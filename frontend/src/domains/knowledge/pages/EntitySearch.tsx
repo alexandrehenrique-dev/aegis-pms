@@ -1,10 +1,18 @@
 import { useState } from "react";
 import { Search, X } from "lucide-react";
-import { Badge, Button, Card, EmptyState, PageHeader } from "../../../shared/components/Primitives";
-import { kgColor, kgEdges, kgNodes } from "../mocks/knowledge.mocks";
+import { Badge, Button, Card, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { kgColor } from "../mocks/knowledge.mocks";
+import { knowledgeService } from "../services/knowledgeService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 
 export function EntitySearch() {
   const [q, setQ] = useState("");
+  const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(), []);
+  const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(), []);
+
+  if (loadingNodes || loadingEdges) return <SkeletonLines />;
+  if (errorNodes || errorEdges || !kgNodes || !kgEdges) return <PartialErrorWidget />;
+
   const res = q ? kgNodes.filter((n) => (n.label + n.type + n.status).toLowerCase().includes(q.toLowerCase())) : kgNodes;
   return (
     <>

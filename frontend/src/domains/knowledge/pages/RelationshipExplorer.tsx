@@ -1,9 +1,16 @@
 import { Filter } from "lucide-react";
-import { Badge, Button, Card, PageHeader } from "../../../shared/components/Primitives";
-import { kgEdges, kgNodes } from "../mocks/knowledge.mocks";
+import { Badge, Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { knowledgeService } from "../services/knowledgeService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { KGBadge } from "../components/KGBadge";
 
 export function RelationshipExplorer() {
+  const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(), []);
+  const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(), []);
+
+  if (loadingNodes || loadingEdges) return <SkeletonLines />;
+  if (errorNodes || errorEdges || !kgNodes || !kgEdges) return <PartialErrorWidget />;
+
   return (
     <>
       <PageHeader title="Relationship Explorer" desc="Relações reais entre entidades de negócio do produto Maestro Beton." badge="Relações">

@@ -1,14 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { AlertTriangle } from "lucide-react";
-import { Badge, Button, Card, EmptyState, PageHeader } from "../../../shared/components/Primitives";
-import { kgColor, kgEdges, kgNodes } from "../mocks/knowledge.mocks";
+import { Badge, Button, Card, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { kgColor, type KGNode } from "../mocks/knowledge.mocks";
+import { knowledgeService } from "../services/knowledgeService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { KGBadge } from "../components/KGBadge";
 
 export function EntityDetails() {
   const { id } = useParams();
-  const initial = (id && kgNodes.find((n) => n.id === id)) || kgNodes[2];
-  const [sel, setSel] = useState(initial);
+  const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(), []);
+  const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(), []);
+  const [sel, setSel] = useState<KGNode | null>(null);
+
+  useEffect(() => {
+    if (kgNodes && !sel) setSel((id && kgNodes.find((n) => n.id === id)) || kgNodes[2]);
+  }, [kgNodes, id, sel]);
+
+  if (loadingNodes || loadingEdges) return <SkeletonLines />;
+  if (errorNodes || errorEdges || !kgNodes || !kgEdges || !sel) return <PartialErrorWidget />;
+
   const c = kgColor[sel.type];
   const incoming = kgEdges.filter((e) => e.to === sel.id).map((e) => kgNodes.find((n) => n.id === e.from)!).filter(Boolean);
   const outgoing = kgEdges.filter((e) => e.from === sel.id).map((e) => kgNodes.find((n) => n.id === e.to)!).filter(Boolean);

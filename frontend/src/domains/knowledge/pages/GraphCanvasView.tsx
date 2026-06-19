@@ -1,12 +1,20 @@
 import { useState } from "react";
 import { Search, X, AlertTriangle } from "lucide-react";
-import { Button, EmptyState, PageHeader, Card } from "../../../shared/components/Primitives";
-import { kgColor, kgEdges, kgNodes, KG_H, KG_W, type KGEdge, type KGNode } from "../mocks/knowledge.mocks";
+import { Button, EmptyState, PageHeader, Card, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { kgColor, KG_H, KG_W, type KGEdge, type KGNode } from "../mocks/knowledge.mocks";
+import { knowledgeService } from "../services/knowledgeService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 
 export function GraphCanvasView() {
   const [sel, setSel] = useState<KGNode | null>(null);
   const [tf, setTf] = useState("todos");
   const [q, setQ] = useState("");
+  const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(), []);
+  const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(), []);
+
+  if (loadingNodes || loadingEdges) return <SkeletonLines />;
+  if (errorNodes || errorEdges || !kgNodes || !kgEdges) return <PartialErrorWidget />;
+
   const types = [...new Set(kgNodes.map((n) => n.type))];
   const vis = kgNodes.filter((n) => (tf === "todos" || n.type === tf) && (q === "" || n.label.toLowerCase().includes(q.toLowerCase())));
   const visIds = new Set(vis.map((n) => n.id));
