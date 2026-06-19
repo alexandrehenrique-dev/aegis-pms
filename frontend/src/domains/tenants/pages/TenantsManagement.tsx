@@ -10,10 +10,12 @@ import { TenantContextMenu, type ContextMenuTarget } from "../components/TenantC
 import { tenantsService } from "../../../core/tenants/services/tenantsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { toast } from "../../../core/notifications/toast";
+import { useAuth } from "../../../core/auth/AuthContext";
 import type { TenantOption } from "../../../shared/types";
 
 export function TenantsManagement() {
   const navigate = useNavigate();
+  const { selectTenant, selectProduct } = useAuth();
   const [reloadKey, setReloadKey] = useState(0);
   const { data: tenants, loading, error } = useAsyncData(() => tenantsService.listTenants(), [reloadKey]);
   const refresh = () => setReloadKey((k) => k + 1);
@@ -24,6 +26,17 @@ export function TenantsManagement() {
   const [confirmationText, setConfirmationText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ tenant: TenantOption; position: ContextMenuTarget } | null>(null);
+
+  const handleAccessTenant = (t: TenantOption) => {
+    // Bypassa o switchTenant (que só conhece os tenants do mock de login do
+    // usuário) — aqui o tenant vem da lista canônica de administração, que
+    // pode incluir tenants recém-criados no wizard. Reseta o produto
+    // selecionado; RequireAuth redireciona para /select-product se preciso,
+    // mesmo comportamento do Switcher de tenant no header.
+    selectTenant(t);
+    selectProduct(null);
+    navigate("/dashboard");
+  };
 
   const handleDelete = async () => {
     if (!pendingDelete) return;
@@ -52,7 +65,11 @@ export function TenantsManagement() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {tenants.map((t) => (
-            <Card key={t.id} onContextMenu={(e) => { e.preventDefault(); setContextMenu({ tenant: t, position: { x: e.clientX, y: e.clientY } }); }}>
+            <Card
+              key={t.id}
+              onClick={() => handleAccessTenant(t)}
+              onContextMenu={(e) => { e.preventDefault(); setContextMenu({ tenant: t, position: { x: e.clientX, y: e.clientY } }); }}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div><h3 className="font-semibold">{t.name}</h3><p className="text-sm text-muted-foreground">Plano {t.plan}</p></div>
                 <Badge tone={t.status === "ativo" ? "green" : "red"}>{t.status}</Badge>
@@ -61,7 +78,7 @@ export function TenantsManagement() {
                 <div className="rounded-lg bg-muted p-3"><p className="text-xs text-muted-foreground">Produtos</p><p className="font-semibold">{t.productCount}</p></div>
                 <div className="rounded-lg bg-muted p-3"><p className="text-xs text-muted-foreground">Último acesso</p><p className="truncate font-semibold">{t.lastAccess}</p></div>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                 <Button primary onClick={() => navigate(`/products/new?tenantId=${t.id}`)}><Plus size={15} />Criar produto</Button>
                 <Button onClick={() => setEditingTenant(t)}><Pencil size={14} />Editar</Button>
                 <button onClick={() => setPendingDelete(t)} className="inline-flex items-center gap-2 rounded-lg border border-destructive/30 px-3 py-2 text-sm text-destructive transition hover:bg-destructive/10 active:scale-[0.97]"><Trash2 size={14} />Excluir</button>
