@@ -12,23 +12,24 @@ O Spring Boot serve o build de produção do React (`frontend/dist/`) na mesma o
 
 ## Tarefas
 
-### A. Build do frontend
+### A. Build do frontend e cópia para o backend
+
+Já existe um script versionado para isso — use-o em vez de rodar os comandos manualmente:
 
 ```bash
 cd frontend
-npm install
-npm run build
-# gera frontend/dist/
+npm run build:backend
+# builda o frontend (vite build) e copia frontend/dist/ para
+# backend/src/main/resources/static/, criando o diretório se necessário
 ```
 
-### B. Copiar para o backend
+Equivalente manual (caso o script não esteja disponível neste ambiente):
 
 ```bash
+cd frontend && npm install && npm run build && cd ..
 rm -rf backend/src/main/resources/static/*
 cp -R frontend/dist/* backend/src/main/resources/static/
 ```
-
-(Pode ser automatizado depois em `scripts/build-frontend-to-backend.sh` — não obrigatório nesta etapa.)
 
 ### C. Configuração de fallback de rotas no Spring Boot
 

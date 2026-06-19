@@ -22,7 +22,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/aegis}
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8282/realms/aegis}
 ```
 
 Regras de acesso: `/api/v1/**` protegido; `/actuator/health` e `/actuator/info` públicos; Swagger liberado em `local`; CSRF off (API stateless); CORS configurado para `http://localhost:5173` em dev.
@@ -64,7 +64,7 @@ curl -i http://localhost:8080/api/v1/me
 # esperado: 401
 
 # obter token (usuário de teste criado na etapa 03)
-TOKEN=$(curl -s -X POST http://localhost:8181/realms/aegis/protocol/openid-connect/token \
+TOKEN=$(curl -s -X POST http://localhost:8282/realms/aegis/protocol/openid-connect/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "client_id=aegis-web" \
   -d "grant_type=password" \

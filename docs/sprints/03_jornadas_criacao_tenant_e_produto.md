@@ -1,5 +1,7 @@
 # Sprint 03 — Jornadas de criação de Tenant e de Produto
 
+> ⚠️ **Obsoleta — substituída pela Sprint 09.** Este documento assume um `App.tsx` monolítico (`type Screen`, linha 35) que não existe mais: a Sprint 01 já refatorou o frontend para `src/app/`, `src/core/`, `src/domains/`, `src/shared/`. O diagnóstico abaixo (criação de produto existe e é mockada; criação de tenant não existe; atribuição de produto a usuário não existe) continua correto em essência, mas o desenho da solução e os caminhos de arquivo estão em `docs/sprints/09_servicos_integracao_fluxo_super_admin_e_build.md`, que já reflete a estrutura real do repositório. Use a Sprint 09 como fonte da verdade; mantenha este arquivo apenas como registro histórico do diagnóstico original.
+
 > Pré-requisito: Sprint 01 (arquitetura) e Sprint 02 (backend com modelo Tenant/Membership/Product) concluídas.
 
 ## Contexto

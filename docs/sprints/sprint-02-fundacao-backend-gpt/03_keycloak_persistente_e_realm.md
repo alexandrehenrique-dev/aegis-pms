@@ -45,7 +45,7 @@ Adicionar ao `docker-compose.yml`:
 
 ### B. Realm, client e roles
 
-Subir e configurar manualmente via console admin (`http://localhost:8181`, login `admin`/`admin`):
+Subir e configurar manualmente via console admin (`http://localhost:8282`, login `admin`/`admin`):
 
 - Criar realm `aegis`.
 - Criar client `aegis-web`: tipo OpenID Connect, Client authentication OFF, Standard flow ON, Direct access grants OFF (a menos que precise testar temporariamente), PKCE S256 se disponível.
@@ -73,7 +73,7 @@ Esse arquivo **não** entra no `.gitignore` — configuração de Keycloak é ve
 
 ## Critérios de aceite
 
-- [ ] Keycloak acessível em `http://localhost:8181`, login admin funciona.
+- [ ] Keycloak acessível em `http://localhost:8282`, login admin funciona.
 - [ ] Keycloak usa o `keycloak-postgres`, não H2.
 - [ ] Realm `aegis`, client `aegis-web` e as 6 roles globais existem.
 - [ ] Usuário de teste criado e com role atribuída.
@@ -83,8 +83,8 @@ Esse arquivo **não** entra no `.gitignore` — configuração de Keycloak é ve
 ## Validação
 
 ```bash
-curl http://localhost:8181/realms/aegis/.well-known/openid-configuration
-# deve retornar JSON com issuer = http://localhost:8181/realms/aegis
+curl http://localhost:8282/realms/aegis/.well-known/openid-configuration
+# deve retornar JSON com issuer = http://localhost:8282/realms/aegis
 
 docker exec -it keycloak-postgres psql -U keycloak_user -d keycloak -c "SELECT count(*) FROM realm;"
 # esperado: count >= 1
