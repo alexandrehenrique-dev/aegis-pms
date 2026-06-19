@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Outlet } from "react-router";
 
 /**
@@ -8,5 +9,5 @@ import { Outlet } from "react-router";
  * blueprint (app/layouts) rather than inlining auth routes directly.
  */
 export function AuthLayout() {
-  return <Outlet />;
+  return <Suspense fallback={null}><Outlet /></Suspense>;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, CheckCircle2, Clock3, HelpCircle, LogOut, Menu, Monitor, Moon, Sun, X } from "lucide-react";
@@ -180,7 +180,7 @@ export function AppShell() {
               {!blocked && showViewerBanner && <ReadOnlyBanner role={viewAsRole} />}
               {!blocked && showEditorBanner && <ReadOnlyBanner role={viewAsRole} />}
               {tabs && <ModuleTabs tabs={tabs} />}
-              <Outlet />
+              <Suspense fallback={<ScreenSkeleton />}><Outlet /></Suspense>
             </>
           )}
         </main>
