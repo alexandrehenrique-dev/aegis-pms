@@ -1,6 +1,13 @@
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Badge, Button, Card, Field, PageHeader, SelectLike } from "../../../shared/components/Primitives";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../../shared/components/ui/dialog";
 import { LeadStatusBadge } from "../components/FormBadges";
 import { FormsTimeline } from "../components/FormsTimeline";
+import { toast } from "../../../core/notifications/toast";
+import { formsService } from "../services/formsService";
+
+const OWNERS = ["Marina Costa", "João Alves", "Camila Rocha", "Pedro Lima"];
 
 function UTMCard() {
   return (
@@ -14,11 +21,51 @@ function UTMCard() {
 }
 
 export function SubmissionDetails() {
+  const email = "camila@studio.com";
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignee, setAssignee] = useState("Marina Costa");
+  const [assigning, setAssigning] = useState(false);
+  const [qualifying, setQualifying] = useState(false);
+  const [qualified, setQualified] = useState(false);
+  const [notes, setNotes] = useState("Responder ainda hoje e solicitar briefing.");
+
+  const handleAssign = async () => {
+    setAssigning(true);
+    try {
+      await formsService.assignSubmissions([email], assignee);
+      toast.success("Lead atribuído!", { description: `${assignee} agora é responsável por este lead.` });
+      setAssignOpen(false);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleQualify = async () => {
+    setQualifying(true);
+    try {
+      await formsService.markQualified(email);
+      setQualified(true);
+      toast.success("Lead marcado como qualificado!");
+    } finally {
+      setQualifying(false);
+    }
+  };
+
   return (
     <>
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Atribuir lead</DialogTitle></DialogHeader>
+          <SelectLike label="Responsável" value={assignee} options={OWNERS} onChange={setAssignee} />
+          <DialogFooter>
+            <Button onClick={() => setAssignOpen(false)}>Cancelar</Button>
+            <Button primary onClick={handleAssign} disabled={assigning}>{assigning && <Loader2 size={15} className="animate-spin" />}{assigning ? "Atribuindo..." : "Confirmar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <PageHeader title="Camila Rocha" module="Forms" desc="Detalhe da submissão com contexto de lead, origem, timeline e qualificação." badge="Lead Novo">
-        <Button>Atribuir</Button>
-        <Button primary>Marcar qualificado</Button>
+        <Button onClick={() => setAssignOpen(true)}>Atribuir</Button>
+        <Button primary onClick={handleQualify} disabled={qualifying || qualified}>{qualifying && <Loader2 size={15} className="animate-spin" />}{qualified ? "Qualificado" : qualifying ? "Marcando..." : "Marcar qualificado"}</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
@@ -33,10 +80,10 @@ export function SubmissionDetails() {
         <div className="space-y-4">
           <Card>
             <h2 className="mb-3 text-lg font-semibold">Operação do lead</h2>
-            <LeadStatusBadge status="Novo" />
+            <LeadStatusBadge status={qualified ? "Qualificado" : "Novo"} />
             <div className="mt-3 flex flex-wrap gap-1">{["orçamento", "corporativo", "alto-fit"].map((t) => <Badge key={t} tone="blue">{t}</Badge>)}</div>
-            <Field label="Observações" value="Responder ainda hoje e solicitar briefing." textarea />
-            <SelectLike label="Responsável" value="Marina Costa" />
+            <Field label="Observações" value={notes} onChange={setNotes} textarea />
+            <SelectLike label="Responsável" value={assignee} options={OWNERS} onChange={setAssignee} />
           </Card>
           <UTMCard />
         </div>

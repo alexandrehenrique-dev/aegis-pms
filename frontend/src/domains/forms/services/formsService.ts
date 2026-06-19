@@ -19,4 +19,17 @@ export const formsService = {
   async listFieldTypes(): Promise<ListFieldTypesResponse> {
     return fieldTypes;
   },
+  async markQualified(email: string): Promise<void> {
+    const s = submissionsStore.find((x) => x.email === email);
+    if (s) s.status = "Qualificado";
+  },
+  async assignSubmissions(emails: string[], owner: string): Promise<void> {
+    emails.forEach((email) => {
+      const s = submissionsStore.find((x) => x.email === email);
+      if (s) s.owner = owner;
+    });
+  },
+  async saveDraft(): Promise<void> {},
+  async publish(): Promise<void> {},
+  async submitTest(): Promise<void> {},
 };
