@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, Building2, ChevronRight, Clock3, LogOut, Star } from "lucide-react";
 import { useAuth } from "../AuthContext";
+import { getPostLoginLandingPath } from "../../permissions/roles";
 import { AegisLogo } from "../../../shared/components/AegisLogo";
 import { ProductStatusBadge } from "../../../shared/components/ProductStatusBadge";
 import { EmptyState, fade } from "../../../shared/components/Primitives";
@@ -21,7 +22,7 @@ export function ProductSelectScreen() {
   const recents = filtered.filter((p) => p.isRecent && !p.isFavorite);
   const others = filtered.filter((p) => !p.isFavorite && !p.isRecent);
 
-  const handleSelect = (p: ProductOption) => { selectProduct(p); navigate("/dashboard"); };
+  const handleSelect = (p: ProductOption) => { selectProduct(p); navigate(getPostLoginLandingPath(authUser.role, p)); };
   const handleBack = () => { selectTenant(null); navigate("/select-tenant"); };
   const handleLogout = () => { logout(); navigate("/login"); };
 

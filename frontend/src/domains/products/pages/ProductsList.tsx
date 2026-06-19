@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Search, X } from "lucide-react";
-import { Button, EmptyState, PageHeader } from "../../../shared/components/Primitives";
+import { Button, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { ProductStatusBadge } from "../../../shared/components/ProductStatusBadge";
 import { ProductCard } from "../components/ProductCard";
-import { products } from "../mocks/products.mocks";
+import { productsService } from "../services/productsService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import type { ProductStatus } from "../../../shared/types";
 
 export function ProductsList() {
@@ -12,8 +13,13 @@ export function ProductsList() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [q, setQ] = useState("");
   const [sf, setSf] = useState<ProductStatus | "todos">("todos");
-  const filtered = products.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()) && (sf === "todos" || p.status === sf));
+  const { data: products, loading, error } = useAsyncData(() => productsService.listProducts(), []);
   const statuses: Array<ProductStatus | "todos"> = ["todos", "Ativo", "Pendente", "Arquivado", "Sem módulos"];
+
+  if (loading) return <SkeletonLines />;
+  if (error || !products) return <PartialErrorWidget />;
+
+  const filtered = products.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()) && (sf === "todos" || p.status === sf));
 
   return (
     <>

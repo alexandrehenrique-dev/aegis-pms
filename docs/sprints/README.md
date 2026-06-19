@@ -5,7 +5,7 @@
 Cada arquivo aqui é uma sprint **autocontida e copiável**: você pode abrir o arquivo, copiar o conteúdo inteiro e colar em um agente para que ele execute a sprint do início ao fim, incluindo geração de código, validação e, quando aplicável, comandos de git.
 
 **Divisão de execução entre agentes neste plano:**
-- **Sprint 01, Sprint 09 e Sprints 05–08** → executadas por você com **Claude/Cowork em modo agent**, com acesso direto a este repositório. (Sprints 03 e 04 estão obsoletas — ver nota em "Ordem recomendada".)
+- **Sprint 01, Sprint 09, Sprints 05–08 e Sprint 10** → executadas por você com **Claude/Cowork em modo agent**, com acesso direto a este repositório. (Sprints 03 e 04 estão obsoletas — ver nota em "Ordem recomendada".)
 - **Sprint 02** → executada por você com o **GPT**, colando manualmente um arquivo por vez da pasta [`sprint-02-fundacao-backend-gpt/`](./sprint-02-fundacao-backend-gpt/00_indice_e_instrucoes.md) (12 etapas, da fundação do Docker Compose até servir o React pelo Spring Boot). Veja o motivo dessa divisão no índice daquela pasta.
 
 Isto é diferente de `docs/implementation/figma-make-sprints-refinamento-v2.md`, que documenta sprints **já executadas** (Sprints 09–19) durante a geração do frontend via Figma Make. As sprints desta pasta usam numeração própria (01, 02, 03...) para não colidir com aquele histórico — elas tratam do que falta **depois** de Figma Make: arquitetura, integração real com backend, Keycloak, permissões por produto e o que o `implementation/001` ainda não foi executado.
@@ -27,6 +27,7 @@ Isto é diferente de `docs/implementation/figma-make-sprints-refinamento-v2.md`,
 | 01 | `01_refactor_frontend_e_setup_git.md` | Decisão de stack (React, ADR-0011), refatoração do `App.tsx` monolítico para arquitetura por domínio, remoção de artefatos do Figma Make, criação das branches `release`/`develop`, primeiro push do frontend |
 | 02 | `02_fundacao_backend.md` → redireciona para [`sprint-02-fundacao-backend-gpt/`](./sprint-02-fundacao-backend-gpt/00_indice_e_instrucoes.md) (12 etapas) | Executa `implementation/001` **via GPT**: Docker Compose, PostgreSQL dedicado, Keycloak dedicado, Spring Boot modular, Knowledge Graph MVP, e build do React (não Angular) servido pelo Spring Boot |
 | 09 | `09_servicos_integracao_fluxo_super_admin_e_build.md` | **Execute aqui, no lugar de 03/04.** Camada `services/`+`contracts/` em todos os domínios, fluxo Super Admin (criar tenant → criar produto → atribuir a usuário) com navegação de volta, preparação para Keycloak na porta 8282, script de build para o backend servir o SPA |
+| 10 | `10_refinamento_acoes_pendentes_ui.md` | Auditoria de 140+ botões sem `onClick` e campos não editáveis em todos os domínios; corrige os primitivos compartilhados (`SelectLike`/`Field`) e liga cada ação a algo real (service, navegação, drawer, toggle) — depende dos services da Sprint 09 |
 | ~~03~~ | ~~`03_jornadas_criacao_tenant_e_produto.md`~~ | ⚠️ Obsoleta — substituída pela Sprint 09. Mantida só como histórico do diagnóstico original |
 | ~~04~~ | ~~`04_integracao_frontend_backend_contratos.md`~~ | ⚠️ Obsoleta — substituída pela Sprint 09. Mantida só como histórico do diagnóstico original |
 | 05 | `05_roles_permissoes_features_por_produto.md` | Sistema de roles/permissões onde funcionalidades (ex.: Knowledge Graph) podem ser atribuídas/removidas por produto |

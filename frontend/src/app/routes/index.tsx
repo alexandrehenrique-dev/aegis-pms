@@ -17,6 +17,9 @@ const ProductSelectScreen = lazy(() => import("../../core/auth/pages/ProductSele
 // --- domains/dashboard ---
 const DashboardGlobal = lazy(() => import("../../domains/dashboard/pages/DashboardGlobal").then((m) => ({ default: m.DashboardGlobal })));
 
+// --- domains/tenants (Super Admin) — tela única; criar/editar/excluir são modais dentro dela, não rotas. ---
+const TenantsManagement = lazy(() => import("../../domains/tenants/pages/TenantsManagement").then((m) => ({ default: m.TenantsManagement })));
+
 // --- domains/products ---
 const ProductsList = lazy(() => import("../../domains/products/pages/ProductsList").then((m) => ({ default: m.ProductsList })));
 const CreateProductForm = lazy(() => import("../../domains/products/pages/CreateProductForm").then((m) => ({ default: m.CreateProductForm })));
@@ -109,6 +112,8 @@ export function AppRoutes() {
         <Route element={<AppShell />}>
           <Route element={<RequireRole />}>
             <Route path="/dashboard" element={<DashboardGlobal />} />
+
+            <Route path="/admin/tenants" element={<TenantsManagement />} />
 
             <Route path="/products" element={<ProductsList />} />
             <Route path="/products/new" element={<CreateProductForm />} />

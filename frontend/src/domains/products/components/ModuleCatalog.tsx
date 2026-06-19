@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
-import { Badge, Button, Card, PageHeader } from "../../../shared/components/Primitives";
-import { modules } from "../../dashboard/mocks/dashboard.mocks";
+import { Badge, Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { productsService } from "../services/productsService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import type { ModuleState } from "../../../shared/types";
 
 function ModuleCard({ Icon, name, desc, state, maturity, dep, impact }: { Icon: ComponentType<{ size?: number; className?: string }>; name: string; desc: string; state: ModuleState; maturity: string; dep: string; impact: string }) {
@@ -18,6 +19,11 @@ function ModuleCard({ Icon, name, desc, state, maturity, dep, impact }: { Icon: 
 }
 
 export function ModuleCatalog({ compact = false }: { compact?: boolean }) {
+  const { data: modules, loading, error } = useAsyncData(() => productsService.listModuleCatalog(), []);
+
+  if (loading) return <SkeletonLines />;
+  if (error || !modules) return <PartialErrorWidget />;
+
   return (
     <div>
       {!compact && (
@@ -27,8 +33,8 @@ export function ModuleCatalog({ compact = false }: { compact?: boolean }) {
         </PageHeader>
       )}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {modules.slice(0, compact ? 6 : modules.length).map(([Icon, name, desc, state, maturity, dep, impact]) => (
-          <ModuleCard key={name as string} Icon={Icon as ComponentType<{ size?: number; className?: string }>} name={name as string} desc={desc as string} state={state as ModuleState} maturity={maturity as string} dep={dep as string} impact={impact as string} />
+        {modules.slice(0, compact ? 6 : modules.length).map((m) => (
+          <ModuleCard key={m.name} Icon={m.Icon} name={m.name} desc={m.desc} state={m.state} maturity={m.maturity} dep={m.dependency} impact={m.impact} />
         ))}
       </div>
     </div>

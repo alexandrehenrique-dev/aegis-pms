@@ -1,26 +1,38 @@
 import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button, Card, Field, PageHeader, SelectLike } from "../../../shared/components/Primitives";
 import { toast } from "../../../core/notifications/toast";
+import { usersService } from "../services/usersService";
 import { PermissionImpactSummary } from "../components/PermissionImpactSummary";
 
 export function InviteUserDrawer() {
+  const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  const handleSend = () => {
-    setSent(true);
-    toast.success("Convite enviado!", { description: "João Alves receberá um email com instruções de acesso." });
+  const [name, setName] = useState("João Alves");
+  const [email, setEmail] = useState("joao@byop.com");
+
+  const handleSend = async () => {
+    setSending(true);
+    try {
+      await usersService.invite({ name, email, role: "Editor", allowedProducts: "Maestro Beton" });
+      setSent(true);
+      toast.success("Convite enviado!", { description: `${name} receberá um email com instruções de acesso.` });
+    } finally {
+      setSending(false);
+    }
   };
+
   return (
     <>
       <PageHeader title="Convidar Usuário" desc="Convide com papéis, produtos permitidos e resumo de risco." badge="Convite">
         <Button>Cancelar</Button>
-        <Button primary onClick={handleSend} disabled={sent}>{sent ? <><CheckCircle2 size={15} />Enviado</> : "Enviar convite"}</Button>
+        <Button primary onClick={handleSend} disabled={sending || sent}>{sending && <Loader2 size={15} className="animate-spin" />}{sent ? <><CheckCircle2 size={15} />Enviado</> : sending ? "Enviando..." : "Enviar convite"}</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>
           <div className="grid gap-3 md:grid-cols-2">
-            <Field label="Nome" value="João Alves" />
-            <Field label="Email" value="joao@byop.com" />
+            <Field label="Nome" value={name} onChange={setName} />
+            <Field label="Email" value={email} onChange={setEmail} />
             <SelectLike label="Papel" value="Editor" />
             <SelectLike label="Produtos permitidos" value="Maestro Beton" />
             <SelectLike label="Módulos permitidos" value="Conteúdo, Assets, Forms" />

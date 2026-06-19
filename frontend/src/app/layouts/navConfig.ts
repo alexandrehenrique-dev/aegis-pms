@@ -2,7 +2,15 @@ import { BarChart3, Boxes, FileText, Image, LayoutDashboard, Settings, ShieldChe
 
 export type NavItem = { path: string; icon: LucideIcon; label: string };
 
-/** Main sidebar navigation, in display order. Replaces the old `nav` Screen-keyed array. */
+/**
+ * Main sidebar navigation, in display order. Replaces the old `nav`
+ * Screen-keyed array. /admin/tenants (Super Admin) is intentionally NOT
+ * here — gestão de tenants é cross-tenant por natureza, não mais uma seção
+ * dentro do workspace do tenant atual. O único acesso é o card "Gestão de
+ * Tenants" em DashboardGlobal (visível só para super_admin), e de lá em
+ * diante a navegação é por BackLink ("Voltar para...") dentro do próprio
+ * fluxo de administração — não pelo menu lateral regular.
+ */
 export const nav: NavItem[] = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/products", icon: Boxes, label: "Produtos" },

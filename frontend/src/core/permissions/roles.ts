@@ -1,4 +1,23 @@
-import type { UserRole } from "../../shared/types";
+import { getProductSlug } from "../../shared/utils/productSlugs";
+import type { ProductOption, UserRole } from "../../shared/types";
+
+/**
+ * Para onde o usuário cai depois de selecionar um produto no login,
+ * conforme o papel:
+ * - super_admin / tenant_admin: hub do tenant (visão ampla, vários produtos).
+ * - product_manager: lista de produtos disponíveis (opera vários produtos).
+ * - editor / viewer: direto no produto já selecionado (operam um produto
+ *   por vez) — viewer cai no mesmo lugar que editor; as restrições de
+ *   somente-leitura já são aplicadas pelo RequireRole/ReadOnlyBanner.
+ */
+export function getPostLoginLandingPath(role: UserRole, product: ProductOption): string {
+  if (role === "product_manager") return "/products";
+  if (role === "editor" || role === "viewer") {
+    const slug = getProductSlug(product.name);
+    return slug ? `/products/${slug}` : "/dashboard";
+  }
+  return "/dashboard";
+}
 
 export const roleLabels: Record<UserRole, string> = {
   super_admin: "Super Admin",
@@ -30,17 +49,17 @@ export const roleVisibleNav: Record<UserRole, Set<string>> = {
 // A route is blocked if it starts with any of these prefixes.
 export const roleBlockedRoutePrefixes: Record<UserRole, string[]> = {
   super_admin: [],
-  tenant_admin: ["/settings/security"],
+  tenant_admin: ["/settings/security", "/admin"],
   product_manager: [
     "/settings/tenant", "/users", "/settings/permissions", "/settings/roles", "/settings/access-preview",
-    "/audit", "/settings/security", "/products/new", "/content/*/publish",
+    "/audit", "/settings/security", "/products/new", "/content/*/publish", "/admin",
   ],
   editor: [
     "/settings", "/users",
-    "/audit", "/products/new",
+    "/audit", "/products/new", "/admin",
   ],
   viewer: [
-    "/settings", "/users", "/audit", "/products/new",
+    "/settings", "/users", "/audit", "/products/new", "/admin",
     "/content/*/editor", "/forms/new", "/assets/upload", "/assets/*/metadata", "/assets/*/tags",
     "/content/*/workflow", "/knowledge/graph", "/knowledge/relationships", "/knowledge/entities",
     "/knowledge/search", "/knowledge/orphans", "/knowledge/insights",

@@ -1,0 +1,181 @@
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { motion } from "motion/react";
+import { ArrowLeft, CheckCircle2, Loader2, X } from "lucide-react";
+import { Badge, Button, Field, fade } from "../../../shared/components/Primitives";
+import { tenantsService } from "../../../core/tenants/services/tenantsService";
+import { productsService } from "../../products/services/productsService";
+import { productAssignmentsService } from "../../users/services/productAssignmentsService";
+import { usersService } from "../../users/services/usersService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import type { TenantOption } from "../../../shared/types";
+import type { ProductSummary } from "../../products/contracts/responses";
+import type { ProductAssignmentSummary } from "../../users/contracts/productAssignments";
+
+const INITIAL_MODULES = ["Conteúdo", "Assets", "Forms", "Analytics", "SEO", "Workflow"];
+
+type Step = 1 | 2 | 3 | 4;
+
+/**
+ * Wizard "Criar Tenant -> Criar Produto -> Atribuir Usuário" como modal de
+ * múltiplas etapas sobre /admin/tenants — nunca navega para outra rota, só
+ * avança/recua o `step` interno. Substitui as antigas páginas roteadas
+ * (CreateTenantForm/CreateProductForm-com-tenantId/AssignProductUserForm)
+ * por pedido explícito: a tela de gestão de tenants é a única tela.
+ */
+export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const navigate = useNavigate();
+  const [step, setStep] = useState<Step>(1);
+  const [saving, setSaving] = useState(false);
+
+  const [tenant, setTenant] = useState<TenantOption | null>(null);
+  const [product, setProduct] = useState<ProductSummary | null>(null);
+  const [assignment, setAssignment] = useState<ProductAssignmentSummary | null>(null);
+
+  // Step 1 fields
+  const [tenantName, setTenantName] = useState("Novo Tenant");
+  const [tenantSlug, setTenantSlug] = useState("novo-tenant");
+  const [adminEmail, setAdminEmail] = useState("");
+
+  // Step 2 fields
+  const [productName, setProductName] = useState("Novo Produto");
+  const [productSlug, setProductSlug] = useState("novo-produto");
+
+  // Step 3 fields
+  const { data: existingUsers } = useAsyncData(() => usersService.listUsers(), []);
+  const [assignMode, setAssignMode] = useState<"existing" | "invite">("invite");
+  const [selectedEmail, setSelectedEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [role, setRole] = useState("Editor");
+
+  const handleCreateTenant = async () => {
+    setSaving(true);
+    try {
+      const created = await tenantsService.create({ name: tenantName, slug: tenantSlug, plan: "Starter", initialAdminEmail: adminEmail });
+      setTenant(created);
+      setStep(2);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateProduct = async () => {
+    if (!tenant) return;
+    setSaving(true);
+    try {
+      const created = await productsService.create({
+        name: productName, slug: productSlug, type: "Site Institucional", language: "pt-BR",
+        description: "Produto criado pelo wizard de onboarding do Super Admin.", template: "Produto operacional padrão",
+        initialModules: INITIAL_MODULES, tenantId: tenant.id,
+      });
+      setProduct(created);
+      setStep(3);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAssignUser = async () => {
+    if (!tenant || !product?.id) return;
+    setSaving(true);
+    try {
+      const summary = await productAssignmentsService.assign({
+        tenantId: tenant.id, productId: product.id,
+        userId: assignMode === "existing" ? selectedEmail : undefined,
+        inviteEmail: assignMode === "invite" ? inviteEmail : undefined,
+        inviteName: assignMode === "invite" ? inviteName : undefined,
+        role,
+      });
+      setAssignment(summary);
+      setStep(4);
+      onDone();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const canSubmitAssign = assignMode === "existing" ? !!selectedEmail : !!inviteEmail.trim() && !!inviteName.trim();
+
+  return (
+    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={step < 4 ? onClose : undefined}>
+      <motion.div {...fade} className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-5 flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2"><h2 className="font-semibold">Criar Tenant</h2><Badge tone="violet">Passo {Math.min(step, 3)} de 3</Badge></div>
+            <p className="mt-0.5 text-xs text-muted-foreground">Tenant → primeiro produto → usuário responsável.</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1 transition hover:bg-muted"><X size={17} /></button>
+        </div>
+
+        {step === 1 && (
+          <div className="space-y-3">
+            <Field label="Nome do tenant" value={tenantName} onChange={setTenantName} />
+            <Field label="Slug / identificador único" value={tenantSlug} onChange={setTenantSlug} />
+            <Field label="E-mail do Tenant Admin inicial" value={adminEmail} onChange={setAdminEmail} />
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-3">
+            <div className="rounded-lg bg-muted p-2.5 text-xs text-muted-foreground">Tenant: <b className="text-foreground">{tenant?.name}</b></div>
+            <Field label="Nome do produto" value={productName} onChange={setProductName} />
+            <Field label="Slug" value={productSlug} onChange={setProductSlug} />
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-3">
+            <div className="rounded-lg bg-muted p-2.5 text-xs text-muted-foreground">Atribuir <b className="text-foreground">{product?.name}</b> em <b className="text-foreground">{tenant?.name}</b> a:</div>
+            <div className="flex gap-1.5">
+              <button onClick={() => setAssignMode("invite")} className={`rounded-xl border px-3 py-1.5 text-sm transition ${assignMode === "invite" ? "border-primary bg-primary/5 text-primary font-medium" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}>Convidar novo</button>
+              <button onClick={() => setAssignMode("existing")} className={`rounded-xl border px-3 py-1.5 text-sm transition ${assignMode === "existing" ? "border-primary bg-primary/5 text-primary font-medium" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}>Usuário existente</button>
+            </div>
+            {assignMode === "invite" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Nome" value={inviteName} onChange={setInviteName} />
+                <Field label="Email" value={inviteEmail} onChange={setInviteEmail} />
+              </div>
+            ) : (
+              <div className="max-h-40 space-y-1.5 overflow-y-auto">
+                {existingUsers?.map((u) => (
+                  <button key={u.email} onClick={() => setSelectedEmail(u.email)} className={`flex w-full items-center justify-between rounded-lg border p-2.5 text-left text-sm transition ${selectedEmail === u.email ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}>
+                    <span><b>{u.name}</b> <span className="text-muted-foreground">· {u.email}</span></span>
+                    {selectedEmail === u.email && <CheckCircle2 size={14} className="text-primary" />}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">{["Editor", "Product Manager", "Viewer"].map((r) => <Badge key={r} tone={role === r ? "violet" : "neutral"}><button onClick={() => setRole(r)}>{r}</button></Badge>)}</div>
+          </div>
+        )}
+
+        {step === 4 && assignment && (
+          <div className="space-y-3 text-sm">
+            <div className="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-full bg-[#ede9fe]"><CheckCircle2 size={22} className="text-primary" /></div>
+            <div className="flex justify-between"><span>Tenant</span><b>{tenant?.name}</b></div>
+            <div className="flex justify-between"><span>Produto</span><b>{assignment.productName}</b></div>
+            <div className="flex justify-between"><span>Usuário</span><b>{assignment.userName} · {assignment.userEmail}</b></div>
+            <div className="flex justify-between"><span>Papel</span><b>{assignment.role}</b></div>
+            <div className="flex justify-between"><span>Status</span><Badge tone={assignment.status === "convidado" ? "blue" : "green"}>{assignment.status}</Badge></div>
+          </div>
+        )}
+
+        <div className="mt-5 flex justify-between gap-2">
+          {step > 1 && step < 4 ? (
+            <Button onClick={() => setStep((s) => (s - 1) as Step)}><ArrowLeft size={14} />Voltar</Button>
+          ) : <span />}
+          {step === 1 && <Button primary onClick={handleCreateTenant} disabled={saving || !tenantName.trim() || !tenantSlug.trim() || !adminEmail.trim()}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Criando..." : "Criar tenant"}</Button>}
+          {step === 2 && <Button primary onClick={handleCreateProduct} disabled={saving || !productName.trim() || !productSlug.trim()}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Criando..." : "Criar produto"}</Button>}
+          {step === 3 && <Button primary onClick={handleAssignUser} disabled={saving || !canSubmitAssign}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Atribuindo..." : "Concluir"}</Button>}
+          {step === 4 && (
+            <div className="flex gap-2">
+              <Button primary onClick={() => { onClose(); navigate(`/products/${product?.id}`); }}>Ir para o Produto</Button>
+              <Button onClick={onClose}>Fechar</Button>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
