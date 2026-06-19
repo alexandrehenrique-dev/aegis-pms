@@ -11,7 +11,7 @@ Este documento descreve a árvore atual do projeto, explica o papel de cada past
 ├── AGENTS.md                       # Protocolo para agentes de IA (gitflow, commits, branches)
 ├── CONTRIBUTING.md                 # Convenções de contribuição, agnósticas de agente/ferramenta
 ├── docs/
-│   ├── AEGIS_CMS_V1.md             # Documento mestre completo (fonte de verdade)
+│   ├── AEGIS_PMS_V1.md             # Documento mestre completo (fonte de verdade)
 │   ├── AEGIS_DOCUMENTO_TECNICA.md  # Versão condensada do documento mestre
 │   ├── AEGIS_DOCUMENTO_MESTRE_V1.md# Descontinuado — apenas aviso de redirecionamento
 │   ├── Aegis-Vision.md             # Visão de produto e narrativa estratégica
@@ -86,7 +86,7 @@ Raiz do repositório `aegis-pms`. Git inicializado, remote `git@github.com:alexa
 
 ### `docs/`
 
-Centro documental do Aegis. Define a plataforma como multi-produto, multi-tenant, modular e orientada a contratos. Fonte de verdade: `AEGIS_CMS_V1.md`.
+Centro documental do Aegis. Define a plataforma como multi-produto, multi-tenant, modular e orientada a contratos. Fonte de verdade: `AEGIS_PMS_V1.md`.
 
 ### `docs/implementation/`
 
@@ -106,6 +106,6 @@ SPA React gerada pelo Figma Make a partir das specs em `docs/implementation/002-
 
 ## Inconsistências corrigidas nesta sessão
 
-1. Três documentos competindo como "fonte de verdade" (`AEGIS_CMS_V1.md`, `AEGIS_DOCUMENTO_TECNICA.md`, `AEGIS_DOCUMENTO_MESTRE_V1.md`) → `AEGIS_DOCUMENTO_MESTRE_V1.md` descontinuado, `docs/README.md` corrigido para apontar `AEGIS_CMS_V1.md` como mestre e `AEGIS_DOCUMENTO_TECNICA.md` como versão condensada.
+1. Três documentos competindo como "fonte de verdade" (`AEGIS_PMS_V1.md`, `AEGIS_DOCUMENTO_TECNICA.md`, `AEGIS_DOCUMENTO_MESTRE_V1.md`) → `AEGIS_DOCUMENTO_MESTRE_V1.md` descontinuado, `docs/README.md` corrigido para apontar `AEGIS_PMS_V1.md` como mestre e `AEGIS_DOCUMENTO_TECNICA.md` como versão condensada.
 2. ARTIGO V da Constituição (`016_aegis_constitution.md`) contradizia a previsão de um produto de domínio RH (Conecta Talentos) ao dizer "Aegis não será plataforma de RH" → clarificado: Aegis não é um RH-SaaS vertical, mas pode hospedar produtos de domínio RH como qualquer outro produto.
 3. Este arquivo (`WORKTREE.md`) estava desatualizado desde 2026-06-15 → regenerado para refletir o estado real do repositório, incluindo `frontend/` e `docs/implementation/`.

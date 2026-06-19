@@ -3254,7 +3254,7 @@ Agentes de IA atuam **dentro** da arquitetura, não criam arquitetura paralela:
 
 ```txt
 docs/
-├── AEGIS_CMS_V1.md   # constituição do produto (este documento)
+├── AEGIS_PMS_V1.md   # constituição do produto (este documento)
 ├── adr/         # decisões formais
 ├── contracts/   # contratos JSON canônicos
 ├── api/         # REST/OpenAPI e GraphQL futuro
