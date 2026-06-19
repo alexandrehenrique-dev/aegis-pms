@@ -1,0 +1,105 @@
+# Etapa 01 — Estrutura do repositório e variáveis de ambiente
+
+> Cole este arquivo inteiro numa conversa nova do GPT.
+
+## Contexto fixo
+
+Você é um engenheiro sênior trabalhando no backend do **Aegis PMS**, Product Management System do ecossistema BYOP — uma plataforma administrativa multi-produto, multi-tenant, modular e orientada a contratos (não um CMS comum).
+
+Stack obrigatória: Java 21+, Spring Boot 3.x, Spring Security OAuth2 Resource Server, Spring Data JPA, Flyway, Spring Modulith, PostgreSQL (com volume persistente dedicado), Keycloak (com PostgreSQL dedicado e persistente, nunca H2), Docker Compose. O frontend já existe em React (não é Angular — decisão registrada em ADR-0011) e será buildado e servido pelo Spring Boot na mesma origem mais adiante nesta sprint.
+
+Regras que nunca podem ser violadas: não remover persistência dos bancos; não usar H2 como banco principal; não misturar regra de negócio em controller; não criar microsserviços (é um monólito modular); manter `/api/v1` como prefixo de toda API; toda etapa precisa ter critérios de aceite e validação antes de seguir para a próxima.
+
+## Objetivo desta etapa
+
+Criar a estrutura base do repositório backend e definir as variáveis de ambiente que toda a infraestrutura local vai usar.
+
+## Tarefas
+
+### A. Estrutura de diretórios
+
+Confirmar/criar:
+
+```txt
+aegis-pms/
+ ├── docs/
+ ├── infra/
+ │    ├── docker/
+ │    └── keycloak/
+ ├── backend/
+ │    ├── src/
+ │    ├── pom.xml
+ │    └── Dockerfile
+ ├── scripts/
+ ├── docker-compose.yml
+ └── .env.example
+```
+
+`frontend/` já existe (não criar — pertence à Sprint 01, já em React).
+
+### B. Variáveis de ambiente
+
+Criar/atualizar `.env.example` na raiz com:
+
+```env
+# Project
+COMPOSE_PROJECT_NAME=aegis-pms
+
+# Aegis PostgreSQL
+AEGIS_DB_NAME=aegis_pms
+AEGIS_DB_USER=aegis_user
+AEGIS_DB_PASSWORD=aegis_password
+AEGIS_DB_PORT=5432
+
+# Keycloak PostgreSQL
+KEYCLOAK_DB_NAME=keycloak
+KEYCLOAK_DB_USER=keycloak_user
+KEYCLOAK_DB_PASSWORD=keycloak_password
+KEYCLOAK_DB_PORT=5433
+
+# Keycloak
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=admin
+KEYCLOAK_HTTP_PORT=8181
+KEYCLOAK_REALM=aegis
+KEYCLOAK_WEB_CLIENT_ID=aegis-web
+
+# Backend
+BACKEND_PORT=8080
+SPRING_PROFILES_ACTIVE=local
+KEYCLOAK_ISSUER_URI=http://localhost:8181/realms/aegis
+
+# Frontend (build estático servido pelo backend — ver etapa 09)
+FRONTEND_DEV_PORT=5173
+
+# Storage
+AEGIS_STORAGE_LOCAL_PATH=./data/storage
+
+# Timezone
+TZ=America/Sao_Paulo
+```
+
+Nota: `FRONTEND_DEV_PORT` é `5173` (porta padrão do Vite), não `4200` (Angular) — ajuste em relação ao roteiro original, já que o frontend é React+Vite.
+
+O repositório raiz já tem um `.gitignore` consolidado (criado previamente) cobrindo backend, frontend, Docker, Keycloak e PostgreSQL — não sobrescrever, apenas confirmar que ele cobre `target/`, `*.env`, etc.
+
+## Critérios de aceite
+
+- [ ] Estrutura de diretórios confirmada/criada.
+- [ ] `.env.example` existe na raiz com todas as variáveis acima, sem nenhuma senha real de produção.
+- [ ] `.gitignore` da raiz já cobre os artefatos do backend.
+
+## Validação
+
+```bash
+tree -L 2
+cp .env.example .env
+cat .env
+```
+
+## Commit sugerido
+
+```bash
+git add .
+git commit -m "chore(backend): estrutura base do backend e variaveis de ambiente"
+```
