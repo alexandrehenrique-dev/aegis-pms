@@ -1,34 +1,105 @@
-# OS files
-.DS_Store
-Thumbs.db
+# ============================================================
+# Aegis PMS — .gitignore consolidado
+# Cobre: backend (Java/Spring Boot/Maven/Gradle), frontend
+# (Node/React/Vite), Docker, Keycloak, banco de dados, OS e IDEs.
+#
+# IMPORTANTE: este arquivo só ignora artefatos locais/gerados.
+# Ele NUNCA deve ser usado para remover do versionamento as
+# configurações de Docker Compose, schemas, migrations ou specs
+# de Keycloak/PostgreSQL — bancos dedicados e persistentes são
+# decisão arquitetural (ADR-0005, ADR-0010, implementation/001
+# Features 004/005) e suas CONFIGS continuam versionadas; apenas
+# os DADOS/volumes/exports locais ficam fora do git.
+# ============================================================
 
-# Editor settings
+# ---------- OS ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---------- Editores / IDEs ----------
 .vscode/
 .idea/
+*.iml
+*.swp
+*.swo
+*~
 
-# Dependencies
+# ---------- Ambiente / segredos ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+!**/keycloak/realm-export*.json
+secrets/
+*.secret
+
+# ---------- Backend: Java / Spring Boot / Maven / Gradle ----------
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+*.class
+*.jar
+!**/wrapper/maven-wrapper.jar
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+out/
+HELP.md
+*.iws
+*.ipr
+
+# ---------- Frontend: Node / React / Vite ----------
 node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+.turbo/
+.eslintcache
+*.tsbuildinfo
 vendor/
 
-# Build outputs
-dist/
-build/
-out/
+# ---------- Build outputs genéricos ----------
 coverage/
+*.tgz
 
-# Logs
+# ---------- Logs ----------
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+logs/
 
-# Environment files
-.env
-.env.*
-!.env.example
+# ---------- Docker ----------
+docker-compose.override.yml
+.docker/
+*.pid
 
-# Temporary files
+# ---------- Banco de dados (Aegis + Keycloak) ----------
+# Volumes/dumps locais nunca versionam — bancos são persistentes
+# via volume Docker nomeado, não via arquivo no repositório.
+*.sql.gz
+*.dump
+pgdata/
+postgres-data/
+keycloak-data/
+*.mv.db
+
+# ---------- Keycloak (artefatos locais; exports versionados ficam fora deste padrão) ----------
+keycloak/themes/*/cache/
+keycloak/providers/*.jar
+
+# ---------- Temporários ----------
 *.tmp
 *.temp
 .cache/
