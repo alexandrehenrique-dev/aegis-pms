@@ -1716,6 +1716,8 @@ Feature concluída quando status do sistema indicar app + db + graph.
 
 # 23. FEATURE 017 — FRONTEND ANGULAR BASE
 
+> ⚠️ **Superado por [ADR-0011](../adr/ADR-0011-frontend-framework-react.md).** O frontend oficial do Aegis é React (já implementado em `frontend/`, com 11 sprints de refinamento validados — ver `figma-make-sprints-refinamento-v2.md`), não Angular. Esta feature e a Feature 018 (servir Angular pelo backend) ficam aqui como histórico; a estratégia de "servir a SPA pelo Spring Boot" (ADR-0009) permanece válida e se aplica ao build React. Para a refatoração arquitetural do frontend React atual, ver `docs/sprints/01_refactor_frontend_e_setup_git.md`.
+
 ## Objetivo
 
 Criar frontend Angular mais atual.

@@ -36,3 +36,4 @@ Ajuste visual pequeno, correção de typo, refactor local sem impacto, bugfix se
 | ADR-0008 | JSON Contracts | ACCEPTED |
 | ADR-0009 | SPA servido pelo Spring Boot | ACCEPTED |
 | ADR-0010 | PostgreSQL como banco inicial | ACCEPTED |
+| ADR-0011 | Framework de Frontend: React (não Angular) | ACCEPTED |

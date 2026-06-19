@@ -6,14 +6,23 @@ Bem-vindo à documentação oficial do **Aegis** — a plataforma multi-tenant, 
 
 ## Fonte da Verdade
 
-O arquivo `AEGIS_DOCUMENTO_MESTRE_V1.md` é a **constituição** do projeto. Toda decisão estrutural, princípio, política e estratégia oficial vive nele. Os demais diretórios detalham e operacionalizam o que o Documento Mestre estabelece.
+O arquivo `AEGIS_CMS_V1.md` é o **documento mestre** do projeto — a versão completa e detalhada (DDL de banco, contratos JSON, diagramas, "Leis" por domínio) das oito partes que definem o Aegis. Toda decisão estrutural, princípio, política e estratégia oficial vive nele.
+
+`AEGIS_DOCUMENTO_TECNICA.md` é a **versão condensada** do mesmo documento mestre — mesma estrutura (Parte I–VIII, seções 1–48, Seções Transversais A–D, Resumo Executivo), porém resumida. Use-a para leitura rápida ou onboarding; em caso de divergência, `AEGIS_CMS_V1.md` prevalece.
+
+`AEGIS_DOCUMENTO_MESTRE_V1.md` foi **descontinuado** (era uma terceira versão, redundante e com boilerplate excessivo, sem a profundidade de CMS_V1 nem a objetividade de TECNICA). O arquivo permanece no histórico do git, mas não deve mais ser lido nem referenciado.
 
 ## Estrutura Documental
 
 ```txt
 docs/
-├── AEGIS_DOCUMENTO_MESTRE_V1.md   # Constituição do produto (fonte de verdade)
+├── AEGIS_CMS_V1.md                # Documento mestre completo (fonte de verdade)
+├── AEGIS_DOCUMENTO_TECNICA.md     # Versão condensada do documento mestre
+├── Aegis-Vision.md                # Visão de produto e narrativa estratégica
+├── Aegis-Domain-Map.md            # Mapa de domínios (core/supporting/generic) e dependências
 ├── README.md                      # Este índice
+├── WORKTREE.md                    # Snapshot da árvore do repositório
+├── implementation/                # Roteiros de implementação numerados (001–016) + specs de Figma Make
 ├── adr/                           # Architecture Decision Records (decisões formais)
 ├── api/                           # REST/OpenAPI e GraphQL futuro
 ├── contracts/                     # Contratos JSON canônicos (fronteira frontend/backend)
@@ -26,15 +35,17 @@ docs/
 └── governance/                    # Processo de governança arquitetural e de IA
 ```
 
+Fora de `docs/`, o repositório também contém `frontend/` (SPA React/Vite gerada via Figma Make, ainda 100% mockada) e, na raiz, `AGENTS.md` + `CONTRIBUTING.md` com as convenções de gitflow e o protocolo para agentes de IA (Claude, Codex ou outros).
+
 ## Por onde começar
 
 | Você é... | Leia primeiro |
 |---|---|
-| Novo no projeto | `AEGIS_DOCUMENTO_MESTRE_V1.md` (Parte I e Resumo Executivo) |
-| Backend (Aegis) | Documento Mestre Partes II–VI + `adr/` + `database/` + `api/` |
-| UX/UI (Eirene) | Documento Mestre Parte III + `ux/` |
-| Infra (Daedalus) | Documento Mestre Parte VI + `deploy/` + `operations/` |
-| Agente de IA | Documento Mestre + `governance/` (Governança de IA) antes de qualquer mudança |
+| Novo no projeto | `AEGIS_CMS_V1.md` (Parte I e Resumo Executivo) ou `AEGIS_DOCUMENTO_TECNICA.md` para uma versão rápida |
+| Backend (Aegis) | `AEGIS_CMS_V1.md` Partes II–VI + `adr/` + `database/` + `api/` + `implementation/001` em diante |
+| UX/UI (Eirene) | `AEGIS_CMS_V1.md` Parte III + `ux/` + `implementation/002-011` (UX/Figma Make) |
+| Infra (Daedalus) | `AEGIS_CMS_V1.md` Parte VI + `deploy/` + `operations/` |
+| Agente de IA | `AGENTS.md` primeiro, depois `AEGIS_CMS_V1.md` + `governance/` (Governança de IA) antes de qualquer mudança |
 
 ## Mapa de ADRs
 

@@ -103,9 +103,13 @@ O Aegis não será:
 - ERP genérico
 - CRM genérico
 - sistema financeiro completo
-- plataforma de RH
+- plataforma de RH genérica (um RH-SaaS vertical como Gupy ou Workday)
 - e-commerce genérico
 - coleção aleatória de funcionalidades
+
+---
+
+Isto não impede que produtos de domínio específico — como um produto de RH (ex.: Conecta Talentos), de e-commerce ou financeiro — sejam **hospedados e administrados** pelo Aegis como qualquer outro produto digital. O Aegis nunca *será* o ERP, o CRM ou o RH; ele administra o produto que resolve esse domínio, da mesma forma que administra qualquer outro.
 
 ---
 
