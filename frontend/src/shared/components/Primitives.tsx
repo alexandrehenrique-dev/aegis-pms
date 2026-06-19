@@ -1,6 +1,7 @@
 import { type MouseEvent, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { AlertTriangle, ChevronDown, Circle, Lock, Plus, Sparkles } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 export const fade = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.2 } };
 
@@ -121,27 +122,60 @@ export function PageHeader({ title, desc, badge = "BYOP", children }: { title: s
   );
 }
 
-export function Field({ label, value, onChange, textarea = false }: { label: string; value: string; onChange?: (v: string) => void; textarea?: boolean }) {
+export function Field({ label, value, onChange, textarea = false, locked = false }: { label: string; value: string; onChange?: (v: string) => void; textarea?: boolean; locked?: boolean }) {
+  const className = `w-full rounded-lg border border-border bg-card p-3 text-sm outline-primary ${textarea ? "min-h-28" : ""} ${locked ? "cursor-not-allowed opacity-60" : ""}`;
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-medium">{label}</span>
       {textarea ? (
-        <textarea className="min-h-28 w-full rounded-lg border border-border bg-card p-3 text-sm outline-primary" defaultValue={value} />
+        <textarea className={className} value={value} onChange={(e) => onChange?.(e.target.value)} disabled={locked} />
       ) : (
-        <input className="w-full rounded-lg border border-border bg-card p-3 text-sm outline-primary" value={value} onChange={(e) => onChange?.(e.target.value)} />
+        <input className={className} value={value} onChange={(e) => onChange?.(e.target.value)} disabled={locked} />
       )}
     </label>
   );
 }
 
-export function SelectLike({ label, value }: { label: string; value: string }) {
+export function SelectLike({ label, value, options, onChange, locked = false }: { label: string; value: string; options?: string[]; onChange?: (v: string) => void; locked?: boolean }) {
+  if (locked) {
+    return (
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium">{label}</span>
+        <div className="flex w-full cursor-not-allowed items-center justify-between rounded-lg border border-border bg-card p-3 text-sm opacity-60">
+          <span>{value}</span>
+        </div>
+      </label>
+    );
+  }
+
+  if (!options || options.length === 0) {
+    return (
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium">{label}</span>
+        <button className="flex w-full items-center justify-between rounded-lg border border-border bg-card p-3 text-sm">
+          <span>{value}</span>
+          <ChevronDown size={15} />
+        </button>
+      </label>
+    );
+  }
+
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-medium">{label}</span>
-      <button className="flex w-full items-center justify-between rounded-lg border border-border bg-card p-3 text-sm">
-        <span>{value}</span>
-        <ChevronDown size={15} />
-      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button type="button" className="flex w-full items-center justify-between rounded-lg border border-border bg-card p-3 text-sm">
+            <span>{value}</span>
+            <ChevronDown size={15} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+          {options.map((opt) => (
+            <DropdownMenuItem key={opt} onSelect={() => onChange?.(opt)}>{opt}</DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </label>
   );
 }
