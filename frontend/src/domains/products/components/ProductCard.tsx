@@ -2,16 +2,12 @@ import { useNavigate } from "react-router";
 import { ExternalLink, MoreHorizontal } from "lucide-react";
 import { Badge, Button, Card } from "../../../shared/components/Primitives";
 import { ProductStatusBadge } from "../../../shared/components/ProductStatusBadge";
-import { products } from "../mocks/products.mocks";
+import { getProductSlug } from "../../../shared/utils/productSlugs";
+import type { ProductSummary } from "../contracts/responses";
 
-// Maestro Beton is the only seeded product with modules > 0 and a dedicated
-// detail route in this sprint; every other seeded product routes to /products
-// (list) since they have no individual mock detail page yet.
-const productSlugs: Record<string, string> = { "Maestro Beton": "maestro-beton" };
-
-export function ProductCard({ p }: { p: typeof products[number] }) {
+export function ProductCard({ p }: { p: ProductSummary }) {
   const navigate = useNavigate();
-  const slug = productSlugs[p.name];
+  const slug = getProductSlug(p.name);
   const handleOpen = () => {
     if (!p.modules) { navigate("/products/maestro-beton?empty=1"); return; }
     navigate(slug ? `/products/${slug}` : "/products");

@@ -1,5 +1,6 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AuthUser, ProductOption, TenantOption } from "../../shared/types";
+import { setAuthTokenProvider } from "../../shared/services/apiClient";
 
 type AuthContextValue = {
   authUser: AuthUser | null;
@@ -32,6 +33,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [selectedProduct, setSelectedProduct] = useState<ProductOption | null>(null);
   const [userTenants, setUserTenants] = useState<TenantOption[]>([]);
   const [userProducts, setUserProducts] = useState<Record<string, ProductOption[]>>({});
+
+  // Registra a fonte do token do apiClient. Hoje e' um token mock derivado do
+  // usuario logado; na Sprint 06 (Keycloak real) so' esta funcao muda.
+  useEffect(() => {
+    setAuthTokenProvider(() => (authUser ? `mock-token-${authUser.id}` : null));
+  }, [authUser]);
 
   const login = (user: AuthUser, tenants: TenantOption[], products: Record<string, ProductOption[]>) => {
     setAuthUser(user);

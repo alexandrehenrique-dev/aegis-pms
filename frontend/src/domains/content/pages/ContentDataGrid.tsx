@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Filter, Search } from "lucide-react";
-import { Badge, Button, EmptyState, PageHeader } from "../../../shared/components/Primitives";
-import { contents } from "../mocks/content.mocks";
+import { Badge, Button, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { contentService } from "../services/contentService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { ContentStatusBadge } from "../components/ContentStatusBadge";
 import { ContentCardMobile } from "../components/ContentCardMobile";
 
@@ -10,7 +11,12 @@ export function ContentDataGrid() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>([]);
-  const rows = contents.filter((r) => r[0].toLowerCase().includes(q.toLowerCase()));
+  const { data: contents, loading, error } = useAsyncData(() => contentService.listContent(), []);
+
+  if (loading) return <SkeletonLines />;
+  if (error || !contents) return <PartialErrorWidget />;
+
+  const rows = contents.filter((r) => r.title.toLowerCase().includes(q.toLowerCase()));
 
   return (
     <>
@@ -37,16 +43,21 @@ export function ContentDataGrid() {
               <thead className="bg-muted text-xs text-muted-foreground"><tr>{["", "Título", "Tipo", "Idioma", "Autor", "Status", "Última atualização", "Publicação", "Versão", "Ações"].map((h) => <th key={h} className="p-3 font-medium">{h}</th>)}</tr></thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r[0]} className="border-t border-border hover:bg-muted/40">
-                    <td className="p-3"><input type="checkbox" onChange={(e) => setSel(e.target.checked ? [...sel, r[0]] : sel.filter((x) => x !== r[0]))} /></td>
-                    {r.slice(0, 4).map((c) => <td key={c} className="p-3">{c}</td>)}
-                    <td className="p-3"><ContentStatusBadge status={r[4]} /></td>
-                    {r.slice(5).map((c) => <td key={c} className="p-3">{c}</td>)}
+                  <tr key={r.title} className="border-t border-border hover:bg-muted/40">
+                    <td className="p-3"><input type="checkbox" onChange={(e) => setSel(e.target.checked ? [...sel, r.title] : sel.filter((x) => x !== r.title))} /></td>
+                    <td className="p-3">{r.title}</td>
+                    <td className="p-3">{r.type}</td>
+                    <td className="p-3">{r.lang}</td>
+                    <td className="p-3">{r.author}</td>
+                    <td className="p-3"><ContentStatusBadge status={r.status} /></td>
+                    <td className="p-3">{r.updatedAt}</td>
+                    <td className="p-3">{r.publication}</td>
+                    <td className="p-3">{r.version}</td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Button onClick={() => navigate(`/content/${r[0].toLowerCase()}/editor`)}>Abrir</Button>
-                        <Button onClick={() => navigate(`/content/${r[0].toLowerCase()}/preview`)}>Preview</Button>
-                        <Button onClick={() => navigate(`/content/${r[0].toLowerCase()}/versions`)}>Histórico</Button>
+                        <Button onClick={() => navigate(`/content/${r.title.toLowerCase()}/editor`)}>Abrir</Button>
+                        <Button onClick={() => navigate(`/content/${r.title.toLowerCase()}/preview`)}>Preview</Button>
+                        <Button onClick={() => navigate(`/content/${r.title.toLowerCase()}/versions`)}>Histórico</Button>
                       </div>
                     </td>
                   </tr>
@@ -54,7 +65,7 @@ export function ContentDataGrid() {
               </tbody>
             </table>
           </div>
-          <div className="grid gap-3 lg:hidden">{rows.map((r) => <ContentCardMobile key={r[0]} row={r} />)}</div>
+          <div className="grid gap-3 lg:hidden">{rows.map((r) => <ContentCardMobile key={r.title} row={r} />)}</div>
         </>
       )}
     </>

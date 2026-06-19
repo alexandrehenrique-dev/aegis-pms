@@ -5,6 +5,7 @@ export const mockUsers: Record<string, { password: string; user: AuthUser; error
   "admin@byop.io": { password: "senha123", user: { id: "u1", name: "Ana Martins", email: "admin@byop.io", role: "tenant_admin", initials: "AM" } },
   "pm@byop.io": { password: "senha123", user: { id: "u2", name: "Marina Costa", email: "pm@byop.io", role: "product_manager", initials: "MC" } },
   "editor@byop.io": { password: "senha123", user: { id: "u3", name: "Rafael Lima", email: "editor@byop.io", role: "editor", initials: "RL" } },
+  "viewer@byop.io": { password: "senha123", user: { id: "u6", name: "João Alves", email: "viewer@byop.io", role: "viewer", initials: "JA" } },
   "blocked@byop.io": { password: "senha123", user: { id: "u4", name: "Bloqueado", email: "blocked@byop.io", role: "viewer", initials: "BL" }, error: "blocked" },
 };
 
@@ -21,6 +22,7 @@ export const mockTenantsByUser: Record<string, TenantOption[]> = {
   ],
   u2: [{ id: "t1", name: "BYOP", plan: "Pro", productCount: 6, lastAccess: "há 12 min", status: "ativo" }],
   u3: [{ id: "t1", name: "BYOP", plan: "Pro", productCount: 6, lastAccess: "ontem", status: "ativo" }],
+  u6: [{ id: "t1", name: "BYOP", plan: "Pro", productCount: 6, lastAccess: "3 dias", status: "ativo" }],
 };
 
 export const mockProductsByUser: Record<string, Record<string, ProductOption[]>> = {
@@ -65,4 +67,5 @@ export const mockProductsByUser: Record<string, Record<string, ProductOption[]>>
     ],
   },
   u3: { t1: [{ id: "p1", name: "Maestro Beton", type: "Site Institucional", status: "Ativo", modules: 6, isFavorite: true }] },
+  u6: { t1: [{ id: "p1", name: "Maestro Beton", type: "Site Institucional", status: "Ativo", modules: 6, isFavorite: true }] },
 };

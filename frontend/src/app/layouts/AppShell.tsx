@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { AlertTriangle, CheckCircle2, Clock3, HelpCircle, LogOut, Menu, Monitor, Moon, Sun, X } from "lucide-react";
+import { AlertTriangle, Building2, CheckCircle2, Clock3, HelpCircle, LogOut, Menu, Monitor, Moon, Sun, X } from "lucide-react";
 
 import { useAuth } from "../../core/auth/AuthContext";
 import { useViewAsRole } from "../../core/permissions/ViewAsRoleContext";
@@ -116,6 +116,11 @@ export function AppShell() {
           <Switcher label="Produto" active={effectiveProduct.name} items={productSwitcherItems} onSelect={(item) => { switchProduct(item.id); navigate("/dashboard"); }} />
         </div>
         <div className="ml-auto flex items-center gap-1.5">
+          {viewAsRole === "super_admin" && (
+            <button onClick={() => navigate("/select-tenant")} className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-sm transition hover:bg-muted" title="Ir para a tela de Super Admin">
+              <Building2 size={15} /><span className="hidden sm:inline">Super Admin</span>
+            </button>
+          )}
           <GlobalSearch />
           <Notifications />
           <button onClick={() => setTheme(themeNext[theme])} className="rounded-xl border border-border bg-card p-2 transition hover:bg-muted" title="Alternar tema">{themeIcon}</button>

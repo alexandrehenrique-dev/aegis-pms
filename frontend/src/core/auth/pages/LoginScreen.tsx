@@ -5,6 +5,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { mockUsers, mockTenantsByUser, mockProductsByUser } from "../mocks/users";
 import { AuthCard, AuthEnvBadge, AuthLogo } from "../components/AuthChrome";
+import { getApiMode } from "../../config/keycloakConfig";
 import type { LoginError } from "../../../shared/types";
 
 export function LoginScreen() {
@@ -68,11 +69,17 @@ export function LoginScreen() {
         <div className="mt-6 border-t border-border pt-4 text-center text-sm text-muted-foreground">
           Primeiro acesso? <button onClick={() => navigate("/invite")} className="text-primary transition hover:underline">Ativar convite</button>
         </div>
-        <div className="mt-4 rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
-          <p className="mb-1 font-medium">Contas de demonstração</p>
-          <p>admin@byop.io · pm@byop.io · editor@byop.io</p>
-          <p>Senha: <span className="font-mono">senha123</span></p>
-        </div>
+        {getApiMode() === "mock" && (
+          <div className="mt-4 rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
+            <p className="mb-1 font-medium">Contas de demonstração</p>
+            <p>super-admin@byop.io · Super Admin</p>
+            <p>admin@byop.io · Tenant Admin</p>
+            <p>pm@byop.io · Product Manager</p>
+            <p>editor@byop.io · Editor</p>
+            <p>viewer@byop.io · Viewer</p>
+            <p className="mt-1">Senha: <span className="font-mono">senha123</span></p>
+          </div>
+        )}
       </AuthCard>
     </div>
   );

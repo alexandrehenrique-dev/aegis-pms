@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type MouseEvent, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { AlertTriangle, ChevronDown, Circle, Lock, Plus, Sparkles } from "lucide-react";
 
@@ -46,11 +46,12 @@ export function Badge({ children, tone = "neutral" }: { children: ReactNode; ton
   return <span className={`rounded-full px-2 py-1 text-[11px] font-medium ${c}`}>{children}</span>;
 }
 
-export function Card({ children, className = "", onClick }: { children: ReactNode; className?: string; onClick?: () => void }) {
+export function Card({ children, className = "", onClick, onContextMenu }: { children: ReactNode; className?: string; onClick?: () => void; onContextMenu?: (e: MouseEvent) => void }) {
   return (
     <motion.div
       {...fade}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       className={`rounded-2xl border border-border bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-none ${onClick ? "cursor-pointer hover:border-primary/30 hover:shadow-[0_2px_12px_rgba(124,58,237,0.08)] transition-shadow" : ""} ${className}`}
     >
       {children}

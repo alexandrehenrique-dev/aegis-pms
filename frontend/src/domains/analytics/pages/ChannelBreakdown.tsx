@@ -1,8 +1,11 @@
-import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
+import { Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { ChartContainer, ComparisonBadge } from "../components/AnalyticsBits";
-import { channels } from "../mocks/analytics.mocks";
+import { analyticsService } from "../services/analyticsService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 
 export function ChannelBreakdown() {
+  const { data: channels, loading, error } = useAsyncData(() => analyticsService.listChannels(), []);
+
   return (
     <>
       <PageHeader title="Traffic & Channels" module="Analytics" desc="Compare tráfego e conversão por origem para decidir onde agir." badge="Canais">
@@ -13,8 +16,8 @@ export function ChannelBreakdown() {
           <ChartContainer title="Gráfico de canais" type="bar" />
           <Card>
             <h2 className="mb-3 text-lg font-semibold">Tabela de origem</h2>
-            {channels.map((c) => (
-              <div key={c[0]} className="mb-2 grid grid-cols-4 gap-2 rounded-xl border border-border p-3 text-sm"><b>{c[0]}</b><span>{c[1]} visitas</span><span>{c[2]} conv.</span><ComparisonBadge value={c[3]} /></div>
+            {loading ? <SkeletonLines /> : error || !channels ? <PartialErrorWidget /> : channels.map((c) => (
+              <div key={c.name} className="mb-2 grid grid-cols-4 gap-2 rounded-xl border border-border p-3 text-sm"><b>{c.name}</b><span>{c.visits} visitas</span><span>{c.conversion} conv.</span><ComparisonBadge value={c.trend} /></div>
             ))}
           </Card>
         </div>

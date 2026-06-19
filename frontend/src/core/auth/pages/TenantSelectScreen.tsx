@@ -1,26 +1,69 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Boxes, Clock3, LogOut } from "lucide-react";
+import { Boxes, Clock3, LogOut, Plus } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { roleLabels } from "../../permissions/roles";
+import { tenantsService } from "../../tenants/services/tenantsService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AegisLogo } from "../../../shared/components/AegisLogo";
-import { Badge, EmptyState, fade } from "../../../shared/components/Primitives";
+import { Badge, Button, EmptyState, Field, fade } from "../../../shared/components/Primitives";
+import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
+import { toast } from "../../notifications/toast";
+// domains/tenants são consumidos aqui mesmo vivendo em core/auth: a gestão de
+// tenants do Super Admin reaproveita esta tela (não existe /admin/tenants
+// separado) e o wizard de onboarding inerentemente cruza para os domínios de
+// produtos/usuários — ver CreateTenantWizardModal.
+import { CreateTenantWizardModal } from "../../../domains/tenants/components/CreateTenantWizardModal";
+import { EditTenantModal } from "../../../domains/tenants/components/EditTenantModal";
+import { TenantContextMenu, type ContextMenuTarget } from "../../../domains/tenants/components/TenantContextMenu";
+import type { TenantOption } from "../../../shared/types";
 
 export function TenantSelectScreen() {
   const navigate = useNavigate();
   const { authUser, userTenants, selectTenant, logout } = useAuth();
   const [q, setQ] = useState("");
-  if (!authUser) return null;
-  const filtered = userTenants.filter((t) => t.name.toLowerCase().includes(q.toLowerCase()));
+  const isSuperAdmin = authUser?.role === "super_admin";
 
-  const handleSelect = (t: typeof userTenants[number]) => {
+  const [reloadKey, setReloadKey] = useState(0);
+  const refresh = () => setReloadKey((k) => k + 1);
+  const { data: allTenants } = useAsyncData(() => tenantsService.listTenants(), [reloadKey]);
+
+  const [showCreateWizard, setShowCreateWizard] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<TenantOption | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<TenantOption | null>(null);
+  const [confirmationText, setConfirmationText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ tenant: TenantOption; position: ContextMenuTarget } | null>(null);
+
+  if (!authUser) return null;
+
+  // Super Admin gerencia a plataforma inteira (tenantsService); demais
+  // papéis veem só os tenants aos quais já têm acesso (userTenants do login).
+  const tenants = isSuperAdmin ? (allTenants ?? []) : userTenants;
+  const filtered = tenants.filter((t) => t.name.toLowerCase().includes(q.toLowerCase()));
+
+  const handleSelect = (t: TenantOption) => {
     if (t.status === "suspenso") return;
     selectTenant(t);
     navigate("/select-product");
   };
 
   const handleLogout = () => { logout(); navigate("/login"); };
+
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await tenantsService.remove(pendingDelete.id, { confirmationText });
+      toast.success(`${pendingDelete.name} foi excluído.`, { description: "Produtos e usuários deste tenant perderam acesso." });
+      setPendingDelete(null);
+      setConfirmationText("");
+      refresh();
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -37,14 +80,27 @@ export function TenantSelectScreen() {
       </header>
       <main className="mx-auto max-w-3xl px-4 py-12">
         <motion.div {...fade}>
-          <h1 className="text-2xl font-semibold tracking-[-.02em]">Selecione seu espaço de trabalho</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Você tem acesso a {userTenants.length} tenant{userTenants.length !== 1 ? "s" : ""}.</p>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-[-.02em]">{isSuperAdmin ? "Gestão de Tenants" : "Selecione seu espaço de trabalho"}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {isSuperAdmin ? "Todos os tenants da plataforma. Botão direito sobre um tenant para editar ou excluir." : `Você tem acesso a ${userTenants.length} tenant${userTenants.length !== 1 ? "s" : ""}.`}
+              </p>
+            </div>
+            {isSuperAdmin && <Button primary onClick={() => setShowCreateWizard(true)}><Plus size={15} />Criar Tenant</Button>}
+          </div>
           <div className="mt-6 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar tenant..." className="w-full bg-transparent text-sm outline-none" />
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {filtered.length === 0 ? <EmptyState compact title="Nenhum tenant encontrado" description="Ajuste a busca." /> : filtered.map((t) => (
-              <button key={t.id} onClick={() => handleSelect(t)} disabled={t.status === "suspenso"} className="group rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary hover:shadow-[0_8px_30px_rgba(15,61,46,.08)] disabled:opacity-50">
+              <button
+                key={t.id}
+                onClick={() => handleSelect(t)}
+                onContextMenu={(e) => { if (!isSuperAdmin) return; e.preventDefault(); setContextMenu({ tenant: t, position: { x: e.clientX, y: e.clientY } }); }}
+                disabled={t.status === "suspenso"}
+                className="group rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary hover:shadow-[0_8px_30px_rgba(15,61,46,.08)] disabled:opacity-50"
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 font-semibold text-primary">{t.name.charAt(0)}</div>
@@ -62,6 +118,37 @@ export function TenantSelectScreen() {
           </div>
         </motion.div>
       </main>
+
+      {contextMenu && (
+        <TenantContextMenu
+          position={contextMenu.position}
+          onEdit={() => { setEditingTenant(contextMenu.tenant); setContextMenu(null); }}
+          onDelete={() => { setPendingDelete(contextMenu.tenant); setContextMenu(null); }}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {showCreateWizard && (
+        <CreateTenantWizardModal onClose={() => setShowCreateWizard(false)} onDone={refresh} />
+      )}
+
+      {editingTenant && (
+        <EditTenantModal tenant={editingTenant} onClose={() => setEditingTenant(null)} onSaved={() => { setEditingTenant(null); refresh(); }} />
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title={`Excluir ${pendingDelete.name}?`}
+          desc={`Esta ação é irreversível. Todos os ${pendingDelete.productCount} produtos deste tenant e o acesso de todos os usuários associados a eles serão removidos imediatamente. Digite o nome do tenant para confirmar.`}
+          danger
+          loading={deleting}
+          confirmDisabled={confirmationText.trim() !== pendingDelete.name}
+          onCancel={() => { setPendingDelete(null); setConfirmationText(""); }}
+          onConfirm={handleDelete}
+        >
+          <Field label={`Digite "${pendingDelete.name}" para confirmar`} value={confirmationText} onChange={setConfirmationText} />
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

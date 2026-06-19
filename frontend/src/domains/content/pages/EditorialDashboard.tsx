@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router";
 import { AlertTriangle, Plus } from "lucide-react";
 import { Badge, Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
-import { editEvents } from "../mocks/content.mocks";
+import { contentService } from "../services/contentService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 
 function EditorialAttentionCard() {
   return (
@@ -16,9 +17,10 @@ function EditorialAttentionCard() {
 }
 
 function EditorialTimeline() {
+  const { data: editEvents } = useAsyncData(() => contentService.listEditEvents(), []);
   return (
     <div className="space-y-1">
-      {editEvents.map((t, i) => (
+      {(editEvents ?? []).map((t, i) => (
         <div key={t} className="flex gap-3 rounded-xl p-3 hover:bg-muted">
           <span className="mt-1 h-2.5 w-2.5 rounded-full bg-primary" />
           <div><p className="text-sm font-medium">{t}</p><p className="text-xs text-muted-foreground">há {i + 1} h · BYOP → Maestro Beton → Conteúdo</p></div>

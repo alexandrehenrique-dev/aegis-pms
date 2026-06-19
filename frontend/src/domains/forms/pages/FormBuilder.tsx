@@ -1,16 +1,20 @@
 import { Plus } from "lucide-react";
-import { Badge, Button, Card, Field, PageHeader, SelectLike } from "../../../shared/components/Primitives";
-import { fieldTypes } from "../mocks/forms.mocks";
+import { Badge, Button, Card, Field, PageHeader, SelectLike, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { formsService } from "../services/formsService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 
 function FieldCard({ name }: { name: string }) {
   return <button className="flex w-full items-center justify-between rounded-xl border border-border bg-card p-3 text-left text-sm transition hover:bg-muted"><span>{name}</span><Plus size={14} /></button>;
 }
 
 function FieldPalette() {
+  const { data: fieldTypes, loading, error } = useAsyncData(() => formsService.listFieldTypes(), []);
   return (
     <Card className="h-full">
       <h2 className="mb-3 text-lg font-semibold">Biblioteca de campos</h2>
-      <div className="grid gap-2">{fieldTypes.map((f) => <FieldCard key={f} name={f} />)}</div>
+      {loading ? <SkeletonLines /> : error || !fieldTypes ? <PartialErrorWidget /> : (
+        <div className="grid gap-2">{fieldTypes.map((f) => <FieldCard key={f} name={f} />)}</div>
+      )}
     </Card>
   );
 }

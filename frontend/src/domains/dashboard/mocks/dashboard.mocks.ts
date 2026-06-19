@@ -1,8 +1,26 @@
 import { FileText, Image, Boxes, BarChart3, Globe2, Sparkles, Workflow, Clock3, ShieldCheck, PanelRight } from "lucide-react";
 
-// Dashboard reuses the products domain's canonical mock list (single source of truth).
-export { products } from "../../products/mocks/products.mocks";
+// KPIs do hub do tenant. Vira GET /api/v1/dashboard/summary quando o backend
+// existir (ver docs/trace/00_endpoints_esperados.md, Seção B) — provavelmente
+// um agregador sobre os endpoints de tenants/produtos/módulos já definidos.
+export const dashboardSummary = {
+  activeProducts: 5,
+  archivedProducts: 1,
+  pendingContent: 18,
+  pendingContentNeedingReview: 7,
+  openApprovals: 6,
+  criticalApprovals: 2,
+  formsReceived: 143,
+  formsReceivedToday: 12,
+  recentAssets: 32,
+  activeUsers: 21,
+  productManagers: 9,
+  conversionRate: "4.8%",
+};
 
+// Cross-domain reuse: o catálogo de módulos pertence conceitualmente a
+// products, mas a lista canônica ainda vive aqui (movida de App.tsx na
+// Sprint 01). productsService.listModuleCatalog() importa daqui.
 export const modules = [
   [FileText, "Conteúdo", "Operar páginas, artigos e workflow editorial.", "habilitado", "MVP", "Sem dependências", "Publicação e governança"],
   [Image, "Assets", "Centralizar mídia, documentos e metadados.", "habilitado", "MVP", "Storage", "Organização de acervo"],

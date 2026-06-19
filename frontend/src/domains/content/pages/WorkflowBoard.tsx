@@ -1,21 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { Badge, Button, Card, EmptyState, PageHeader } from "../../../shared/components/Primitives";
+import { Badge, Button, Card, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 import { roleLabels } from "../../../core/permissions/roles";
 import { toast } from "../../../core/notifications/toast";
-import { wfInitialItems, type PendingDrop, type WFEvent, type WFItem, type WFStatus } from "../mocks/content.mocks";
+import { contentService } from "../services/contentService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import type { PendingDrop, WFEvent, WFItem, WFStatus } from "../mocks/content.mocks";
 import { WFLane } from "../components/WFLane";
 import { TransitionModal } from "../components/TransitionModal";
 
 export function WorkflowBoard() {
   const { viewAsRole } = useViewAsRole();
-  const [items, setItems] = useState<WFItem[]>(wfInitialItems);
+  const { data: initialItems, loading, error } = useAsyncData(() => contentService.listWorkflowItems(), []);
+  const [items, setItems] = useState<WFItem[]>([]);
   const [pending, setPending] = useState<PendingDrop | null>(null);
   const [events, setEvents] = useState<WFEvent[]>([]);
   const lanes: WFStatus[] = ["Draft", "In Review", "Published", "Archived"];
+
+  useEffect(() => { if (initialItems) setItems(initialItems); }, [initialItems]);
+
+  if (loading) return <SkeletonLines />;
+  if (error) return <PartialErrorWidget />;
 
   const handleDrop = (itemId: string, toLane: WFStatus) => {
     const item = items.find((i) => i.id === itemId);

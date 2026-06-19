@@ -2,14 +2,20 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Search } from "lucide-react";
 import { Badge, Button, EmptyState, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
-import { assets } from "../mocks/assets.mocks";
+import { assetsService } from "../services/assetsService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AssetCard, AssetStatusBadge } from "../components/AssetBits";
 
 export function AssetLibrary() {
   const navigate = useNavigate();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [q, setQ] = useState("");
-  const rows = assets.filter((a) => (a[0] + a[4] + a[1]).toLowerCase().includes(q.toLowerCase()));
+  const { data: assets, loading, error } = useAsyncData(() => assetsService.listAssets(), []);
+
+  if (loading) return <SkeletonLines />;
+  if (error || !assets) return <PartialErrorWidget />;
+
+  const rows = assets.filter((a) => (a.name + a.tags + a.type).toLowerCase().includes(q.toLowerCase()));
 
   return (
     <>
@@ -37,21 +43,27 @@ export function AssetLibrary() {
         <PermissionHint />
       </div>
       {rows.length === 0 ? <EmptyState title="Busca sem resultado" description="Nenhum asset corresponde aos filtros atuais." /> : view === "grid" ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{rows.map((a) => <AssetCard key={a[0]} a={a} />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{rows.map((a) => <AssetCard key={a.name} a={a} />)}</div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <table className="hidden w-full text-left text-sm lg:table">
             <thead className="bg-muted text-xs text-muted-foreground"><tr>{["Nome", "Tipo", "Tamanho", "Status", "Tags", "Uso", "Data", "Ações"].map((h) => <th key={h} className="p-3 font-medium">{h}</th>)}</tr></thead>
             <tbody>
               {rows.map((a) => (
-                <tr key={a[0]} className="border-t border-border hover:bg-muted/40">
-                  {a.map((c, i) => <td key={c} className="p-3">{i === 3 ? <AssetStatusBadge status={c} /> : c}</td>)}
-                  <td className="p-3"><Button onClick={() => navigate(`/assets/${a[0].replace(/\.[a-z0-9]+$/i, "")}`)}>Abrir</Button></td>
+                <tr key={a.name} className="border-t border-border hover:bg-muted/40">
+                  <td className="p-3">{a.name}</td>
+                  <td className="p-3">{a.type}</td>
+                  <td className="p-3">{a.size}</td>
+                  <td className="p-3"><AssetStatusBadge status={a.status} /></td>
+                  <td className="p-3">{a.tags}</td>
+                  <td className="p-3">{a.usage}</td>
+                  <td className="p-3">{a.uploadedAt}</td>
+                  <td className="p-3"><Button onClick={() => navigate(`/assets/${a.name.replace(/\.[a-z0-9]+$/i, "")}`)}>Abrir</Button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div className="grid gap-2 p-3 lg:hidden">{rows.map((a) => <AssetCard key={a[0]} a={a} />)}</div>
+          <div className="grid gap-2 p-3 lg:hidden">{rows.map((a) => <AssetCard key={a.name} a={a} />)}</div>
         </div>
       )}
     </>
