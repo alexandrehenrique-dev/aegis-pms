@@ -371,6 +371,8 @@ Definir variáveis de ambiente necessárias para infraestrutura local.
 
 ## Tarefas
 
+> ⚠️ **Porta do Keycloak corrigida:** este roteiro original usa `8181`. A decisão vigente do projeto (registrada na Sprint 09 do frontend, `docs/sprints/09_servicos_integracao_fluxo_super_admin_e_build.md`) é **`8282`**. Os arquivos executáveis de `docs/sprints/sprint-02-fundacao-backend-gpt/` já usam `8282` — use sempre esses arquivos como fonte da verdade, não os valores abaixo.
+
 Atualizar `.env.example` com:
 
 ```env

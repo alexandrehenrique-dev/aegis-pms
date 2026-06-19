@@ -1,5 +1,7 @@
 # Sprint 04 — Integração frontend-backend com contratos
 
+> ⚠️ **Obsoleta — substituída pela Sprint 09.** O diagnóstico abaixo ("zero `fetch`/`axios` em `App.tsx`") refere-se a um arquivo monolítico que não existe mais — a Sprint 01 já refatorou o frontend para `src/app/`, `src/core/`, `src/domains/`, `src/shared/`, cada domínio com seus próprios `mocks/`. O objetivo conceitual (camada `services/` + `contracts/` tipados, nenhum componente de UI chamando rede direto) continua válido e correto, mas o desenho concreto — caminhos de arquivo, lista de domínios, integração com o toggle mock/real da Sprint 07 — está em `docs/sprints/09_servicos_integracao_fluxo_super_admin_e_build.md`. Use a Sprint 09 como fonte da verdade; mantenha este arquivo apenas como registro histórico do diagnóstico original.
+
 > Pré-requisito: Sprint 01 (arquitetura), Sprint 02 (backend rodando) concluídas.
 
 ## Contexto
