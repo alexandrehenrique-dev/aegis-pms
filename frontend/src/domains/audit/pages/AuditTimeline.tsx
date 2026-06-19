@@ -1,10 +1,16 @@
 import { Filter } from "lucide-react";
-import { Button, Card, EmptyState, PageHeader } from "../../../shared/components/Primitives";
+import { Button, Card, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { AuditEventCard } from "../components/AuditEventCard";
-import { auditEvents } from "../mocks/audit.mocks";
+import { auditService } from "../services/auditService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 
 export function AuditTimeline({ compact = false }: { compact?: boolean }) {
-  const body = <div>{auditEvents.map((e) => <AuditEventCard key={`${e[0]}-${e[1]}-${e[5]}`} e={e} />)}</div>;
+  const { data: auditEvents, loading, error } = useAsyncData(() => auditService.listEvents(), []);
+
+  if (loading) return <SkeletonLines />;
+  if (error || !auditEvents) return <PartialErrorWidget />;
+
+  const body = <div>{auditEvents.map((e) => <AuditEventCard key={`${e.actor}-${e.action}-${e.time}`} e={e} />)}</div>;
   if (compact) return body;
   return (
     <>

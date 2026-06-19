@@ -1,11 +1,13 @@
 import { useNavigate } from "react-router";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { Button, Card, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
-import { settingCards } from "../mocks/settings.mocks";
+import { settingsService } from "../services/settingsService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { SettingsCard } from "../components/SettingsBits";
 
 export function SettingsOverview() {
   const navigate = useNavigate();
+  const { data: settingCards, loading, error } = useAsyncData(() => settingsService.listSettingCards(), []);
   const attnItems: [string, string][] = [
     ["2 usuários com convite pendente.", "/users"],
     ["1 integração sem configuração.", "/settings/security"],
@@ -18,7 +20,9 @@ export function SettingsOverview() {
         <Button onClick={() => navigate("/audit")}>Ver auditoria</Button>
         <Button primary onClick={() => navigate("/settings/product")}>Configurar produto</Button>
       </PageHeader>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{settingCards.map((c) => <SettingsCard key={c[0]} c={c} />)}</div>
+      {loading ? <SkeletonLines /> : error || !settingCards ? <PartialErrorWidget /> : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{settingCards.map((c) => <SettingsCard key={c.name} c={c} />)}</div>
+      )}
       <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Atenção administrativa</h2>
