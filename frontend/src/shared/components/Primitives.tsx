@@ -1,0 +1,146 @@
+import { type ReactNode } from "react";
+import { motion } from "motion/react";
+import { AlertTriangle, ChevronDown, Circle, Lock, Plus, Sparkles } from "lucide-react";
+
+export const fade = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.2 } };
+
+export function Button({ children, primary = false, onClick, disabled }: { children: ReactNode; primary?: boolean; onClick?: () => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.97] active:opacity-90 ${primary ? "border-primary bg-primary text-primary-foreground shadow-[0_4px_14px_rgba(124,58,237,.25)] hover:bg-primary/90" : "border-border bg-card text-foreground hover:bg-muted"}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function SkeletonCard() {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="mb-3 h-4 w-24 animate-pulse rounded-lg bg-muted" />
+      <div className="h-7 w-16 animate-pulse rounded-lg bg-muted" />
+      <div className="mt-2 h-3 w-32 animate-pulse rounded-lg bg-muted" />
+    </div>
+  );
+}
+
+export function SkeletonLines() {
+  return (
+    <div className="space-y-2">
+      {[1, 2, 3, 4].map((i) => <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />)}
+    </div>
+  );
+}
+
+export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "green" | "blue" | "amber" | "red" | "violet" }) {
+  const c = {
+    green: "bg-[#dcfce7] text-[#15803d]",
+    blue: "bg-[#dbeafe] text-[#1d4ed8]",
+    amber: "bg-[#fef3c7] text-[#b45309]",
+    red: "bg-[#fee2e2] text-[#dc2626]",
+    violet: "bg-[#ede9fe] text-[#7c3aed]",
+    neutral: "bg-muted text-muted-foreground",
+  }[tone];
+  return <span className={`rounded-full px-2 py-1 text-[11px] font-medium ${c}`}>{children}</span>;
+}
+
+export function Card({ children, className = "", onClick }: { children: ReactNode; className?: string; onClick?: () => void }) {
+  return (
+    <motion.div
+      {...fade}
+      onClick={onClick}
+      className={`rounded-2xl border border-border bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-none ${onClick ? "cursor-pointer hover:border-primary/30 hover:shadow-[0_2px_12px_rgba(124,58,237,0.08)] transition-shadow" : ""} ${className}`}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+export function KPIWidget({ label, value, detail, locked, error, onClick }: { label: string; value: string; detail: string; locked?: boolean; error?: boolean; onClick?: () => void }) {
+  return (
+    <Card onClick={!locked ? onClick : undefined}>
+      <div className="flex items-start justify-between">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        {locked ? <Lock size={16} /> : error ? <AlertTriangle size={16} className="text-destructive" /> : <Circle size={10} className="mt-1 fill-primary text-primary" />}
+      </div>
+      <p className="mt-3 text-2xl font-semibold tracking-[-.02em]">{locked ? "Restrito" : error ? "Parcial" : value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{locked ? "Sem permissão para este widget" : error ? "Alguns dados não carregaram" : detail}</p>
+    </Card>
+  );
+}
+
+export function PermissionHint() {
+  return (
+    <div className="rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+      <Lock size={16} className="mb-2" />
+      Alguns indicadores dependem do perfil Tenant Admin ou Product Manager.
+    </div>
+  );
+}
+
+export function PartialErrorWidget() {
+  return (
+    <div className="rounded-xl border border-destructive/20 bg-[#FDEBE8]/50 p-3 text-sm">
+      <AlertTriangle size={16} className="mb-2 text-destructive" />
+      <b>Erro parcial:</b> dados de conversão indisponíveis. Os demais widgets continuam operacionais.
+    </div>
+  );
+}
+
+export function EmptyState({ compact = false, title = "Nenhum produto criado ainda.", description = "Comece criando o primeiro item para operar este contexto digital." }: { compact?: boolean; title?: string; description?: string }) {
+  return (
+    <div className={`rounded-xl border border-dashed border-border bg-muted/40 text-center ${compact ? "p-3" : "p-8"}`}>
+      <Sparkles className="mx-auto mb-2 text-primary" size={compact ? 18 : 28} />
+      <p className="font-medium">{title}</p>
+      <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-muted-foreground">{description}</p>
+      {!compact && (
+        <div className="mt-4 flex justify-center gap-2">
+          <Button primary><Plus size={15} />Criar produto</Button>
+          <Button>Ver documentação</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function PageHeader({ title, desc, badge = "BYOP", children }: { title: string; desc: string; module?: string; badge?: string; children?: ReactNode }) {
+  return (
+    <motion.header {...fade} className="mb-6 flex flex-col gap-3 border-b border-border pb-5 md:flex-row md:items-end md:justify-between">
+      <div>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-[-.02em] md:text-3xl">{title}</h1>
+          <Badge tone="violet">{badge}</Badge>
+        </div>
+        <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">{desc}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </motion.header>
+  );
+}
+
+export function Field({ label, value, onChange, textarea = false }: { label: string; value: string; onChange?: (v: string) => void; textarea?: boolean }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium">{label}</span>
+      {textarea ? (
+        <textarea className="min-h-28 w-full rounded-lg border border-border bg-card p-3 text-sm outline-primary" defaultValue={value} />
+      ) : (
+        <input className="w-full rounded-lg border border-border bg-card p-3 text-sm outline-primary" value={value} onChange={(e) => onChange?.(e.target.value)} />
+      )}
+    </label>
+  );
+}
+
+export function SelectLike({ label, value }: { label: string; value: string }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium">{label}</span>
+      <button className="flex w-full items-center justify-between rounded-lg border border-border bg-card p-3 text-sm">
+        <span>{value}</span>
+        <ChevronDown size={15} />
+      </button>
+    </label>
+  );
+}
