@@ -6,7 +6,7 @@ export function ProductEmpty() {
   return (
     <>
       <PageHeader title="Conecta Talentos" desc="Produto recém-criado aguardando capacidades iniciais." badge="Sem módulos">
-        <Button>Editar dados do produto</Button>
+        <Button onClick={() => navigate("/settings/product")}>Editar dados do produto</Button>
         <Button primary onClick={() => navigate("/products/maestro-beton/modules")}>Habilitar módulos</Button>
       </PageHeader>
       <EmptyState title="Este produto ainda não possui módulos habilitados." description="Escolha as capacidades iniciais para começar a operar este produto digital." />
