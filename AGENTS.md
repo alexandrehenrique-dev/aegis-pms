@@ -11,7 +11,7 @@ Se você é um agente de IA agnóstico de ferramenta (não especificamente Claud
 ## 1. Antes de qualquer mudança
 
 1. Leia este arquivo até o fim.
-2. Leia `docs/README.md` para entender a estrutura documental e qual é a fonte de verdade (`docs/AEGIS_CMS_V1.md`).
+2. Leia `docs/README.md` para entender a estrutura documental e qual é a fonte de verdade (`docs/AEGIS_PMS_V1.md`).
 3. Leia `docs/implementation/016_aegis_constitution.md`. Nenhuma mudança pode violar a Constituição do Aegis.
 4. Verifique `docs/adr/README.md` — se a sua tarefa toca em banco, autenticação, framework, contrato público ou modelo multi-tenant, **já existe um ADR sobre isso**. Não decida de novo o que já foi decidido; siga o ADR vigente.
 5. Se a tarefa vier de um arquivo em `docs/sprints/`, execute exatamente o que o arquivo da sprint descreve, na ordem descrita, e pare nos critérios de aceite.

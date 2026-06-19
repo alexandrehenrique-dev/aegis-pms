@@ -1,4 +1,4 @@
-# Documentação do Aegis CMS
+# Documentação do Aegis PMS
 
 Bem-vindo à documentação oficial do **Aegis** — a plataforma multi-tenant, multi-produto, modular e orientada a contratos do ecossistema **BYOP (Build Your Own Path)**.
 
@@ -6,9 +6,9 @@ Bem-vindo à documentação oficial do **Aegis** — a plataforma multi-tenant, 
 
 ## Fonte da Verdade
 
-O arquivo `AEGIS_CMS_V1.md` é o **documento mestre** do projeto — a versão completa e detalhada (DDL de banco, contratos JSON, diagramas, "Leis" por domínio) das oito partes que definem o Aegis. Toda decisão estrutural, princípio, política e estratégia oficial vive nele.
+O arquivo `AEGIS_PMS_V1.md` é o **documento mestre** do projeto — a versão completa e detalhada (DDL de banco, contratos JSON, diagramas, "Leis" por domínio) das oito partes que definem o Aegis. Toda decisão estrutural, princípio, política e estratégia oficial vive nele.
 
-`AEGIS_DOCUMENTO_TECNICA.md` é a **versão condensada** do mesmo documento mestre — mesma estrutura (Parte I–VIII, seções 1–48, Seções Transversais A–D, Resumo Executivo), porém resumida. Use-a para leitura rápida ou onboarding; em caso de divergência, `AEGIS_CMS_V1.md` prevalece.
+`AEGIS_DOCUMENTO_TECNICA.md` é a **versão condensada** do mesmo documento mestre — mesma estrutura (Parte I–VIII, seções 1–48, Seções Transversais A–D, Resumo Executivo), porém resumida. Use-a para leitura rápida ou onboarding; em caso de divergência, `AEGIS_PMS_V1.md` prevalece.
 
 `AEGIS_DOCUMENTO_MESTRE_V1.md` foi **descontinuado** (era uma terceira versão, redundante e com boilerplate excessivo, sem a profundidade de CMS_V1 nem a objetividade de TECNICA). O arquivo permanece no histórico do git, mas não deve mais ser lido nem referenciado.
 
@@ -16,7 +16,7 @@ O arquivo `AEGIS_CMS_V1.md` é o **documento mestre** do projeto — a versão c
 
 ```txt
 docs/
-├── AEGIS_CMS_V1.md                # Documento mestre completo (fonte de verdade)
+├── AEGIS_PMS_V1.md                # Documento mestre completo (fonte de verdade)
 ├── AEGIS_DOCUMENTO_TECNICA.md     # Versão condensada do documento mestre
 ├── Aegis-Vision.md                # Visão de produto e narrativa estratégica
 ├── Aegis-Domain-Map.md            # Mapa de domínios (core/supporting/generic) e dependências
@@ -41,11 +41,11 @@ Fora de `docs/`, o repositório também contém `frontend/` (SPA React/Vite gera
 
 | Você é... | Leia primeiro |
 |---|---|
-| Novo no projeto | `AEGIS_CMS_V1.md` (Parte I e Resumo Executivo) ou `AEGIS_DOCUMENTO_TECNICA.md` para uma versão rápida |
-| Backend (Aegis) | `AEGIS_CMS_V1.md` Partes II–VI + `adr/` + `database/` + `api/` + `implementation/001` em diante |
-| UX/UI (Eirene) | `AEGIS_CMS_V1.md` Parte III + `ux/` + `implementation/002-011` (UX/Figma Make) |
-| Infra (Daedalus) | `AEGIS_CMS_V1.md` Parte VI + `deploy/` + `operations/` |
-| Agente de IA | `AGENTS.md` primeiro, depois `AEGIS_CMS_V1.md` + `governance/` (Governança de IA) antes de qualquer mudança |
+| Novo no projeto | `AEGIS_PMS_V1.md` (Parte I e Resumo Executivo) ou `AEGIS_DOCUMENTO_TECNICA.md` para uma versão rápida |
+| Backend (Aegis) | `AEGIS_PMS_V1.md` Partes II–VI + `adr/` + `database/` + `api/` + `implementation/001` em diante |
+| UX/UI (Eirene) | `AEGIS_PMS_V1.md` Parte III + `ux/` + `implementation/002-011` (UX/Figma Make) |
+| Infra (Daedalus) | `AEGIS_PMS_V1.md` Parte VI + `deploy/` + `operations/` |
+| Agente de IA | `AGENTS.md` primeiro, depois `AEGIS_PMS_V1.md` + `governance/` (Governança de IA) antes de qualquer mudança |
 
 ## Mapa de ADRs
 
