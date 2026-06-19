@@ -1,6 +1,8 @@
 import { Filter } from "lucide-react";
-import { Badge, Button, Card } from "../../../shared/components/Primitives";
-import { kpis } from "../mocks/analytics.mocks";
+import { Badge, Button, Card, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { analyticsService } from "../services/analyticsService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import type { AnalyticsKpi } from "../contracts/responses";
 
 export function ComparisonBadge({ value }: { value: string }) {
   return <Badge tone={value.includes("-") || value.includes("atenção") ? "amber" : value.includes("estável") ? "neutral" : "green"}>{value}</Badge>;
@@ -10,19 +12,22 @@ export function TrendIndicator({ tone }: { tone: string }) {
   return <span className={`h-2.5 w-2.5 rounded-full ${tone === "positivo" ? "bg-primary" : tone === "atenção" ? "bg-[#D97706]" : "bg-muted-foreground"}`} />;
 }
 
-export function KPIBlock({ k }: { k: string[] }) {
+export function KPIBlock({ k }: { k: AnalyticsKpi }) {
   return (
     <Card>
-      <div className="flex items-start justify-between"><p className="text-sm text-muted-foreground">{k[0]}</p><TrendIndicator tone={k[4]} /></div>
-      <div className="mt-3 flex items-end justify-between gap-3"><p className="text-2xl font-semibold tracking-[-.02em]">{k[1]}</p><ComparisonBadge value={k[2]} /></div>
-      <p className="mt-2 text-xs leading-5 text-muted-foreground">{k[3]}</p>
-      <Button>{k[4] === "atenção" ? "Investigar" : "Ver detalhe"}</Button>
+      <div className="flex items-start justify-between"><p className="text-sm text-muted-foreground">{k.label}</p><TrendIndicator tone={k.tone} /></div>
+      <div className="mt-3 flex items-end justify-between gap-3"><p className="text-2xl font-semibold tracking-[-.02em]">{k.value}</p><ComparisonBadge value={k.comparison} /></div>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">{k.note}</p>
+      <Button>{k.tone === "atenção" ? "Investigar" : "Ver detalhe"}</Button>
     </Card>
   );
 }
 
 export function KPIGrid() {
-  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{kpis.map((k) => <KPIBlock key={k[0]} k={k} />)}</div>;
+  const { data: kpis, loading, error } = useAsyncData(() => analyticsService.listKpis(), []);
+  if (loading) return <SkeletonLines />;
+  if (error || !kpis) return <PartialErrorWidget />;
+  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{kpis.map((k) => <KPIBlock key={k.label} k={k} />)}</div>;
 }
 
 export function PeriodSelector() {
