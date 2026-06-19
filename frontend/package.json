@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:backend": "bash ../scripts/build-frontend-for-backend.sh",
     "dev": "vite",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint ."
