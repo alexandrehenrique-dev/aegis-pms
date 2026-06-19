@@ -60,14 +60,14 @@ KEYCLOAK_DB_PORT=5433
 # Keycloak
 KEYCLOAK_ADMIN=admin
 KEYCLOAK_ADMIN_PASSWORD=admin
-KEYCLOAK_HTTP_PORT=8181
+KEYCLOAK_HTTP_PORT=8282
 KEYCLOAK_REALM=aegis
 KEYCLOAK_WEB_CLIENT_ID=aegis-web
 
 # Backend
 BACKEND_PORT=8080
 SPRING_PROFILES_ACTIVE=local
-KEYCLOAK_ISSUER_URI=http://localhost:8181/realms/aegis
+KEYCLOAK_ISSUER_URI=http://localhost:8282/realms/aegis
 
 # Frontend (build estático servido pelo backend — ver etapa 09)
 FRONTEND_DEV_PORT=5173

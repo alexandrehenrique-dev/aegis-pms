@@ -18,9 +18,9 @@ Build multi-stage: build do jar com Maven, depois imagem final só com JRE rodan
 
 ### B. Observação crítica de issuer
 
-Dentro da rede Docker, o backend acessaria o Keycloak via `http://keycloak:8080/realms/aegis`, mas o browser acessa via `http://localhost:8181/realms/aegis`. Isso pode gerar conflito de issuer.
+Dentro da rede Docker, o backend acessaria o Keycloak via `http://keycloak:8080/realms/aegis`, mas o browser acessa via `http://localhost:8282/realms/aegis`. Isso pode gerar conflito de issuer.
 
-Solução para o MVP: manter o issuer **externo** (`http://localhost:8181/realms/aegis`) configurado via `KEYCLOAK_ISSUER_URI`, mesmo quando o backend roda containerizado — não silenciar a validação de issuer para "resolver" o problema.
+Solução para o MVP: manter o issuer **externo** (`http://localhost:8282/realms/aegis`) configurado via `KEYCLOAK_ISSUER_URI`, mesmo quando o backend roda containerizado — não silenciar a validação de issuer para "resolver" o problema.
 
 ### C. Serviço `aegis-backend` no compose
 
@@ -64,7 +64,7 @@ Solução para o MVP: manter o issuer **externo** (`http://localhost:8181/realms
 docker compose up -d --build
 docker compose ps
 curl http://localhost:8080/actuator/health
-curl http://localhost:8181/realms/aegis/.well-known/openid-configuration
+curl http://localhost:8282/realms/aegis/.well-known/openid-configuration
 ```
 
 ## Commit sugerido
