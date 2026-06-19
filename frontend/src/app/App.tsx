@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, ArrowLeft, BarChart3, Bell, Boxes, Building2, CheckCircle2, ChevronDown, ChevronRight, Circle, CircleAlert, Clock3, Command, ExternalLink, Eye, EyeOff, FileText, Filter, Gauge, GitCompare, GitBranch, Globe2, GripVertical, HelpCircle, History, Image, Languages, LayoutDashboard, Loader2, Lock, LogOut, MailCheck, Menu, Monitor, Moon, MoreHorizontal, PackagePlus, PanelRight, Plus, Search, Send, Settings, ShieldCheck, Sparkles, SplitSquareHorizontal, Star, Sun, Users, Workflow, X } from "lucide-react";
-import logoUrl from "../imports/logo.png";
+import logoUrl from "../shared/assets/logo.png";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { toast, Toaster } from "sonner";
