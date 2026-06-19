@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, CheckCircle2, Loader2, X } from "lucide-react";
 import { Badge, Button, Field, fade } from "../../../shared/components/Primitives";
+import { useAuth } from "../../../core/auth/AuthContext";
 import { tenantsService } from "../../../core/tenants/services/tenantsService";
 import { productsService } from "../../products/services/productsService";
 import { productAssignmentsService } from "../../users/services/productAssignmentsService";
@@ -25,6 +26,7 @@ type Step = 1 | 2 | 3 | 4;
  */
 export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const navigate = useNavigate();
+  const { selectTenant, selectProduct } = useAuth();
   const [step, setStep] = useState<Step>(1);
   const [saving, setSaving] = useState(false);
 
@@ -170,7 +172,17 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
           {step === 3 && <Button primary onClick={handleAssignUser} disabled={saving || !canSubmitAssign}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Atribuindo..." : "Concluir"}</Button>}
           {step === 4 && (
             <div className="flex gap-2">
-              <Button primary onClick={() => { onClose(); navigate(`/products/${product?.id}`); }}>Ir para o Produto</Button>
+              <Button
+                primary
+                onClick={() => {
+                  if (tenant) selectTenant(tenant);
+                  if (product) selectProduct({ id: product.id ?? "", name: product.name, type: product.type, status: product.status, modules: product.modules });
+                  onClose();
+                  navigate(`/products/${product?.id}`);
+                }}
+              >
+                Ir para o Produto
+              </Button>
               <Button onClick={onClose}>Fechar</Button>
             </div>
           )}

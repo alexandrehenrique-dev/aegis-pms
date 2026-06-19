@@ -117,7 +117,7 @@ export function AppShell() {
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           {viewAsRole === "super_admin" && (
-            <button onClick={() => navigate("/admin/tenants")} className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-sm transition hover:bg-muted" title="Ir para a tela de Super Admin">
+            <button onClick={() => navigate("/select-tenant")} className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-sm transition hover:bg-muted" title="Ir para a tela de Super Admin">
               <Building2 size={15} /><span className="hidden sm:inline">Super Admin</span>
             </button>
           )}

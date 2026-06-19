@@ -49,17 +49,17 @@ export const roleVisibleNav: Record<UserRole, Set<string>> = {
 // A route is blocked if it starts with any of these prefixes.
 export const roleBlockedRoutePrefixes: Record<UserRole, string[]> = {
   super_admin: [],
-  tenant_admin: ["/settings/security", "/admin"],
+  tenant_admin: ["/settings/security"],
   product_manager: [
     "/settings/tenant", "/users", "/settings/permissions", "/settings/roles", "/settings/access-preview",
-    "/audit", "/settings/security", "/products/new", "/content/*/publish", "/admin",
+    "/audit", "/settings/security", "/products/new", "/content/*/publish",
   ],
   editor: [
     "/settings", "/users",
-    "/audit", "/products/new", "/admin",
+    "/audit", "/products/new",
   ],
   viewer: [
-    "/settings", "/users", "/audit", "/products/new", "/admin",
+    "/settings", "/users", "/audit", "/products/new",
     "/content/*/editor", "/forms/new", "/assets/upload", "/assets/*/metadata", "/assets/*/tags",
     "/content/*/workflow", "/knowledge/graph", "/knowledge/relationships", "/knowledge/entities",
     "/knowledge/search", "/knowledge/orphans", "/knowledge/insights",
