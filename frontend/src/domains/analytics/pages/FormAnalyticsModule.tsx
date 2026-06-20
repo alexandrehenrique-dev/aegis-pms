@@ -1,5 +1,9 @@
+import { useState } from "react";
 import { Button, Card, KPIWidget, PageHeader } from "../../../shared/components/Primitives";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { ChartContainer } from "../components/AnalyticsBits";
+
+const FORMS = ["Contato Comercial", "Orçamento Maestro", "Newsletter"];
 
 function FormAnalyticsTable() {
   const rows = [
@@ -21,10 +25,19 @@ function FormAnalyticsTable() {
 }
 
 export function FormAnalyticsModule() {
+  const [form, setForm] = useState<string | null>(null);
   return (
     <>
       <PageHeader title="Form Analytics" module="Analytics" desc="Mede respostas, conversão, abandono, origem e qualificação dos leads." badge="Forms">
-        <Button>Formulário: todos</Button>
+        <Popover>
+          <PopoverTrigger asChild><Button>Formulário: {form ?? "todos"}</Button></PopoverTrigger>
+          <PopoverContent>
+            <div className="flex flex-col gap-1">
+              <Button onClick={() => setForm(null)} primary={!form}>Todos</Button>
+              {FORMS.map((f) => <Button key={f} onClick={() => setForm(f)} primary={form === f}>{f}</Button>)}
+            </div>
+          </PopoverContent>
+        </Popover>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-4">
         <KPIWidget label="Respostas" value="439" detail="+18 hoje" />

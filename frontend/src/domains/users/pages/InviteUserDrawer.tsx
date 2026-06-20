@@ -5,16 +5,23 @@ import { toast } from "../../../core/notifications/toast";
 import { usersService } from "../services/usersService";
 import { PermissionImpactSummary } from "../components/PermissionImpactSummary";
 
+const ROLES = ["Editor", "Viewer", "Product Manager", "Tenant Admin"];
+const PRODUCTS = ["Maestro Beton", "Conecta Talentos", "Todos os produtos"];
+const MODULES = ["Conteúdo, Assets, Forms", "Conteúdo, Analytics", "Todos os módulos"];
+
 export function InviteUserDrawer() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [name, setName] = useState("João Alves");
   const [email, setEmail] = useState("joao@byop.com");
+  const [role, setRole] = useState(ROLES[0]);
+  const [allowedProducts, setAllowedProducts] = useState(PRODUCTS[0]);
+  const [allowedModules, setAllowedModules] = useState(MODULES[0]);
 
   const handleSend = async () => {
     setSending(true);
     try {
-      await usersService.invite({ name, email, role: "Editor", allowedProducts: "Maestro Beton" });
+      await usersService.invite({ name, email, role, allowedProducts });
       setSent(true);
       toast.success("Convite enviado!", { description: `${name} receberá um email com instruções de acesso.` });
     } finally {
@@ -33,9 +40,9 @@ export function InviteUserDrawer() {
           <div className="grid gap-3 md:grid-cols-2">
             <Field label="Nome" value={name} onChange={setName} />
             <Field label="Email" value={email} onChange={setEmail} />
-            <SelectLike label="Papel" value="Editor" />
-            <SelectLike label="Produtos permitidos" value="Maestro Beton" />
-            <SelectLike label="Módulos permitidos" value="Conteúdo, Assets, Forms" />
+            <SelectLike label="Papel" value={role} options={ROLES} onChange={setRole} />
+            <SelectLike label="Produtos permitidos" value={allowedProducts} options={PRODUCTS} onChange={setAllowedProducts} />
+            <SelectLike label="Módulos permitidos" value={allowedModules} options={MODULES} onChange={setAllowedModules} />
             <Field label="Mensagem opcional" value="Você foi convidado para operar conteúdo do produto." textarea />
           </div>
         </Card>

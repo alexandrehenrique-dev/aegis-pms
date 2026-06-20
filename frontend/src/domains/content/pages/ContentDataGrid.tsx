@@ -1,27 +1,62 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { Filter, Search } from "lucide-react";
 import { Badge, Button, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { contentService } from "../services/contentService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { ContentStatusBadge } from "../components/ContentStatusBadge";
 import { ContentCardMobile } from "../components/ContentCardMobile";
 
+function FilterGroup({ label, options, value, onChange }: { label: string; options: string[]; value: string | null; onChange: (v: string | null) => void }) {
+  return (
+    <div className="mb-3">
+      <p className="mb-1 text-sm font-medium">{label}</p>
+      <div className="flex flex-wrap gap-1">
+        <Button onClick={() => onChange(null)} primary={!value}>Todos</Button>
+        {options.map((o) => <Button key={o} onClick={() => onChange(o)} primary={value === o}>{o}</Button>)}
+      </div>
+    </div>
+  );
+}
+
 export function ContentDataGrid() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>([]);
+  const [status, setStatus] = useState<string | null>(null);
+  const [lang, setLang] = useState<string | null>(null);
+  const [type, setType] = useState<string | null>(null);
+  const [author, setAuthor] = useState<string | null>(null);
   const { data: contents, loading, error } = useAsyncData(() => contentService.listContent(), []);
+
+  const options = useMemo(() => ({
+    statuses: Array.from(new Set((contents ?? []).map((r) => r.status))),
+    langs: Array.from(new Set((contents ?? []).map((r) => r.lang))),
+    types: Array.from(new Set((contents ?? []).map((r) => r.type))),
+    authors: Array.from(new Set((contents ?? []).map((r) => r.author))),
+  }), [contents]);
 
   if (loading) return <SkeletonLines />;
   if (error || !contents) return <PartialErrorWidget />;
 
-  const rows = contents.filter((r) => r.title.toLowerCase().includes(q.toLowerCase()));
+  const rows = contents.filter((r) =>
+    r.title.toLowerCase().includes(q.toLowerCase()) &&
+    (!status || r.status === status) && (!lang || r.lang === lang) && (!type || r.type === type) && (!author || r.author === author)
+  );
 
   return (
     <>
       <PageHeader title="Lista de Conteúdos" module="Conteúdo" desc="DataGrid operacional de páginas, seções, artigos, traduções e versões." badge="Conteúdo">
-        <Button><Filter size={15} />Status / Idioma / Tipo / Autor</Button>
+        <Popover>
+          <PopoverTrigger asChild><Button><Filter size={15} />Status / Idioma / Tipo / Autor</Button></PopoverTrigger>
+          <PopoverContent className="w-80">
+            <FilterGroup label="Status" options={options.statuses} value={status} onChange={setStatus} />
+            <FilterGroup label="Idioma" options={options.langs} value={lang} onChange={setLang} />
+            <FilterGroup label="Tipo" options={options.types} value={type} onChange={setType} />
+            <FilterGroup label="Autor" options={options.authors} value={author} onChange={setAuthor} />
+          </PopoverContent>
+        </Popover>
         <Button primary onClick={() => navigate("/content/new/editor")}>Novo conteúdo</Button>
       </PageHeader>
       <div className="mb-4 rounded-2xl border border-border bg-card p-3">

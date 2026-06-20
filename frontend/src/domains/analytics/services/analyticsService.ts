@@ -15,4 +15,11 @@ export const analyticsService = {
   async listChannels(): Promise<ListChannelsResponse> {
     return channelsStore;
   },
+  async generateReport(_name: string): Promise<void> {
+    void _name;
+  },
+  async markTrendReviewed(_label: string): Promise<void> {
+    void _label;
+  },
+  async generateActionPlan(): Promise<void> {},
 };

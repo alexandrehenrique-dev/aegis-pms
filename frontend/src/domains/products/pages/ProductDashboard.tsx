@@ -25,7 +25,7 @@ export function ProductDashboard() {
       <PageHeader title="Maestro Beton" desc="Cockpit operacional do produto digital: saúde, pendências, módulos e próximos passos." badge="Site Institucional">
         <Button onClick={() => navigate("/products/maestro-beton/detail")}>Editar produto</Button>
         <Button onClick={() => navigate("/products/maestro-beton/modules")}>Ver módulos</Button>
-        <Button primary><ExternalLink size={15} />Preview público</Button>
+        <Button primary onClick={() => window.open("https://maestro-beton.byop.app", "_blank", "noopener,noreferrer")}><ExternalLink size={15} />Preview público</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">

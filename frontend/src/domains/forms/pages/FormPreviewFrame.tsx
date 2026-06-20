@@ -1,13 +1,23 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
+import { toast } from "../../../core/notifications/toast";
+import { formsService } from "../services/formsService";
 
 export function FormPreviewFrame() {
+  const navigate = useNavigate();
   const [state, setState] = useState("desktop");
+
+  const handleTestSubmit = async () => {
+    await formsService.submitTest();
+    toast.success("Envio de teste registrado");
+  };
+
   return (
     <>
       <PageHeader title="Preview do Formulário" module="Forms" desc="Valide desktop, tablet, mobile e estados antes da publicação." badge="Preview">
-        <Button>Voltar</Button>
-        <Button primary>Enviar teste</Button>
+        <Button onClick={() => navigate(-1)}>Voltar</Button>
+        <Button primary onClick={handleTestSubmit}>Enviar teste</Button>
       </PageHeader>
       <Card>
         <div className="mb-4 flex flex-wrap gap-2">{["desktop", "tablet", "mobile", "vazio", "preenchido", "inválido", "enviado", "erro"].map((v) => <Button key={v} onClick={() => setState(v)}>{v}</Button>)}</div>
@@ -21,7 +31,7 @@ export function FormPreviewFrame() {
             </div>
           ))}
           {state === "enviado" && <div className="mt-3 rounded-xl bg-[#ede9fe] p-3 text-sm text-primary">Formulário enviado. Lead criado.</div>}
-          <Button primary>Enviar</Button>
+          <Button primary onClick={handleTestSubmit}>Enviar</Button>
         </div>
       </Card>
     </>

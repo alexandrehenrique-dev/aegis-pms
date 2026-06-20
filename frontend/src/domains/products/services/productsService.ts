@@ -10,6 +10,16 @@ import type { ListModulesResponse, ListProductsResponse, ProductSummary } from "
 // listProducts/create passam a falar com a API real via apiClient.
 const productsStore: ProductSummary[] = [...productMocks];
 
+const moduleCatalogStore: ListModulesResponse = moduleCatalogMocks.map(([Icon, name, desc, state, maturity, dependency, impact]) => ({
+  Icon: Icon as ComponentType<{ size?: number; className?: string }>,
+  name: name as string,
+  desc: desc as string,
+  state: state as ModuleState,
+  maturity: maturity as string,
+  dependency: dependency as string,
+  impact: impact as string,
+}));
+
 function slugify(name: string): string {
   return name.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
@@ -20,16 +30,25 @@ export const productsService = {
   },
 
   async listModuleCatalog(): Promise<ListModulesResponse> {
-    return moduleCatalogMocks.map(([Icon, name, desc, state, maturity, dependency, impact]) => ({
-      Icon: Icon as ComponentType<{ size?: number; className?: string }>,
-      name: name as string,
-      desc: desc as string,
-      state: state as ModuleState,
-      maturity: maturity as string,
-      dependency: dependency as string,
-      impact: impact as string,
-    }));
+    return moduleCatalogStore;
   },
+
+  async enableModule(moduleName: string): Promise<void> {
+    const m = moduleCatalogStore.find((x) => x.name === moduleName);
+    if (m) m.state = "habilitado";
+  },
+
+  async disableModule(moduleName: string): Promise<void> {
+    const m = moduleCatalogStore.find((x) => x.name === moduleName);
+    if (m) m.state = "desabilitado";
+  },
+
+  async archiveProduct(idOrName: string): Promise<void> {
+    const p = productsStore.find((x) => x.id === idOrName || x.name === idOrName);
+    if (p) p.status = "Arquivado";
+  },
+
+  async saveSettings(): Promise<void> {},
 
   async create(req: CreateProductRequest): Promise<ProductSummary> {
     const created: ProductSummary = {

@@ -59,13 +59,14 @@ export function CreateProductForm() {
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <Card>
           <div className="grid gap-4 md:grid-cols-2">
-            {tenantId && <SelectLike label="Tenant" value={tenant?.name ?? "Carregando..."} />}
+            {/* fixo por enquanto: tenant/tipo/idioma/template do wizard são fixos no MVP — ADR/Sprint 09 */}
+            {tenantId && <SelectLike label="Tenant" value={tenant?.name ?? "Carregando..."} locked />}
             <Field label="Nome do produto" value={name} onChange={setName} />
             <Field label="Slug" value={slug} onChange={setSlug} />
-            <SelectLike label="Tipo" value="Site Institucional" />
-            <SelectLike label="Idioma padrão" value="Português (Brasil)" />
+            <SelectLike label="Tipo" value="Site Institucional" locked />
+            <SelectLike label="Idioma padrão" value="Português (Brasil)" locked />
             <div className="md:col-span-2"><Field label="Descrição" value={description} onChange={setDescription} textarea /></div>
-            <SelectLike label="Template inicial" value="Produto operacional padrão" />
+            <SelectLike label="Template inicial" value="Produto operacional padrão" locked />
             <div>
               <p className="mb-2 text-sm font-medium">Módulos iniciais</p>
               <div className="flex flex-wrap gap-2">{INITIAL_MODULES.map((m) => <Badge key={m} tone="green">{m}</Badge>)}</div>

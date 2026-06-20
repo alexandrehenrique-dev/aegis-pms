@@ -15,4 +15,12 @@ export const contentService = {
   async listWorkflowItems(): Promise<ListWorkflowItemsResponse> {
     return wfInitialItems;
   },
+  async restoreVersion(version: string): Promise<void> {
+    void version;
+  },
+  async submitForReview(): Promise<void> {},
+  async publish(): Promise<void> {},
+  async archive(): Promise<void> {},
+  async saveDraft(): Promise<void> {},
+  async schedulePublish(): Promise<void> {},
 };

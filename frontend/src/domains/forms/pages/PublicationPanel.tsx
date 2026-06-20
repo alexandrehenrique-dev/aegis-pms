@@ -1,12 +1,35 @@
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
 import { ConversionCard } from "../components/ConversionCard";
+import { toast } from "../../../core/notifications/toast";
+import { formsService } from "../services/formsService";
+
+const EMBED_SNIPPET = "<aegis-form id=contato-comercial />";
 
 export function PublicationPanel() {
+  const [publishing, setPublishing] = useState(false);
+
+  const handleCopyEmbed = async () => {
+    await navigator.clipboard.writeText(EMBED_SNIPPET);
+    toast.success("Copiado");
+  };
+
+  const handlePublish = async () => {
+    setPublishing(true);
+    try {
+      await formsService.publish();
+      toast.success("Alterações publicadas!");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   return (
     <>
       <PageHeader title="Publicação do Formulário" module="Forms" desc="Controle URL, embed, script, iframe, domínio e status de publicação." badge="Publicado">
-        <Button>Copiar embed</Button>
-        <Button primary>Publicar alterações</Button>
+        <Button onClick={handleCopyEmbed}>Copiar embed</Button>
+        <Button primary onClick={handlePublish} disabled={publishing}>{publishing && <Loader2 size={15} className="animate-spin" />}{publishing ? "Publicando..." : "Publicar alterações"}</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>

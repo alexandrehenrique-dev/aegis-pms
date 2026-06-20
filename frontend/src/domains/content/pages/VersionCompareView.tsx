@@ -1,4 +1,9 @@
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { Loader2 } from "lucide-react";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
+import { toast } from "../../../core/notifications/toast";
+import { contentService } from "../services/contentService";
 
 function DiffList({ old = false }: { old?: boolean }) {
   return (
@@ -11,11 +16,24 @@ function DiffList({ old = false }: { old?: boolean }) {
 }
 
 export function VersionCompareView() {
+  const navigate = useNavigate();
+  const [restoring, setRestoring] = useState(false);
+
+  const handleRestore = async () => {
+    setRestoring(true);
+    try {
+      await contentService.restoreVersion("v17");
+      toast.success("Versão v17 restaurada!");
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   return (
     <>
       <PageHeader title="Comparação de Versões" module="Conteúdo" desc="Diff lado a lado entre versões do conteúdo Home." badge="Diff">
-        <Button>Voltar</Button>
-        <Button primary>Restaurar versão</Button>
+        <Button onClick={() => navigate(-1)}>Voltar</Button>
+        <Button primary onClick={handleRestore} disabled={restoring}>{restoring && <Loader2 size={15} className="animate-spin" />}{restoring ? "Restaurando..." : "Restaurar versão"}</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-2">
         <Card><h2 className="mb-3 text-lg font-semibold">Versão A — v17</h2><DiffList old /></Card>

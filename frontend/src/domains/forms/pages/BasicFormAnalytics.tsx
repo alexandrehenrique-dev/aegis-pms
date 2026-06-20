@@ -1,10 +1,20 @@
+import { useState } from "react";
 import { Button, Card, KPIWidget, PageHeader } from "../../../shared/components/Primitives";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../shared/components/ui/dropdown-menu";
+
+const PERIODS = ["Últimos 7 dias", "Últimos 30 dias", "Últimos 90 dias"];
 
 export function BasicFormAnalytics() {
+  const [period, setPeriod] = useState(PERIODS[1]);
   return (
     <>
       <PageHeader title="Analytics Básico do Formulário" module="Forms" desc="Métricas do formulário, sem entrar ainda no módulo Analytics avançado." badge="Métricas">
-        <Button>Últimos 30 dias</Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button>{period}</Button></DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {PERIODS.map((p) => <DropdownMenuItem key={p} onSelect={() => setPeriod(p)}>{p}</DropdownMenuItem>)}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </PageHeader>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <KPIWidget label="Visualizações" value="3.482" detail="Home + embed" />

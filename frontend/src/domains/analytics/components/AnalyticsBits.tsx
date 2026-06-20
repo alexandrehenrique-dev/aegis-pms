@@ -1,8 +1,22 @@
+import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Filter } from "lucide-react";
 import { Badge, Button, Card, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { analyticsService } from "../services/analyticsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import type { AnalyticsKpi } from "../contracts/responses";
+
+const KPI_ROUTES: Record<string, string> = {
+  "Visitas": "/analytics/channels",
+  "Conversões": "/analytics/forms",
+  "Taxa de conversão": "/analytics/forms",
+  "Formulários recebidos": "/forms/submissions",
+  "Conteúdos publicados": "/content/list",
+  "Páginas mais acessadas": "/analytics/content",
+  "Leads qualificados": "/forms/submissions",
+  "Tempo médio na página": "/analytics/content",
+};
 
 export function ComparisonBadge({ value }: { value: string }) {
   return <Badge tone={value.includes("-") || value.includes("atenção") ? "amber" : value.includes("estável") ? "neutral" : "green"}>{value}</Badge>;
@@ -13,12 +27,13 @@ export function TrendIndicator({ tone }: { tone: string }) {
 }
 
 export function KPIBlock({ k }: { k: AnalyticsKpi }) {
+  const navigate = useNavigate();
   return (
     <Card>
       <div className="flex items-start justify-between"><p className="text-sm text-muted-foreground">{k.label}</p><TrendIndicator tone={k.tone} /></div>
       <div className="mt-3 flex items-end justify-between gap-3"><p className="text-2xl font-semibold tracking-[-.02em]">{k.value}</p><ComparisonBadge value={k.comparison} /></div>
       <p className="mt-2 text-xs leading-5 text-muted-foreground">{k.note}</p>
-      <Button>{k.tone === "atenção" ? "Investigar" : "Ver detalhe"}</Button>
+      <Button onClick={() => navigate(KPI_ROUTES[k.label] ?? "/analytics")}>{k.tone === "atenção" ? "Investigar" : "Ver detalhe"}</Button>
     </Card>
   );
 }
@@ -30,13 +45,34 @@ export function KPIGrid() {
   return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{kpis.map((k) => <KPIBlock key={k.label} k={k} />)}</div>;
 }
 
+const PERIODS = ["Últimos 7 dias", "Últimos 30 dias", "Últimos 90 dias"];
+const CHANNELS = ["Direto", "Google", "Instagram", "WhatsApp", "Referral", "Orgânico", "Campanha"];
+
 export function PeriodSelector() {
+  const navigate = useNavigate();
+  const [period, setPeriod] = useState(PERIODS[1]);
+  const [comparing, setComparing] = useState(false);
+  const [channel, setChannel] = useState<string | null>(null);
+
   return (
     <div className="flex flex-wrap gap-2">
-      <Button>Últimos 30 dias</Button>
-      <Button>Comparar período anterior</Button>
-      <Button><Filter size={15} />Canal</Button>
-      <Button>Conteúdo</Button>
+      <Popover>
+        <PopoverTrigger asChild><Button>{period}</Button></PopoverTrigger>
+        <PopoverContent>
+          <div className="flex flex-col gap-1">{PERIODS.map((p) => <Button key={p} onClick={() => setPeriod(p)} primary={period === p}>{p}</Button>)}</div>
+        </PopoverContent>
+      </Popover>
+      <Button onClick={() => setComparing((c) => !c)} primary={comparing}>Comparar período anterior</Button>
+      <Popover>
+        <PopoverTrigger asChild><Button><Filter size={15} />{channel ?? "Canal"}</Button></PopoverTrigger>
+        <PopoverContent>
+          <div className="flex flex-wrap gap-1">
+            <Button onClick={() => setChannel(null)} primary={!channel}>Todos</Button>
+            {CHANNELS.map((c) => <Button key={c} onClick={() => setChannel(c)} primary={channel === c}>{c}</Button>)}
+          </div>
+        </PopoverContent>
+      </Popover>
+      <Button onClick={() => navigate("/analytics/content")}>Conteúdo</Button>
     </div>
   );
 }

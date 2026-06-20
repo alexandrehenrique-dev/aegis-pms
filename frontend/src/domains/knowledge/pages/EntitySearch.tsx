@@ -1,23 +1,38 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { Badge, Button, Card, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { kgColor } from "../mocks/knowledge.mocks";
 import { knowledgeService } from "../services/knowledgeService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 
 export function EntitySearch() {
   const [q, setQ] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(), []);
   const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(), []);
+
+  const types = useMemo(() => Array.from(new Set((kgNodes ?? []).map((n) => n.type))), [kgNodes]);
 
   if (loadingNodes || loadingEdges) return <SkeletonLines />;
   if (errorNodes || errorEdges || !kgNodes || !kgEdges) return <PartialErrorWidget />;
 
-  const res = q ? kgNodes.filter((n) => (n.label + n.type + n.status).toLowerCase().includes(q.toLowerCase())) : kgNodes;
+  const res = kgNodes
+    .filter((n) => !q || (n.label + n.type + n.status).toLowerCase().includes(q.toLowerCase()))
+    .filter((n) => !typeFilter || n.type === typeFilter);
   return (
     <>
       <PageHeader title="Entity Search" desc="Busca por entidades de negócio: conteúdo, assets, formulários, leads, tags e SEO." badge="Busca">
-        <Button>Filtros</Button>
+        <Popover>
+          <PopoverTrigger asChild><Button>Filtros</Button></PopoverTrigger>
+          <PopoverContent>
+            <p className="mb-2 text-sm font-medium">Tipo de entidade</p>
+            <div className="flex flex-wrap gap-1">
+              <Button onClick={() => setTypeFilter(null)} primary={!typeFilter}>Todas</Button>
+              {types.map((t) => <Button key={t} onClick={() => setTypeFilter(t)} primary={typeFilter === t}>{t}</Button>)}
+            </div>
+          </PopoverContent>
+        </Popover>
       </PageHeader>
       <div className="mb-4 flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
         <Search size={17} />

@@ -1,6 +1,10 @@
-export function PermissionCell({ state }: { state: string }) {
+export function PermissionCell({ state, onToggle }: { state: string; onToggle?: () => void }) {
   return (
-    <button className={`grid h-8 w-8 place-items-center rounded-lg border ${state === "on" ? "border-primary bg-primary text-white" : state === "locked" ? "border-border bg-muted text-muted-foreground" : "border-border bg-card"}`}>
+    <button
+      onClick={state !== "locked" ? onToggle : undefined}
+      disabled={state === "locked"}
+      className={`grid h-8 w-8 place-items-center rounded-lg border ${state === "on" ? "border-primary bg-primary text-white" : state === "locked" ? "cursor-not-allowed border-border bg-muted text-muted-foreground" : "border-border bg-card hover:bg-muted"}`}
+    >
       {state === "on" ? "✓" : state === "locked" ? "—" : ""}
     </button>
   );
