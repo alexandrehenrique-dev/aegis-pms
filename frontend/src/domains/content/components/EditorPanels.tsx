@@ -132,7 +132,8 @@ export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }:
   const handleLinkEntity = async (node: KGNode) => {
     const body = typeof content.body === "string" ? content.body : "";
     onChangeContent({ body: `${body}${body ? " " : ""}{{kg-ref:${node.id}:${node.label}}}` });
-    await knowledgeService.createEdge(section.id, node.id, "relacionado a");
+    await knowledgeService.ensureNodeForContent(section.id, section.label);
+    await knowledgeService.createEdge(section.id, node.id, "RELATED_TO");
     toast.success("Referência linkada", { description: `${node.label} inserido no corpo e relação criada no grafo.` });
   };
 

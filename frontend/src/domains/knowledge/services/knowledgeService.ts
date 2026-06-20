@@ -1,6 +1,6 @@
-import { kgNodes, kgEdges, wikidevKgNodes, wikidevKgEdges, lokiKgNodes, lokiKgEdges, type KGEdge, type KGNode } from "../mocks/knowledge.mocks";
+import { kgNodes, kgEdges, wikidevKgNodes, wikidevKgEdges, lokiKgNodes, lokiKgEdges, type KGEdge, type KGEntityType, type KGNode } from "../mocks/knowledge.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
-import type { GraphNodePreview, ListEdgesResponse, ListNodesResponse, RelatedNode } from "../contracts/responses";
+import type { EdgeType, GraphNodePreview, ListEdgesResponse, ListNodesResponse, RelatedNode } from "../contracts/responses";
 
 // Store em memória só para a sessão do navegador — ver nota equivalente em
 // domains/products/services/productsService.ts. Os 3 conjuntos (Maestro
@@ -54,9 +54,22 @@ export const knowledgeService = {
     return allNodes.filter((n) => !q || (n.label + n.type).toLowerCase().includes(q));
   },
 
-  /** Cria a aresta RELATED_TO ao linkar uma referência inline (`kg-ref`) durante a autoria — Sprint 11, Tarefa C.3 (docs/trace, Seção A: `POST .../graph/edges`). */
-  async createEdge(from: string, to: string, verb = "relacionado a"): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/graph/edges", { from, to, verb });
-    allEdges.push({ from, to, verb });
+  /**
+   * Garante que existe um `GraphNode` para o conteúdo de origem antes de
+   * criar uma aresta a partir dele (Sprint 12, Tarefa H.2) — sem isto,
+   * `createEdge` referenciaria um `sourceNodeId` inexistente e o backend
+   * real rejeitaria com 404 ("Edge exige sourceNodeId e targetNodeId
+   * existentes", etapa 07). Cria o nó automaticamente se ainda não existir.
+   */
+  async ensureNodeForContent(nodeId: string, label: string, type: KGEntityType = "Página"): Promise<void> {
+    if (allNodes.some((n) => n.id === nodeId)) return;
+    logApiCall("POST", "/api/v1/products/{productId}/graph/nodes", { id: nodeId, label, type });
+    allNodes.push({ id: nodeId, label, type, status: "ativo", x: 0, y: 0, props: [] });
+  },
+
+  /** Cria uma aresta do catálogo fechado de `edgeType` ao linkar uma referência inline (`kg-ref`) durante a autoria — Sprint 11, Tarefa C.3 / Sprint 12, Tarefa H.1 (docs/trace, Seção A: `POST .../graph/edges`). */
+  async createEdge(from: string, to: string, edgeType: EdgeType = "RELATED_TO"): Promise<void> {
+    logApiCall("POST", "/api/v1/products/{productId}/graph/edges", { from, to, edgeType });
+    allEdges.push({ from, to, verb: edgeType });
   },
 };
