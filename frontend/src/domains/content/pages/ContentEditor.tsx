@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { Badge, Button, PageHeader } from "../../../shared/components/Primitives";
 import { UnsavedChangesBanner, ConflictAlert } from "../../../shared/components/Banners";
+import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { FloatingSaveStatus, type SaveStatus } from "../../../shared/components/FloatingSaveStatus";
 import { toast } from "../../../core/notifications/toast";
 import { ContentStructureTree, BlockEditorCanvas, PropertiesPanel } from "../components/EditorPanels";
@@ -9,8 +10,17 @@ import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { slugify } from "../../../shared/utils/slugify";
 import { pagesService } from "../../pages/services/pagesService";
+import { DEFAULT_BLOCK_CONTENT } from "../../pages/blockDefaults";
 import type { BlockType, Page } from "../../pages/contracts/responses";
 
+/**
+ * Quem chega a esta tela já passou pelo gate de rota (`RequireRole` +
+ * `roleBlockedRoutePrefixes["/content/*\/editor"]`, ver core/permissions/roles.ts)
+ * — hoje só `viewer` é bloqueado. Editor, Product Manager, Tenant Admin e
+ * Super Admin podem adicionar, editar e remover blocos; não há gating
+ * adicional por ação dentro do editor porque nenhum documento (004, V1)
+ * distingue essas ações dentro do mesmo papel "Editor de Conteúdo" (07.04).
+ */
 export function ContentEditor() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -20,6 +30,8 @@ export function ContentEditor() {
   const { data: pages } = useAsyncData(() => pagesService.listPages(productSlug), [productSlug]);
   const [page, setPage] = useState<Page | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deletingBlock, setDeletingBlock] = useState(false);
 
   useEffect(() => {
     const home = pages?.[0] ?? null;
@@ -28,6 +40,7 @@ export function ContentEditor() {
   }, [pages]);
 
   const selectedSection = page?.sections.find((s) => s.id === selectedSectionId) ?? null;
+  const pendingDeleteSection = page?.sections.find((s) => s.id === pendingDeleteId) ?? null;
 
   const triggerSave = () => {
     setSaveStatus("dirty");
@@ -41,21 +54,46 @@ export function ContentEditor() {
     }, 1800);
   };
 
+  // Sempre busca a página de volta no service após mutar, em vez de remontar
+  // o array de seções manualmente: pagesService é a fonte da verdade e
+  // devolve cópias isoladas (ver pagesService.ts), então isto nunca duplica
+  // ou perde itens, independente de quantas mutações ocorrerem em sequência.
+  const refreshPage = async (current: Page) => {
+    const fresh = await pagesService.getPage(current.productSlug, current.id);
+    setPage(fresh ?? null);
+    return fresh ?? null;
+  };
+
   const handleChangeContent = async (patch: Record<string, unknown>) => {
     if (!page || !selectedSectionId) return;
-    const updated = await pagesService.updateSection(page.productSlug, page.id, selectedSectionId, { content: { ...selectedSection?.content, ...patch } });
-    setPage({ ...page, sections: page.sections.map((s) => (s.id === updated.id ? updated : s)) });
+    await pagesService.updateSection(page.productSlug, page.id, selectedSectionId, { content: { ...selectedSection?.content, ...patch } });
+    await refreshPage(page);
     triggerSave();
   };
 
   const handleAddBlock = async (type: BlockType) => {
     if (!page) return;
     const label = `Novo bloco ${page.sections.length + 1}`;
-    const created = await pagesService.createSection(page.productSlug, page.id, { type, label, content: {} });
-    setPage({ ...page, sections: [...page.sections, created] });
+    const created = await pagesService.createSection(page.productSlug, page.id, { type, label, content: DEFAULT_BLOCK_CONTENT[type] });
+    await refreshPage(page);
     setSelectedSectionId(created.id);
     toast.success("Bloco adicionado", { description: `${label} (${type})` });
     triggerSave();
+  };
+
+  const handleDeleteBlock = async () => {
+    if (!page || !pendingDeleteId) return;
+    setDeletingBlock(true);
+    try {
+      await pagesService.deleteSection(page.productSlug, page.id, pendingDeleteId);
+      const fresh = await refreshPage(page);
+      if (selectedSectionId === pendingDeleteId) setSelectedSectionId(fresh?.sections[0]?.id ?? null);
+      toast.success("Bloco removido", { description: pendingDeleteSection?.label });
+      setPendingDeleteId(null);
+      triggerSave();
+    } finally {
+      setDeletingBlock(false);
+    }
   };
 
   return (
@@ -70,10 +108,20 @@ export function ContentEditor() {
         <div className="flex gap-2 overflow-auto pb-1">{["1 Estrutura", "2 Conteúdo", "3 Propriedades", "4 Preview", "5 Publicação"].map((x) => <Badge key={x} tone="blue">{x}</Badge>)}</div>
       </div>
       <div className="grid gap-4 xl:grid-cols-[280px_1fr_340px]">
-        <ContentStructureTree page={page} selectedId={selectedSectionId} onSelect={setSelectedSectionId} onAddBlock={handleAddBlock} />
-        <div className="space-y-4"><BlockEditorCanvas section={selectedSection} onChangeContent={handleChangeContent} /><ConflictAlert /></div>
+        <ContentStructureTree page={page} selectedId={selectedSectionId} onSelect={setSelectedSectionId} onAddBlock={handleAddBlock} onRequestDelete={setPendingDeleteId} />
+        <div className="space-y-4"><BlockEditorCanvas section={selectedSection} onChangeContent={handleChangeContent} onRequestDelete={setPendingDeleteId} /><ConflictAlert /></div>
         <PropertiesPanel page={page} section={selectedSection} />
       </div>
+      {pendingDeleteSection && (
+        <ConfirmDialog
+          title={`Remover bloco "${pendingDeleteSection.label}"?`}
+          desc="Esta ação é irreversível: o bloco e seu conteúdo saem imediatamente da página."
+          danger
+          loading={deletingBlock}
+          onCancel={() => setPendingDeleteId(null)}
+          onConfirm={handleDeleteBlock}
+        />
+      )}
     </>
   );
 }
