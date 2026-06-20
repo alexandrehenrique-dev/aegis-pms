@@ -1,6 +1,4 @@
 export type DashboardSummaryResponse = {
-  activeProducts: number;
-  archivedProducts: number;
   pendingContent: number;
   pendingContentNeedingReview: number;
   openApprovals: number;

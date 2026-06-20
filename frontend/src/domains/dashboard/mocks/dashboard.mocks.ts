@@ -3,9 +3,10 @@ import { FileText, Image, Boxes, BarChart3, Globe2, Sparkles, Workflow, Clock3, 
 // KPIs do hub do tenant. Vira GET /api/v1/dashboard/summary quando o backend
 // existir (ver docs/trace/00_endpoints_esperados.md, Seção B) — provavelmente
 // um agregador sobre os endpoints de tenants/produtos/módulos já definidos.
+// `activeProducts`/`archivedProducts` NÃO vivem aqui: são contados em tempo
+// real a partir de `tenantProducts` (AuthContext) em DashboardGlobal.tsx,
+// para refletir imediatamente criação/edição/exclusão de produto.
 export const dashboardSummary = {
-  activeProducts: 5,
-  archivedProducts: 1,
   pendingContent: 18,
   pendingContentNeedingReview: 7,
   openApprovals: 6,

@@ -15,15 +15,17 @@ export const knowledgeService = {
   async listEdges(): Promise<ListEdgesResponse> {
     return kgEdges;
   },
-  async markInsightReviewed(_text: string): Promise<void> {
-    void _text;
+  // Pontos de integração real (Sprint 07) — sem endpoint formalizado ainda em
+  // docs/trace/00_endpoints_esperados.md (só o GET de orphans existe, Seção B.5);
+  // path inferido por convenção REST sobre o recurso já documentado.
+  async markInsightReviewed(text: string): Promise<void> {
+    console.log("[mock→backend] POST /api/v1/products/{productId}/graph/insights/review", { text });
   },
-  async resolveOrphan(_id: string, _action: string): Promise<void> {
-    void _id;
-    void _action;
+  async resolveOrphan(id: string, action: string): Promise<void> {
+    console.log(`[mock→backend] POST /api/v1/products/{productId}/graph/orphans/${id}/resolve`, { action });
   },
-  async resolveOrphans(_ids: string[]): Promise<void> {
-    void _ids;
+  async resolveOrphans(ids: string[]): Promise<void> {
+    console.log("[mock→backend] POST /api/v1/products/{productId}/graph/orphans/resolve", { ids });
   },
 
   /** Preview leve para tooltip de referência inline (`kg-ref`) — Sprint 11, Tarefa C.1/C.4. */
@@ -51,8 +53,9 @@ export const knowledgeService = {
     return allNodes.filter((n) => !q || (n.label + n.type).toLowerCase().includes(q));
   },
 
-  /** Cria a aresta RELATED_TO ao linkar uma referência inline (`kg-ref`) durante a autoria — Sprint 11, Tarefa C.3. */
+  /** Cria a aresta RELATED_TO ao linkar uma referência inline (`kg-ref`) durante a autoria — Sprint 11, Tarefa C.3 (docs/trace, Seção A: `POST .../graph/edges`). */
   async createEdge(from: string, to: string, verb = "relacionado a"): Promise<void> {
+    console.log("[mock→backend] POST /api/v1/products/{productId}/graph/edges", { from, to, verb });
     allEdges.push({ from, to, verb });
   },
 };

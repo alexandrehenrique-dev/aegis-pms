@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Boxes, Clock3, LogOut, Plus } from "lucide-react";
+import { Boxes, Clock3, LogOut, MoreVertical, Plus } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { roleLabels } from "../../permissions/roles";
 import { tenantsService } from "../../tenants/services/tenantsService";
@@ -51,6 +51,14 @@ export function TenantSelectScreen() {
 
   const handleLogout = () => { logout(); navigate("/login"); };
 
+  // Reaproveitado pelo botão direito (desktop) e pelo "⋮" visível em mobile
+  // (botão direito/long-press não é confiável em touch) — ver ContextActionMenu.
+  const openContextMenu = (t: TenantOption, e: MouseEvent) => {
+    if (!isSuperAdmin) return;
+    e.preventDefault();
+    setContextMenu({ tenant: t, position: { x: e.clientX, y: e.clientY } });
+  };
+
   const handleDelete = async () => {
     if (!pendingDelete) return;
     setDeleting(true);
@@ -94,26 +102,33 @@ export function TenantSelectScreen() {
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {filtered.length === 0 ? <EmptyState compact title="Nenhum tenant encontrado" description="Ajuste a busca." /> : filtered.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => handleSelect(t)}
-                onContextMenu={(e) => { if (!isSuperAdmin) return; e.preventDefault(); setContextMenu({ tenant: t, position: { x: e.clientX, y: e.clientY } }); }}
-                disabled={t.status === "suspenso"}
-                className="group rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary hover:shadow-[0_8px_30px_rgba(15,61,46,.08)] disabled:opacity-50"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 font-semibold text-primary">{t.name.charAt(0)}</div>
-                    <div><p className="font-semibold">{t.name}</p><p className="text-xs text-muted-foreground">{t.plan}</p></div>
+              <div key={t.id} className="relative">
+                <button
+                  onClick={() => handleSelect(t)}
+                  onContextMenu={(e) => openContextMenu(t, e)}
+                  disabled={t.status === "suspenso"}
+                  className="group w-full rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary hover:shadow-[0_8px_30px_rgba(15,61,46,.08)] disabled:opacity-50"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 font-semibold text-primary">{t.name.charAt(0)}</div>
+                      <div><p className="font-semibold">{t.name}</p><p className="text-xs text-muted-foreground">{t.plan}</p></div>
+                    </div>
+                    <Badge tone={t.status === "ativo" ? "green" : "red"}>{t.status}</Badge>
                   </div>
-                  <Badge tone={t.status === "ativo" ? "green" : "red"}>{t.status}</Badge>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1"><Boxes size={12} />{t.productCount} produtos</span>
-                  <span className="flex items-center gap-1"><Clock3 size={12} />{t.lastAccess}</span>
-                </div>
-                {t.status === "suspenso" ? <p className="mt-3 text-xs text-destructive">Tenant suspenso. Contate o suporte.</p> : <div className="mt-4 flex justify-end"><span className="text-sm text-primary opacity-0 transition group-hover:opacity-100">Entrar →</span></div>}
-              </button>
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><Boxes size={12} />{t.productCount} produtos</span>
+                    <span className="flex items-center gap-1"><Clock3 size={12} />{t.lastAccess}</span>
+                  </div>
+                  {t.status === "suspenso" ? <p className="mt-3 text-xs text-destructive">Tenant suspenso. Contate o suporte.</p> : <div className="mt-4 flex justify-end"><span className="text-sm text-primary opacity-0 transition group-hover:opacity-100">Entrar →</span></div>}
+                </button>
+                {/* Botão direito não é confiável em touch — em mobile, este "⋮" visível abre o mesmo menu. Fica fora do <button> do card para não criar botão-dentro-de-botão. */}
+                {isSuperAdmin && (
+                  <button onClick={(e) => openContextMenu(t, e)} aria-label={`Ações de ${t.name}`} className="absolute right-2 top-2 rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted lg:hidden">
+                    <MoreVertical size={16} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         </motion.div>

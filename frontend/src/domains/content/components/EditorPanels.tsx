@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, Link2, Loader2, Plus, Send } from "lucide-react";
+import { AlertTriangle, Link2, Loader2, Plus, Send, Trash2 } from "lucide-react";
 import { Badge, Button, Card, Field, SelectLike } from "../../../shared/components/Primitives";
 import { PermissionHint } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
@@ -12,8 +12,8 @@ import { EntityPicker } from "../../knowledge/components/EntityPicker";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
 import type { KGNode } from "../../knowledge/mocks/knowledge.mocks";
 
-export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock }: {
-  page: Page | null; selectedId: string | null; onSelect: (id: string) => void; onAddBlock: (type: BlockType) => void;
+export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, onRequestDelete }: {
+  page: Page | null; selectedId: string | null; onSelect: (id: string) => void; onAddBlock: (type: BlockType) => void; onRequestDelete: (id: string) => void;
 }) {
   const [newType, setNewType] = useState<BlockType>("text");
   const sections = page?.sections ?? [];
@@ -23,10 +23,13 @@ export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock }:
       <h2 className="mb-3 text-lg font-semibold">Estrutura</h2>
       {!page && <p className="text-sm text-muted-foreground">Nenhuma página carregada para este produto.</p>}
       {sections.map((s, i) => (
-        <button key={s.id} onClick={() => onSelect(s.id)} className={`mb-1 flex w-full items-center justify-between rounded-lg p-2 text-left text-sm ${selectedId === s.id ? "bg-muted" : "hover:bg-muted"}`}>
-          <span>{s.label}</span>
-          <span className="flex gap-1"><Badge>{s.type}</Badge>{i === sections.length - 1 && sections.length > 4 && <AlertTriangle size={14} className="text-[#8A5A12]" />}</span>
-        </button>
+        <div key={s.id} className={`mb-1 flex w-full items-center gap-1 rounded-lg p-1 ${selectedId === s.id ? "bg-muted" : "hover:bg-muted"}`}>
+          <button onClick={() => onSelect(s.id)} className="flex flex-1 items-center justify-between p-1 text-left text-sm">
+            <span>{s.label}</span>
+            <span className="flex gap-1"><Badge>{s.type}</Badge>{i === sections.length - 1 && sections.length > 4 && <AlertTriangle size={14} className="text-[#8A5A12]" />}</span>
+          </button>
+          <button onClick={() => onRequestDelete(s.id)} aria-label={`Remover ${s.label}`} className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button>
+        </div>
       ))}
       {page && (
         <div className="mt-3 flex items-center gap-2">
@@ -38,25 +41,70 @@ export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock }:
   );
 }
 
-function ItemsEditor({ items, onChange }: { items: Record<string, unknown>[]; onChange: (items: Record<string, unknown>[]) => void }) {
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+function isArrayOfObjects(v: unknown): v is Record<string, unknown>[] {
+  return Array.isArray(v) && v.length > 0 && v.every((item) => isPlainObject(item));
+}
+
+/** Aplica um valor num caminho aninhado e devolve a árvore `content` completa atualizada (merge raso no nível 1 continua correto). */
+function setNestedField(obj: Record<string, unknown>, path: string[], value: string): Record<string, unknown> {
+  const [head, ...rest] = path;
+  if (rest.length === 0) return { ...obj, [head]: value };
+  const child = isPlainObject(obj[head]) ? (obj[head] as Record<string, unknown>) : {};
+  return { ...obj, [head]: setNestedField(child, rest, value) };
+}
+
+function ObjectFieldsEditor({ obj, path, onPatch }: { obj: Record<string, unknown>; path: string[]; onPatch: (path: string[], value: string) => void }) {
+  return (
+    <>
+      {Object.entries(obj).map(([k, v]) => {
+        const fullPath = [...path, k];
+        if (typeof v === "string") {
+          return (
+            <Field key={fullPath.join(".")} label={fullPath.join(" › ")} value={v} onChange={(nv) => onPatch(fullPath, nv)} textarea={k === "body" || k === "desc"} />
+          );
+        }
+        if (isPlainObject(v)) {
+          return (
+            <div key={fullPath.join(".")} className="rounded-lg border border-border p-3 md:col-span-2">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{k}</p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <ObjectFieldsEditor obj={v} path={fullPath} onPatch={onPatch} />
+              </div>
+            </div>
+          );
+        }
+        return null;
+      })}
+    </>
+  );
+}
+
+function ArrayFieldEditor({ items, onChange }: { items: Record<string, unknown>[]; onChange: (items: Record<string, unknown>[]) => void }) {
   return (
     <div className="space-y-2">
       {items.map((item, i) => (
-        <div key={i} className="rounded-lg border border-border p-3">
-          {typeof item.title === "string" && (
-            <Field label="Título" value={item.title} onChange={(v) => onChange(items.map((it, j) => (j === i ? { ...it, title: v } : it)))} />
-          )}
-          {typeof item.desc === "string" && (
-            <Field label="Descrição" value={item.desc} onChange={(v) => onChange(items.map((it, j) => (j === i ? { ...it, desc: v } : it)))} textarea />
-          )}
+        <div key={i} className="grid gap-2 rounded-lg border border-border p-3 md:grid-cols-2">
+          {Object.entries(item).filter(([, v]) => typeof v === "string").map(([k, v]) => (
+            <Field
+              key={k}
+              label={k}
+              value={v as string}
+              onChange={(nv) => onChange(items.map((it, j) => (j === i ? { ...it, [k]: nv } : it)))}
+              textarea={k === "desc" || k === "a" || k === "body"}
+            />
+          ))}
         </div>
       ))}
     </div>
   );
 }
 
-export function BlockEditorCanvas({ section, onChangeContent }: {
-  section: Section | null; onChangeContent: (patch: Record<string, unknown>) => void;
+export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }: {
+  section: Section | null; onChangeContent: (patch: Record<string, unknown>) => void; onRequestDelete: (id: string) => void;
 }) {
   if (!section) {
     return (
@@ -69,9 +117,13 @@ export function BlockEditorCanvas({ section, onChangeContent }: {
 
   const { content } = section;
   const stringFields = Object.entries(content).filter(([, v]) => typeof v === "string") as [string, string][];
-  const items = Array.isArray(content.items) ? (content.items as Record<string, unknown>[]) : null;
-  const advancedKeys = Object.keys(content).filter((k) => k !== "items" && typeof content[k] !== "string");
+  const nestedObjectFields = Object.entries(content).filter(([, v]) => isPlainObject(v)) as [string, Record<string, unknown>][];
+  const arrayFields = Object.entries(content).filter(([, v]) => isArrayOfObjects(v)) as [string, Record<string, unknown>[]][];
+  const handledKeys = new Set([...stringFields, ...nestedObjectFields, ...arrayFields].map(([k]) => k));
+  const advancedKeys = Object.keys(content).filter((k) => !handledKeys.has(k));
   const canLinkEntity = section.type === "text" || section.type === "rich-text";
+
+  const handleNestedPatch = (path: string[], value: string) => onChangeContent(setNestedField(content, path, value));
 
   const handleLinkEntity = async (node: KGNode) => {
     const body = typeof content.body === "string" ? content.body : "";
@@ -82,11 +134,24 @@ export function BlockEditorCanvas({ section, onChangeContent }: {
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold">Editor / Canvas — {section.label}</h2>
-      <p className="mb-4 text-sm text-muted-foreground">Bloco do tipo <b>{section.type}</b>, vindo de `pagesService` — não é mais uma string solta.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Editor / Canvas — {section.label}</h2>
+          <p className="mb-4 text-sm text-muted-foreground">Bloco do tipo <b>{section.type}</b>, vindo de `pagesService` — não é mais uma string solta.</p>
+        </div>
+        <Button onClick={() => onRequestDelete(section.id)}><Trash2 size={14} />Remover bloco</Button>
+      </div>
       <div className="grid gap-3 md:grid-cols-2">
         {stringFields.map(([k, v]) => (
           <Field key={k} label={k} value={v} onChange={(nv) => onChangeContent({ [k]: nv })} textarea={k === "body"} />
+        ))}
+        {nestedObjectFields.map(([k, v]) => (
+          <div key={k} className="rounded-lg border border-border p-3 md:col-span-2">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{k}</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <ObjectFieldsEditor obj={v} path={[k]} onPatch={handleNestedPatch} />
+            </div>
+          </div>
         ))}
       </div>
       {canLinkEntity && (
@@ -97,12 +162,12 @@ export function BlockEditorCanvas({ section, onChangeContent }: {
           </Popover>
         </div>
       )}
-      {items && (
-        <div className="mt-4">
-          <p className="mb-2 text-sm font-medium">Itens ({items.length})</p>
-          <ItemsEditor items={items} onChange={(next) => onChangeContent({ items: next })} />
+      {arrayFields.map(([k, items]) => (
+        <div key={k} className="mt-4">
+          <p className="mb-2 text-sm font-medium">{k} ({items.length})</p>
+          <ArrayFieldEditor items={items} onChange={(next) => onChangeContent({ [k]: next })} />
         </div>
-      )}
+      ))}
       {advancedKeys.length > 0 && (
         <details className="mt-4 rounded-xl border border-border bg-muted p-3 text-xs">
           <summary className="cursor-pointer font-medium">Dados avançados ({advancedKeys.join(", ")})</summary>

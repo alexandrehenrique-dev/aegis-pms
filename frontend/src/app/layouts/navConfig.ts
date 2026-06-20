@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, FileText, Image, LayoutDashboard, Settings, ShieldCheck, Sparkles, Workflow, type LucideIcon } from "lucide-react";
+import { BarChart3, FileText, Image, LayoutDashboard, Settings, ShieldCheck, Sparkles, Workflow, type LucideIcon } from "lucide-react";
 
 export type NavItem = { path: string; icon: LucideIcon; label: string };
 
@@ -10,10 +10,16 @@ export type NavItem = { path: string; icon: LucideIcon; label: string };
  * Tenants" em DashboardGlobal (visível só para super_admin), e de lá em
  * diante a navegação é por BackLink ("Voltar para...") dentro do próprio
  * fluxo de administração — não pelo menu lateral regular.
+ *
+ * /products também foi removido por um motivo análogo: trocar/gerir o
+ * conjunto de produtos do tenant é uma ação cross-produto, que já acontece
+ * em /select-product (ProductSelectScreen, mesma tela que resolve o caso de
+ * produto bloqueado/sem módulos com botão direito → Editar/Excluir) — não
+ * faz sentido reaparecer como item fixo dentro do workspace de um produto
+ * já selecionado.
  */
 export const nav: NavItem[] = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/products", icon: Boxes, label: "Produtos" },
   { path: "/content", icon: FileText, label: "Conteúdo" },
   { path: "/assets", icon: Image, label: "Assets" },
   { path: "/forms", icon: Workflow, label: "Forms" },
