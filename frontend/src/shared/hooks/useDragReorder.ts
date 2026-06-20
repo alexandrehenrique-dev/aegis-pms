@@ -23,7 +23,7 @@ export function useDragReorder({ dragType, index, onHoverReorder, onDrop }: {
     item: (): DragItem => ({ index }),
     collect: (monitor) => ({ isDragging: monitor.isDragging() }),
     end: () => onDrop?.(),
-  }));
+  }), [dragType, index, onDrop]);
 
   const [{ isOver }, drop] = useDrop<DragItem, void, { isOver: boolean }>(() => ({
     accept: dragType,
@@ -33,7 +33,7 @@ export function useDragReorder({ dragType, index, onHoverReorder, onDrop }: {
       item.index = index;
     },
     collect: (monitor) => ({ isOver: monitor.isOver() }),
-  }));
+  }), [dragType, index, onHoverReorder]);
 
   drag(ref);
   drop(ref);
