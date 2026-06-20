@@ -18,6 +18,7 @@ import { AudioBlockEditor } from "../../pages/components/AudioBlockEditor";
 import { ItemsCrudEditor } from "../../pages/components/ItemsCrudEditor";
 import { ITEMS_CRUD_CONFIG } from "../../pages/itemsCrudConfig";
 import { EventsManagerDrawer } from "../../pages/components/EventsManagerDrawer";
+import { EventSelector } from "../../pages/components/EventSelector";
 import { FormIdSelector } from "../../pages/components/FormIdSelector";
 import { pagesService } from "../../pages/services/pagesService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
@@ -197,12 +198,14 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
 
   const isTwoColumn = section.type === "two-column";
   const isAudio = section.type === "audio";
+  const isEventList = section.type === "event-list";
   const itemsCrudConfig = ITEMS_CRUD_CONFIG[section.type];
   const hasFormIdSelector = section.type === "contact" || section.type === "form";
   const { content } = section;
   const excludedKeys = new Set<string>([
     ...(isTwoColumn ? ["left", "right"] : []),
     ...(isAudio ? ["source", "fileAssetId", "spotifyUrl", "autoplay"] : []),
+    ...(isEventList ? ["selectedEventIds"] : []),
     ...(itemsCrudConfig ? [itemsCrudConfig.key] : []),
     ...(hasFormIdSelector ? ["formId"] : []),
   ]);
@@ -255,8 +258,13 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
       </div>
       {isTwoColumn && <TwoColumnEditor content={content} onChange={onChangeContent} />}
       {isAudio && <AudioBlockEditor content={content} onChange={onChangeContent} />}
-      {section.type === "event-list" && (
-        <div className="mt-3">
+      {isEventList && (
+        <div className="mt-3 space-y-3">
+          <EventSelector
+            productSlug={productSlug}
+            selectedIds={Array.isArray(content.selectedEventIds) ? (content.selectedEventIds as string[]) : []}
+            onChange={(selectedEventIds) => onChangeContent({ selectedEventIds })}
+          />
           <Button onClick={() => setShowEventsManager(true)}><Calendar size={14} />Gerenciar eventos</Button>
           <EventsManagerDrawer productSlug={productSlug} open={showEventsManager} onOpenChange={setShowEventsManager} />
         </div>

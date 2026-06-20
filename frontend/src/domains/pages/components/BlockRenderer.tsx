@@ -128,13 +128,17 @@ export function BlockRenderer({ section }: { section: Section }) {
       );
     }
 
-    case "event-list":
+    case "event-list": {
+      const selectedCount = Array.isArray(c.selectedEventIds) ? c.selectedEventIds.length : 0;
       return (
         <div className="p-6">
           <h3 className="text-xl font-semibold">{asStr(c.title, "Agenda")}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">Lista de eventos vinda da fonte referenciada (gerencie em "Gerenciar eventos" no editor).</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {selectedCount > 0 ? `${selectedCount} evento(s) selecionado(s) para este bloco.` : "Nenhum evento selecionado ainda (ver editor)."}
+          </p>
         </div>
       );
+    }
 
     case "cta-section":
       return (
