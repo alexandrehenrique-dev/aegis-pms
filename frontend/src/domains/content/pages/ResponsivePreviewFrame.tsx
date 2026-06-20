@@ -11,7 +11,9 @@ import { ArticleBody } from "../components/ArticleBody";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
 import { KGBadge } from "../../knowledge/components/KGBadge";
 import { pagesService } from "../../pages/services/pagesService";
+import { globalsService } from "../../pages/services/globalsService";
 import { BlockRenderer } from "../../pages/components/BlockRenderer";
+import { GlobalFooter, GlobalNavbar } from "../../pages/components/GlobalChrome";
 
 const LANGUAGES = ["PT-BR", "EN-US", "ES-ES"];
 
@@ -54,6 +56,7 @@ export function ResponsivePreviewFrame() {
     () => (pageSlug ? pagesService.getPageBySlug(productSlug, pageSlug) : Promise.resolve(undefined)),
     [productSlug, pageSlug],
   );
+  const { data: globals } = useAsyncData(() => globalsService.getGlobals(productSlug), [productSlug]);
 
   const handleSubmitForReview = async () => {
     setSubmitting(true);
@@ -84,7 +87,9 @@ export function ResponsivePreviewFrame() {
             <SkeletonLines />
           ) : page ? (
             <div className="divide-y divide-border">
+              {globals && <GlobalNavbar globals={globals} />}
               {[...page.sections].sort((a, b) => a.order - b.order).map((section) => <BlockRenderer key={section.id} section={section} />)}
+              {globals && <GlobalFooter globals={globals} />}
             </div>
           ) : (
             <EmptyState title="Preview indisponível" description={`Nenhuma página com slug "${pageSlug}" encontrada em ${productSlug}.`} />

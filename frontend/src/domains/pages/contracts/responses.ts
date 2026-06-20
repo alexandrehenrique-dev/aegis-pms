@@ -22,8 +22,6 @@ export const BLOCK_TYPES = [
   "download",
   "audio",
   "social-links",
-  "footer",
-  "navbar",
 ] as const;
 
 export type BlockType = (typeof BLOCK_TYPES)[number];

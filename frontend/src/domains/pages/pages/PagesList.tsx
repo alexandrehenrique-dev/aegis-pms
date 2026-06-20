@@ -117,6 +117,7 @@ export function PagesList() {
         />
       )}
       <PageHeader title="Páginas" desc="Páginas institucionais deste produto — cada uma é composta por seções e blocos." badge={product?.name ?? "Produto"}>
+        <Button onClick={() => navigate("/products/globals")}>Navbar, footer e redes sociais</Button>
         <Button primary onClick={() => setShowNewPage(true)}><Plus size={15} />Nova página</Button>
       </PageHeader>
       {pages.length === 0 ? (

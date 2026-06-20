@@ -36,6 +36,7 @@ const VersionCompareView = lazy(() => import("../../domains/content/pages/Versio
 
 // --- domains/pages ---
 const PagesList = lazy(() => import("../../domains/pages/pages/PagesList").then((m) => ({ default: m.PagesList })));
+const GlobalsSettings = lazy(() => import("../../domains/pages/pages/GlobalsSettings").then((m) => ({ default: m.GlobalsSettings })));
 
 // --- domains/assets ---
 const AssetLibrary = lazy(() => import("../../domains/assets/pages/AssetLibrary").then((m) => ({ default: m.AssetLibrary })));
@@ -129,6 +130,7 @@ export function AppRoutes() {
             <Route path="/content/:id/compare" element={<VersionCompareView />} />
 
             <Route path="/pages" element={<PagesList />} />
+            <Route path="/products/globals" element={<GlobalsSettings />} />
 
             <Route path="/assets" element={<AssetLibrary />} />
             <Route path="/assets/upload" element={<AssetUploadScreen />} />

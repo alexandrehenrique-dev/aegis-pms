@@ -19,10 +19,12 @@ function isMissing(item: Record<string, unknown>, field: string): boolean {
 
 /**
  * CRUD genérico de itens em blocos com lista (Sprint 12, Tarefa D) — usado
- * por `gallery`, `card-list`, `feature-grid`, `timeline`, `faq` e links de
- * `navbar`/`footer`. Diferente do antigo `ArrayFieldEditor`, que só editava
- * campos de itens já existentes, este adiciona, remove (com confirmação se
- * o item tiver conteúdo) e reordena, além de aplicar `rules` por bloco.
+ * por `gallery`, `card-list`, `feature-grid`, `timeline`, `faq`, `social-links`
+ * e pelos links de navbar/footer dentro de `GlobalsSettings` (Sprint 13,
+ * Tarefa G — navbar/footer não são mais `BlockType` de página). Diferente do
+ * antigo `ArrayFieldEditor`, que só editava campos de itens já existentes,
+ * este adiciona, remove (com confirmação se o item tiver conteúdo) e
+ * reordena, além de aplicar `rules` por bloco.
  */
 export function ItemsCrudEditor({ items, onChange, newItem, rules }: {
   items: Record<string, unknown>[];

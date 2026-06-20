@@ -173,22 +173,6 @@ export function BlockRenderer({ section }: { section: Section }) {
         </div>
       );
 
-    case "footer":
-      return (
-        <div className="border-t border-border p-6 text-sm text-muted-foreground">
-          {asStr(c.address)}
-        </div>
-      );
-
-    case "navbar": {
-      const items = asArray(c.items);
-      return (
-        <div className="flex gap-4 border-b border-border p-4 text-sm">
-          {items.map((item, i) => <span key={i}>{asStr(item.label)}</span>)}
-        </div>
-      );
-    }
-
     case "audio": {
       const source = asStr(c.source, "upload");
       return (
