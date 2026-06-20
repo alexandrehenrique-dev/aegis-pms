@@ -37,3 +37,5 @@ Ajuste visual pequeno, correção de typo, refactor local sem impacto, bugfix se
 | ADR-0009 | SPA servido pelo Spring Boot | ACCEPTED |
 | ADR-0010 | PostgreSQL como banco inicial | ACCEPTED |
 | ADR-0011 | Framework de Frontend: React (não Angular) | ACCEPTED |
+| ADR-0012 | Separação de tipos de conteúdo (Page vs Content vs futuros) | ACCEPTED |
+| ADR-0013 | Entidades globais por produto (Navbar/Footer/Redes Sociais) | ACCEPTED |
