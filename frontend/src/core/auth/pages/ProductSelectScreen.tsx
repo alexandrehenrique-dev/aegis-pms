@@ -51,7 +51,7 @@ function PCard({ p, onSelect }: { p: ProductOption; onSelect: (p: ProductOption)
           <ProductStatusBadge status={p.status} />
         </div>
         <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-          <span>{p.modules} módulos{p.modules === 0 ? " · sem módulos" : ""}</span>
+          <span>{p.modules} módulo{p.modules === 1 ? "" : "s"}{p.modules === 0 ? " · sem módulos" : ""}</span>
           {!disabled && <span className="text-primary opacity-0 transition group-hover:opacity-100">Abrir →</span>}
         </div>
         {disabled && canManage && <p className="mt-2 text-xs text-muted-foreground hidden lg:block">Botão direito para editar ou excluir.</p>}

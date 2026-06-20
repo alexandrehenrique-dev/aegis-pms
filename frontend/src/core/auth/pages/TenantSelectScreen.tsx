@@ -97,18 +97,20 @@ export function TenantSelectScreen() {
               </p>
             </div>
             {isSuperAdmin && (
-              <>
-                <div className="hidden lg:block"><Button primary onClick={() => setShowCreateWizard(true)}><Plus size={15} />Criar Tenant</Button></div>
-                <div className="lg:hidden">
-                  <MobileDrawerMenu label="Ações de tenants" title="Ações">
-                    <Button primary onClick={() => setShowCreateWizard(true)} className="w-full"><Plus size={15} />Criar Tenant</Button>
-                  </MobileDrawerMenu>
-                </div>
-              </>
+              <div className="hidden lg:block"><Button primary onClick={() => setShowCreateWizard(true)}><Plus size={15} />Criar Tenant</Button></div>
             )}
           </div>
-          <div className="mt-6 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar tenant..." className="w-full bg-transparent text-sm outline-none" />
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <div className="flex min-w-[200px] flex-1 items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar tenant..." className="w-full bg-transparent text-sm outline-none" />
+            </div>
+            {isSuperAdmin && (
+              <div className="lg:hidden">
+                <MobileDrawerMenu label="Ações de tenants" title="Ações">
+                  <Button primary onClick={() => setShowCreateWizard(true)} className="w-full"><Plus size={15} />Criar Tenant</Button>
+                </MobileDrawerMenu>
+              </div>
+            )}
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {filtered.length === 0 ? <EmptyState compact title="Nenhum tenant encontrado" description="Ajuste a busca." /> : filtered.map((t) => (
@@ -127,7 +129,7 @@ export function TenantSelectScreen() {
                     <Badge tone={t.status === "ativo" ? "green" : "red"}>{t.status}</Badge>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Boxes size={12} />{t.productCount} produtos</span>
+                    <span className="flex items-center gap-1"><Boxes size={12} />{t.productCount} produto{t.productCount !== 1 ? "s" : ""}</span>
                     <span className="flex items-center gap-1"><Clock3 size={12} />{t.lastAccess}</span>
                   </div>
                   {t.status === "suspenso" ? <p className="mt-3 text-xs text-destructive">Tenant suspenso. Contate o suporte.</p> : <div className="mt-4 flex justify-end"><span className="text-sm text-primary opacity-0 transition group-hover:opacity-100">Entrar →</span></div>}
@@ -164,7 +166,7 @@ export function TenantSelectScreen() {
       {pendingDelete && (
         <ConfirmDialog
           title={`Excluir ${pendingDelete.name}?`}
-          desc={`Esta ação é irreversível. Todos os ${pendingDelete.productCount} produtos deste tenant e o acesso de todos os usuários associados a eles serão removidos imediatamente. Digite o nome do tenant para confirmar.`}
+          desc={`Esta ação é irreversível. Todos os ${pendingDelete.productCount} produto${pendingDelete.productCount !== 1 ? "s" : ""} deste tenant e o acesso de todos os usuários associados a eles serão removidos imediatamente. Digite o nome do tenant para confirmar.`}
           danger
           loading={deleting}
           confirmDisabled={confirmationText.trim() !== pendingDelete.name}
