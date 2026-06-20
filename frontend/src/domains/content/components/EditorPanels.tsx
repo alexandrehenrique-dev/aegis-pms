@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { AlertTriangle, Calendar, Link2, Loader2, Plus, Send, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, Calendar, GripVertical, Link2, Loader2, Plus, Send, Trash2 } from "lucide-react";
+import { useDragReorder } from "../../../shared/hooks/useDragReorder";
 import { Badge, Button, Card, Field, SelectLike } from "../../../shared/components/Primitives";
 import { PermissionHint } from "../../../shared/components/Primitives";
 import { MarkdownField } from "../../../shared/components/MarkdownField";
@@ -20,24 +21,67 @@ import { EventsManagerDrawer } from "../../pages/components/EventsManagerDrawer"
 import { FormIdSelector } from "../../pages/components/FormIdSelector";
 import type { KGNode } from "../../knowledge/mocks/knowledge.mocks";
 
-export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, onRequestDelete }: {
+const SECTION_DRAG_TYPE = "page-section";
+
+function SectionRow({ section, index, isSelected, isLast, totalCount, onSelect, onRequestDelete, onHoverReorder, onDrop }: {
+  section: Section; index: number; isSelected: boolean; isLast: boolean; totalCount: number;
+  onSelect: () => void; onRequestDelete: () => void;
+  onHoverReorder: (from: number, to: number) => void; onDrop: () => void;
+}) {
+  const { ref, isDragging, isOver } = useDragReorder({ dragType: SECTION_DRAG_TYPE, index, onHoverReorder, onDrop });
+
+  return (
+    <div
+      ref={ref}
+      style={{ opacity: isDragging ? 0.4 : 1 }}
+      className={`mb-1 flex w-full items-center gap-1 rounded-lg p-1 transition ${isSelected ? "bg-muted" : "hover:bg-muted"} ${isOver ? "ring-2 ring-primary/30" : ""}`}
+    >
+      <GripVertical size={14} className="shrink-0 cursor-grab text-muted-foreground/50 active:cursor-grabbing" />
+      <button onClick={onSelect} className="flex flex-1 items-center justify-between p-1 text-left text-sm">
+        <span>{section.label}</span>
+        <span className="flex gap-1"><Badge>{section.type}</Badge>{isLast && totalCount > 4 && <AlertTriangle size={14} className="text-[#8A5A12]" />}</span>
+      </button>
+      <button onClick={onRequestDelete} aria-label={`Remover ${section.label}`} className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button>
+    </div>
+  );
+}
+
+export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, onRequestDelete, onReorder }: {
   page: Page | null; selectedId: string | null; onSelect: (id: string) => void; onAddBlock: (type: BlockType) => void; onRequestDelete: (id: string) => void;
+  onReorder: (sectionIds: string[]) => void;
 }) {
   const [newType, setNewType] = useState<BlockType>("text");
-  const sections = page?.sections ?? [];
+  const [orderedSections, setOrderedSections] = useState<Section[]>(page?.sections ?? []);
+
+  useEffect(() => setOrderedSections(page?.sections ?? []), [page]);
+
+  const handleHoverReorder = (from: number, to: number) => {
+    setOrderedSections((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
 
   return (
     <Card className="h-full">
       <h2 className="mb-3 text-lg font-semibold">Estrutura</h2>
+      <p className="mb-2 text-xs text-muted-foreground">Arraste pelo ícone para reordenar.</p>
       {!page && <p className="text-sm text-muted-foreground">Nenhuma página carregada para este produto.</p>}
-      {sections.map((s, i) => (
-        <div key={s.id} className={`mb-1 flex w-full items-center gap-1 rounded-lg p-1 ${selectedId === s.id ? "bg-muted" : "hover:bg-muted"}`}>
-          <button onClick={() => onSelect(s.id)} className="flex flex-1 items-center justify-between p-1 text-left text-sm">
-            <span>{s.label}</span>
-            <span className="flex gap-1"><Badge>{s.type}</Badge>{i === sections.length - 1 && sections.length > 4 && <AlertTriangle size={14} className="text-[#8A5A12]" />}</span>
-          </button>
-          <button onClick={() => onRequestDelete(s.id)} aria-label={`Remover ${s.label}`} className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button>
-        </div>
+      {orderedSections.map((s, i) => (
+        <SectionRow
+          key={s.id}
+          section={s}
+          index={i}
+          isSelected={selectedId === s.id}
+          isLast={i === orderedSections.length - 1}
+          totalCount={orderedSections.length}
+          onSelect={() => onSelect(s.id)}
+          onRequestDelete={() => onRequestDelete(s.id)}
+          onHoverReorder={handleHoverReorder}
+          onDrop={() => onReorder(orderedSections.map((sec) => sec.id))}
+        />
       ))}
       {page && (
         <div className="mt-3 flex items-center gap-2">
