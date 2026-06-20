@@ -37,6 +37,19 @@ export const MINI_BLOCK_TYPES = ["text", "rich-text", "image", "cta"] as const;
 export type MiniBlockType = (typeof MINI_BLOCK_TYPES)[number];
 export type MiniBlock = { type: MiniBlockType; content: Record<string, unknown> };
 
+/**
+ * Catálogo de composição (Sprint 13, Decisão 3 / Tarefa E.1) — qualquer
+ * `BlockType` presente aqui aceita filhos, renderizados pelo motor genérico
+ * `SubBlockEditor`. Não é mais exclusividade do `two-column`: um bloco novo
+ * (`tabs`, `accordion`...) só precisa de uma entrada aqui para ganhar CRUD de
+ * sub-blocos de graça. A allowlist de filhos usa `MiniBlockType` (o catálogo
+ * de blocos compostos existente), não o `BlockType` completo — `text`,
+ * `rich-text`, `image` e `cta` são os únicos tipos pensados para aninhar.
+ */
+export const BLOCK_ACCEPTS_CHILDREN: Partial<Record<BlockType, MiniBlockType[]>> = {
+  "two-column": ["text", "rich-text", "image", "cta"],
+};
+
 export type PageStatus = "draft" | "review" | "published" | "archived";
 
 export type PageSeo = {
