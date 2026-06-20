@@ -2,7 +2,11 @@ import { useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Button, Field } from "../../../shared/components/Primitives";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
+import { MarkdownField } from "../../../shared/components/MarkdownField";
+import { MediaField } from "../../../shared/components/MediaField";
 import type { ItemCrudRule } from "../itemsCrudConfig";
+
+const MARKDOWN_ITEM_KEYS = new Set(["desc", "a", "body"]);
 
 function hasContent(item: Record<string, unknown>): boolean {
   return Object.values(item).some((v) => typeof v === "string" && v.trim() !== "");
@@ -71,9 +75,20 @@ export function ItemsCrudEditor({ items, onChange, newItem, rules }: {
             {Object.entries(item).filter(([, v]) => typeof v === "string").map(([k, v]) => {
               const required = rules?.requiredFields?.includes(k);
               const missing = required && isMissing(item, k);
+              const label = required ? `${k} *` : k;
+              const onFieldChange = (nv: string) => updateItem(i, { [k]: nv });
+              if (k === "src") {
+                return <div key={k} className="md:col-span-2"><MediaField label={label} value={v as string} typeFilter="imagem" onChange={onFieldChange} />{missing && <p className="mt-1 text-xs text-destructive">Campo obrigatório.</p>}</div>;
+              }
+              if (k === "fileAssetId") {
+                return <div key={k} className="md:col-span-2"><MediaField label={label} value={v as string} typeFilter="qualquer" onChange={onFieldChange} />{missing && <p className="mt-1 text-xs text-destructive">Campo obrigatório.</p>}</div>;
+              }
+              if (MARKDOWN_ITEM_KEYS.has(k)) {
+                return <div key={k} className="md:col-span-2"><MarkdownField label={label} value={v as string} onChange={onFieldChange} />{missing && <p className="mt-1 text-xs text-destructive">Campo obrigatório.</p>}</div>;
+              }
               return (
                 <div key={k}>
-                  <Field label={required ? `${k} *` : k} value={v as string} onChange={(nv) => updateItem(i, { [k]: nv })} textarea={k === "desc" || k === "a" || k === "body"} />
+                  <Field label={label} value={v as string} onChange={onFieldChange} />
                   {missing && <p className="mt-1 text-xs text-destructive">Campo obrigatório.</p>}
                 </div>
               );

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { AlertTriangle, Calendar, Link2, Loader2, Plus, Send, Trash2 } from "lucide-react";
 import { Badge, Button, Card, Field, SelectLike } from "../../../shared/components/Primitives";
 import { PermissionHint } from "../../../shared/components/Primitives";
+import { MarkdownField } from "../../../shared/components/MarkdownField";
+import { ImageFieldEditor, MediaField } from "../../../shared/components/MediaField";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
@@ -54,6 +56,9 @@ function isArrayOfObjects(v: unknown): v is Record<string, unknown>[] {
   return Array.isArray(v) && v.length > 0 && v.every((item) => isPlainObject(item));
 }
 
+/** Campos de texto longo (Sprint 13, Tarefa B.2) editados via `MarkdownField`, não `<textarea>` simples. */
+const MARKDOWN_FIELD_KEYS = new Set(["body", "desc", "description", "a", "answer"]);
+
 /** Aplica um valor num caminho aninhado e devolve a árvore `content` completa atualizada (merge raso no nível 1 continua correto). */
 function setNestedField(obj: Record<string, unknown>, path: string[], value: string): Record<string, unknown> {
   const [head, ...rest] = path;
@@ -68,11 +73,27 @@ function ObjectFieldsEditor({ obj, path, onPatch }: { obj: Record<string, unknow
       {Object.entries(obj).map(([k, v]) => {
         const fullPath = [...path, k];
         if (typeof v === "string") {
+          if (MARKDOWN_FIELD_KEYS.has(k)) {
+            return <MarkdownField key={fullPath.join(".")} label={fullPath.join(" › ")} value={v} onChange={(nv) => onPatch(fullPath, nv)} />;
+          }
           return (
-            <Field key={fullPath.join(".")} label={fullPath.join(" › ")} value={v} onChange={(nv) => onPatch(fullPath, nv)} textarea={k === "body" || k === "desc"} />
+            <Field key={fullPath.join(".")} label={fullPath.join(" › ")} value={v} onChange={(nv) => onPatch(fullPath, nv)} />
           );
         }
         if (isPlainObject(v)) {
+          if (typeof v.src === "string") {
+            return (
+              <div key={fullPath.join(".")} className="rounded-lg border border-border p-3 md:col-span-2">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{k}</p>
+                <ImageFieldEditor
+                  src={v.src}
+                  alt={typeof v.alt === "string" ? v.alt : ""}
+                  onChangeSrc={(nv) => onPatch([...fullPath, "src"], nv)}
+                  onChangeAlt={(nv) => onPatch([...fullPath, "alt"], nv)}
+                />
+              </div>
+            );
+          }
           return (
             <div key={fullPath.join(".")} className="rounded-lg border border-border p-3 md:col-span-2">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{k}</p>
@@ -93,15 +114,19 @@ function ArrayFieldEditor({ items, onChange }: { items: Record<string, unknown>[
     <div className="space-y-2">
       {items.map((item, i) => (
         <div key={i} className="grid gap-2 rounded-lg border border-border p-3 md:grid-cols-2">
-          {Object.entries(item).filter(([, v]) => typeof v === "string").map(([k, v]) => (
-            <Field
-              key={k}
-              label={k}
-              value={v as string}
-              onChange={(nv) => onChange(items.map((it, j) => (j === i ? { ...it, [k]: nv } : it)))}
-              textarea={k === "desc" || k === "a" || k === "body"}
-            />
-          ))}
+          {Object.entries(item).filter(([, v]) => typeof v === "string").map(([k, v]) => {
+            const onFieldChange = (nv: string) => onChange(items.map((it, j) => (j === i ? { ...it, [k]: nv } : it)));
+            if (k === "src") {
+              return <MediaField key={k} label={k} value={v as string} typeFilter="imagem" onChange={onFieldChange} />;
+            }
+            if (k === "fileAssetId") {
+              return <MediaField key={k} label={k} value={v as string} typeFilter="qualquer" onChange={onFieldChange} />;
+            }
+            if (MARKDOWN_FIELD_KEYS.has(k)) {
+              return <MarkdownField key={k} label={k} value={v as string} onChange={onFieldChange} />;
+            }
+            return <Field key={k} label={k} value={v as string} onChange={onFieldChange} />;
+          })}
         </div>
       ))}
     </div>
@@ -159,9 +184,13 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
         <Button onClick={() => onRequestDelete(section.id)}><Trash2 size={14} />Remover bloco</Button>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
-        {stringFields.map(([k, v]) => (
-          <Field key={k} label={k} value={v} onChange={(nv) => onChangeContent({ [k]: nv })} textarea={k === "body"} />
-        ))}
+        {stringFields.map(([k, v]) => {
+          const onFieldChange = (nv: string) => onChangeContent({ [k]: nv });
+          if (MARKDOWN_FIELD_KEYS.has(k)) {
+            return <MarkdownField key={k} label={k} value={v} onChange={onFieldChange} />;
+          }
+          return <Field key={k} label={k} value={v} onChange={onFieldChange} />;
+        })}
         {nestedObjectFields.map(([k, v]) => (
           <div key={k} className="rounded-lg border border-border p-3 md:col-span-2">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{k}</p>
