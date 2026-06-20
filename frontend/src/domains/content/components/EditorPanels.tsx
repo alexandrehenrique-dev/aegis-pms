@@ -13,6 +13,7 @@ import { BLOCK_TYPES, type BlockType, type Page, type Section } from "../../page
 import { EntityPicker } from "../../knowledge/components/EntityPicker";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
 import { TwoColumnEditor } from "../../pages/components/TwoColumnEditor";
+import { AudioBlockEditor } from "../../pages/components/AudioBlockEditor";
 import { ItemsCrudEditor } from "../../pages/components/ItemsCrudEditor";
 import { ITEMS_CRUD_CONFIG } from "../../pages/itemsCrudConfig";
 import { EventsManagerDrawer } from "../../pages/components/EventsManagerDrawer";
@@ -148,11 +149,13 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
   }
 
   const isTwoColumn = section.type === "two-column";
+  const isAudio = section.type === "audio";
   const itemsCrudConfig = ITEMS_CRUD_CONFIG[section.type];
   const hasFormIdSelector = section.type === "contact" || section.type === "form";
   const { content } = section;
   const excludedKeys = new Set<string>([
     ...(isTwoColumn ? ["left", "right"] : []),
+    ...(isAudio ? ["source", "fileAssetId", "spotifyUrl", "autoplay"] : []),
     ...(itemsCrudConfig ? [itemsCrudConfig.key] : []),
     ...(hasFormIdSelector ? ["formId"] : []),
   ]);
@@ -204,6 +207,7 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
         )}
       </div>
       {isTwoColumn && <TwoColumnEditor content={content} onChange={onChangeContent} />}
+      {isAudio && <AudioBlockEditor content={content} onChange={onChangeContent} />}
       {section.type === "event-list" && (
         <div className="mt-3">
           <Button onClick={() => setShowEventsManager(true)}><Calendar size={14} />Gerenciar eventos</Button>

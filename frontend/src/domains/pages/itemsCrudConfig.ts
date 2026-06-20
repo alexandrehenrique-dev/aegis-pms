@@ -30,4 +30,5 @@ export const ITEMS_CRUD_CONFIG: Partial<Record<BlockType, ItemCrudConfig>> = {
   navbar: { key: "items", newItem: { label: "", href: "" } },
   footer: { key: "links", newItem: { label: "", href: "" } },
   download: { key: "items", newItem: { title: "", fileAssetId: "", fileType: "pdf" }, rules: { requiredFields: ["title", "fileAssetId"] } },
+  "social-links": { key: "items", newItem: { platform: "", href: "" }, rules: { requiredFields: ["platform", "href"] } },
 };

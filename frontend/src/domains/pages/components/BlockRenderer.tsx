@@ -189,6 +189,30 @@ export function BlockRenderer({ section }: { section: Section }) {
       );
     }
 
+    case "audio": {
+      const source = asStr(c.source, "upload");
+      return (
+        <div className="p-6">
+          {c.title ? <h3 className="mb-2 text-xl font-semibold">{asStr(c.title)}</h3> : null}
+          {source === "upload" ? (
+            <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">[player de áudio: {asStr(c.fileAssetId, "nenhum arquivo selecionado")}]</div>
+          ) : (
+            <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">[embed Spotify {source === "spotify-track" ? "(faixa)" : "(playlist)"}: {asStr(c.spotifyUrl, "nenhuma URL")}]</div>
+          )}
+          {c.autoplay ? <p className="mt-1 text-xs text-muted-foreground">Autoplay ativado.</p> : null}
+        </div>
+      );
+    }
+
+    case "social-links": {
+      const items = asArray(c.items);
+      return (
+        <div className="flex gap-3 p-6">
+          {items.map((item, i) => <span key={i} className="rounded-full border border-border px-3 py-1 text-sm">{asStr(item.platform, "rede social")}</span>)}
+        </div>
+      );
+    }
+
     case "download": {
       const items = asArray(c.items);
       return (

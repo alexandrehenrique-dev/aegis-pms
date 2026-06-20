@@ -20,6 +20,8 @@ export const BLOCK_TYPES = [
   "contact",
   "form",
   "download",
+  "audio",
+  "social-links",
   "footer",
   "navbar",
 ] as const;
