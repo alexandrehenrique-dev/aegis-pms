@@ -76,9 +76,12 @@ export function TenantSelectScreen() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between border-b border-border bg-card px-6 py-4 shadow-[0_1px_0_rgba(0,0,0,0.06)] dark:shadow-none">
-        <div className="flex items-center gap-2.5"><AegisLogo size="sm" /><span className="font-semibold tracking-[-.02em]">Aegis</span><Badge tone="violet">Product OS</Badge></div>
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between border-b border-border bg-card px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.06)] dark:shadow-none sm:px-6">
+        <div className="flex items-center gap-2.5">
+          <AegisLogo size="sm" /><span className="font-semibold tracking-[-.02em]">Aegis</span>
+          <div className="hidden lg:block"><Badge tone="violet">Product OS</Badge></div>
+        </div>
+        <div className="hidden items-center gap-3 lg:flex">
           <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-1.5 text-sm">
             <div className="grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">{authUser.initials}</div>
             <span className="text-muted-foreground hidden sm:block">{authUser.name}</span>
@@ -104,13 +107,20 @@ export function TenantSelectScreen() {
             <div className="flex min-w-[200px] flex-1 items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar tenant..." className="w-full bg-transparent text-sm outline-none" />
             </div>
-            {isSuperAdmin && (
-              <div className="lg:hidden">
-                <MobileDrawerMenu label="Ações de tenants" title="Ações">
-                  <Button primary onClick={() => setShowCreateWizard(true)} className="w-full"><Plus size={15} />Criar Tenant</Button>
-                </MobileDrawerMenu>
-              </div>
-            )}
+            <div className="lg:hidden">
+              <MobileDrawerMenu label="Ações de tenants" title="Ações">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2.5 text-sm">
+                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">{authUser.initials}</div>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{authUser.name}</p>
+                    <Badge tone="violet">{roleLabels[authUser.role]}</Badge>
+                  </div>
+                </div>
+                <Badge tone="violet">Product OS</Badge>
+                <Button onClick={handleLogout} className="w-full"><LogOut size={14} />Sair</Button>
+                {isSuperAdmin && <Button primary onClick={() => setShowCreateWizard(true)} className="w-full"><Plus size={15} />Criar Tenant</Button>}
+              </MobileDrawerMenu>
+            </div>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {filtered.length === 0 ? <EmptyState compact title="Nenhum tenant encontrado" description="Ajuste a busca." /> : filtered.map((t) => (

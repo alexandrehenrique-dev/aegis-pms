@@ -99,13 +99,13 @@ export function ProductSelectScreen() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between border-b border-border bg-card px-6 py-4 shadow-[0_1px_0_rgba(0,0,0,0.06)] dark:shadow-none">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5"><AegisLogo size="sm" /><span className="font-semibold tracking-[-.02em]">Aegis</span></div>
-          <ChevronRight size={14} className="text-muted-foreground" />
-          <div className="flex items-center gap-1.5"><Building2 size={14} className="text-muted-foreground" /><span className="text-sm font-medium">{effectiveTenant.name}</span></div>
+      <header className="flex items-center justify-between border-b border-border bg-card px-4 py-4 shadow-[0_1px_0_rgba(0,0,0,0.06)] dark:shadow-none sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2.5"><AegisLogo size="sm" /><span className="font-semibold tracking-[-.02em]">Aegis</span></div>
+          <ChevronRight size={14} className="hidden shrink-0 text-muted-foreground sm:block" />
+          <div className="flex min-w-0 items-center gap-1.5"><Building2 size={14} className="shrink-0 text-muted-foreground" /><span className="truncate text-sm font-medium">{effectiveTenant.name}</span></div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="hidden items-center gap-2 lg:flex">
           <button onClick={handleBack} className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-sm transition hover:bg-muted"><ArrowLeft size={14} />Trocar tenant</button>
           <button onClick={handleLogout} className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-sm transition hover:bg-muted"><LogOut size={14} />Sair</button>
         </div>
@@ -127,6 +127,8 @@ export function ProductSelectScreen() {
             </div>
             <div className="lg:hidden">
               <MobileDrawerMenu label="Filtros de produto" title="Filtrar por status">
+                <Button onClick={handleBack} className="w-full"><ArrowLeft size={14} />Trocar tenant</Button>
+                <Button onClick={handleLogout} className="w-full"><LogOut size={14} />Sair</Button>
                 {["todos", "Ativo", "Pendente", "Arquivado"].map((s) => (
                   <Button key={s} onClick={() => setSf(s)} primary={sf === s} className="w-full">{s}</Button>
                 ))}
