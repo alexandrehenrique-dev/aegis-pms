@@ -4,6 +4,8 @@ import { AnimatePresence } from "motion/react";
 import { Plus, Trash2 } from "lucide-react";
 import { Badge, Button, Card, EmptyState, Field, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
+import { PermGate } from "../../../app/guards/PermGate";
+import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 import { toast } from "../../../core/notifications/toast";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
@@ -67,6 +69,8 @@ function NewPageModal({ onClose, onCreate }: { onClose: () => void; onCreate: (r
 
 export function PagesList() {
   const navigate = useNavigate();
+  const { viewAsRole } = useViewAsRole();
+  const canEdit = viewAsRole !== "viewer";
   const { product } = useCurrentProduct();
   const productSlug = product ? slugify(product.name) : "maestro-beton";
 
@@ -117,8 +121,8 @@ export function PagesList() {
         />
       )}
       <PageHeader title="Páginas" desc="Páginas institucionais deste produto — cada uma é composta por seções e blocos." badge={product?.name ?? "Produto"}>
-        <Button onClick={() => navigate("/products/globals")}>Navbar, footer e redes sociais</Button>
-        <Button primary onClick={() => setShowNewPage(true)}><Plus size={15} />Nova página</Button>
+        <PermGate allowed={canEdit}><Button onClick={() => navigate("/products/globals")}>Navbar, footer e redes sociais</Button></PermGate>
+        <PermGate allowed={canEdit}><Button primary onClick={() => setShowNewPage(true)}><Plus size={15} />Nova página</Button></PermGate>
       </PageHeader>
       {pages.length === 0 ? (
         <EmptyState title="Nenhuma página criada" description="Crie a primeira página institucional deste produto." />
@@ -134,10 +138,12 @@ export function PagesList() {
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">/{p.slug} · {p.locale} · v{p.version} · {p.sections.length} seções</p>
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={() => navigate(`/content/${p.slug}/editor`)}>Editar</Button>
-                  <Button onClick={() => setPendingDeleteId(p.id)}><Trash2 size={14} />Excluir</Button>
-                </div>
+                <PermGate allowed={canEdit}>
+                  <div className="flex gap-2">
+                    <Button onClick={() => navigate(`/content/${p.slug}/editor`)}>Editar</Button>
+                    <Button onClick={() => setPendingDeleteId(p.id)}><Trash2 size={14} />Excluir</Button>
+                  </div>
+                </PermGate>
               </div>
             </Card>
           ))}

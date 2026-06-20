@@ -12,6 +12,7 @@ import { ReadOnlyBanner } from "../../core/permissions/components/ReadOnlyBanner
 import { ToasterHost } from "../../core/notifications/components/ToasterHost";
 import { FeedbackModal } from "../../core/notifications/components/FeedbackModal";
 import { useFeedbackModal } from "../../core/notifications/FeedbackModalContext";
+import { PendingNotificationGate } from "../../core/notifications/PendingNotificationGate";
 
 import { AegisLogo } from "../../shared/components/AegisLogo";
 import { Switcher, type SwitcherItem } from "../../shared/components/Switcher";
@@ -22,7 +23,6 @@ import { useTheme } from "../providers/ThemeProvider";
 import { nav, tabsForPath } from "./navConfig";
 import { AppNav } from "./AppNav";
 import { ModuleTabs } from "./ModuleTabs";
-import { DemoWelcomeModal } from "./DemoWelcomeModal";
 import { ScreenSkeleton } from "./ScreenSkeleton";
 
 import type { UserRole } from "../../shared/types";
@@ -45,9 +45,6 @@ export function AppShell() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { open: showFeedback, setOpen: setShowFeedback } = useFeedbackModal();
   const [transitioning, setTransitioning] = useState(false);
-  const [showWelcome, setShowWelcome] = useState<boolean>(() => {
-    try { return !localStorage.getItem("aegis-welcomed"); } catch { return true; }
-  });
 
   const prevRoot = useRef<string>(location.pathname.split("/")[1] ?? "dashboard");
   const firstRender = useRef(true);
@@ -65,7 +62,6 @@ export function AppShell() {
 
   if (!authUser || !effectiveTenant || !effectiveProduct) return null;
 
-  const handleWelcomeClose = () => { try { localStorage.setItem("aegis-welcomed", "1"); } catch { /* noop */ } setShowWelcome(false); };
   const handleLogout = () => { logout(); navigate("/login"); };
 
   const themeIcon = { light: <Sun size={16} />, dark: <Moon size={16} />, auto: <Monitor size={16} /> }[theme];
@@ -164,7 +160,7 @@ export function AppShell() {
 
       <SimulationBanner viewAs={viewAsRole} actual={authUser.role} onRestore={restore} />
 
-      <AnimatePresence>{showWelcome && <DemoWelcomeModal key="welcome" onClose={handleWelcomeClose} />}</AnimatePresence>
+      <PendingNotificationGate />
       <AnimatePresence>{showFeedback && <FeedbackModal key="fb" screenName={location.pathname} onClose={() => setShowFeedback(false)} />}</AnimatePresence>
       <AnimatePresence>
         {mobile && (

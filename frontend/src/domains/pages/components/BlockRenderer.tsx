@@ -37,14 +37,21 @@ export function BlockRenderer({ section }: { section: Section }) {
   const c = section.content;
 
   switch (section.type) {
-    case "hero":
+    case "hero": {
+      const image = (c.image as Record<string, unknown>) ?? {};
+      const hasImage = typeof image.src === "string" && image.src.length > 0;
       return (
         <div className="rounded-xl bg-muted p-8 text-center">
+          {hasImage && <div className="mx-auto mb-4 max-w-md rounded-lg bg-border/60 p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>}
           <h2 className="text-3xl font-semibold">{asStr(c.title, section.label)}</h2>
           {c.subtitle ? <p className="mt-2 text-muted-foreground">{asStr(c.subtitle)}</p> : null}
-          {c.ctaPrimary ? <button className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground">{asStr((c.ctaPrimary as Record<string, unknown>)?.label, "Saiba mais")}</button> : null}
+          <div className="mt-4 flex justify-center gap-2">
+            {c.ctaPrimary ? <button className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground">{asStr((c.ctaPrimary as Record<string, unknown>)?.label, "Saiba mais")}</button> : null}
+            {asStr((c.ctaSecondary as Record<string, unknown>)?.label) ? <button className="rounded-lg border border-border px-4 py-2 text-sm">{asStr((c.ctaSecondary as Record<string, unknown>)?.label)}</button> : null}
+          </div>
         </div>
       );
+    }
 
     case "text":
     case "rich-text":

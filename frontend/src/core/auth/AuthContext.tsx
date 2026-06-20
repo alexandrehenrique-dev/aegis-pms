@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { AuthUser, ProductOption, TenantOption } from "../../shared/types";
 import { setAuthTokenProvider } from "../../shared/services/apiClient";
 import { logApiCall } from "../../shared/services/devLog";
+import { setNotificationsCurrentUser } from "../notifications/services/notificationsService";
 import type { DeleteProductRequest, UpdateProductRequest } from "../../domains/products/contracts/requests";
 
 type AuthContextValue = {
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // usuario logado; na Sprint 06 (Keycloak real) so' esta funcao muda.
   useEffect(() => {
     setAuthTokenProvider(() => (authUser ? `mock-token-${authUser.id}` : null));
+    setNotificationsCurrentUser(authUser?.id ?? null);
   }, [authUser]);
 
   const login = (user: AuthUser, tenants: TenantOption[], products: Record<string, ProductOption[]>) => {

@@ -2,12 +2,16 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Search } from "lucide-react";
 import { Badge, Button, EmptyState, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
+import { PermGate } from "../../../app/guards/PermGate";
+import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 import { assetsService } from "../services/assetsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AssetCard, AssetStatusBadge } from "../components/AssetBits";
 
 export function AssetLibrary() {
   const navigate = useNavigate();
+  const { viewAsRole } = useViewAsRole();
+  const canEdit = viewAsRole !== "viewer";
   const [view, setView] = useState<"grid" | "list">("grid");
   const [q, setQ] = useState("");
   const { data: assets, loading, error } = useAsyncData(() => assetsService.listAssets(), []);
@@ -20,9 +24,9 @@ export function AssetLibrary() {
   return (
     <>
       <PageHeader title="Assets" module="Assets" desc="Gerencie imagens, vídeos, documentos e arquivos vinculados a este produto." badge="Maestro Beton">
-        <Button onClick={() => navigate("/assets/tags")}>Organizar tags</Button>
+        <PermGate allowed={canEdit}><Button onClick={() => navigate("/assets/tags")}>Organizar tags</Button></PermGate>
         <Button onClick={() => setView(view === "grid" ? "list" : "grid")}>{view === "grid" ? "Lista" : "Grid"}</Button>
-        <Button primary onClick={() => navigate("/assets/upload")}><Plus size={15} />Upload de asset</Button>
+        <PermGate allowed={canEdit}><Button primary onClick={() => navigate("/assets/upload")}><Plus size={15} />Upload de asset</Button></PermGate>
       </PageHeader>
       <div className="mb-4 rounded-2xl border border-border bg-card p-3">
         <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2">

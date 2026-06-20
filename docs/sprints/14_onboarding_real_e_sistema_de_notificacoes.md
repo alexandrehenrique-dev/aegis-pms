@@ -27,12 +27,25 @@ Duas entidades, não uma só — porque uma notificação criada pelo Super Admi
 
 ## Objetivo
 
+0. **Corrigir, antes de qualquer tarefa abaixo**, os bugs de UI já visíveis na navbar mobile de `TenantSelectScreen`/`ProductSelectScreen` (telas que esta sprint vai editar de qualquer forma na Tarefa D) — ver Tarefa A0.
 1. Substituir `DemoWelcomeModal`/`localStorage` por um onboarding real, persistido por usuário, com conteúdo de guia de uso + aviso de homologação.
 2. Criar o domínio de notificações (frontend: contratos/mocks/service; backend: registrado como nova etapa da Sprint 02).
 3. Super Admin cria notificações direcionadas, a partir da tela de seleção de tenant.
 4. Remodelar o sino de notificações para consumir esse domínio real, com modal reabrível.
 
 ## Tarefas
+
+### A0. Correções de UI na navbar mobile do Super Admin (fazer primeiro, antes de A-F)
+
+Um agente paralelo já adicionou os menus hambúrguer mobile (`MobileDrawerMenu`, `shared/components/MobileDrawerMenu.tsx`) em `TenantSelectScreen.tsx` e `ProductSelectScreen.tsx`, mas não corrigiu bugs de label/layout que já existiam nessas telas. Como esta sprint (Tarefa D) já vai editar `TenantSelectScreen.tsx` para adicionar o botão "Criar Notificação", corrigir isso **primeiro**, no mesmo arquivo, evita um segundo round de edição:
+
+1. **Pluralização "produtos" quebrada em `TenantSelectScreen.tsx`** — dois pontos, ambos sempre no plural mesmo quando o valor é 1:
+   - Linha 130 (card de tenant): `{t.productCount} produtos` → `{t.productCount} produto{t.productCount !== 1 ? "s" : ""}`.
+   - Linha 167 (texto do modal de confirmação de exclusão): `Todos os ${pendingDelete.productCount} produtos deste tenant...` → `Todos os ${pendingDelete.productCount} produto${pendingDelete.productCount !== 1 ? "s" : ""} deste tenant...`.
+   - Replicar exatamente o padrão que **já está certo** na mesma tela (linha 96, `tenant${userTenants.length !== 1 ? "s" : ""}`) e em `ProductSelectScreen.tsx` (linha 117, `produto${tenantProducts.length !== 1 ? "s" : ""}`) — não inventar uma forma nova.
+2. **Pluralização "módulos" quebrada em `ProductSelectScreen.tsx`, linha 54** — `{p.modules} módulos{p.modules === 0 ? " · sem módulos" : ""}` trata o caso de zero módulos mas não o de um módulo só (mostra "1 módulos"). Corrigir para `{p.modules} módulo{p.modules === 1 ? "" : "s"}{p.modules === 0 ? " · sem módulos" : ""}`.
+3. **Menu hambúrguer "flutuando" isolado em `TenantSelectScreen.tsx` (navbar mobile)** — causa raiz: o bloco do título (linhas 93-98, sem largura definida) e o botão/`MobileDrawerMenu` (linhas 99-108) compartilham uma única linha `flex flex-wrap items-end justify-between` (linha 92); em telas estreitas, o bloco de título ocupa a linha inteira e empurra o menu para uma linha própria, sozinho, sem nada ao lado — diferente do padrão usado em `ProductSelectScreen.tsx`, onde o `MobileDrawerMenu` fica pareado com o campo de busca na mesma linha (linhas 119-134), parecendo intencional. Mover o botão "Criar Tenant"/`MobileDrawerMenu` de `TenantSelectScreen.tsx` para a mesma linha do campo de busca (perto da linha 110-112), replicando a estrutura de `ProductSelectScreen.tsx`, em vez de deixá-lo ao lado do título.
+4. Depois da correção, conferir visualmente as duas telas em largura mobile (~390px) e confirmar que o hambúrguer aparece sempre pareado com algum outro elemento na mesma linha (nunca sozinho, sem nada ao lado, numa linha própria).
 
 ### A. Modelo de dados (frontend: contratos + mocks + service)
 
@@ -84,6 +97,8 @@ Registrar como **etapa 23** (depois da 22, que continua sendo o checklist final 
 
 ## Critérios de aceite
 
+- [ ] `TenantSelectScreen.tsx` (linhas 130 e 167) e `ProductSelectScreen.tsx` (linha 54) nunca mostram "1 produtos"/"1 módulos" — singular correto em todos os contadores.
+- [ ] Em largura mobile (~390px), o menu hambúrguer de `TenantSelectScreen.tsx` aparece pareado com o campo de busca (mesmo padrão de `ProductSelectScreen.tsx`), nunca isolado numa linha própria abaixo do subtítulo.
 - [ ] `DemoWelcomeModal`/`localStorage("aegis-welcomed")` removidos; onboarding usa `UserNotificationStatus`.
 - [ ] Onboarding aparece como modal a primeira vez que o usuário entra em um produto (qualquer produto), nunca mais depois disso, mesmo em outro navegador/dispositivo (a flag é do usuário no backend/mock, não do navegador).
 - [ ] Conteúdo do onboarding é um guia de uso real, menciona explicitamente que o produto está em homologação, renderizado via `<Markdown>`.
@@ -100,6 +115,7 @@ Registrar como **etapa 23** (depois da 22, que continua sendo o checklist final 
 git checkout develop && git pull origin develop
 git checkout -b sprint/14-onboarding-e-notificacoes
 
+git commit -m "fix(ui): corrige pluralizacao de produtos/modulos e layout do menu mobile em tenant/product select"
 git commit -m "feat(notifications): modelo de dados (notification + usernotificationstatus) e service mock"
 git commit -m "feat(notifications): substitui demowelcomemodal por onboarding real persistido"
 git commit -m "feat(notifications): gate de exibicao automatica ao entrar em um produto"

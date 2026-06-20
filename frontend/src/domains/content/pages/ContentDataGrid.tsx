@@ -4,6 +4,8 @@ import { AnimatePresence } from "motion/react";
 import { Filter, Search } from "lucide-react";
 import { Badge, Button, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
+import { PermGate } from "../../../app/guards/PermGate";
+import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 import { contentService } from "../services/contentService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { ContentStatusBadge } from "../components/ContentStatusBadge";
@@ -24,6 +26,8 @@ function FilterGroup({ label, options, value, onChange }: { label: string; optio
 
 export function ContentDataGrid() {
   const navigate = useNavigate();
+  const { viewAsRole } = useViewAsRole();
+  const canEdit = viewAsRole !== "viewer";
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>([]);
   const [status, setStatus] = useState<string | null>(null);
@@ -61,7 +65,7 @@ export function ContentDataGrid() {
             <FilterGroup label="Autor" options={options.authors} value={author} onChange={setAuthor} />
           </PopoverContent>
         </Popover>
-        <Button primary onClick={() => setShowNewContent(true)}>Novo conteúdo</Button>
+        <PermGate allowed={canEdit}><Button primary onClick={() => setShowNewContent(true)}>Novo conteúdo</Button></PermGate>
       </PageHeader>
       <div className="mb-4 rounded-2xl border border-border bg-card p-3">
         <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2">
@@ -94,7 +98,7 @@ export function ContentDataGrid() {
                     <td className="p-3">{r.version}</td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Button onClick={() => navigate(`/content/${r.title.toLowerCase()}/editor`)}>Abrir</Button>
+                        <PermGate allowed={canEdit}><Button onClick={() => navigate(`/content/${r.title.toLowerCase()}/editor`)}>Abrir</Button></PermGate>
                         <Button onClick={() => navigate(`/content/${r.title.toLowerCase()}/preview`)}>Preview</Button>
                         <Button onClick={() => navigate(`/content/${r.title.toLowerCase()}/versions`)}>Histórico</Button>
                       </div>

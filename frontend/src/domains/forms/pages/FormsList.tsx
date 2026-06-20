@@ -5,6 +5,8 @@ import { Filter, Trash2 } from "lucide-react";
 import { Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
+import { PermGate } from "../../../app/guards/PermGate";
+import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 import { toast } from "../../../core/notifications/toast";
 import { formsService } from "../services/formsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
@@ -27,6 +29,8 @@ function exportFormsCsv(forms: FormSummary[]) {
 
 export function FormsList() {
   const navigate = useNavigate();
+  const { viewAsRole } = useViewAsRole();
+  const canEdit = viewAsRole !== "viewer";
   const { data: loadedForms, loading, error } = useAsyncData(() => formsService.listForms(), []);
   const [forms, setForms] = useState<FormSummary[]>([]);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -92,7 +96,7 @@ export function FormsList() {
           </PopoverContent>
         </Popover>
         <Button onClick={() => exportFormsCsv(filtered)}>Exportar</Button>
-        <Button primary onClick={() => navigate("/forms/new")}>Novo formulário</Button>
+        <PermGate allowed={canEdit}><Button primary onClick={() => navigate("/forms/new")}>Novo formulário</Button></PermGate>
       </PageHeader>
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <table className="hidden w-full text-left text-sm lg:table">
@@ -109,10 +113,10 @@ export function FormsList() {
                 <td className="p-3">{f.publication}</td>
                 <td className="p-3">
                   <div className="flex flex-wrap gap-1">
-                    <Button onClick={() => navigate(`/forms/${f.id}`)}>Editar</Button>
+                    <PermGate allowed={canEdit}><Button onClick={() => navigate(`/forms/${f.id}`)}>Editar</Button></PermGate>
                     <Button onClick={() => navigate("/forms/preview")}>Preview</Button>
                     <Button onClick={() => navigate("/forms/submissions")}>Submissions</Button>
-                    <button onClick={() => setPendingDeleteId(f.id)} aria-label={`Excluir ${f.name}`} className="rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button>
+                    <PermGate allowed={canEdit}><button onClick={() => setPendingDeleteId(f.id)} aria-label={`Excluir ${f.name}`} className="rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button></PermGate>
                   </div>
                 </td>
               </tr>
@@ -127,9 +131,9 @@ export function FormsList() {
                 <FormStatusBadge status={f.status} />
               </div>
               <div className="mt-3 flex gap-2">
-                <Button onClick={() => navigate(`/forms/${f.id}`)}>Editar</Button>
+                <PermGate allowed={canEdit}><Button onClick={() => navigate(`/forms/${f.id}`)}>Editar</Button></PermGate>
                 <Button onClick={() => navigate("/forms/submissions")}>Submissions</Button>
-                <button onClick={() => setPendingDeleteId(f.id)} aria-label={`Excluir ${f.name}`} className="rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button>
+                <PermGate allowed={canEdit}><button onClick={() => setPendingDeleteId(f.id)} aria-label={`Excluir ${f.name}`} className="rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button></PermGate>
               </div>
             </Card>
           ))}
