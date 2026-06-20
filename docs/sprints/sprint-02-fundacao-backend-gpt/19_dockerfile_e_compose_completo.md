@@ -1,6 +1,6 @@
-# Etapa 10 — Dockerfile do backend e Docker Compose completo
+# Etapa 19 — Dockerfile do backend e Docker Compose completo
 
-> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 02-09 concluídas.
+> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 02-18 concluídas (todos os domínios e o build do frontend já existem, para a imagem final do backend já servir tudo).
 
 ## Contexto fixo
 

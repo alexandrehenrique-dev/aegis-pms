@@ -1,0 +1,82 @@
+# Etapa 22 — OpenAPI/Swagger, testes mínimos e checklist final do servidor
+
+> Cole este arquivo inteiro numa conversa nova do GPT. Última etapa — pré-requisito: todas as etapas 01-21 concluídas.
+
+## Contexto fixo
+
+Última etapa da Sprint 02: documentar a API completa (fundação + todos os domínios de produto), garantir uma cobertura mínima de testes nas regras críticas, e validar com um checklist único que tudo está de fato funcionando de ponta a ponta — inclusive os domínios adicionados nas etapas 09-17 e 21 (`content`, `assets`, `forms`, `analytics`, `users`, `audit`, `settings`, `dashboard`, `ProductAssignment`, `pages`).
+
+## Objetivo
+
+Swagger funcionando em dev, suíte de testes mínima passando, e checklist final do servidor 100% marcado.
+
+## Tarefas
+
+### A. OpenAPI/Swagger
+
+- Habilitado em `local`/`dev`, desabilitado em `prod`.
+- Bearer JWT configurado na UI do Swagger (permite colar o token e testar endpoints autenticados).
+- Tags por módulo: `System`, `Auth`, `Tenants`, `Products`, `Product Modules`, `Product Assignments`, `Knowledge Graph`, `Content`, `Pages`, `Assets`, `Forms`, `Submissions`, `Analytics`, `Users`, `Audit`, `Settings`, `Dashboard`.
+- Acessível em `http://localhost:8080/swagger-ui/index.html`.
+
+### B. Testes mínimos
+
+Classes (fundação): `TenantServiceTest`, `ProductServiceTest`, `ProductModuleServiceTest`, `KnowledgeGraphServiceTest`, `GraphConsistencyPolicyTest`, `AuthenticatedUserProviderTest`, e um smoke test de security.
+
+Classes (domínios, etapas 09-17 e 21): `ProductAssignmentServiceTest`, `ContentServiceTest` + `ContentWorkflowPolicyTest`, `AssetServiceTest`, `FormServiceTest` + `SubmissionServiceTest`, `AnalyticsServiceTest`, `UserServiceTest`, `AuditServiceTest`, `SettingsServiceTest`, `PageServiceTest` + `SectionContentValidationTest`.
+
+Cenários obrigatórios (fundação): criar tenant; criar produto; bloquear produto de tenant alheio; habilitar módulo válido; rejeitar módulo inválido; criar node; criar edge válida; rejeitar edge com node inexistente; rejeitar edge cross-tenant; listar neighbors; `/api/v1/me` sem token retorna 401.
+
+Cenários obrigatórios (domínios): editar/excluir tenant; `super_admin` lista todos os tenants, demais papéis só os seus; atribuir produto a usuário existente e a um convite novo (nunca os dois ao mesmo tempo); transição de workflow de conteúdo inválida é rejeitada (`Draft → Published` direto, por exemplo); upload de asset e exclusão; criar/editar formulário e listar submissions; convidar usuário; consultar trilha de auditoria; salvar configurações de produto/tenant; criar página com seções, reordenar seções, e rejeitar seção com `type` fora do catálogo; consultar `/graph/nodes/{nodeId}/preview` e receber o shape leve.
+
+### C. Checklist final do servidor funcional
+
+Confirmar, nesta ordem, tudo o que foi construído nas etapas 01-21:
+
+**Infra**: `docker compose up -d` sobe tudo · `aegis-postgres` healthy · `keycloak-postgres` healthy · `keycloak` acessível · `backend` acessível · volumes existem · dados persistem após restart.
+
+**Keycloak**: realm `aegis` existe · client `aegis-web` existe · os 5 usuários de teste existem e persistem após restart · token pode ser emitido para cada um · OpenID config acessível.
+
+**Backend**: `/actuator/health` UP · `/api/v1/me` sem token = 401, com token = 200 · Flyway criou as tabelas · Swagger abre em local · API usa `/api/v1`.
+
+**Core**: tenant pode ser criado/editado/excluído · `super_admin` vê todos os tenants · produto pode ser criado · produto pode habilitar módulo · listagem respeita membership · produto alheio não é acessível.
+
+**Fluxo Super Admin**: criar tenant → criar produto → atribuir produto a um usuário (existente e por convite) funciona de ponta a ponta via API, espelhando o wizard de 3 passos do frontend (`CreateTenantWizardModal.tsx`).
+
+**Domínios de produto**: `content`, `assets`, `forms`/`submissions`, `analytics`, `users`, `audit`, `settings`, `dashboard` — cada um responde aos endpoints da etapa correspondente (09-16) com os payloads exatos descritos em `docs/trace/00_endpoints_esperados.md`.
+
+**Pages (etapa 21)**: página pode ser criada com seções; seção fora do catálogo de `BlockType` é rejeitada; `hero` sem `title` ou imagem sem `alt` é rejeitado; reordenar seções persiste a nova ordem; excluir página remove seções em cascata.
+
+**Knowledge Graph**: node pode ser criado · edge pode ser criada · neighbor pode ser consultado · edge inválida é bloqueada · cross-tenant é bloqueado · `x`/`y`/`props` persistem (etapa 17) · `/graph/orphans` retorna nós sem edge · `/graph/nodes/{nodeId}/preview` retorna o shape leve (`summary`/`difficulty` vindo do `Content` quando aplicável) · seed inicial funciona.
+
+**Frontend (React, via etapa 18)**: build gera `dist/` · backend serve a SPA · refresh de rota SPA funciona · API não cai no fallback da SPA.
+
+## Critérios de aceite
+
+- [ ] `mvn clean test` passa sem falhas.
+- [ ] Swagger funcional em `local`, desabilitado em `prod`.
+- [ ] Todo item do checklist acima confirmado manualmente.
+
+## Validação
+
+```bash
+cd backend
+mvn clean test
+```
+
+```txt
+http://localhost:8080/swagger-ui/index.html
+```
+
+Percorrer o checklist da seção C item a item.
+
+## Commit sugerido
+
+```bash
+git add backend/
+git commit -m "feat(backend): swagger, testes minimos e validacao final do servidor funcional"
+```
+
+## Ao terminar esta etapa
+
+Volte para `00_indice_e_instrucoes.md` e siga os passos finais de `git push`/merge da branch `sprint/02-fundacao-backend` em `develop`. A partir daqui, a Sprint 09 em diante volta a ser executada com Claude/Cowork (ver `docs/sprints/README.md` para a ordem recomendada).
