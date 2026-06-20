@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { Archive, Copy, Eye, FileText, Gauge, Image, MoreHorizontal } from "lucide-react";
+import { Archive, Copy, Eye, File, FileText, Gauge, Image, MoreHorizontal } from "lucide-react";
 import { Badge, Button, Card } from "../../../shared/components/Primitives";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../shared/components/ui/dropdown-menu";
 import { toast } from "../../../core/notifications/toast";
@@ -10,12 +10,10 @@ export function AssetStatusBadge({ status }: { status: string }) {
   return <Badge tone={status === "ativo" ? "green" : status === "processando" ? "amber" : status === "erro" ? "red" : "neutral"}>{status}</Badge>;
 }
 
+/** Ícone genérico de arquivo para qualquer tipo que não seja imagem (Sprint 12, Tarefa L.1) — antes, qualquer tipo não listado (DOCX, ZIP etc.) caía no ícone de imagem por padrão, o que é enganoso. */
 export function AssetTypeIcon({ type }: { type: string }) {
-  return (
-    <div className="grid h-10 w-10 place-items-center rounded-xl bg-muted text-primary">
-      {type === "vídeo" ? <Eye size={18} /> : type === "áudio" ? <Gauge size={18} /> : type === "PDF" ? <FileText size={18} /> : <Image size={18} />}
-    </div>
-  );
+  const icon = type === "imagem" ? <Image size={18} /> : type === "vídeo" ? <Eye size={18} /> : type === "áudio" ? <Gauge size={18} /> : type === "PDF" ? <FileText size={18} /> : <File size={18} />;
+  return <div className="grid h-10 w-10 place-items-center rounded-xl bg-muted text-primary">{icon}</div>;
 }
 
 export function AssetCard({ a }: { a: AssetSummary }) {

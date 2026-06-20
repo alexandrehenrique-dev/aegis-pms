@@ -38,11 +38,11 @@ export const roleDescriptions: Record<UserRole, string> = {
 // Routes visible in the main sidebar nav per role (replaces the old `roleVisibleNav`
 // Set<Screen> keyed by nav item key — now keyed by the nav item's route path).
 export const roleVisibleNav: Record<UserRole, Set<string>> = {
-  super_admin: new Set(["/dashboard", "/products", "/content", "/assets", "/forms", "/analytics", "/knowledge", "/settings", "/audit"]),
-  tenant_admin: new Set(["/dashboard", "/products", "/content", "/assets", "/forms", "/analytics", "/knowledge", "/settings", "/audit"]),
-  product_manager: new Set(["/dashboard", "/products", "/content", "/assets", "/forms", "/analytics", "/knowledge", "/settings"]),
-  editor: new Set(["/dashboard", "/products", "/content", "/assets", "/forms", "/analytics"]),
-  viewer: new Set(["/dashboard", "/products", "/content", "/analytics"]),
+  super_admin: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings", "/audit"]),
+  tenant_admin: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings", "/audit"]),
+  product_manager: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings"]),
+  editor: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics"]),
+  viewer: new Set(["/dashboard", "/products", "/content", "/pages", "/analytics"]),
 };
 
 // Route prefixes blocked per role (replaces the old `roleBlockedScreens` Set<Screen>).
@@ -105,7 +105,7 @@ export const roleActions: Record<UserRole, RoleAction[]> = {
     { label: "Acompanhar tendências", path: "/analytics/trends", desc: "Insights e anomalias" },
   ],
   editor: [
-    { label: "Criar novo conteúdo", path: "/content/new/editor", desc: "Rascunho para revisão posterior" },
+    { label: "Criar novo conteúdo", path: "/content", desc: "Rascunho para revisão posterior" },
     { label: "Ver rascunhos pendentes", path: "/content", desc: "Lista de conteúdos em edição" },
     { label: "Enviar conteúdo para revisão", path: "/content/workflow", desc: "Mover Draft → In Review" },
     { label: "Gerenciar assets do produto", path: "/assets", desc: "Imagens, vídeos e documentos" },

@@ -1,4 +1,4 @@
-import { BarChart3, FileText, Image, LayoutDashboard, Settings, ShieldCheck, Sparkles, Workflow, type LucideIcon } from "lucide-react";
+import { BarChart3, FileText, Image, LayoutDashboard, Layers, Settings, ShieldCheck, Sparkles, Workflow, type LucideIcon } from "lucide-react";
 
 export type NavItem = { path: string; icon: LucideIcon; label: string };
 
@@ -21,6 +21,7 @@ export type NavItem = { path: string; icon: LucideIcon; label: string };
 export const nav: NavItem[] = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/content", icon: FileText, label: "Conteúdo" },
+  { path: "/pages", icon: Layers, label: "Páginas" },
   { path: "/assets", icon: Image, label: "Assets" },
   { path: "/forms", icon: Workflow, label: "Forms" },
   { path: "/analytics", icon: BarChart3, label: "Analytics" },

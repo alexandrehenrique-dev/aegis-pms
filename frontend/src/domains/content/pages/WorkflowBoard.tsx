@@ -46,8 +46,12 @@ export function WorkflowBoard() {
   return (
     <DndProvider backend={HTML5Backend}>
       <AnimatePresence>{pending && <TransitionModal drop={pending} onConfirm={handleConfirm} onCancel={() => setPending(null)} viewAsRole={viewAsRole} />}</AnimatePresence>
-      <PageHeader title="Workflow Editorial" desc="Arraste cards entre colunas para mover conteúdo pelo fluxo editorial." badge="Workflow">
-        <Badge tone={canPublish ? "violet" : "amber"}>{canPublish ? "Publicação permitida" : "Somente Draft → In Review"}</Badge>
+      <PageHeader
+        title="Workflow Editorial"
+        desc="Arraste cards entre colunas para mover conteúdo pelo fluxo editorial."
+        badge="Workflow"
+        titleBadge={<Badge tone={canPublish ? "violet" : "amber"}>{canPublish ? "Publicação permitida" : "Somente Draft → In Review"}</Badge>}
+      >
         <Button onClick={() => toast.info("Arraste cards entre colunas. O modal confirma cada mudança de status.", { duration: 4000 })}>Como funciona</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_280px]">

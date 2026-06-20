@@ -114,13 +114,14 @@ export function EmptyState({ compact = false, title = "Nenhum produto criado ain
   );
 }
 
-export function PageHeader({ title, desc, badge = "BYOP", children }: { title: string; desc: string; module?: string; badge?: string; children?: ReactNode }) {
+export function PageHeader({ title, desc, badge = "BYOP", titleBadge, children }: { title: string; desc: string; module?: string; badge?: string; titleBadge?: ReactNode; children?: ReactNode }) {
   return (
     <motion.header {...fade} className="mb-6 flex flex-col gap-3 border-b border-border pb-5 md:flex-row md:items-end md:justify-between">
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-[-.02em] md:text-3xl">{title}</h1>
           <Badge tone="violet">{badge}</Badge>
+          {titleBadge}
         </div>
         <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">{desc}</p>
       </div>

@@ -1,4 +1,5 @@
 import { contentByProduct, contents, editEvents, wfInitialItems } from "../mocks/content.mocks";
+import { logApiCall } from "../../../shared/services/devLog";
 import type { ContentRow, ListContentResponse, ListEditEventsResponse, ListWorkflowItemsResponse } from "../contracts/responses";
 
 const contentStore: ContentRow[] = contents.map(([title, type, lang, author, status, updatedAt, publication, version]) => ({
@@ -20,25 +21,33 @@ export const contentService = {
   async listWorkflowItems(): Promise<ListWorkflowItemsResponse> {
     return wfInitialItems;
   },
+
+  /** Cria um artigo do domínio `content` (Sprint 12, Tarefa B) — distinto de `pagesService.createPage`, que cria uma `Page` institucional. */
+  async createContent(payload: { title: string; type: string; lang: string; author: string }): Promise<ContentRow> {
+    logApiCall("POST", "/api/v1/products/{productId}/content", payload);
+    const created: ContentRow = { ...payload, status: "Draft", updatedAt: "agora", publication: "—", version: "v1" };
+    contentStore.unshift(created);
+    return created;
+  },
   // Pontos de integração real (Sprint 07) — docs/trace/00_endpoints_esperados.md, Seção B.1.
   // {contentId} é placeholder: este service ainda não recebe o id do conteúdo selecionado
   // (ContentEditor/WorkflowPanel chamam estes métodos sem parâmetro hoje).
   async restoreVersion(version: string): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/content/{contentId}/versions/{version}/restore", { version });
+    logApiCall("POST", "/api/v1/products/{productId}/content/{contentId}/versions/{version}/restore", { version });
   },
   async submitForReview(): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/content/{contentId}/transition", { from: "Draft", to: "In Review" });
+    logApiCall("POST", "/api/v1/products/{productId}/content/{contentId}/transition", { from: "Draft", to: "In Review" });
   },
   async publish(): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/content/{contentId}/transition", { from: "In Review", to: "Published" });
+    logApiCall("POST", "/api/v1/products/{productId}/content/{contentId}/transition", { from: "In Review", to: "Published" });
   },
   async archive(): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/content/{contentId}/transition", { from: "Published", to: "Archived" });
+    logApiCall("POST", "/api/v1/products/{productId}/content/{contentId}/transition", { from: "Published", to: "Archived" });
   },
   async saveDraft(): Promise<void> {
-    console.log("[mock→backend] PUT /api/v1/products/{productId}/content/{contentId}");
+    logApiCall("PUT", "/api/v1/products/{productId}/content/{contentId}");
   },
   async schedulePublish(): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/content/{contentId}/transition", { from: "In Review", to: "Published", scheduled: true });
+    logApiCall("POST", "/api/v1/products/{productId}/content/{contentId}/transition", { from: "In Review", to: "Published", scheduled: true });
   },
 };

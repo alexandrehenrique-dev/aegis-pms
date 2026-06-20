@@ -1,5 +1,11 @@
 import type { BlockType, Section, SectionSource } from "./responses";
 
+export type CreatePageRequest = {
+  title: string;
+  slug: string;
+  locale: string;
+};
+
 export type CreateSectionRequest = {
   type: BlockType;
   label: string;

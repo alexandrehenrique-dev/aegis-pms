@@ -18,11 +18,22 @@ export const BLOCK_TYPES = [
   "cta-section",
   "faq",
   "contact",
+  "form",
+  "download",
   "footer",
   "navbar",
 ] as const;
 
 export type BlockType = (typeof BLOCK_TYPES)[number];
+
+/**
+ * Allowlist de mini-blocos permitidos dentro de `left`/`right` do bloco
+ * `two-column` — espelha o backend (`21_dominio_pages_secoes_e_blocos.md`):
+ * cada coluna é uma lista de mini-blocos tipados, não um objeto fixo.
+ */
+export const MINI_BLOCK_TYPES = ["text", "rich-text", "image", "cta"] as const;
+export type MiniBlockType = (typeof MINI_BLOCK_TYPES)[number];
+export type MiniBlock = { type: MiniBlockType; content: Record<string, unknown> };
 
 export type PageStatus = "draft" | "review" | "published" | "archived";
 

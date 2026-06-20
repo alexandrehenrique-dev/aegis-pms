@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, Link2, Loader2, Plus, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, Calendar, Link2, Loader2, Plus, Send, Trash2 } from "lucide-react";
 import { Badge, Button, Card, Field, SelectLike } from "../../../shared/components/Primitives";
 import { PermissionHint } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
@@ -10,6 +10,11 @@ import { VersionTimeline } from "./VersionTimeline";
 import { BLOCK_TYPES, type BlockType, type Page, type Section } from "../../pages/contracts/responses";
 import { EntityPicker } from "../../knowledge/components/EntityPicker";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
+import { TwoColumnEditor } from "../../pages/components/TwoColumnEditor";
+import { ItemsCrudEditor } from "../../pages/components/ItemsCrudEditor";
+import { ITEMS_CRUD_CONFIG } from "../../pages/itemsCrudConfig";
+import { EventsManagerDrawer } from "../../pages/components/EventsManagerDrawer";
+import { FormIdSelector } from "../../pages/components/FormIdSelector";
 import type { KGNode } from "../../knowledge/mocks/knowledge.mocks";
 
 export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, onRequestDelete }: {
@@ -103,9 +108,11 @@ function ArrayFieldEditor({ items, onChange }: { items: Record<string, unknown>[
   );
 }
 
-export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }: {
-  section: Section | null; onChangeContent: (patch: Record<string, unknown>) => void; onRequestDelete: (id: string) => void;
+export function BlockEditorCanvas({ section, productSlug, onChangeContent, onRequestDelete }: {
+  section: Section | null; productSlug: string; onChangeContent: (patch: Record<string, unknown>) => void; onRequestDelete: (id: string) => void;
 }) {
+  const [showEventsManager, setShowEventsManager] = useState(false);
+
   if (!section) {
     return (
       <Card>
@@ -115,11 +122,20 @@ export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }:
     );
   }
 
+  const isTwoColumn = section.type === "two-column";
+  const itemsCrudConfig = ITEMS_CRUD_CONFIG[section.type];
+  const hasFormIdSelector = section.type === "contact" || section.type === "form";
   const { content } = section;
-  const stringFields = Object.entries(content).filter(([, v]) => typeof v === "string") as [string, string][];
-  const nestedObjectFields = Object.entries(content).filter(([, v]) => isPlainObject(v)) as [string, Record<string, unknown>][];
-  const arrayFields = Object.entries(content).filter(([, v]) => isArrayOfObjects(v)) as [string, Record<string, unknown>[]][];
-  const handledKeys = new Set([...stringFields, ...nestedObjectFields, ...arrayFields].map(([k]) => k));
+  const excludedKeys = new Set<string>([
+    ...(isTwoColumn ? ["left", "right"] : []),
+    ...(itemsCrudConfig ? [itemsCrudConfig.key] : []),
+    ...(hasFormIdSelector ? ["formId"] : []),
+  ]);
+  const fieldableContent = Object.fromEntries(Object.entries(content).filter(([k]) => !excludedKeys.has(k)));
+  const stringFields = Object.entries(fieldableContent).filter(([, v]) => typeof v === "string") as [string, string][];
+  const nestedObjectFields = Object.entries(fieldableContent).filter(([, v]) => isPlainObject(v)) as [string, Record<string, unknown>][];
+  const arrayFields = Object.entries(fieldableContent).filter(([, v]) => isArrayOfObjects(v)) as [string, Record<string, unknown>[]][];
+  const handledKeys = new Set([...stringFields.map(([k]) => k), ...nestedObjectFields.map(([k]) => k), ...arrayFields.map(([k]) => k), ...excludedKeys]);
   const advancedKeys = Object.keys(content).filter((k) => !handledKeys.has(k));
   const canLinkEntity = section.type === "text" || section.type === "rich-text";
 
@@ -128,7 +144,8 @@ export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }:
   const handleLinkEntity = async (node: KGNode) => {
     const body = typeof content.body === "string" ? content.body : "";
     onChangeContent({ body: `${body}${body ? " " : ""}{{kg-ref:${node.id}:${node.label}}}` });
-    await knowledgeService.createEdge(section.id, node.id, "relacionado a");
+    await knowledgeService.ensureNodeForContent(section.id, section.label);
+    await knowledgeService.createEdge(section.id, node.id, "RELATED_TO");
     toast.success("Referência linkada", { description: `${node.label} inserido no corpo e relação criada no grafo.` });
   };
 
@@ -153,13 +170,34 @@ export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }:
             </div>
           </div>
         ))}
+        {hasFormIdSelector && (
+          <FormIdSelector productSlug={productSlug} value={typeof content.formId === "string" ? content.formId : ""} onChange={(formId) => onChangeContent({ formId })} />
+        )}
       </div>
+      {isTwoColumn && <TwoColumnEditor content={content} onChange={onChangeContent} />}
+      {section.type === "event-list" && (
+        <div className="mt-3">
+          <Button onClick={() => setShowEventsManager(true)}><Calendar size={14} />Gerenciar eventos</Button>
+          <EventsManagerDrawer productSlug={productSlug} open={showEventsManager} onOpenChange={setShowEventsManager} />
+        </div>
+      )}
       {canLinkEntity && (
         <div className="mt-3">
           <Popover>
             <PopoverTrigger asChild><Button><Link2 size={15} />Linkar a outra entidade</Button></PopoverTrigger>
             <PopoverContent><EntityPicker onSelect={handleLinkEntity} /></PopoverContent>
           </Popover>
+        </div>
+      )}
+      {itemsCrudConfig && (
+        <div className="mt-4">
+          <p className="mb-2 text-sm font-medium">{itemsCrudConfig.key} ({(Array.isArray(content[itemsCrudConfig.key]) ? content[itemsCrudConfig.key] as unknown[] : []).length})</p>
+          <ItemsCrudEditor
+            items={Array.isArray(content[itemsCrudConfig.key]) ? (content[itemsCrudConfig.key] as Record<string, unknown>[]) : []}
+            onChange={(next) => onChangeContent({ [itemsCrudConfig.key]: next })}
+            newItem={itemsCrudConfig.newItem}
+            rules={itemsCrudConfig.rules}
+          />
         </div>
       )}
       {arrayFields.map(([k, items]) => (
@@ -228,16 +266,33 @@ function WorkflowPanel() {
   );
 }
 
+function PageJsonViewer({ page }: { page: Page | null }) {
+  const [copied, setCopied] = useState(false);
+  if (!page) return <p className="text-sm text-muted-foreground">Nenhuma página carregada.</p>;
+  const json = JSON.stringify(page, null, 2);
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(json);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div>
+      <div className="mb-2 flex justify-end"><Button onClick={handleCopy}>{copied ? "Copiado!" : "Copiar JSON"}</Button></div>
+      <pre className="max-h-[480px] overflow-auto rounded-lg bg-muted p-3 text-xs">{json}</pre>
+    </div>
+  );
+}
+
 export function PropertiesPanel({ page, section }: { page: Page | null; section: Section | null }) {
   const [tab, setTab] = useState("Propriedades");
   return (
     <Card className="h-full">
       <div className="mb-3 flex gap-1 overflow-auto">
-        {["Propriedades", "SEO", "Workflow", "Histórico"].map((t) => (
+        {["Propriedades", "SEO", "Workflow", "Histórico", "JSON"].map((t) => (
           <button key={t} onClick={() => setTab(t)} className={`rounded-lg px-2 py-1 text-xs ${tab === t ? "bg-primary text-white" : "bg-muted"}`}>{t}</button>
         ))}
       </div>
-      {tab === "SEO" ? <SEOPanel page={page} /> : tab === "Workflow" ? <WorkflowPanel /> : tab === "Histórico" ? <VersionTimeline compact /> : (
+      {tab === "SEO" ? <SEOPanel page={page} /> : tab === "Workflow" ? <WorkflowPanel /> : tab === "Histórico" ? <VersionTimeline compact /> : tab === "JSON" ? <PageJsonViewer page={page} /> : (
         <div className="space-y-2 text-sm">
           {[
             ["página", page?.slug ?? "—"],

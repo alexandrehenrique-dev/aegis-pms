@@ -1,4 +1,5 @@
 import { allTenants } from "../mocks/tenants.mocks";
+import { logApiCall } from "../../../shared/services/devLog";
 import type { TenantOption } from "../../../shared/types";
 import type { CreateTenantRequest, DeleteTenantRequest, UpdateTenantRequest } from "../contracts/requests";
 import type { ListTenantsResponse, TenantDetailResponse } from "../contracts/responses";
@@ -17,6 +18,7 @@ export const tenantsService = {
   },
 
   async create(req: CreateTenantRequest): Promise<TenantOption> {
+    logApiCall("POST", "/api/v1/admin/tenants", req);
     const created: TenantOption = {
       id: req.slug,
       name: req.name,
@@ -32,6 +34,7 @@ export const tenantsService = {
   async update(id: string, req: UpdateTenantRequest): Promise<TenantOption> {
     const tenant = tenantsStore.find((t) => t.id === id);
     if (!tenant) throw { status: 404, message: `Tenant ${id} não encontrado.` };
+    logApiCall("PUT", `/api/v1/admin/tenants/${id}`, req);
     tenant.name = req.name;
     tenant.plan = req.plan;
     tenant.status = req.status;
@@ -39,8 +42,10 @@ export const tenantsService = {
   },
 
   /** Destrutivo e irreversível no backend real: remove o tenant e cascateia para seus produtos/usuários. A UI deve sempre confirmar com um modal de severidade antes de chamar isto. */
-  async remove(id: string, _req: DeleteTenantRequest): Promise<void> {
+  async remove(id: string, req: DeleteTenantRequest): Promise<void> {
     const index = tenantsStore.findIndex((t) => t.id === id);
-    if (index >= 0) tenantsStore.splice(index, 1);
+    if (index < 0) return;
+    logApiCall("DELETE", `/api/v1/admin/tenants/${id}`, req);
+    tenantsStore.splice(index, 1);
   },
 };

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Image, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Badge, Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { assetsService } from "../services/assetsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
@@ -10,6 +10,7 @@ export function AssetPicker() {
   const [selected, setSelected] = useState("hero-maestro-beton.jpg");
   const { data: assets, loading, error } = useAsyncData(() => assetsService.listAssets(), []);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const selectedAsset = assets?.find((a) => a.name === selected);
 
   const handleQuickUpload = () => fileInputRef.current?.click();
 
@@ -51,7 +52,7 @@ export function AssetPicker() {
         </Card>
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Preview lateral</h2>
-          <div className="aspect-video rounded-xl bg-muted p-4"><Image className="text-primary" /></div>
+          <div className="aspect-video rounded-xl bg-muted p-4"><AssetTypeIcon type={selectedAsset?.type ?? ""} /></div>
           <p className="mt-3 font-medium">{selected}</p>
           <p className="text-sm text-muted-foreground">Asset selecionado vinculado ao produto ativo.</p>
           <Button primary onClick={handleConfirmSelection}>Usar asset</Button>

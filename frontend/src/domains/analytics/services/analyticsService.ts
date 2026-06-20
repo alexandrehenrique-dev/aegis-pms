@@ -1,4 +1,5 @@
 import { kpis, health, channels } from "../mocks/analytics.mocks";
+import { logApiCall } from "../../../shared/services/devLog";
 import type { AnalyticsKpi, ChannelRow, HealthSignal, ListChannelsResponse, ListHealthResponse, ListKpisResponse } from "../contracts/responses";
 
 const kpisStore: AnalyticsKpi[] = kpis.map(([label, value, comparison, note, tone]) => ({ label, value, comparison, note, tone }));
@@ -15,11 +16,13 @@ export const analyticsService = {
   async listChannels(): Promise<ListChannelsResponse> {
     return channelsStore;
   },
-  async generateReport(_name: string): Promise<void> {
-    void _name;
+  async generateReport(name: string): Promise<void> {
+    logApiCall("POST", "/api/v1/products/{productId}/analytics/reports", { name });
   },
-  async markTrendReviewed(_label: string): Promise<void> {
-    void _label;
+  async markTrendReviewed(label: string): Promise<void> {
+    logApiCall("POST", "/api/v1/products/{productId}/analytics/trends/review", { label });
   },
-  async generateActionPlan(): Promise<void> {},
+  async generateActionPlan(): Promise<void> {
+    logApiCall("POST", "/api/v1/products/{productId}/analytics/action-plan");
+  },
 };

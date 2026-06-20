@@ -76,12 +76,8 @@ export const pagesByProduct: Record<string, Page[]> = {
           order: 4,
           content: {
             title: "Solicitar orçamento",
-            fields: [
-              { name: "tipoEvento", label: "Tipo de evento", type: "select", options: ["Casamento", "Evento corporativo", "Show"], required: true },
-              { name: "data", label: "Data do evento", type: "date", required: true },
-              { name: "cidade", label: "Cidade", type: "text", required: true },
-              { name: "convidados", label: "Número de convidados", type: "number", required: false },
-            ],
+            infoItems: [],
+            formId: "form-orcamento-maestro",
           },
         },
       ],
@@ -247,8 +243,8 @@ export const pagesByProduct: Record<string, Page[]> = {
           label: "Missão e Valores",
           order: 1,
           content: {
-            left: { title: "Missão", body: "Democratizar o acesso à formação musical de qualidade." },
-            right: { title: "Valores", body: "Tradição, comunidade, disciplina e generosidade." },
+            left: [{ type: "text", content: { title: "Missão", body: "Democratizar o acesso à formação musical de qualidade." } }],
+            right: [{ type: "text", content: { title: "Valores", body: "Tradição, comunidade, disciplina e generosidade." } }],
           },
         },
       ],
@@ -347,11 +343,8 @@ export const pagesByProduct: Record<string, Page[]> = {
           order: 0,
           content: {
             title: "Fale com a CMSS",
-            fields: [
-              { name: "nome", label: "Nome", type: "text", required: true },
-              { name: "email", label: "E-mail", type: "email", required: true },
-              { name: "mensagem", label: "Mensagem", type: "textarea", required: true },
-            ],
+            infoItems: [],
+            formId: "",
           },
         },
         {
@@ -359,7 +352,11 @@ export const pagesByProduct: Record<string, Page[]> = {
           type: "footer",
           label: "Rodapé",
           order: 1,
-          content: { address: "Praça Central, s/n — São Sebastião", social: ["instagram", "facebook"] },
+          content: {
+            address: "Praça Central, s/n — São Sebastião",
+            social: ["instagram", "facebook"],
+            links: [{ label: "Home", href: "/" }, { label: "Contato", href: "/contato" }],
+          },
         },
       ],
     },
@@ -431,6 +428,22 @@ export const pagesByProduct: Record<string, Page[]> = {
               { date: "2024 — atual", title: "Founder, BYOP", desc: "Construção da plataforma Aegis e produtos relacionados." },
               { date: "2019 — 2024", title: "Engenheiro de Software Sênior", desc: "Liderança técnica em produtos de dados e backend." },
               { date: "2015 — 2019", title: "Desenvolvedor Full-stack", desc: "Produtos web para clientes de diversos setores." },
+            ],
+          },
+        },
+        {
+          id: "ad-home-s5",
+          type: "download",
+          label: "Downloads",
+          order: 4,
+          content: {
+            title: "Downloads",
+            items: [
+              { title: "Currículo (PT-BR)", fileAssetId: "ad-curriculo-ptbr.pdf", fileType: "pdf" },
+              { title: "Currículo (EN)", fileAssetId: "ad-curriculo-en.pdf", fileType: "pdf" },
+              { title: "Apresentação", fileAssetId: "ad-apresentacao.pdf", fileType: "pdf" },
+              { title: "Case study", fileAssetId: "ad-case-study.pdf", fileType: "pdf" },
+              { title: "Certificado", fileAssetId: "ad-certificado.pdf", fileType: "pdf" },
             ],
           },
         },

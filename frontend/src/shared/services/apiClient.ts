@@ -6,6 +6,8 @@
  * nunca a forma de uso deste cliente.
  */
 
+import { logApiCall } from "./devLog";
+
 export type ApiError = {
   status: number;
   message: string;
@@ -35,6 +37,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  logApiCall(init.method ?? "GET", path, init.body);
 
   let response: Response;
   try {

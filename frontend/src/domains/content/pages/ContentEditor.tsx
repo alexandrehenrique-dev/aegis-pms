@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { AnimatePresence } from "motion/react";
-import { Badge, Button, PageHeader } from "../../../shared/components/Primitives";
+import { Badge, Button, EmptyState, PageHeader } from "../../../shared/components/Primitives";
 import { UnsavedChangesBanner, ConflictAlert } from "../../../shared/components/Banners";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { FloatingSaveStatus, type SaveStatus } from "../../../shared/components/FloatingSaveStatus";
@@ -22,22 +23,26 @@ import type { BlockType, Page } from "../../pages/contracts/responses";
  * distingue essas ações dentro do mesmo papel "Editor de Conteúdo" (07.04).
  */
 export function ContentEditor() {
+  const navigate = useNavigate();
+  const { id: pageSlug } = useParams<{ id: string }>();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { product } = useCurrentProduct();
   const productSlug = product ? slugify(product.name) : "maestro-beton";
 
-  const { data: pages } = useAsyncData(() => pagesService.listPages(productSlug), [productSlug]);
+  const { data: foundPage, loading: loadingPage } = useAsyncData(
+    () => (pageSlug ? pagesService.getPageBySlug(productSlug, pageSlug) : Promise.resolve(undefined)),
+    [productSlug, pageSlug],
+  );
   const [page, setPage] = useState<Page | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deletingBlock, setDeletingBlock] = useState(false);
 
   useEffect(() => {
-    const home = pages?.[0] ?? null;
-    setPage(home);
-    setSelectedSectionId(home?.sections[0]?.id ?? null);
-  }, [pages]);
+    setPage(foundPage ?? null);
+    setSelectedSectionId(foundPage?.sections[0]?.id ?? null);
+  }, [foundPage]);
 
   const selectedSection = page?.sections.find((s) => s.id === selectedSectionId) ?? null;
   const pendingDeleteSection = page?.sections.find((s) => s.id === pendingDeleteId) ?? null;
@@ -96,10 +101,20 @@ export function ContentEditor() {
     }
   };
 
+  if (!loadingPage && !page) {
+    return (
+      <EmptyState
+        title="Página não encontrada"
+        description={`Nenhuma página com slug "${pageSlug}" existe em ${productSlug}. Volte para a lista de páginas e escolha uma existente, ou crie uma nova.`}
+      />
+    );
+  }
+
   return (
     <>
       <AnimatePresence>{saveStatus !== "idle" && <FloatingSaveStatus key={saveStatus} status={saveStatus} onRetry={triggerSave} />}</AnimatePresence>
       <PageHeader title={`${page?.title ?? "Página"} — Editar`} desc="Edite blocos, propriedades, SEO e publicação com rastreabilidade." badge={page ? page.status : "draft"}>
+        <Button onClick={() => navigate(`/content/${page?.slug}/preview`)} disabled={!page}>Preview</Button>
         <Button onClick={triggerSave}>Salvar rascunho</Button>
         <Button primary onClick={() => { setSaveStatus("idle"); toast.success("Enviado para revisão.", { description: "Rafael Lima será notificado." }); }}>Enviar para revisão</Button>
       </PageHeader>
@@ -109,7 +124,7 @@ export function ContentEditor() {
       </div>
       <div className="grid gap-4 xl:grid-cols-[280px_1fr_340px]">
         <ContentStructureTree page={page} selectedId={selectedSectionId} onSelect={setSelectedSectionId} onAddBlock={handleAddBlock} onRequestDelete={setPendingDeleteId} />
-        <div className="space-y-4"><BlockEditorCanvas section={selectedSection} onChangeContent={handleChangeContent} onRequestDelete={setPendingDeleteId} /><ConflictAlert /></div>
+        <div className="space-y-4"><BlockEditorCanvas section={selectedSection} productSlug={productSlug} onChangeContent={handleChangeContent} onRequestDelete={setPendingDeleteId} /><ConflictAlert /></div>
         <PropertiesPanel page={page} section={selectedSection} />
       </div>
       {pendingDeleteSection && (

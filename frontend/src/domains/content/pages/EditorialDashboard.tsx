@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
+import { AnimatePresence } from "motion/react";
 import { AlertTriangle, Plus } from "lucide-react";
-import { Badge, Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
+import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
 import { contentService } from "../services/contentService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { NewContentModal } from "../components/NewContentModal";
 
 function EditorialAttentionCard() {
   return (
@@ -32,12 +35,13 @@ function EditorialTimeline() {
 
 export function EditorialDashboard() {
   const navigate = useNavigate();
+  const [showNewContent, setShowNewContent] = useState(false);
   return (
     <>
-      <PageHeader title="Conteúdo" module="Conteúdo" desc="Gerencie páginas, artigos, traduções, revisões e publicações deste produto." badge="Maestro Beton">
-        <Badge tone="blue">Conteúdo</Badge>
+      <AnimatePresence>{showNewContent && <NewContentModal onClose={() => setShowNewContent(false)} />}</AnimatePresence>
+      <PageHeader title="Conteúdo" module="Conteúdo" desc="Gerencie artigos, traduções, revisões e publicações deste produto." badge="Maestro Beton">
         <Button onClick={() => navigate("/content/workflow")}>Ver workflow</Button>
-        <Button primary onClick={() => navigate("/content/new/editor")}><Plus size={15} />Novo conteúdo</Button>
+        <Button primary onClick={() => setShowNewContent(true)}><Plus size={15} />Novo conteúdo</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
