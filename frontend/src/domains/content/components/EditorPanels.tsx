@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, Link2, Loader2, Plus, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, Calendar, Link2, Loader2, Plus, Send, Trash2 } from "lucide-react";
 import { Badge, Button, Card, Field, SelectLike } from "../../../shared/components/Primitives";
 import { PermissionHint } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
@@ -13,6 +13,7 @@ import { knowledgeService } from "../../knowledge/services/knowledgeService";
 import { TwoColumnEditor } from "../../pages/components/TwoColumnEditor";
 import { ItemsCrudEditor } from "../../pages/components/ItemsCrudEditor";
 import { ITEMS_CRUD_CONFIG } from "../../pages/itemsCrudConfig";
+import { EventsManagerDrawer } from "../../pages/components/EventsManagerDrawer";
 import type { KGNode } from "../../knowledge/mocks/knowledge.mocks";
 
 export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, onRequestDelete }: {
@@ -106,9 +107,11 @@ function ArrayFieldEditor({ items, onChange }: { items: Record<string, unknown>[
   );
 }
 
-export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }: {
-  section: Section | null; onChangeContent: (patch: Record<string, unknown>) => void; onRequestDelete: (id: string) => void;
+export function BlockEditorCanvas({ section, productSlug, onChangeContent, onRequestDelete }: {
+  section: Section | null; productSlug: string; onChangeContent: (patch: Record<string, unknown>) => void; onRequestDelete: (id: string) => void;
 }) {
+  const [showEventsManager, setShowEventsManager] = useState(false);
+
   if (!section) {
     return (
       <Card>
@@ -163,6 +166,12 @@ export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }:
         ))}
       </div>
       {isTwoColumn && <TwoColumnEditor content={content} onChange={onChangeContent} />}
+      {section.type === "event-list" && (
+        <div className="mt-3">
+          <Button onClick={() => setShowEventsManager(true)}><Calendar size={14} />Gerenciar eventos</Button>
+          <EventsManagerDrawer productSlug={productSlug} open={showEventsManager} onOpenChange={setShowEventsManager} />
+        </div>
+      )}
       {canLinkEntity && (
         <div className="mt-3">
           <Popover>

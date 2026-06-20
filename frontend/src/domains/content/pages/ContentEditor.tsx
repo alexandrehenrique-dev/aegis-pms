@@ -124,7 +124,7 @@ export function ContentEditor() {
       </div>
       <div className="grid gap-4 xl:grid-cols-[280px_1fr_340px]">
         <ContentStructureTree page={page} selectedId={selectedSectionId} onSelect={setSelectedSectionId} onAddBlock={handleAddBlock} onRequestDelete={setPendingDeleteId} />
-        <div className="space-y-4"><BlockEditorCanvas section={selectedSection} onChangeContent={handleChangeContent} onRequestDelete={setPendingDeleteId} /><ConflictAlert /></div>
+        <div className="space-y-4"><BlockEditorCanvas section={selectedSection} productSlug={productSlug} onChangeContent={handleChangeContent} onRequestDelete={setPendingDeleteId} /><ConflictAlert /></div>
         <PropertiesPanel page={page} section={selectedSection} />
       </div>
       {pendingDeleteSection && (
