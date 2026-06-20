@@ -1,4 +1,5 @@
 import { kgNodes, kgEdges, wikidevKgNodes, wikidevKgEdges, lokiKgNodes, lokiKgEdges, type KGEdge, type KGNode } from "../mocks/knowledge.mocks";
+import { logApiCall } from "../../../shared/services/devLog";
 import type { GraphNodePreview, ListEdgesResponse, ListNodesResponse, RelatedNode } from "../contracts/responses";
 
 // Store em memória só para a sessão do navegador — ver nota equivalente em
@@ -19,13 +20,13 @@ export const knowledgeService = {
   // docs/trace/00_endpoints_esperados.md (só o GET de orphans existe, Seção B.5);
   // path inferido por convenção REST sobre o recurso já documentado.
   async markInsightReviewed(text: string): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/graph/insights/review", { text });
+    logApiCall("POST", "/api/v1/products/{productId}/graph/insights/review", { text });
   },
   async resolveOrphan(id: string, action: string): Promise<void> {
-    console.log(`[mock→backend] POST /api/v1/products/{productId}/graph/orphans/${id}/resolve`, { action });
+    logApiCall("POST", `/api/v1/products/{productId}/graph/orphans/${id}/resolve`, { action });
   },
   async resolveOrphans(ids: string[]): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/graph/orphans/resolve", { ids });
+    logApiCall("POST", "/api/v1/products/{productId}/graph/orphans/resolve", { ids });
   },
 
   /** Preview leve para tooltip de referência inline (`kg-ref`) — Sprint 11, Tarefa C.1/C.4. */

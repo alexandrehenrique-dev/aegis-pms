@@ -1,4 +1,5 @@
 import { usersRows } from "../mocks/users.mocks";
+import { logApiCall } from "../../../shared/services/devLog";
 import type { InviteUserRequest } from "../contracts/requests";
 import type { ListUsersResponse, UserSummary } from "../contracts/responses";
 
@@ -12,6 +13,7 @@ export const usersService = {
   },
 
   async invite(req: InviteUserRequest): Promise<UserSummary> {
+    logApiCall("POST", "/api/v1/admin/users/invite", req);
     const created: UserSummary = {
       name: req.name, email: req.email, role: req.role, products: req.allowedProducts,
       status: "convidado", lastAccess: "nunca", inviteStatus: "pendente",
@@ -22,11 +24,15 @@ export const usersService = {
 
   async resendInvite(email: string): Promise<void> {
     const u = usersStore.find((x) => x.email === email);
-    if (u) u.inviteStatus = "pendente";
+    if (!u) return;
+    logApiCall("POST", `/api/v1/admin/users/${email}/resend-invite`);
+    u.inviteStatus = "pendente";
   },
 
   async blockUser(email: string): Promise<void> {
     const u = usersStore.find((x) => x.email === email);
-    if (u) u.status = "bloqueado";
+    if (!u) return;
+    logApiCall("POST", `/api/v1/admin/users/${email}/block`);
+    u.status = "bloqueado";
   },
 };

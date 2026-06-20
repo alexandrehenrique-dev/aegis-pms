@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AuthUser, ProductOption, TenantOption } from "../../shared/types";
 import { setAuthTokenProvider } from "../../shared/services/apiClient";
+import { logApiCall } from "../../shared/services/devLog";
 import type { DeleteProductRequest, UpdateProductRequest } from "../../domains/products/contracts/requests";
 
 type AuthContextValue = {
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const updateProduct = (productId: string, req: UpdateProductRequest) => {
     if (!effectiveTenant) return;
-    console.log(`[mock→backend] PATCH /api/v1/admin/products/${productId}`, req);
+    logApiCall("PATCH", `/api/v1/admin/products/${productId}`, req);
     const tenantId = effectiveTenant.id;
     const patch = { name: req.name, type: req.type, status: req.status, modulesList: req.modules, modules: req.modules.length };
     setUserProducts((prev) => ({ ...prev, [tenantId]: (prev[tenantId] ?? []).map((p) => (p.id === productId ? { ...p, ...patch } : p)) }));
@@ -92,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** Exclusão lógica (soft delete) — `DELETE /api/v1/admin/products/{productId}` (docs/AEGIS_PMS_V1.md §8.4/§8.5: produto nunca é apagado fisicamente). */
   const removeProduct = (productId: string, req: DeleteProductRequest) => {
     if (!effectiveTenant) return;
-    console.log(`[mock→backend] DELETE /api/v1/admin/products/${productId}`, req);
+    logApiCall("DELETE", `/api/v1/admin/products/${productId}`, req);
     const tenantId = effectiveTenant.id;
     setUserProducts((prev) => ({ ...prev, [tenantId]: (prev[tenantId] ?? []).filter((p) => p.id !== productId) }));
     setSelectedProduct((sp) => (sp && sp.id === productId ? null : sp));

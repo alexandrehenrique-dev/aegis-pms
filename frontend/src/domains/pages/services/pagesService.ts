@@ -1,4 +1,5 @@
 import { pagesByProduct } from "../mocks/pages.mocks";
+import { logApiCall } from "../../../shared/services/devLog";
 import type { CreateSectionRequest, ReorderSectionsRequest, UpdateSectionRequest } from "../contracts/requests";
 import type { ListPagesResponse, Page, Section } from "../contracts/responses";
 
@@ -42,7 +43,7 @@ export const pagesService = {
   async updatePage(productSlug: string, pageId: string, patch: Partial<Pick<Page, "title" | "status" | "seo">>): Promise<Page> {
     const page = findStorePage(productSlug, pageId);
     if (!page) throw { status: 404, message: `Página ${pageId} não encontrada.` };
-    console.log(`[mock→backend] PUT /api/v1/products/${productSlug}/pages/${pageId}`, patch);
+    logApiCall("PUT", `/api/v1/products/${productSlug}/pages/${pageId}`, patch);
     Object.assign(page, patch);
     page.version += 1;
     return clonePage(page);
@@ -52,7 +53,7 @@ export const pagesService = {
     const page = findStorePage(productSlug, pageId);
     if (!page) throw { status: 404, message: `Página ${pageId} não encontrada.` };
     const section: Section = { id: nextSectionId(page), order: page.sections.length, ...req };
-    console.log(`[mock→backend] POST /api/v1/products/${productSlug}/pages/${pageId}/sections`, req);
+    logApiCall("POST", `/api/v1/products/${productSlug}/pages/${pageId}/sections`, req);
     page.sections.push(section);
     page.version += 1;
     return { ...section };
@@ -62,7 +63,7 @@ export const pagesService = {
     const page = findStorePage(productSlug, pageId);
     const section = page?.sections.find((s) => s.id === sectionId);
     if (!page || !section) throw { status: 404, message: `Seção ${sectionId} não encontrada.` };
-    console.log(`[mock→backend] PUT /api/v1/products/${productSlug}/pages/${pageId}/sections/${sectionId}`, req);
+    logApiCall("PUT", `/api/v1/products/${productSlug}/pages/${pageId}/sections/${sectionId}`, req);
     Object.assign(section, req);
     page.version += 1;
     return { ...section };
@@ -71,7 +72,7 @@ export const pagesService = {
   async deleteSection(productSlug: string, pageId: string, sectionId: string): Promise<void> {
     const page = findStorePage(productSlug, pageId);
     if (!page) return;
-    console.log(`[mock→backend] DELETE /api/v1/products/${productSlug}/pages/${pageId}/sections/${sectionId}`);
+    logApiCall("DELETE", `/api/v1/products/${productSlug}/pages/${pageId}/sections/${sectionId}`);
     page.sections = page.sections.filter((s) => s.id !== sectionId);
     page.version += 1;
   },
@@ -80,7 +81,7 @@ export const pagesService = {
     const page = findStorePage(productSlug, pageId);
     if (!page) throw { status: 404, message: `Página ${pageId} não encontrada.` };
     const byId = new Map(page.sections.map((s) => [s.id, s]));
-    console.log(`[mock→backend] PUT /api/v1/products/${productSlug}/pages/${pageId}/sections/reorder`, req);
+    logApiCall("PUT", `/api/v1/products/${productSlug}/pages/${pageId}/sections/reorder`, req);
     page.sections = req.sectionIds.map((id, order) => {
       const section = byId.get(id);
       if (!section) throw { status: 400, message: `Seção ${id} não pertence a esta página.` };

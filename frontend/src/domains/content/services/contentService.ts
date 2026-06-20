@@ -1,4 +1,5 @@
 import { contentByProduct, contents, editEvents, wfInitialItems } from "../mocks/content.mocks";
+import { logApiCall } from "../../../shared/services/devLog";
 import type { ContentRow, ListContentResponse, ListEditEventsResponse, ListWorkflowItemsResponse } from "../contracts/responses";
 
 const contentStore: ContentRow[] = contents.map(([title, type, lang, author, status, updatedAt, publication, version]) => ({
@@ -24,21 +25,21 @@ export const contentService = {
   // {contentId} é placeholder: este service ainda não recebe o id do conteúdo selecionado
   // (ContentEditor/WorkflowPanel chamam estes métodos sem parâmetro hoje).
   async restoreVersion(version: string): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/content/{contentId}/versions/{version}/restore", { version });
+    logApiCall("POST", "/api/v1/products/{productId}/content/{contentId}/versions/{version}/restore", { version });
   },
   async submitForReview(): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/content/{contentId}/transition", { from: "Draft", to: "In Review" });
+    logApiCall("POST", "/api/v1/products/{productId}/content/{contentId}/transition", { from: "Draft", to: "In Review" });
   },
   async publish(): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/content/{contentId}/transition", { from: "In Review", to: "Published" });
+    logApiCall("POST", "/api/v1/products/{productId}/content/{contentId}/transition", { from: "In Review", to: "Published" });
   },
   async archive(): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/content/{contentId}/transition", { from: "Published", to: "Archived" });
+    logApiCall("POST", "/api/v1/products/{productId}/content/{contentId}/transition", { from: "Published", to: "Archived" });
   },
   async saveDraft(): Promise<void> {
-    console.log("[mock→backend] PUT /api/v1/products/{productId}/content/{contentId}");
+    logApiCall("PUT", "/api/v1/products/{productId}/content/{contentId}");
   },
   async schedulePublish(): Promise<void> {
-    console.log("[mock→backend] POST /api/v1/products/{productId}/content/{contentId}/transition", { from: "In Review", to: "Published", scheduled: true });
+    logApiCall("POST", "/api/v1/products/{productId}/content/{contentId}/transition", { from: "In Review", to: "Published", scheduled: true });
   },
 };

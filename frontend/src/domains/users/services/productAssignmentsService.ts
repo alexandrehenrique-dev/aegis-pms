@@ -1,5 +1,6 @@
 import { usersService } from "./usersService";
 import { productsService } from "../../products/services/productsService";
+import { logApiCall } from "../../../shared/services/devLog";
 import type { AssignProductUserRequest, ProductAssignmentSummary } from "../contracts/productAssignments";
 
 const assignmentsStore: ProductAssignmentSummary[] = [];
@@ -10,6 +11,7 @@ export const productAssignmentsService = {
   },
 
   async assign(req: AssignProductUserRequest): Promise<ProductAssignmentSummary> {
+    logApiCall("POST", `/api/v1/admin/products/${req.productId}/assignments`, req);
     const products = await productsService.listProducts();
     const product = products.find((p) => p.id === req.productId);
 
