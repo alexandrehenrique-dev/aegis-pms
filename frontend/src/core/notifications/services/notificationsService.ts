@@ -23,13 +23,14 @@ export function setNotificationsCurrentUser(userId: string | null) {
   currentUserId = userId;
 }
 
-function statusFor(notificationId: string, userId: string): UserNotificationStatus {
-  const existing = (statusStore[userId] ?? []).find((s) => s.notificationId === notificationId);
-  return existing ?? { notificationId, autoShown: false, read: false };
-}
-
-function withStatus(notification: Notification, userId: string): NotificationWithStatus {
-  return { ...notification, ...statusFor(notification.id, userId) };
+/** Só as notificações para as quais o usuário é destinatário de fato (tem uma `UserNotificationStatus` própria) — nunca todas com um status padrão inventado. */
+function notificationsFor(userId: string): NotificationWithStatus[] {
+  return (statusStore[userId] ?? [])
+    .map((status) => {
+      const notification = notificationsStore.find((n) => n.id === status.notificationId);
+      return notification ? { ...notification, ...status } : null;
+    })
+    .filter((n): n is NotificationWithStatus => n !== null);
 }
 
 function byCreatedAtDesc(a: Notification, b: Notification): number {
@@ -49,18 +50,14 @@ function userIdsForTenant(tenantId: string): string[] {
 export const notificationsService = {
   async listMine(): Promise<NotificationWithStatus[]> {
     if (!currentUserId) return [];
-    const userId = currentUserId;
-    return [...notificationsStore].sort(byCreatedAtDesc).map((n) => withStatus(n, userId));
+    return notificationsFor(currentUserId).sort(byCreatedAtDesc);
   },
 
   /** A mais antiga ainda não mostrada automaticamente — fila de "primeiro acesso", uma por vez (Sprint 14, Tarefa C). */
   async getPendingModal(): Promise<NotificationWithStatus | null> {
     if (!currentUserId) return null;
-    const userId = currentUserId;
-    const pending = notificationsStore
-      .filter((n) => n.presentationMode === "MODAL_ONCE")
-      .map((n) => withStatus(n, userId))
-      .filter((n) => !n.autoShown)
+    const pending = notificationsFor(currentUserId)
+      .filter((n) => n.presentationMode === "MODAL_ONCE" && !n.autoShown)
       .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
     return pending[0] ?? null;
   },
