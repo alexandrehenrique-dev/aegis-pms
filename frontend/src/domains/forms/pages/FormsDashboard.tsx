@@ -1,16 +1,20 @@
 import { useNavigate } from "react-router";
 import { Plus } from "lucide-react";
 import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
+import { PermGate } from "../../../app/guards/PermGate";
+import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 import { ConversionCard } from "../components/ConversionCard";
 import { FormsTimeline } from "../components/FormsTimeline";
 
 export function FormsDashboard() {
   const navigate = useNavigate();
+  const { viewAsRole } = useViewAsRole();
+  const canCreate = viewAsRole !== "viewer";
   return (
     <>
       <PageHeader title="Forms" module="Forms" desc="Central operacional de captura de dados, submissões e qualificação de leads." badge="Maestro Beton">
         <Button onClick={() => navigate("/forms/list")}>Ver formulários</Button>
-        <Button primary onClick={() => navigate("/forms/new")}><Plus size={15} />Criar formulário</Button>
+        <PermGate allowed={canCreate}><Button primary onClick={() => navigate("/forms/new")}><Plus size={15} />Criar formulário</Button></PermGate>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">

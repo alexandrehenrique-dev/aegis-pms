@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router";
 import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
+import { PermGate } from "../../../app/guards/PermGate";
+import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 
 function KnowledgeTimeline() {
   return (
@@ -16,11 +18,13 @@ function KnowledgeTimeline() {
 
 export function KnowledgeOverview() {
   const navigate = useNavigate();
+  const { viewAsRole } = useViewAsRole();
+  const canExplore = viewAsRole !== "viewer";
   return (
     <>
       <PageHeader title="Knowledge Graph" desc="Mapa operacional de relações, dependências e impactos do produto." badge="Maestro Beton">
-        <Button onClick={() => navigate("/knowledge/search")}>Buscar entidade</Button>
-        <Button primary onClick={() => navigate("/knowledge/graph")}>Explorar grafo</Button>
+        <PermGate allowed={canExplore}><Button onClick={() => navigate("/knowledge/search")}>Buscar entidade</Button></PermGate>
+        <PermGate allowed={canExplore}><Button primary onClick={() => navigate("/knowledge/graph")}>Explorar grafo</Button></PermGate>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">

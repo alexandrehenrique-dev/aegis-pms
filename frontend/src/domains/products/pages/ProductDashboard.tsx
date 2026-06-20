@@ -1,6 +1,7 @@
 import { useNavigate, useSearchParams } from "react-router";
 import { ChevronRight, ExternalLink } from "lucide-react";
 import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
+import { isRouteBlocked } from "../../../core/permissions/roles";
 import { Button, Card, KPIWidget, PageHeader } from "../../../shared/components/Primitives";
 import { OperationalTimeline } from "../../../shared/components/OperationalTimeline";
 import { QuickActions } from "../components/QuickActions";
@@ -13,12 +14,14 @@ export function ProductDashboard() {
   const { viewAsRole } = useViewAsRole();
   if (params.get("empty")) return <ProductEmpty />;
 
-  const pendencias: [string, string][] = [
+  const allPendencias: [string, string][] = [
     ["Revisar conteúdo em aprovação", "/content/workflow"],
     ["Configurar SEO da página Home", "/settings/product"],
     ["Adicionar imagens à galeria", "/assets"],
     ["Ver respostas do formulário de orçamento", "/forms/submissions"],
   ];
+  // Sprint 13, Tarefa N: pendência só aparece se a rota não for bloqueada para o papel atual (ex.: "Configurar SEO" exige /settings, fora do escopo de editor/viewer).
+  const pendencias = allPendencias.filter(([, path]) => !isRouteBlocked(viewAsRole, path));
 
   return (
     <>

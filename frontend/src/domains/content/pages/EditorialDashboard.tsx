@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import { AnimatePresence } from "motion/react";
 import { AlertTriangle, Plus } from "lucide-react";
 import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
+import { PermGate } from "../../../app/guards/PermGate";
+import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 import { contentService } from "../services/contentService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { NewContentModal } from "../components/NewContentModal";
@@ -35,13 +37,15 @@ function EditorialTimeline() {
 
 export function EditorialDashboard() {
   const navigate = useNavigate();
+  const { viewAsRole } = useViewAsRole();
+  const canEdit = viewAsRole !== "viewer";
   const [showNewContent, setShowNewContent] = useState(false);
   return (
     <>
       <AnimatePresence>{showNewContent && <NewContentModal onClose={() => setShowNewContent(false)} />}</AnimatePresence>
       <PageHeader title="Conteúdo" module="Conteúdo" desc="Gerencie artigos, traduções, revisões e publicações deste produto." badge="Maestro Beton">
-        <Button onClick={() => navigate("/content/workflow")}>Ver workflow</Button>
-        <Button primary onClick={() => setShowNewContent(true)}><Plus size={15} />Novo conteúdo</Button>
+        <PermGate allowed={canEdit}><Button onClick={() => navigate("/content/workflow")}>Ver workflow</Button></PermGate>
+        <PermGate allowed={canEdit}><Button primary onClick={() => setShowNewContent(true)}><Plus size={15} />Novo conteúdo</Button></PermGate>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">

@@ -83,6 +83,16 @@ function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * Regra geral de permissão por widget (Sprint 13, Tarefa N) — `RequireRole`
+ * só bloqueia a rota inteira; nenhum widget de dashboard verifica papel por
+ * conta própria. Qualquer widget de dashboard que exiba dado ou ação fora do
+ * escopo de `roleVisibleNav`/`roleBlockedRoutePrefixes` do papel atual deve
+ * estar dentro de um `PermGate` (`app/guards/PermGate.tsx`) — vale para
+ * dashboards futuros desde o início, não só para os já auditados nesta sprint
+ * (`DashboardGlobal`, `EditorialDashboard`, `FormsDashboard`,
+ * `AnalyticsOverview`, `ProductDashboard`, `KnowledgeOverview`).
+ */
 export type RoleAction = { label: string; path: string; desc: string };
 
 export const roleActions: Record<UserRole, RoleAction[]> = {
