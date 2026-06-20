@@ -67,6 +67,17 @@ Validação obrigatória: exatamente um de `userId` ou `inviteEmail` deve vir pr
 
 **`DELETE /api/v1/products/{productId}/users/{userId}`** — remove a atribuição.
 
+### C. Padrão de qualidade e entrega (obrigatório)
+
+> Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
+
+- **Java 25** / **Spring Boot 4.1.x**. Javadoc obrigatório na interface e em todo método de `ProductAssignmentRepository` (e nos métodos novos de `TenantRepository`, se algum for adicionado aqui). Mapper via MapStruct (`ProductAssignmentMapper`). 100% de cobertura nas classes funcionais.
+- Entregar em rodadas:
+  1. `ProductAssignment` (entity) + `ProductAssignmentRepository` (constraint única `(productId, userSubject)`) + testes `@DataJpaTest`.
+  2. `ProductAssignmentMapper` (MapStruct) + testes de mapper.
+  3. Extensão de `TenantService` (PUT/DELETE, escopo por papel) + `ProductAssignmentService` (validação `userId` XOR `inviteEmail`, etc.) + testes com mocks — cada regra da Seção A/B com teste do caminho feliz e da rejeição.
+  4. Extensão de `TenantController` + novo `ProductAssignmentController` + testes `@WebMvcTest` + validação via `curl`.
+
 ## Critérios de aceite
 
 - [ ] `PUT`/`DELETE` de tenant funcionam; `DELETE` exige `confirmationText` correto e cascateia.
@@ -77,6 +88,8 @@ Validação obrigatória: exatamente um de `userId` ou `inviteEmail` deve vir pr
 - [ ] `userId` de um usuário de outro tenant é rejeitado.
 - [ ] `DELETE` de `ProductAssignment` remove a atribuição.
 - [ ] Excluir um tenant remove em cascata seus produtos, módulos, memberships e `ProductAssignment`s.
+- [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa (JaCoCo).
+- [ ] `ProductAssignmentRepository` tem Javadoc na interface e em todo método.
 
 ## Validação
 

@@ -1,44 +1,95 @@
-import { useState } from "react";
-import { AlertTriangle, Calendar, Link2, Loader2, Plus, Send, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, Calendar, GripVertical, Link2, Loader2, Plus, Send, Trash2 } from "lucide-react";
+import { useDragReorder } from "../../../shared/hooks/useDragReorder";
 import { Badge, Button, Card, Field, SelectLike } from "../../../shared/components/Primitives";
 import { PermissionHint } from "../../../shared/components/Primitives";
+import { MarkdownField } from "../../../shared/components/MarkdownField";
+import { ImageFieldEditor, MediaField } from "../../../shared/components/MediaField";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
 import { ContentStatusBadge } from "./ContentStatusBadge";
 import { VersionTimeline } from "./VersionTimeline";
-import { BLOCK_TYPES, type BlockType, type Page, type Section } from "../../pages/contracts/responses";
+import type { BlockType, Page, Section } from "../../pages/contracts/responses";
 import { EntityPicker } from "../../knowledge/components/EntityPicker";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
 import { TwoColumnEditor } from "../../pages/components/TwoColumnEditor";
+import { AudioBlockEditor } from "../../pages/components/AudioBlockEditor";
 import { ItemsCrudEditor } from "../../pages/components/ItemsCrudEditor";
 import { ITEMS_CRUD_CONFIG } from "../../pages/itemsCrudConfig";
 import { EventsManagerDrawer } from "../../pages/components/EventsManagerDrawer";
+import { EventSelector } from "../../pages/components/EventSelector";
 import { FormIdSelector } from "../../pages/components/FormIdSelector";
+import { pagesService } from "../../pages/services/pagesService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import type { KGNode } from "../../knowledge/mocks/knowledge.mocks";
 
-export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, onRequestDelete }: {
+const SECTION_DRAG_TYPE = "page-section";
+
+function SectionRow({ section, index, isSelected, isLast, totalCount, onSelect, onRequestDelete, onHoverReorder, onDrop }: {
+  section: Section; index: number; isSelected: boolean; isLast: boolean; totalCount: number;
+  onSelect: () => void; onRequestDelete: () => void;
+  onHoverReorder: (from: number, to: number) => void; onDrop: () => void;
+}) {
+  const { ref, isDragging, isOver } = useDragReorder({ dragType: SECTION_DRAG_TYPE, index, onHoverReorder, onDrop });
+
+  return (
+    <div
+      ref={ref}
+      style={{ opacity: isDragging ? 0.4 : 1 }}
+      className={`mb-1 flex w-full items-center gap-1 rounded-lg p-1 transition ${isSelected ? "bg-muted" : "hover:bg-muted"} ${isOver ? "ring-2 ring-primary/30" : ""}`}
+    >
+      <GripVertical size={14} className="shrink-0 cursor-grab text-muted-foreground/50 active:cursor-grabbing" />
+      <button onClick={onSelect} className="flex flex-1 items-center justify-between p-1 text-left text-sm">
+        <span>{section.label}</span>
+        <span className="flex gap-1"><Badge>{section.type}</Badge>{isLast && totalCount > 4 && <AlertTriangle size={14} className="text-[#8A5A12]" />}</span>
+      </button>
+      <button onClick={onRequestDelete} aria-label={`Remover ${section.label}`} className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button>
+    </div>
+  );
+}
+
+export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, onRequestDelete, onReorder }: {
   page: Page | null; selectedId: string | null; onSelect: (id: string) => void; onAddBlock: (type: BlockType) => void; onRequestDelete: (id: string) => void;
+  onReorder: (sectionIds: string[]) => void;
 }) {
   const [newType, setNewType] = useState<BlockType>("text");
-  const sections = page?.sections ?? [];
+  const [orderedSections, setOrderedSections] = useState<Section[]>(page?.sections ?? []);
+  const { data: blockTypes } = useAsyncData(() => pagesService.listBlockTypes(), []);
+
+  useEffect(() => setOrderedSections(page?.sections ?? []), [page]);
+
+  const handleHoverReorder = (from: number, to: number) => {
+    setOrderedSections((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
 
   return (
     <Card className="h-full">
       <h2 className="mb-3 text-lg font-semibold">Estrutura</h2>
+      <p className="mb-2 text-xs text-muted-foreground">Arraste pelo ícone para reordenar.</p>
       {!page && <p className="text-sm text-muted-foreground">Nenhuma página carregada para este produto.</p>}
-      {sections.map((s, i) => (
-        <div key={s.id} className={`mb-1 flex w-full items-center gap-1 rounded-lg p-1 ${selectedId === s.id ? "bg-muted" : "hover:bg-muted"}`}>
-          <button onClick={() => onSelect(s.id)} className="flex flex-1 items-center justify-between p-1 text-left text-sm">
-            <span>{s.label}</span>
-            <span className="flex gap-1"><Badge>{s.type}</Badge>{i === sections.length - 1 && sections.length > 4 && <AlertTriangle size={14} className="text-[#8A5A12]" />}</span>
-          </button>
-          <button onClick={() => onRequestDelete(s.id)} aria-label={`Remover ${s.label}`} className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button>
-        </div>
+      {orderedSections.map((s, i) => (
+        <SectionRow
+          key={s.id}
+          section={s}
+          index={i}
+          isSelected={selectedId === s.id}
+          isLast={i === orderedSections.length - 1}
+          totalCount={orderedSections.length}
+          onSelect={() => onSelect(s.id)}
+          onRequestDelete={() => onRequestDelete(s.id)}
+          onHoverReorder={handleHoverReorder}
+          onDrop={() => onReorder(orderedSections.map((sec) => sec.id))}
+        />
       ))}
       {page && (
         <div className="mt-3 flex items-center gap-2">
-          <SelectLike label="" value={newType} options={[...BLOCK_TYPES]} onChange={(v) => setNewType(v as BlockType)} />
+          <SelectLike label="" value={newType} options={[...(blockTypes ?? [])]} onChange={(v) => setNewType(v as BlockType)} />
           <Button onClick={() => onAddBlock(newType)}><Plus size={15} />Adicionar bloco</Button>
         </div>
       )}
@@ -54,6 +105,9 @@ function isArrayOfObjects(v: unknown): v is Record<string, unknown>[] {
   return Array.isArray(v) && v.length > 0 && v.every((item) => isPlainObject(item));
 }
 
+/** Campos de texto longo (Sprint 13, Tarefa B.2) editados via `MarkdownField`, não `<textarea>` simples. */
+const MARKDOWN_FIELD_KEYS = new Set(["body", "desc", "description", "a", "answer"]);
+
 /** Aplica um valor num caminho aninhado e devolve a árvore `content` completa atualizada (merge raso no nível 1 continua correto). */
 function setNestedField(obj: Record<string, unknown>, path: string[], value: string): Record<string, unknown> {
   const [head, ...rest] = path;
@@ -68,11 +122,27 @@ function ObjectFieldsEditor({ obj, path, onPatch }: { obj: Record<string, unknow
       {Object.entries(obj).map(([k, v]) => {
         const fullPath = [...path, k];
         if (typeof v === "string") {
+          if (MARKDOWN_FIELD_KEYS.has(k)) {
+            return <MarkdownField key={fullPath.join(".")} label={fullPath.join(" › ")} value={v} onChange={(nv) => onPatch(fullPath, nv)} />;
+          }
           return (
-            <Field key={fullPath.join(".")} label={fullPath.join(" › ")} value={v} onChange={(nv) => onPatch(fullPath, nv)} textarea={k === "body" || k === "desc"} />
+            <Field key={fullPath.join(".")} label={fullPath.join(" › ")} value={v} onChange={(nv) => onPatch(fullPath, nv)} />
           );
         }
         if (isPlainObject(v)) {
+          if (typeof v.src === "string") {
+            return (
+              <div key={fullPath.join(".")} className="rounded-lg border border-border p-3 md:col-span-2">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{k}</p>
+                <ImageFieldEditor
+                  src={v.src}
+                  alt={typeof v.alt === "string" ? v.alt : ""}
+                  onChangeSrc={(nv) => onPatch([...fullPath, "src"], nv)}
+                  onChangeAlt={(nv) => onPatch([...fullPath, "alt"], nv)}
+                />
+              </div>
+            );
+          }
           return (
             <div key={fullPath.join(".")} className="rounded-lg border border-border p-3 md:col-span-2">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{k}</p>
@@ -93,15 +163,19 @@ function ArrayFieldEditor({ items, onChange }: { items: Record<string, unknown>[
     <div className="space-y-2">
       {items.map((item, i) => (
         <div key={i} className="grid gap-2 rounded-lg border border-border p-3 md:grid-cols-2">
-          {Object.entries(item).filter(([, v]) => typeof v === "string").map(([k, v]) => (
-            <Field
-              key={k}
-              label={k}
-              value={v as string}
-              onChange={(nv) => onChange(items.map((it, j) => (j === i ? { ...it, [k]: nv } : it)))}
-              textarea={k === "desc" || k === "a" || k === "body"}
-            />
-          ))}
+          {Object.entries(item).filter(([, v]) => typeof v === "string").map(([k, v]) => {
+            const onFieldChange = (nv: string) => onChange(items.map((it, j) => (j === i ? { ...it, [k]: nv } : it)));
+            if (k === "src") {
+              return <MediaField key={k} label={k} value={v as string} typeFilter="imagem" onChange={onFieldChange} />;
+            }
+            if (k === "fileAssetId") {
+              return <MediaField key={k} label={k} value={v as string} typeFilter="qualquer" onChange={onFieldChange} />;
+            }
+            if (MARKDOWN_FIELD_KEYS.has(k)) {
+              return <MarkdownField key={k} label={k} value={v as string} onChange={onFieldChange} />;
+            }
+            return <Field key={k} label={k} value={v as string} onChange={onFieldChange} />;
+          })}
         </div>
       ))}
     </div>
@@ -123,11 +197,15 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
   }
 
   const isTwoColumn = section.type === "two-column";
+  const isAudio = section.type === "audio";
+  const isEventList = section.type === "event-list";
   const itemsCrudConfig = ITEMS_CRUD_CONFIG[section.type];
   const hasFormIdSelector = section.type === "contact" || section.type === "form";
   const { content } = section;
   const excludedKeys = new Set<string>([
     ...(isTwoColumn ? ["left", "right"] : []),
+    ...(isAudio ? ["source", "fileAssetId", "spotifyUrl", "autoplay"] : []),
+    ...(isEventList ? ["selectedEventIds"] : []),
     ...(itemsCrudConfig ? [itemsCrudConfig.key] : []),
     ...(hasFormIdSelector ? ["formId"] : []),
   ]);
@@ -159,15 +237,28 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
         <Button onClick={() => onRequestDelete(section.id)}><Trash2 size={14} />Remover bloco</Button>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
-        {stringFields.map(([k, v]) => (
-          <Field key={k} label={k} value={v} onChange={(nv) => onChangeContent({ [k]: nv })} textarea={k === "body"} />
-        ))}
+        {stringFields.map(([k, v]) => {
+          const onFieldChange = (nv: string) => onChangeContent({ [k]: nv });
+          if (MARKDOWN_FIELD_KEYS.has(k)) {
+            return <MarkdownField key={k} label={k} value={v} onChange={onFieldChange} />;
+          }
+          return <Field key={k} label={k} value={v} onChange={onFieldChange} />;
+        })}
         {nestedObjectFields.map(([k, v]) => (
           <div key={k} className="rounded-lg border border-border p-3 md:col-span-2">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{k}</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              <ObjectFieldsEditor obj={v} path={[k]} onPatch={handleNestedPatch} />
-            </div>
+            {typeof v.src === "string" ? (
+              <ImageFieldEditor
+                src={v.src}
+                alt={typeof v.alt === "string" ? v.alt : ""}
+                onChangeSrc={(nv) => handleNestedPatch([k, "src"], nv)}
+                onChangeAlt={(nv) => handleNestedPatch([k, "alt"], nv)}
+              />
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                <ObjectFieldsEditor obj={v} path={[k]} onPatch={handleNestedPatch} />
+              </div>
+            )}
           </div>
         ))}
         {hasFormIdSelector && (
@@ -175,8 +266,14 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
         )}
       </div>
       {isTwoColumn && <TwoColumnEditor content={content} onChange={onChangeContent} />}
-      {section.type === "event-list" && (
-        <div className="mt-3">
+      {isAudio && <AudioBlockEditor content={content} onChange={onChangeContent} />}
+      {isEventList && (
+        <div className="mt-3 space-y-3">
+          <EventSelector
+            productSlug={productSlug}
+            selectedIds={Array.isArray(content.selectedEventIds) ? (content.selectedEventIds as string[]) : []}
+            onChange={(selectedEventIds) => onChangeContent({ selectedEventIds })}
+          />
           <Button onClick={() => setShowEventsManager(true)}><Calendar size={14} />Gerenciar eventos</Button>
           <EventsManagerDrawer productSlug={productSlug} open={showEventsManager} onOpenChange={setShowEventsManager} />
         </div>

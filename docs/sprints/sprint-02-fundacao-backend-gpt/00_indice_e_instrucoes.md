@@ -14,9 +14,9 @@ A Sprint 02 é a exceção: ela cobre a fundação inteira do backend (Docker, P
    git pull origin develop
    git checkout -b sprint/02-fundacao-backend
    ```
-2. Abra uma conversa nova no GPT para cada arquivo `01_...md` até `22_...md`, **nesta ordem** (ver tabela "Etapas" abaixo — a numeração do arquivo já é a ordem de execução). Cole o conteúdo do arquivo inteiro (ele já inclui o contexto fixo necessário — não precisa colar nada antes).
+2. Leia `00_padrao_qualidade_e_arquitetura.md` uma vez (não precisa colar no GPT, é para você entender o padrão antes de revisar o que o GPT entregar). Depois, abra uma conversa nova no GPT para cada arquivo `01_...md` até `23_...md`, **nesta ordem** (ver tabela "Etapas" abaixo — a numeração do arquivo já é a ordem de execução). Cole o conteúdo do arquivo inteiro (ele já inclui o contexto fixo necessário, incluindo um resumo do padrão de qualidade — não precisa colar nada antes).
 3. Peça ao GPT para gerar os arquivos/código pedidos na etapa, aplique-os no repositório, valide com os comandos da seção "Validação" do próprio arquivo, e só então comite (cada etapa já traz a mensagem de commit sugerida).
-4. Ao terminar a última etapa (`22_...md`), faça merge da branch em `develop`:
+4. Ao terminar a última etapa (`23_...md`), faça merge da branch em `develop`:
    ```bash
    git push -u origin sprint/02-fundacao-backend
    git checkout develop
@@ -34,8 +34,16 @@ A Sprint 02 é a exceção: ela cobre a fundação inteira do backend (Docker, P
 - Os payloads das etapas 09-17 e 21 (domínios de produto) **não são inventados nesta sprint** — são os mesmos contratos TypeScript que `frontend/src/domains/*/contracts/` já define hoje (Sprint 09 do frontend, fora do GPT), mais os achados da Sprint 11 (domínio `pages`, preview leve de nó do grafo, `summary`/`difficultyLevel` em `Content`). Se o GPT sugerir um shape diferente do descrito na etapa, prevaleça o shape da etapa/trace report, não a sugestão do GPT.
 - Toda etapa precisa passar pela validação descrita antes de seguir para a próxima.
 - Se o GPT sugerir qualquer mudança na forma como Keycloak ou PostgreSQL persistem dados, pare e não aplique — viola decisão arquitetural já tomada.
+- **Stack é Java 25**, sem exceção — nunca aceitar "21+" ou qualquer versão menor sugerida pelo GPT.
+- **Padrão de qualidade e arquitetura obrigatório em toda etapa que gera classes Java**: cobertura de 100% nas classes funcionais (DTOs de transporte puro ficam fora), JaCoCo configurado e falhando o build abaixo de 100%, Javadoc em toda interface/método de `Repository`, mappers via MapStruct, e entrega sempre em rodadas (entity+repo → mapper → service → controller), nunca tudo de uma vez. Detalhe completo, com exemplos de código: **`00_padrao_qualidade_e_arquitetura.md`** — leia esse arquivo uma vez antes de começar a executar qualquer etapa de domínio; cada etapa também traz um resumo dele, mas o arquivo é a fonte da verdade.
 
 ## Etapas
+
+### Preâmbulo (ler antes, não é colado no GPT)
+
+| Arquivo | Conteúdo |
+|---|---|
+| `00_padrao_qualidade_e_arquitetura.md` | Java 25, estrutura por camada, Javadoc em repository, MapStruct, JaCoCo (100% nas classes funcionais), entrega em rodadas — fonte da verdade do padrão repetido (resumido) em cada etapa abaixo |
 
 ### Fundação (Features de `implementation/001`)
 
@@ -74,4 +82,10 @@ A Sprint 02 é a exceção: ela cobre a fundação inteira do backend (Docker, P
 | `21_dominio_pages_secoes_e_blocos.md` | Trace, Seção D.1 (Sprint 11 do frontend) | Domínio `pages`: páginas compostas por seções/blocos tipados (hero, card-list, gallery, contact...) — pré-requisito só a etapa 10, pode ser feita a qualquer momento depois dela, numerada por último por ter sido adicionada depois |
 | `22_openapi_testes_e_checklist_final.md` | 023, 024, 025 | Swagger, testes mínimos, checklist final do servidor |
 
-Ao final da etapa 22, o backend completo deve estar funcional: `docker compose up -d` sobe tudo, Keycloak e PostgreSQL persistem dados entre restarts, o backend autentica via JWT, o modelo core e o Knowledge Graph MVP funcionam, **todos os domínios de produto que o frontend já usa (content, pages, assets, forms, analytics, users, audit, settings, dashboard) respondem com os payloads exatos do trace report**, o fluxo de Super Admin (criar tenant → criar produto → atribuir usuário) funciona de ponta a ponta via API, e o build do frontend React é servido na mesma origem.
+### Domínio adicional (Sprint 14 do frontend)
+
+| Arquivo | Cobre | Conteúdo |
+|---|---|---|
+| `23_dominio_notification.md` | Sprint 14 do frontend (`docs/sprints/14_onboarding_real_e_sistema_de_notificacoes.md`) | Domínio `notification`: onboarding real + notificações direcionadas do Super Admin, com fan-out por destinatário — adicionada **depois** do checklist final (etapa 22) porque surgiu depois; ao terminá-la, não é preciso refazer o checklist inteiro da etapa 22, só confirmar que nada que já passava deixou de passar (`mvn clean verify` no projeto inteiro continua sendo o teste definitivo disso) |
+
+Ao final da etapa 22, o backend completo deve estar funcional: `docker compose up -d` sobe tudo, Keycloak e PostgreSQL persistem dados entre restarts, o backend autentica via JWT, o modelo core e o Knowledge Graph MVP funcionam, **todos os domínios de produto que o frontend já usa (content, pages, assets, forms, analytics, users, audit, settings, dashboard) respondem com os payloads exatos do trace report**, o fluxo de Super Admin (criar tenant → criar produto → atribuir usuário) funciona de ponta a ponta via API, e o build do frontend React é servido na mesma origem. Ao final da etapa 23, além de tudo isso, o sistema de notificações (onboarding + direcionadas) também está funcional.

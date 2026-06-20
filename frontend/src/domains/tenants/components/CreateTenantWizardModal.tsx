@@ -70,7 +70,7 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
       const created = await productsService.create({
         name: productName, slug: productSlug, type: "Site Institucional", language: "pt-BR",
         description: "Produto criado pelo wizard de onboarding do Super Admin.", template: "Produto operacional padrão",
-        initialModules: INITIAL_MODULES, tenantId: tenant.id,
+        initialModules: INITIAL_MODULES, tenantId: tenant.id, assetStorageStrategy: "local",
       });
       setProduct(created);
       setStep(3);

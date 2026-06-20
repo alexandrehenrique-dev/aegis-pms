@@ -11,6 +11,7 @@ import { SimulationBanner } from "../../core/permissions/components/SimulationBa
 import { ReadOnlyBanner } from "../../core/permissions/components/ReadOnlyBanner";
 import { ToasterHost } from "../../core/notifications/components/ToasterHost";
 import { FeedbackModal } from "../../core/notifications/components/FeedbackModal";
+import { useFeedbackModal } from "../../core/notifications/FeedbackModalContext";
 
 import { AegisLogo } from "../../shared/components/AegisLogo";
 import { Switcher, type SwitcherItem } from "../../shared/components/Switcher";
@@ -42,7 +43,7 @@ export function AppShell() {
 
   const [mobile, setMobile] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
+  const { open: showFeedback, setOpen: setShowFeedback } = useFeedbackModal();
   const [transitioning, setTransitioning] = useState(false);
   const [showWelcome, setShowWelcome] = useState<boolean>(() => {
     try { return !localStorage.getItem("aegis-welcomed"); } catch { return true; }
@@ -124,7 +125,7 @@ export function AppShell() {
           <GlobalSearch />
           <Notifications />
           <button onClick={() => setTheme(themeNext[theme])} className="rounded-xl border border-border bg-card p-2 transition hover:bg-muted" title="Alternar tema">{themeIcon}</button>
-          <button onClick={() => setShowFeedback(true)} className="rounded-xl border border-border bg-card p-2 transition hover:bg-muted" title="Enviar feedback"><HelpCircle size={16} /></button>
+          <button onClick={() => navigate("/help")} className="rounded-xl border border-border bg-card p-2 transition hover:bg-muted" title="Central de Ajuda"><HelpCircle size={16} /></button>
           <div className="relative">
             <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-2.5 text-sm transition hover:bg-muted">
               <div className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">{authUser.initials}</div>

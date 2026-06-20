@@ -1,7 +1,7 @@
 import { pagesByProduct } from "../mocks/pages.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
 import type { CreatePageRequest, CreateSectionRequest, ReorderSectionsRequest, UpdateSectionRequest } from "../contracts/requests";
-import type { ListPagesResponse, Page, Section } from "../contracts/responses";
+import { BLOCK_TYPES, type BlockType, type ListPagesResponse, type Page, type Section } from "../contracts/responses";
 
 // Store em memória só para a sessão do navegador — ver nota equivalente em
 // domains/products/services/productsService.ts.
@@ -29,6 +29,17 @@ function clonePage(page: Page): Page {
 }
 
 export const pagesService = {
+  /**
+   * Catálogo de `BlockType` (Sprint 13, Tarefa H.1) — hoje devolve a
+   * constante `BLOCK_TYPES` (mock), mas todo código novo consulta este
+   * método, nunca a constante direto. Prepara a troca para um catálogo
+   * vindo do backend (que pode variar por tipo de produto/plano) sem exigir
+   * outro refactor.
+   */
+  async listBlockTypes(): Promise<readonly BlockType[]> {
+    return BLOCK_TYPES;
+  },
+
   async listPages(productSlug: string): Promise<ListPagesResponse> {
     return pagesStore.filter((p) => p.productSlug === productSlug).map(clonePage);
   },

@@ -28,3 +28,14 @@ export type SubmissionSummary = {
 export type ListFormsResponse = FormSummary[];
 export type ListSubmissionsResponse = SubmissionSummary[];
 export type ListFieldTypesResponse = string[];
+
+/**
+ * Entrega de respostas (Sprint 13, Tarefa J) — antes, uma submissão só
+ * gerava um toast interno, sem nenhum lugar para configurar "para onde
+ * mandar". Cada canal expande seus próprios campos de configuração quando
+ * marcado; mais de um pode estar habilitado simultaneamente. Persistido
+ * junto com a definição do formulário (`PUT .../forms/{formId}/delivery`).
+ */
+export type DeliveryChannelType = "email" | "whatsapp" | "telegram" | "webhook";
+export type DeliveryChannel = { type: DeliveryChannelType; config: Record<string, string>; enabled: boolean };
+export type FormDelivery = { channels: DeliveryChannel[] };

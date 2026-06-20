@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { AnimatePresence } from "motion/react";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { Badge, Button, EmptyState, PageHeader } from "../../../shared/components/Primitives";
 import { UnsavedChangesBanner, ConflictAlert } from "../../../shared/components/Banners";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
@@ -86,6 +88,13 @@ export function ContentEditor() {
     triggerSave();
   };
 
+  const handleReorderSections = async (sectionIds: string[]) => {
+    if (!page) return;
+    await pagesService.reorderSections(page.productSlug, page.id, { sectionIds });
+    await refreshPage(page);
+    triggerSave();
+  };
+
   const handleDeleteBlock = async () => {
     if (!page || !pendingDeleteId) return;
     setDeletingBlock(true);
@@ -111,7 +120,7 @@ export function ContentEditor() {
   }
 
   return (
-    <>
+    <DndProvider backend={HTML5Backend}>
       <AnimatePresence>{saveStatus !== "idle" && <FloatingSaveStatus key={saveStatus} status={saveStatus} onRetry={triggerSave} />}</AnimatePresence>
       <PageHeader title={`${page?.title ?? "Página"} — Editar`} desc="Edite blocos, propriedades, SEO e publicação com rastreabilidade." badge={page ? page.status : "draft"}>
         <Button onClick={() => navigate(`/content/${page?.slug}/preview`)} disabled={!page}>Preview</Button>
@@ -123,7 +132,7 @@ export function ContentEditor() {
         <div className="flex gap-2 overflow-auto pb-1">{["1 Estrutura", "2 Conteúdo", "3 Propriedades", "4 Preview", "5 Publicação"].map((x) => <Badge key={x} tone="blue">{x}</Badge>)}</div>
       </div>
       <div className="grid gap-4 xl:grid-cols-[280px_1fr_340px]">
-        <ContentStructureTree page={page} selectedId={selectedSectionId} onSelect={setSelectedSectionId} onAddBlock={handleAddBlock} onRequestDelete={setPendingDeleteId} />
+        <ContentStructureTree page={page} selectedId={selectedSectionId} onSelect={setSelectedSectionId} onAddBlock={handleAddBlock} onRequestDelete={setPendingDeleteId} onReorder={handleReorderSections} />
         <div className="space-y-4"><BlockEditorCanvas section={selectedSection} productSlug={productSlug} onChangeContent={handleChangeContent} onRequestDelete={setPendingDeleteId} /><ConflictAlert /></div>
         <PropertiesPanel page={page} section={selectedSection} />
       </div>
@@ -137,6 +146,6 @@ export function ContentEditor() {
           onConfirm={handleDeleteBlock}
         />
       )}
-    </>
+    </DndProvider>
   );
 }

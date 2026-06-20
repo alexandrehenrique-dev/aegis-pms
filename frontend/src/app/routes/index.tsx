@@ -1,6 +1,7 @@
 import { lazy } from "react";
 import { Navigate, Route, Routes } from "react-router";
 import { AppShell } from "../layouts/AppShell";
+import { FeedbackModalProvider } from "../../core/notifications/FeedbackModalContext";
 import { AuthLayout } from "../layouts/AuthLayout";
 import { RequireAuth } from "../guards/RequireAuth";
 import { RequireRole } from "../guards/RequireRole";
@@ -36,6 +37,7 @@ const VersionCompareView = lazy(() => import("../../domains/content/pages/Versio
 
 // --- domains/pages ---
 const PagesList = lazy(() => import("../../domains/pages/pages/PagesList").then((m) => ({ default: m.PagesList })));
+const GlobalsSettings = lazy(() => import("../../domains/pages/pages/GlobalsSettings").then((m) => ({ default: m.GlobalsSettings })));
 
 // --- domains/assets ---
 const AssetLibrary = lazy(() => import("../../domains/assets/pages/AssetLibrary").then((m) => ({ default: m.AssetLibrary })));
@@ -75,6 +77,9 @@ const EntitySearch = lazy(() => import("../../domains/knowledge/pages/EntitySear
 const OrphanEntityTable = lazy(() => import("../../domains/knowledge/pages/OrphanEntityTable").then((m) => ({ default: m.OrphanEntityTable })));
 const KnowledgeInsights = lazy(() => import("../../domains/knowledge/pages/KnowledgeInsights").then((m) => ({ default: m.KnowledgeInsights })));
 
+// --- core/help ---
+const HelpCenter = lazy(() => import("../../core/help/pages/HelpCenter").then((m) => ({ default: m.HelpCenter })));
+
 // --- domains/settings ---
 const SettingsOverview = lazy(() => import("../../domains/settings/pages/SettingsOverview").then((m) => ({ default: m.SettingsOverview })));
 const ProductSettings = lazy(() => import("../../domains/settings/pages/ProductSettings").then((m) => ({ default: m.ProductSettings })));
@@ -109,7 +114,7 @@ export function AppRoutes() {
       </Route>
 
       <Route element={<RequireAuth />}>
-        <Route element={<AppShell />}>
+        <Route element={<FeedbackModalProvider><AppShell /></FeedbackModalProvider>}>
           <Route element={<RequireRole />}>
             <Route path="/dashboard" element={<DashboardGlobal />} />
 
@@ -129,6 +134,7 @@ export function AppRoutes() {
             <Route path="/content/:id/compare" element={<VersionCompareView />} />
 
             <Route path="/pages" element={<PagesList />} />
+            <Route path="/products/globals" element={<GlobalsSettings />} />
 
             <Route path="/assets" element={<AssetLibrary />} />
             <Route path="/assets/upload" element={<AssetUploadScreen />} />
@@ -166,6 +172,7 @@ export function AppRoutes() {
             <Route path="/knowledge/insights" element={<KnowledgeInsights />} />
 
             <Route path="/settings" element={<SettingsOverview />} />
+            <Route path="/help" element={<HelpCenter />} />
             <Route path="/settings/product" element={<ProductSettings />} />
             <Route path="/settings/tenant" element={<TenantSettings />} />
             <Route path="/settings/permissions" element={<PermissionMatrixView />} />

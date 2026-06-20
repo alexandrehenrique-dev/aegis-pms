@@ -1,7 +1,7 @@
 import { forms, submissionsData, fieldTypes } from "../mocks/forms.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
 import { pagesService } from "../../pages/services/pagesService";
-import type { FormField, FormSummary, ListFieldTypesResponse, ListFormsResponse, ListSubmissionsResponse, SubmissionSummary } from "../contracts/responses";
+import type { FormDelivery, FormField, FormSummary, ListFieldTypesResponse, ListFormsResponse, ListSubmissionsResponse, SubmissionSummary } from "../contracts/responses";
 
 const formsStore: FormSummary[] = forms.map(([id, productSlug, name, type, status, responses, conversion, lastActivity, publication]) => ({
   id, productSlug, name, type, status, responses, conversion, lastActivity, publication,
@@ -29,6 +29,19 @@ const DEFAULT_CONTATO_FIELDS: FormField[] = [
 const fieldsByFormId: Record<string, FormField[]> = {
   "form-contato-comercial": DEFAULT_CONTATO_FIELDS,
 };
+
+const deliveryByFormId: Record<string, FormDelivery> = {};
+
+function emptyDelivery(): FormDelivery {
+  return {
+    channels: [
+      { type: "email", config: { address: "" }, enabled: false },
+      { type: "whatsapp", config: { number: "" }, enabled: false },
+      { type: "telegram", config: { chatId: "", botToken: "" }, enabled: false },
+      { type: "webhook", config: { url: "", method: "POST" }, enabled: false },
+    ],
+  };
+}
 
 export const formsService = {
   async listForms(productSlug?: string): Promise<ListFormsResponse> {
@@ -83,6 +96,16 @@ export const formsService = {
     const index = formsStore.findIndex((f) => f.id === id);
     if (index >= 0) formsStore.splice(index, 1);
     delete fieldsByFormId[id];
+  },
+
+  async getDelivery(formId: string): Promise<FormDelivery> {
+    if (!deliveryByFormId[formId]) deliveryByFormId[formId] = emptyDelivery();
+    return deliveryByFormId[formId];
+  },
+
+  async saveDelivery(formId: string, delivery: FormDelivery): Promise<void> {
+    logApiCall("PUT", `/api/v1/products/{productId}/forms/${formId}/delivery`, delivery);
+    deliveryByFormId[formId] = delivery;
   },
 
   async saveDraft(): Promise<void> {

@@ -62,12 +62,25 @@ Implementar como agregador puro: consulta `products` (ativos/arquivados), `conte
 - `PUT /settings` em um produto que não pertence ao tenant do usuário retorna 404 (mesma regra de "não revelar existência" já usada em produto, etapa 06).
 - `dashboard/summary` é escopado pelo(s) tenant(s) do usuário — `SUPER_ADMIN` vê agregado de todos os tenants (ou exige um `tenantId` de contexto — decisão de implementação do GPT, documentar a escolha).
 
+### D. Padrão de qualidade e entrega (obrigatório)
+
+> Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
+
+- **Java 25** / **Spring Boot 4.1.x**. `roles`/`permission-matrix` precisam de persistência própria — criar `RolePermission` (entity: `id`, `tenantId`, `role`, `permissionKey`, `allowed`) + `RolePermissionRepository`, com Javadoc obrigatório na interface e em todo método. `settings/overview` e `dashboard/summary` são agregadores (sem entidade própria). Mapper via MapStruct (`RolePermissionMapper`). 100% de cobertura nas classes funcionais.
+- Entregar em rodadas:
+  1. `RolePermission` (entity) + `RolePermissionRepository` + testes `@DataJpaTest`.
+  2. `RolePermissionMapper` (MapStruct) + testes de mapper.
+  3. `SettingsService` (overview, update, roles/permission-matrix) + `DashboardService` (agregador da Seção B) + testes com mocks — incluindo o cenário de 403 para papel não autorizado.
+  4. `SettingsController`, `DashboardController` (endpoints das Seções A/B) + testes `@WebMvcTest` + validação via `curl`.
+
 ## Critérios de aceite
 
 - [ ] `settings/overview` retorna os cards esperados.
 - [ ] `roles`/`permission-matrix` usam as mesmas chaves de permissão do frontend (`core/permissions/roles.ts`).
 - [ ] Editar permissões como papel não autorizado retorna 403.
 - [ ] `dashboard/summary` retorna números reais (não fixos) agregados dos outros domínios.
+- [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa (JaCoCo).
+- [ ] `RolePermissionRepository` tem Javadoc na interface e em todo método.
 
 ## Validação
 

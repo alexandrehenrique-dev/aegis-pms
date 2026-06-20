@@ -333,7 +333,7 @@ DELETE /api/v1/products/{productId}/pages/{pageId}/sections/{sectionId}
 PUT    /api/v1/products/{productId}/pages/{pageId}/sections/reorder
 ```
 
-Catálogo fechado de `BlockType`: `hero, text, rich-text, two-column, image, image-text, feature-grid, card-list, gallery, timeline, event-list, cta-section, faq, contact, footer, navbar`. Especificação completa de payloads e regras de validação por tipo de bloco: `docs/sprints/sprint-02-fundacao-backend-gpt/21_dominio_pages_secoes_e_blocos.md`.
+Catálogo fechado de `BlockType` (atualizado pela Sprint 13 — `footer`/`navbar` saíram, `audio`/`social-links` entraram, ver D.6): `hero, text, rich-text, two-column, image, image-text, feature-grid, card-list, gallery, timeline, event-list, cta-section, faq, contact, audio, social-links`. Especificação completa de payloads e regras de validação por tipo de bloco: `docs/sprints/sprint-02-fundacao-backend-gpt/21_dominio_pages_secoes_e_blocos.md`.
 
 ### D.2 Preview leve de nó do grafo (extensão da etapa 17 — caso WikiDev)
 
@@ -362,9 +362,80 @@ A criação de produto hoje não permite selecionar módulos (`CreateProductForm
 | Portfolio (Alexandre Dev) | Desligado por padrão, ligável manualmente |
 | Library/Books/Music (Loki) | **Ligado por padrão** |
 
+### D.5 Estratégia de armazenamento de assets (Sprint 13)
+
+Escolhida por produto, no momento da criação (`Product.assetStorageStrategy: "local"|"s3"`, default `"local"`). Especificação completa (Strategy pattern, provisionamento de pastas, riscos, melhorias futuras): `docs/sprints/sprint-02-fundacao-backend-gpt/11_dominio_assets.md`, Seção D. A pasta raiz de storage local é criada automaticamente — em Java multiplataforma na etapa 04 (sem Docker) e via volume Docker nomeado na etapa 19 (containerizado) — nunca uma etapa manual.
+
+```txt
+GET /api/v1/assets/{assetId}/resolve
+```
+```ts
+type ResolvedAsset = { id: string; url: string; expiresAt?: string; contentType: string };
+```
+Motivo: qualquer domínio que referencia um asset (`pages`, `content`, `forms`) guarda só o `assetId` (UUID) — nunca uma URL ou caminho — e resolve a URL de uso (local ou S3 pré-assinada) só na hora de renderizar, via este endpoint.
+
+### D.6 Domínio `pages` — `ProductGlobals` (navbar, footer, redes sociais)
+
+Navbar, footer e redes sociais deixaram de ser seção de página e passaram a ser configuração única por produto. Especificação completa: `docs/sprints/sprint-02-fundacao-backend-gpt/21_dominio_pages_secoes_e_blocos.md`, Seção F.
+
+```txt
+GET /api/v1/products/{productId}/globals
+PUT /api/v1/products/{productId}/globals
+```
+```ts
+type ProductGlobals = {
+  navbar: { logoAssetId?: string; links: { label: string; href: string }[] };
+  footer: { addressText?: string; links: { label: string; href: string }[] };
+  socialLinks: { platform: string; href: string }[];
+  floatingWhatsapp?: { enabled: boolean; number: string; message: string };
+};
+```
+Motivo: `BlockRenderer`/preview do frontend renderiza isso automaticamente no topo/rodapé de qualquer página do produto, sem precisar que cada página declare seu próprio navbar/footer.
+
+### D.7 Domínio `forms` — entrega de respostas por múltiplos canais
+
+```txt
+PUT /api/v1/products/{productId}/forms/{formId}/delivery
+```
+```ts
+type FormDeliveryChannel = { type: "email"|"whatsapp"|"telegram"|"webhook"; enabled: boolean; config: Record<string,string> };
+type UpdateFormDeliveryRequest = { channels: FormDeliveryChannel[] };
+```
+Motivo: cliente pode querer receber submissions por mais de um canal simultâneo (não só notificação interna). Especificação completa: `docs/sprints/sprint-02-fundacao-backend-gpt/12_dominio_forms.md`, Seção D.
+
 ---
 
-## E. Recomendação de ordenação das sprints
+## F. Domínio `notification` (Sprint 14 — onboarding real + notificações direcionadas)
+
+Onboarding deixou de ser um modal client-side (`localStorage`) e passou a ser **um tipo de notificação** entre vários — mesmo mecanismo serve para avisos de feature, manutenção, etc. Especificação completa: `docs/sprints/sprint-02-fundacao-backend-gpt/23_dominio_notification.md`.
+
+```txt
+GET  /api/v1/notifications/mine
+GET  /api/v1/notifications/mine/pending-modal
+POST /api/v1/notifications/{notificationId}/mark-shown
+POST /api/v1/notifications/{notificationId}/mark-read
+POST /api/v1/notifications                                  (Super Admin)
+GET  /api/v1/notifications                                  (Super Admin)
+```
+
+```ts
+type NotificationWithStatus = {
+  id: string; type: "ONBOARDING" | "FEATURE" | "WARNING" | "MAINTENANCE" | "GENERAL";
+  title: string; bodyMarkdown: string; presentationMode: "MODAL_ONCE" | "BELL_ONLY";
+  createdAt: string; autoShown: boolean; read: boolean; readAt?: string;
+};
+type CreateNotificationRequest = {
+  type: "ONBOARDING" | "FEATURE" | "WARNING" | "MAINTENANCE" | "GENERAL";
+  title: string; bodyMarkdown: string; presentationMode: "MODAL_ONCE" | "BELL_ONLY";
+  target: { type: "ALL" } | { type: "TENANT"; tenantId: string } | { type: "USERS"; userIds: string[] };
+};
+```
+
+Motivo: `core/notifications/components/NotificationModal.tsx` (substitui `DemoWelcomeModal.tsx`) precisa saber o que mostrar automaticamente ao entrar num produto (`pending-modal`); `shared/components/Notifications.tsx` (sino) precisa do histórico completo (`mine`); `TenantSelectScreen.tsx` ganha o botão "Criar Notificação" (Super Admin) que chama `POST /notifications` com fan-out para os destinatários.
+
+---
+
+## G. Recomendação de ordenação das sprints
 
 1. **01** — Refactor do frontend + setup git. *(concluída.)*
 2. **02** (via GPT, `sprint-02-fundacao-backend-gpt/`) — Fundação do backend: Docker Compose, Postgres dedicado, Keycloak dedicado (porta 8282), Spring Boot, `/api/v1/me`, tenants, produtos, módulos, knowledge graph, build do React servido pelo Spring Boot.
@@ -372,11 +443,14 @@ A criação de produto hoje não permite selecionar módulos (`CreateProductForm
    - ~~03~~, ~~04~~ — obsoletas, mantidas só como histórico.
 4. **10** — Refinamento de ações pendentes na UI (`10_refinamento_acoes_pendentes_ui.md`) — corrige `SelectLike`/`Field` para serem editáveis de verdade e liga ~140 botões sem `onClick` a alguma ação real. Não depende de backend.
 5. **11** — Modelo de páginas/blocos, correção do Knowledge Graph e mocks dos 6 produtos (`11_modelo_paginas_blocos_knowledge_graph_e_mocks_produtos.md`) — seleção real de módulos na criação de produto, domínio `pages`, preview leve de nó, `summary`/`difficultyLevel` em `Content`. *(Mocks dos 6 produtos como produto selecionável já criados; conteúdo profundo por produto ainda pendente — ver critérios de aceite daquela sprint.)*
-6. **Extensão da Sprint 02 — concluída e integrada** como etapas `09` a `17` e `21` de `docs/sprints/sprint-02-fundacao-backend-gpt/` (renumeração feita após esta análise: as etapas antigas `09`-`12` — build do frontend, docker compose, seed, openapi/checklist — agora são `18`-`20` e `22`; a etapa `21`, domínio `pages`, foi adicionada pela Sprint 11). Cobre toda a Seção B (`content`=10, `assets`=11, `forms`=12, `analytics`=13, `users`=14, `audit`=15, `settings`+`dashboard`=16) e a Seção C inteira (`tenants` CRUD + `ProductAssignment`=09, extras do Knowledge Graph=17) — sem isso, a Sprint 07 (mock↔real) só ligaria de fato os domínios já cobertos pela fundação original (tenants, produtos, módulos, knowledge graph), deixando os demais mockados mesmo com a infraestrutura de toggle pronta.
-7. **05** — Roles/permissões por produto (liga `ModuleCatalog` ao backend real).
-8. **06** — Keycloak login UI custom (login real via Authorization Code + PKCE, porta 8282).
-9. **07** — Modo mock vs. real via `.env` (`VITE_API_MODE`) — só plenamente eficaz depois que a sprint #6 acima existir.
-10. **08** — Gaps pós Sprint 19 (Figma Make) — reavaliar depois da 09, já que o gap do Super Admin "Criar Tenant" foi resolvido por ela.
+6. **12** — Correções pós-teste manual da Sprint 11 (`12_correcoes_pos_teste_editor_blocos_e_grafo.md`) — logging de chamadas de API, fluxo "Novo conteúdo" corrigido, `two-column`/`contact` alinhados com o backend, CRUD de itens em blocos de lista, preview real, `edgeType` do grafo corrigido, mobile e upload de PDF.
+7. **13** — Engine de blocos genérica, entidades globais e responsividade (`13_engine_de_blocos_entidades_globais_e_responsividade.md`) — decisões de modelo (tipos de conteúdo, `ProductGlobals`, sub-blocos genéricos, permissões por widget, estratégia de storage), markdown, mídia, drag-and-drop, entrega de formulário multicanal, Central de Ajuda, e varredura responsiva ampla. **Ainda não executada** (mas o markdown que ela pedia já está em produção, confirmado na investigação da Sprint 14).
+8. **14** — Onboarding real e sistema de notificações remodelado (`14_onboarding_real_e_sistema_de_notificacoes.md`) — substitui o modal de boas-vindas baseado em `localStorage` por onboarding persistido por usuário, e cria o fluxo de notificações direcionadas do Super Admin (criar notificação, escolher destinatários, fan-out, sino remodelado). **Ainda não executada.**
+9. **Extensão da Sprint 02 — concluída e integrada** como etapas `09` a `17`, `21` e `23` de `docs/sprints/sprint-02-fundacao-backend-gpt/` (renumeração feita após a Sprint 11: as etapas antigas `09`-`12` — build do frontend, docker compose, seed, openapi/checklist — agora são `18`-`20` e `22`; a etapa `21`, domínio `pages`, foi adicionada pela Sprint 11; a etapa `23`, domínio `notification`, foi adicionada pela Sprint 14, depois do checklist final). Cobre toda a Seção B (`content`=10, `assets`=11, `forms`=12, `analytics`=13, `users`=14, `audit`=15, `settings`+`dashboard`=16) e a Seção C inteira (`tenants` CRUD + `ProductAssignment`=09, extras do Knowledge Graph=17). **Atualizada pela Sprint 13** (ECOMMERCE/assetStorageStrategy, markdown/sanitização, storage local/S3, formulário multicanal, ProductGlobals/audio/social-links/acceptsChildren genérico) **e pela Sprint 14** (domínio `notification`, etapa 23).
+10. **05** — Roles/permissões por produto (liga `ModuleCatalog` ao backend real).
+11. **06** — Keycloak login UI custom (login real via Authorization Code + PKCE, porta 8282).
+12. **07** — Modo mock vs. real via `.env` (`VITE_API_MODE`) — só plenamente eficaz depois que a sprint #10 acima existir.
+13. **08** — Gaps pós Sprint 19 (Figma Make) — reavaliar depois da 09, já que o gap do Super Admin "Criar Tenant" foi resolvido por ela.
 
 ## Observação sobre o login mock de Super Admin e demais papéis
 

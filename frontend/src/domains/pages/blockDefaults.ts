@@ -36,7 +36,7 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, Record<string, unknown>> =
   "card-list": { title: "Novo título", items: [{ title: "Item 1", desc: "Descrição do item." }] },
   gallery: { items: [{ src: "", alt: "Descrição da imagem" }] },
   timeline: { items: [{ date: "2026", title: "Marco", desc: "Descrição do marco." }] },
-  "event-list": { title: "Agenda" },
+  "event-list": { title: "Agenda", selectedEventIds: [] },
   "cta-section": { title: "Novo título", ctaPrimary: { label: "Call to action", href: "#" } },
   faq: { items: [{ q: "Pergunta frequente?", a: "Resposta para a pergunta." }] },
   contact: {
@@ -46,6 +46,6 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, Record<string, unknown>> =
   },
   form: { formId: "" },
   download: { title: "Downloads", items: [{ title: "Documento", fileAssetId: "", fileType: "pdf" }] },
-  footer: { address: "Endereço do produto", links: [{ label: "Home", href: "/" }] },
-  navbar: { items: [{ label: "Home", href: "/" }] },
+  audio: { title: "Faixa", source: "upload", fileAssetId: "", spotifyUrl: "", autoplay: false },
+  "social-links": { items: [{ platform: "instagram", href: "" }] },
 };

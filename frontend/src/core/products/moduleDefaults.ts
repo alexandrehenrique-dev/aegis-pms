@@ -31,6 +31,15 @@ export type ModuleOption = {
 /** Knowledge Graph exige o módulo Conteúdo habilitado (Sprint 11, Tarefa A.4). */
 export const KNOWLEDGE_GRAPH_DEPENDENCY = "Conteúdo";
 
+/**
+ * "E-commerce" (Sprint 13, Decisão 5/Tarefa H.2) — carrinho, checkout e
+ * pagamento não são implementados nesta sprint; o módulo é registrado como
+ * `comingSoon` para já existir como conceito no catálogo quando chegar a
+ * hora, sem exigir outro refactor de modelo. Espelha `ECOMMERCE` no enum de
+ * `moduleKey` do backend (`06_modelo_core_tenant_product_modulos.md`).
+ */
+export const ECOMMERCE_MODULE_KEY = "E-commerce";
+
 export const PRODUCT_TYPE_MODULE_DEFAULTS: Record<ProductTypeKey, ModuleOption[]> = {
   "Site Institucional": [
     { key: "Páginas", default: true },
@@ -40,6 +49,7 @@ export const PRODUCT_TYPE_MODULE_DEFAULTS: Record<ProductTypeKey, ModuleOption[]
     { key: "SEO", default: true },
     { key: "Analytics", default: true },
     { key: "Knowledge Graph", default: false },
+    { key: ECOMMERCE_MODULE_KEY, default: false, comingSoon: true },
   ],
   Portal: [
     { key: "Páginas", default: true },
@@ -85,5 +95,6 @@ export const PRODUCT_TYPE_MODULE_DEFAULTS: Record<ProductTypeKey, ModuleOption[]
     { key: "SEO", default: true },
     { key: "Workflow", default: true },
     { key: "Knowledge Graph", default: false },
+    { key: ECOMMERCE_MODULE_KEY, default: false, comingSoon: true },
   ],
 };

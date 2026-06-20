@@ -10,6 +10,42 @@ import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { PRODUCT_TYPES } from "../../../core/products/moduleDefaults";
 import { useModuleSelection } from "../hooks/useModuleSelection";
 import { ModuleCheckboxList } from "../components/ModuleCheckboxList";
+import type { AssetStorageStrategy } from "../contracts/requests";
+
+function StorageStrategyStep({ strategy, onChange, s3Bucket, onChangeBucket, s3Region, onChangeRegion }: {
+  strategy: AssetStorageStrategy; onChange: (s: AssetStorageStrategy) => void;
+  s3Bucket: string; onChangeBucket: (v: string) => void; s3Region: string; onChangeRegion: (v: string) => void;
+}) {
+  return (
+    <div className="md:col-span-2">
+      <p className="mb-2 text-sm font-medium">Armazenamento de assets</p>
+      <div className="grid gap-3 md:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => onChange("local")}
+          className={`rounded-xl border p-3 text-left text-sm ${strategy === "local" ? "border-primary bg-muted" : "border-border"}`}
+        >
+          <p className="font-medium">Local <Badge tone="green">recomendado</Badge></p>
+          <p className="mt-1 text-xs text-muted-foreground">Os arquivos do produto ficam guardados no próprio servidor.</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange("s3")}
+          className={`rounded-xl border p-3 text-left text-sm ${strategy === "s3" ? "border-primary bg-muted" : "border-border"}`}
+        >
+          <p className="font-medium">Bucket externo (S3)</p>
+          <p className="mt-1 text-xs text-muted-foreground">Para quem já usa ou vai usar um provedor de nuvem próprio — exige configuração adicional.</p>
+        </button>
+      </div>
+      {strategy === "s3" && (
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <Field label="Bucket (opcional, configurável depois)" value={s3Bucket} onChange={onChangeBucket} />
+          <Field label="Região (opcional, configurável depois)" value={s3Region} onChange={onChangeRegion} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ProductSummaryPanel({ slug, tenantName, moduleCount }: { slug: string; tenantName?: string; moduleCount: number }) {
   return (
@@ -36,6 +72,9 @@ export function CreateProductForm() {
   const [slug, setSlug] = useState("novo-produto");
   const [description, setDescription] = useState("Produto institucional com conteúdo, formulários, SEO e assets governados.");
   const { type, setType, moduleOptions, selectedModules, toggleModule, selectedList } = useModuleSelection("Site Institucional");
+  const [assetStorageStrategy, setAssetStorageStrategy] = useState<AssetStorageStrategy>("local");
+  const [s3Bucket, setS3Bucket] = useState("");
+  const [s3Region, setS3Region] = useState("");
 
   const handleCreate = async () => {
     setSaving(true);
@@ -43,6 +82,7 @@ export function CreateProductForm() {
       const product = await productsService.create({
         name, slug, type, language: "pt-BR", description, template: "Produto operacional padrão",
         initialModules: selectedList, tenantId: tenantId ?? undefined,
+        assetStorageStrategy, s3Bucket: s3Bucket || undefined, s3Region: s3Region || undefined,
       });
       toast.success("Produto criado com sucesso!", { description: `byop/${slug} · ${selectedList.length} módulos iniciais habilitados` });
       if (tenantId) navigate(`/admin/tenants/${tenantId}/products/${product.id}/assign-user`);
@@ -74,6 +114,14 @@ export function CreateProductForm() {
               <p className="mb-2 text-xs text-muted-foreground">Pré-marcados pelo tipo de produto escolhido — desmarque/marque antes de confirmar.</p>
               <ModuleCheckboxList options={moduleOptions} selected={selectedModules} onToggle={toggleModule} />
             </div>
+            <StorageStrategyStep
+              strategy={assetStorageStrategy}
+              onChange={setAssetStorageStrategy}
+              s3Bucket={s3Bucket}
+              onChangeBucket={setS3Bucket}
+              s3Region={s3Region}
+              onChangeRegion={setS3Region}
+            />
           </div>
           <div className="mt-4 rounded-xl bg-muted p-3 text-sm"><CheckCircle2 size={16} className="mb-2 text-primary" />Slug disponível: <b>{slug}</b></div>
         </Card>

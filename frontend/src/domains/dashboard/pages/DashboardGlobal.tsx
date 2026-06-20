@@ -45,7 +45,9 @@ export function DashboardGlobal() {
             <PartialErrorWidget />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <KPIWidget label="Produtos ativos" value={String(activeProducts)} detail={`${archivedProducts} produto${archivedProducts === 1 ? "" : "s"} arquivado${archivedProducts === 1 ? "" : "s"}`} onClick={() => navigate("/products")} />
+              <PermGate allowed={canCreate}>
+                <KPIWidget label="Produtos ativos" value={String(activeProducts)} detail={`${archivedProducts} produto${archivedProducts === 1 ? "" : "s"} arquivado${archivedProducts === 1 ? "" : "s"}`} onClick={() => navigate("/products")} />
+              </PermGate>
               <KPIWidget label="Conteúdos pendentes" value={String(summary.pendingContent)} detail={`${summary.pendingContentNeedingReview} exigem revisão`} onClick={() => navigate("/content/list")} />
               <KPIWidget label="Aprovações em aberto" value={String(summary.openApprovals)} detail={`${summary.criticalApprovals} críticas`} onClick={() => navigate("/content/workflow")} />
               <KPIWidget label="Formulários recebidos" value={String(summary.formsReceived)} detail={`+${summary.formsReceivedToday} hoje`} onClick={() => navigate("/forms/submissions")} />

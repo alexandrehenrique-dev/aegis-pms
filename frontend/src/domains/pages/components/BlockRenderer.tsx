@@ -1,5 +1,6 @@
 import type { MiniBlock } from "../contracts/responses";
 import type { Section } from "../contracts/responses";
+import { Markdown } from "../../../shared/components/Markdown";
 
 function asStr(v: unknown, fallback = ""): string {
   return typeof v === "string" ? v : fallback;
@@ -50,7 +51,7 @@ export function BlockRenderer({ section }: { section: Section }) {
       return (
         <div className="p-6">
           {c.title ? <h3 className="text-xl font-semibold">{asStr(c.title)}</h3> : null}
-          <div className="mt-2 max-w-2xl text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: asStr(c.body) }} />
+          <div className="mt-2 max-w-2xl text-sm text-muted-foreground"><Markdown>{asStr(c.body)}</Markdown></div>
         </div>
       );
 
@@ -78,7 +79,7 @@ export function BlockRenderer({ section }: { section: Section }) {
           <div className="rounded-xl bg-muted p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>
           <div>
             <h3 className="text-xl font-semibold">{asStr(c.title)}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{asStr(c.body)}</p>
+            <div className="mt-2 text-sm text-muted-foreground"><Markdown>{asStr(c.body)}</Markdown></div>
           </div>
         </div>
       );
@@ -94,7 +95,7 @@ export function BlockRenderer({ section }: { section: Section }) {
             {items.map((item, i) => (
               <div key={i} className="rounded-lg border border-border p-3">
                 <p className="font-medium">{asStr(item.title)}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{asStr(item.desc)}</p>
+                <div className="mt-1 text-sm text-muted-foreground"><Markdown inline>{asStr(item.desc)}</Markdown></div>
               </div>
             ))}
           </div>
@@ -127,13 +128,17 @@ export function BlockRenderer({ section }: { section: Section }) {
       );
     }
 
-    case "event-list":
+    case "event-list": {
+      const selectedCount = Array.isArray(c.selectedEventIds) ? c.selectedEventIds.length : 0;
       return (
         <div className="p-6">
           <h3 className="text-xl font-semibold">{asStr(c.title, "Agenda")}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">Lista de eventos vinda da fonte referenciada (gerencie em "Gerenciar eventos" no editor).</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {selectedCount > 0 ? `${selectedCount} evento(s) selecionado(s) para este bloco.` : "Nenhum evento selecionado ainda (ver editor)."}
+          </p>
         </div>
       );
+    }
 
     case "cta-section":
       return (
@@ -150,7 +155,7 @@ export function BlockRenderer({ section }: { section: Section }) {
           {items.map((item, i) => (
             <div key={i} className="rounded-lg border border-border p-3">
               <p className="font-medium">{asStr(item.q ?? item.question)}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{asStr(item.a ?? item.answer)}</p>
+              <div className="mt-1 text-sm text-muted-foreground"><Markdown inline>{asStr(item.a ?? item.answer)}</Markdown></div>
             </div>
           ))}
         </div>
@@ -172,18 +177,26 @@ export function BlockRenderer({ section }: { section: Section }) {
         </div>
       );
 
-    case "footer":
+    case "audio": {
+      const source = asStr(c.source, "upload");
       return (
-        <div className="border-t border-border p-6 text-sm text-muted-foreground">
-          {asStr(c.address)}
+        <div className="p-6">
+          {c.title ? <h3 className="mb-2 text-xl font-semibold">{asStr(c.title)}</h3> : null}
+          {source === "upload" ? (
+            <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">[player de áudio: {asStr(c.fileAssetId, "nenhum arquivo selecionado")}]</div>
+          ) : (
+            <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">[embed Spotify {source === "spotify-track" ? "(faixa)" : "(playlist)"}: {asStr(c.spotifyUrl, "nenhuma URL")}]</div>
+          )}
+          {c.autoplay ? <p className="mt-1 text-xs text-muted-foreground">Autoplay ativado.</p> : null}
         </div>
       );
+    }
 
-    case "navbar": {
+    case "social-links": {
       const items = asArray(c.items);
       return (
-        <div className="flex gap-4 border-b border-border p-4 text-sm">
-          {items.map((item, i) => <span key={i}>{asStr(item.label)}</span>)}
+        <div className="flex gap-3 p-6">
+          {items.map((item, i) => <span key={i} className="rounded-full border border-border px-3 py-1 text-sm">{asStr(item.platform, "rede social")}</span>)}
         </div>
       );
     }

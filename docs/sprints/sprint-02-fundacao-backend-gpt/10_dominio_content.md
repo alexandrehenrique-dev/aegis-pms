@@ -20,6 +20,8 @@ CRUD de conteúdo, máquina de estados de workflow editorial, versionamento e pu
 
 **ContentVersion**: `id`, `contentId`, `versionLabel`, `snapshotJson` (conteúdo serializado no momento da versão), `createdBySubject`, `createdAt`.
 
+> **Convenção de markdown (Sprint 13 do frontend):** qualquer campo de texto longo dentro de `snapshotJson` (corpo do artigo, `summary`) é **markdown**, nunca HTML bruto. O backend não precisa converter markdown para HTML (isso é responsabilidade do renderer do frontend), mas deve armazenar a string exatamente como recebida e aplicar a regra de sanitização da Seção C antes de persistir.
+
 `WFStatus = "Draft" | "In Review" | "Published" | "Archived"`.
 
 Transições permitidas (espelhando `wfAllowed` já modelado em `frontend/src/domains/content/mocks/content.mocks.ts` — não inventar uma máquina de estados diferente):
@@ -67,6 +69,20 @@ type WFItem = { id: string; title: string; type: string; lang: string; author: s
 - Só quem tem papel `SUPER_ADMIN`, `TENANT_ADMIN` ou `PRODUCT_MANAGER` pode publicar (`transition` para `Published`) — `EDITOR`/`VIEWER` podem mover até `In Review`, nunca além.
 - Toda transição grava uma `ContentVersion` nova.
 - `publish` é um atalho para `transition` com `to: "Published"` que também atualiza `publication` (data/canal).
+- **Sanitização de markdown** (não negociável, mesma regra que vale para `pages` na etapa 21): rejeitar/limpar tags HTML fora de uma allowlist mínima (`p, strong, em, ul, ol, li, blockquote, h2, h3, a, br`), bloquear `javascript:`/`data:` em links, nunca aceitar `<script>`/`<iframe>` dentro do markdown. Aplicar ao salvar (`PUT`/`transition`), não só na hora de renderizar.
+- **Isolamento por produto** (`00_padrao_qualidade_e_arquitetura.md`, Seção 10): conteúdo de um produto que não está no escopo do usuário autenticado retorna 404, nunca 403, em qualquer endpoint da Seção B.
+- **Module-gating** (`00_padrao_qualidade_e_arquitetura.md`, Seção 9.2): `ContentController` anotado com `@RequireModule(ModuleKey.CONTENT)` — produto com módulo `CONTENT` desabilitado retorna 403 `MODULE_DISABLED`.
+
+### D. Padrão de qualidade e entrega (obrigatório)
+
+> Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
+
+- **Java 25** / **Spring Boot 4.1.x**. Javadoc obrigatório na interface e em todo método de `ContentRepository`/`ContentVersionRepository`. Mappers via MapStruct (`ContentMapper`, `ContentVersionMapper`). 100% de cobertura nas classes funcionais, incluindo a lógica de sanitização de markdown (`MarkdownSanitizer`/equivalente) e a máquina de estados (`wfAllowed`).
+- Entregar em rodadas:
+  1. `Content`, `ContentVersion` (entities) + `ContentRepository`, `ContentVersionRepository` + testes `@DataJpaTest`.
+  2. `ContentMapper`, `ContentVersionMapper` (MapStruct) + testes de mapper.
+  3. `ContentService` (transições, publicação, sanitização) + testes com mocks — cada transição permitida E cada transição rejeitada da Seção A tem teste próprio; sanitização tem teste para cada caso da allowlist (tag permitida passa, tag fora da lista é removida, `javascript:` é bloqueado).
+  4. `ContentController` (endpoints da Seção B) + testes `@WebMvcTest` (incluindo `EDITOR` tentando publicar → 403) + validação via `curl`.
 
 ## Critérios de aceite
 
@@ -75,6 +91,10 @@ type WFItem = { id: string; title: string; type: string; lang: string; author: s
 - [ ] Transições não permitidas (ex.: `Draft → Published`) são rejeitadas com 400.
 - [ ] `EDITOR` tentando publicar é rejeitado com 403.
 - [ ] Versões de um conteúdo podem ser listadas em ordem cronológica.
+- [ ] Conteúdo de produto fora do escopo do usuário retorna 404 (não 403).
+- [ ] Produto com módulo `CONTENT` desabilitado retorna 403 `MODULE_DISABLED` em qualquer endpoint desta etapa.
+- [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa (JaCoCo).
+- [ ] `ContentRepository`/`ContentVersionRepository` têm Javadoc na interface e em todo método.
 
 ## Validação
 

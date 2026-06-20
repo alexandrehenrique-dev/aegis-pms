@@ -52,6 +52,19 @@ type GraphNodePreview = {
 
 Implementação: não precisa de tabela nova — `summary`/`difficulty` vêm do `Content` associado ao nó (etapa 10, campos `summary`/`difficultyLevel`, quando o nó referenciar um `Content`) ou de `props`/`metadataJson` para nós que não são `Content` (ex.: um nó `TAG` ou `CATEGORY`). `thumbnail` é opcional e pode vir de um asset associado, se existir.
 
+**Isolamento por produto e module-gating** (`00_padrao_qualidade_e_arquitetura.md`, Seções 9.2 e 10): os endpoints novos desta etapa (`position`, `orphans`, `preview`) ficam no mesmo `KnowledgeGraphController` da etapa 07 — já anotado com `@RequireModule(ModuleKey.KNOWLEDGE_GRAPH)` e já validando isolamento por produto; não precisa duplicar a anotação por método, só confirmar que os métodos novos estão na mesma classe.
+
+### E. Padrão de qualidade e entrega (obrigatório)
+
+> Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
+
+- **Java 25** / **Spring Boot 4.1.x**. Esta etapa **não cria entidade nova** — ajusta `GraphNode` (etapa 07) e o `GraphNodeRepository`/`GraphNodeMapper` já existentes (adicionar Javadoc nos métodos novos, se algum for adicionado ao repository). 100% de cobertura nas classes funcionais, incluindo a lógica de `orphans` (query de nós sem edge) e o fallback de `preview` (`Content` vs `props`/`metadataJson`).
+- Entregar em rodadas:
+  1. Ajuste de `GraphNode` (colunas `x`/`y`, decisão sobre `props`) + ajuste/novo método em `GraphNodeRepository` (query de órfãos) + testes `@DataJpaTest`.
+  2. Ajuste de `GraphNodeMapper` (shape `KGNode` completo) + testes de mapper.
+  3. Ajuste de `KnowledgeGraphService` (posição, órfãos, preview) + testes com mocks — caso `Content` associado e caso sem `Content` (fallback para `props`) ambos cobertos.
+  4. Ajuste de `KnowledgeGraphController` (endpoints da Seção B/D) + testes `@WebMvcTest` + validação via `curl`.
+
 ## Critérios de aceite
 
 - [ ] Posição de um nó pode ser atualizada via `PATCH .../position` e persiste entre consultas.
@@ -59,6 +72,7 @@ Implementação: não precisa de tabela nova — `summary`/`difficulty` vêm do 
 - [ ] `GET /graph/orphans` retorna só nós sem nenhuma edge.
 - [ ] Shape de `OrphanEntityTable` documentado no trace report.
 - [ ] `GET .../preview` retorna o shape leve `GraphNodePreview`, populado a partir do `Content` associado quando existir.
+- [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa (JaCoCo).
 
 ## Validação
 

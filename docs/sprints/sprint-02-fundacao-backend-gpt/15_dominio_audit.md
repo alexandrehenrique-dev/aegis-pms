@@ -42,6 +42,18 @@ type AuditEvent = {
 - Auditoria é **somente leitura** pela API pública — nenhum endpoint de escrita direta; eventos só são criados pelos próprios serviços de domínio via `AuditService`.
 - `risk` é calculado pela própria ação (ex.: excluir tenant = `alto`; editar configuração = `medio`; criar conteúdo = `baixo`) — manter uma tabela de mapeamento simples, não um cálculo complexo nesta fase.
 - Listagem suporta filtro por `actorSubject`, `productId`, `module`, `risk` (mesmo filtro que `AuditTimeline.tsx` oferece na UI).
+- **Isolamento por tenant** (`00_padrao_qualidade_e_arquitetura.md`, Seção 10): `tenantId` fora do escopo do usuário autenticado (sem membership ativa, exceto `SUPER_ADMIN`) retorna 404, nunca 403.
+
+### D. Padrão de qualidade e entrega (obrigatório)
+
+> Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
+
+- **Java 25** / **Spring Boot 4.1.x**. Javadoc obrigatório na interface e em todo método de `AuditEventRepository` (incluindo os métodos de filtro). Mapper via MapStruct (`AuditEventMapper`). 100% de cobertura nas classes funcionais, incluindo a tabela de mapeamento de `risk` por ação.
+- Entregar em rodadas:
+  1. `AuditEvent` (entity, ajustada à tabela da etapa 04) + `AuditEventRepository` (com os filtros da Seção C) + testes `@DataJpaTest`.
+  2. `AuditEventMapper` (MapStruct) + testes de mapper.
+  3. `AuditService` (record central + cálculo de `risk`) + refatoração dos serviços das etapas 09/10/11/14 para usar este service + testes com mocks.
+  4. `AuditController` (endpoints da Seção B) + testes `@WebMvcTest` (confirmando que não existe endpoint de escrita) + validação via `curl`.
 
 ## Critérios de aceite
 
@@ -49,6 +61,9 @@ type AuditEvent = {
 - [ ] Listagem de eventos funciona com os filtros.
 - [ ] Detalhe de um evento retorna os campos técnicos completos.
 - [ ] Não existe endpoint de escrita direta de auditoria.
+- [ ] Tenant fora do escopo do usuário (sem `SUPER_ADMIN`) retorna 404 (não 403).
+- [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa (JaCoCo).
+- [ ] `AuditEventRepository` tem Javadoc na interface e em todo método.
 
 ## Validação
 
