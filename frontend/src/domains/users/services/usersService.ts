@@ -19,4 +19,14 @@ export const usersService = {
     usersStore.push(created);
     return created;
   },
+
+  async resendInvite(email: string): Promise<void> {
+    const u = usersStore.find((x) => x.email === email);
+    if (u) u.inviteStatus = "pendente";
+  },
+
+  async blockUser(email: string): Promise<void> {
+    const u = usersStore.find((x) => x.email === email);
+    if (u) u.status = "bloqueado";
+  },
 };

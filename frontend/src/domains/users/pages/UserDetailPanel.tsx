@@ -1,14 +1,53 @@
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { AnimatePresence } from "motion/react";
+import { Loader2 } from "lucide-react";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
+import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { SettingsSection } from "../../settings/components/SettingsBits";
 import { AuditTimeline } from "../../audit/pages/AuditTimeline";
+import { toast } from "../../../core/notifications/toast";
+import { usersService } from "../services/usersService";
 
 export function UserDetailPanel() {
+  const navigate = useNavigate();
+  const email = "ana@byop.com";
+  const [resending, setResending] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      await usersService.resendInvite(email);
+      toast.success("Convite reenviado!", { description: email });
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    setBlocking(true);
+    try {
+      await usersService.blockUser(email);
+      setBlocked(true);
+      toast.success("Usuário bloqueado.", { description: "Ana Martins perdeu acesso à plataforma." });
+      setConfirmBlock(false);
+    } finally {
+      setBlocking(false);
+    }
+  };
+
   return (
     <>
+      <AnimatePresence>
+        {confirmBlock && <ConfirmDialog title="Bloquear este usuário?" desc="Ana Martins perderá acesso imediato à plataforma até ser desbloqueada." danger loading={blocking} onConfirm={handleBlock} onCancel={() => setConfirmBlock(false)} />}
+      </AnimatePresence>
       <PageHeader title="Ana Martins" module="Users" desc="Perfil, papéis, produtos, permissões efetivas e atividade recente." badge="Tenant Admin">
-        <Button>Reenviar convite</Button>
-        <Button>Bloquear</Button>
-        <Button primary>Editar permissões</Button>
+        <Button onClick={handleResend} disabled={resending}>{resending && <Loader2 size={15} className="animate-spin" />}{resending ? "Reenviando..." : "Reenviar convite"}</Button>
+        <Button onClick={() => setConfirmBlock(true)} disabled={blocked}>{blocked ? "Bloqueado" : "Bloquear"}</Button>
+        <Button primary onClick={() => navigate("/settings/permissions")}>Editar permissões</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
