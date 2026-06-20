@@ -109,6 +109,15 @@ export function ProductSelectScreen() {
           <button onClick={handleBack} className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-sm transition hover:bg-muted"><ArrowLeft size={14} />Trocar tenant</button>
           <button onClick={handleLogout} className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-sm transition hover:bg-muted"><LogOut size={14} />Sair</button>
         </div>
+        <div className="shrink-0 lg:hidden">
+          <MobileDrawerMenu label="Filtros de produto" title="Filtrar por status">
+            {["todos", "Ativo", "Pendente", "Arquivado"].map((s) => (
+              <Button key={s} onClick={() => setSf(s)} primary={sf === s} className="w-full">{s}</Button>
+            ))}
+            <Button onClick={handleBack} className="w-full"><ArrowLeft size={14} />Trocar tenant</Button>
+            <Button onClick={handleLogout} className="w-full"><LogOut size={14} />Sair</Button>
+          </MobileDrawerMenu>
+        </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-10">
         <motion.div {...fade}>
@@ -124,15 +133,6 @@ export function ProductSelectScreen() {
               {["todos", "Ativo", "Pendente", "Arquivado"].map((s) => (
                 <button key={s} onClick={() => setSf(s)} className={`rounded-xl border px-3 py-2 text-sm transition ${sf === s ? "border-primary bg-primary/5 text-primary" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}>{s}</button>
               ))}
-            </div>
-            <div className="lg:hidden">
-              <MobileDrawerMenu label="Filtros de produto" title="Filtrar por status">
-                <Button onClick={handleBack} className="w-full"><ArrowLeft size={14} />Trocar tenant</Button>
-                <Button onClick={handleLogout} className="w-full"><LogOut size={14} />Sair</Button>
-                {["todos", "Ativo", "Pendente", "Arquivado"].map((s) => (
-                  <Button key={s} onClick={() => setSf(s)} primary={sf === s} className="w-full">{s}</Button>
-                ))}
-              </MobileDrawerMenu>
             </div>
           </div>
           {filtered.length === 0 ? <EmptyState title="Nenhum produto encontrado" description="Ajuste os filtros ou limpe a busca." /> : (

@@ -89,6 +89,20 @@ export function TenantSelectScreen() {
           </div>
           <button onClick={handleLogout} className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-sm transition hover:bg-muted"><LogOut size={14} />Sair</button>
         </div>
+        <div className="lg:hidden">
+          <MobileDrawerMenu label="Ações de tenants" title="Ações">
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2.5 text-sm">
+              <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">{authUser.initials}</div>
+              <div className="min-w-0">
+                <p className="truncate font-medium">{authUser.name}</p>
+                <Badge tone="violet">{roleLabels[authUser.role]}</Badge>
+              </div>
+            </div>
+            <Badge tone="violet">Product OS</Badge>
+            {isSuperAdmin && <Button primary onClick={() => setShowCreateWizard(true)} className="w-full"><Plus size={15} />Criar Tenant</Button>}
+            <Button onClick={handleLogout} className="w-full"><LogOut size={14} />Sair</Button>
+          </MobileDrawerMenu>
+        </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-12">
         <motion.div {...fade}>
@@ -106,20 +120,6 @@ export function TenantSelectScreen() {
           <div className="mt-6 flex flex-wrap items-center gap-2">
             <div className="flex min-w-[200px] flex-1 items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar tenant..." className="w-full bg-transparent text-sm outline-none" />
-            </div>
-            <div className="lg:hidden">
-              <MobileDrawerMenu label="Ações de tenants" title="Ações">
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2.5 text-sm">
-                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">{authUser.initials}</div>
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{authUser.name}</p>
-                    <Badge tone="violet">{roleLabels[authUser.role]}</Badge>
-                  </div>
-                </div>
-                <Badge tone="violet">Product OS</Badge>
-                <Button onClick={handleLogout} className="w-full"><LogOut size={14} />Sair</Button>
-                {isSuperAdmin && <Button primary onClick={() => setShowCreateWizard(true)} className="w-full"><Plus size={15} />Criar Tenant</Button>}
-              </MobileDrawerMenu>
             </div>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
