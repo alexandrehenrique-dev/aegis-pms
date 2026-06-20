@@ -29,4 +29,5 @@ export const ITEMS_CRUD_CONFIG: Partial<Record<BlockType, ItemCrudConfig>> = {
   faq: { key: "items", newItem: { q: "", a: "" }, rules: { requiredFields: ["q", "a"] } },
   navbar: { key: "items", newItem: { label: "", href: "" } },
   footer: { key: "links", newItem: { label: "", href: "" } },
+  download: { key: "items", newItem: { title: "", fileAssetId: "", fileType: "pdf" }, rules: { requiredFields: ["title", "fileAssetId"] } },
 };

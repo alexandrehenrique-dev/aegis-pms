@@ -16,7 +16,7 @@ function UploadProgressItem({ name, p }: { name: string; p: number }) {
 }
 
 function FileValidationAlert() {
-  return <div className="rounded-xl border border-[#D97706]/25 bg-[#FBF1DF] p-3 text-sm text-[#8A5A12]">Use textos alternativos para melhorar acessibilidade e SEO. Tipos permitidos: JPG, PNG, WEBP, SVG, MP4, MP3 e PDF.</div>;
+  return <div className="rounded-xl border border-[#D97706]/25 bg-[#FBF1DF] p-3 text-sm text-[#8A5A12]">Use textos alternativos para melhorar acessibilidade e SEO. Aceita qualquer tipo de arquivo (imagens, vídeo, áudio, PDF, DOCX, ZIP...).</div>;
 }
 
 function AssetUploadZone({ onSelect }: { onSelect: () => void }) {

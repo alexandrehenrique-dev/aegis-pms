@@ -431,6 +431,22 @@ export const pagesByProduct: Record<string, Page[]> = {
             ],
           },
         },
+        {
+          id: "ad-home-s5",
+          type: "download",
+          label: "Downloads",
+          order: 4,
+          content: {
+            title: "Downloads",
+            items: [
+              { title: "Currículo (PT-BR)", fileAssetId: "ad-curriculo-ptbr.pdf", fileType: "pdf" },
+              { title: "Currículo (EN)", fileAssetId: "ad-curriculo-en.pdf", fileType: "pdf" },
+              { title: "Apresentação", fileAssetId: "ad-apresentacao.pdf", fileType: "pdf" },
+              { title: "Case study", fileAssetId: "ad-case-study.pdf", fileType: "pdf" },
+              { title: "Certificado", fileAssetId: "ad-certificado.pdf", fileType: "pdf" },
+            ],
+          },
+        },
       ],
     },
   ],
