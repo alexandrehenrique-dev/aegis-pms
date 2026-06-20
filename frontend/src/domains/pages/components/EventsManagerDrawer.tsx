@@ -36,7 +36,7 @@ function EventForm({ initial, onSave, onCancel, saving }: { initial: CreateEvent
   return (
     <div className="space-y-3">
       <Field label="Título" value={draft.title} onChange={(v) => patch({ title: v })} />
-      <Field label="Data" value={draft.date} onChange={(v) => patch({ date: v })} />
+      <Field label="Data" type="date" value={draft.date} onChange={(v) => patch({ date: v })} />
       <Field label="Local" value={draft.location} onChange={(v) => patch({ location: v })} />
       <SelectLike label="Tipo" value={draft.type} options={TYPE_OPTIONS} onChange={(v) => patch({ type: v as PageEvent["type"] })} />
       <SelectLike label="Visibilidade" value={draft.visibility} options={VISIBILITY_OPTIONS} onChange={(v) => patch({ visibility: v as EventVisibility })} />

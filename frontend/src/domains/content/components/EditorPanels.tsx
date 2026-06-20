@@ -186,6 +186,11 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
   section: Section | null; productSlug: string; onChangeContent: (patch: Record<string, unknown>) => void; onRequestDelete: (id: string) => void;
 }) {
   const [showEventsManager, setShowEventsManager] = useState(false);
+  const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
+  const handleEventsManagerOpenChange = (open: boolean) => {
+    setShowEventsManager(open);
+    if (!open) setEventsRefreshKey((k) => k + 1);
+  };
 
   if (!section) {
     return (
@@ -273,9 +278,10 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
             productSlug={productSlug}
             selectedIds={Array.isArray(content.selectedEventIds) ? (content.selectedEventIds as string[]) : []}
             onChange={(selectedEventIds) => onChangeContent({ selectedEventIds })}
+            refreshKey={eventsRefreshKey}
           />
           <Button onClick={() => setShowEventsManager(true)}><Calendar size={14} />Gerenciar eventos</Button>
-          <EventsManagerDrawer productSlug={productSlug} open={showEventsManager} onOpenChange={setShowEventsManager} />
+          <EventsManagerDrawer productSlug={productSlug} open={showEventsManager} onOpenChange={handleEventsManagerOpenChange} />
         </div>
       )}
       {canLinkEntity && (
