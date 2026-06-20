@@ -247,8 +247,8 @@ export const pagesByProduct: Record<string, Page[]> = {
           label: "Missão e Valores",
           order: 1,
           content: {
-            left: { title: "Missão", body: "Democratizar o acesso à formação musical de qualidade." },
-            right: { title: "Valores", body: "Tradição, comunidade, disciplina e generosidade." },
+            left: [{ type: "text", content: { title: "Missão", body: "Democratizar o acesso à formação musical de qualidade." } }],
+            right: [{ type: "text", content: { title: "Valores", body: "Tradição, comunidade, disciplina e generosidade." } }],
           },
         },
       ],

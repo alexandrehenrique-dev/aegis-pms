@@ -10,6 +10,7 @@ import { VersionTimeline } from "./VersionTimeline";
 import { BLOCK_TYPES, type BlockType, type Page, type Section } from "../../pages/contracts/responses";
 import { EntityPicker } from "../../knowledge/components/EntityPicker";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
+import { TwoColumnEditor } from "../../pages/components/TwoColumnEditor";
 import type { KGNode } from "../../knowledge/mocks/knowledge.mocks";
 
 export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, onRequestDelete }: {
@@ -115,11 +116,14 @@ export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }:
     );
   }
 
+  const isTwoColumn = section.type === "two-column";
   const { content } = section;
-  const stringFields = Object.entries(content).filter(([, v]) => typeof v === "string") as [string, string][];
-  const nestedObjectFields = Object.entries(content).filter(([, v]) => isPlainObject(v)) as [string, Record<string, unknown>][];
-  const arrayFields = Object.entries(content).filter(([, v]) => isArrayOfObjects(v)) as [string, Record<string, unknown>[]][];
+  const fieldableContent = isTwoColumn ? Object.fromEntries(Object.entries(content).filter(([k]) => k !== "left" && k !== "right")) : content;
+  const stringFields = Object.entries(fieldableContent).filter(([, v]) => typeof v === "string") as [string, string][];
+  const nestedObjectFields = Object.entries(fieldableContent).filter(([, v]) => isPlainObject(v)) as [string, Record<string, unknown>][];
+  const arrayFields = Object.entries(fieldableContent).filter(([, v]) => isArrayOfObjects(v)) as [string, Record<string, unknown>[]][];
   const handledKeys = new Set([...stringFields, ...nestedObjectFields, ...arrayFields].map(([k]) => k));
+  if (isTwoColumn) { handledKeys.add("left"); handledKeys.add("right"); }
   const advancedKeys = Object.keys(content).filter((k) => !handledKeys.has(k));
   const canLinkEntity = section.type === "text" || section.type === "rich-text";
 
@@ -154,6 +158,7 @@ export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }:
           </div>
         ))}
       </div>
+      {isTwoColumn && <TwoColumnEditor content={content} onChange={onChangeContent} />}
       {canLinkEntity && (
         <div className="mt-3">
           <Popover>

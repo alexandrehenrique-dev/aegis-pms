@@ -1,4 +1,12 @@
-import type { BlockType } from "./contracts/responses";
+import type { BlockType, MiniBlockType } from "./contracts/responses";
+
+/** Conteúdo inicial por `MiniBlockType` ao adicionar um mini-bloco numa coluna de `two-column`. */
+export const MINI_BLOCK_DEFAULT_CONTENT: Record<MiniBlockType, Record<string, unknown>> = {
+  text: { title: "Novo título", body: "Escreva o conteúdo aqui." },
+  "rich-text": { title: "Novo título", body: "Escreva o conteúdo aqui." },
+  image: { src: "", alt: "Descrição da imagem" },
+  cta: { label: "Saiba mais", href: "#" },
+};
 
 /**
  * Conteúdo inicial por `BlockType` ao adicionar um bloco novo no editor
@@ -15,8 +23,8 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, Record<string, unknown>> =
   text: { title: "Novo título", body: "Escreva o conteúdo aqui." },
   "rich-text": { title: "Novo título", body: "Escreva o conteúdo aqui." },
   "two-column": {
-    left: { title: "Coluna 1", body: "Conteúdo da primeira coluna." },
-    right: { title: "Coluna 2", body: "Conteúdo da segunda coluna." },
+    left: [{ type: "text", content: { title: "Coluna 1", body: "Conteúdo da primeira coluna." } }],
+    right: [{ type: "text", content: { title: "Coluna 2", body: "Conteúdo da segunda coluna." } }],
   },
   image: { image: { src: "", alt: "Descrição da imagem" } },
   "image-text": {
