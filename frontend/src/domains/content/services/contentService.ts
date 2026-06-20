@@ -1,4 +1,4 @@
-import { contents, editEvents, wfInitialItems } from "../mocks/content.mocks";
+import { contentByProduct, contents, editEvents, wfInitialItems } from "../mocks/content.mocks";
 import type { ContentRow, ListContentResponse, ListEditEventsResponse, ListWorkflowItemsResponse } from "../contracts/responses";
 
 const contentStore: ContentRow[] = contents.map(([title, type, lang, author, status, updatedAt, publication, version]) => ({
@@ -8,6 +8,11 @@ const contentStore: ContentRow[] = contents.map(([title, type, lang, author, sta
 export const contentService = {
   async listContent(): Promise<ListContentResponse> {
     return contentStore;
+  },
+
+  /** Conteúdo por produto (Sprint 11, Tarefa E.2) — produtos sem entrada aqui ainda usam o mock genérico de `contentStore`. */
+  async listContentByProduct(productSlug: string): Promise<ListContentResponse> {
+    return contentByProduct[productSlug] ?? [];
   },
   async listEditEvents(): Promise<ListEditEventsResponse> {
     return editEvents;

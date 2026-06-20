@@ -4,14 +4,49 @@ import { Loader2 } from "lucide-react";
 import { Button, Card, PageHeader, SelectLike } from "../../../shared/components/Primitives";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { slugify } from "../../../shared/utils/slugify";
+import { ArticleBody } from "../components/ArticleBody";
+import { knowledgeService } from "../../knowledge/services/knowledgeService";
+import { KGBadge } from "../../knowledge/components/KGBadge";
 
 const LANGUAGES = ["PT-BR", "EN-US", "ES-ES"];
+
+/** Artigo com referência kg-ref de exemplo, usado como prova de conceito da Tarefa C quando o produto atual é a WikiDev. */
+function WikiDevArticlePreview({ article }: { article: { title: string; body: string } }) {
+  const { data: related } = useAsyncData(() => knowledgeService.listRelated("node-spring-boot"), []);
+  return (
+    <div className="rounded-xl bg-muted p-8">
+      <p className="text-xs text-muted-foreground">Preview de artigo publicado — WikiDev</p>
+      <h2 className="mt-4 text-3xl font-semibold">{article.title}</h2>
+      <div className="mt-4 max-w-xl"><ArticleBody body={article.body} /></div>
+      {related && related.length > 0 && (
+        <div className="mt-6 max-w-xl rounded-lg border border-border bg-card p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Relacionados</p>
+          <div className="space-y-1">
+            {related.map((r) => (
+              <div key={r.node.id} className="flex items-center justify-between text-sm">
+                <span>{r.node.label}</span>
+                <span className="flex items-center gap-2"><KGBadge type={r.node.type} /><span className="text-xs text-muted-foreground">peso {r.weight}</span></span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ResponsivePreviewFrame() {
   const navigate = useNavigate();
   const [vp, setVp] = useState("desktop");
   const [lang, setLang] = useState(LANGUAGES[0]);
   const [submitting, setSubmitting] = useState(false);
+  const { product } = useCurrentProduct();
+  const productSlug = product ? slugify(product.name) : "maestro-beton";
+  const { data: productContent } = useAsyncData(() => contentService.listContentByProduct(productSlug), [productSlug]);
+  const wikidevArticle = productSlug === "wikidev" ? productContent?.find((c) => c.body) : undefined;
 
   const handleSubmitForReview = async () => {
     setSubmitting(true);
@@ -36,13 +71,17 @@ export function ResponsivePreviewFrame() {
           <SelectLike label="Idioma" value={lang} options={LANGUAGES} onChange={setLang} />
         </div>
         <div className={`mx-auto rounded-2xl border border-border bg-white p-5 shadow-[0_8px_30px_rgba(28,28,28,.05)] ${vp === "mobile" ? "max-w-[375px]" : vp === "tablet" ? "max-w-[768px]" : "max-w-5xl"}`}>
-          <div className="rounded-xl bg-muted p-8">
-            <p className="text-xs text-muted-foreground">Preview institucional Maestro Beton</p>
-            <h2 className="mt-4 text-3xl font-semibold">Experiências que conectam pessoas</h2>
-            <p className="mt-2 max-w-xl text-muted-foreground">Mock simples da página Home renderizada no contexto do produto.</p>
-            {/* preview do conteúdo sendo editado — não é controle da tela, não tratar como botão morto */}
-            <Button primary>Solicitar orçamento</Button>
-          </div>
+          {wikidevArticle?.body ? (
+            <WikiDevArticlePreview article={{ title: wikidevArticle.title, body: wikidevArticle.body }} />
+          ) : (
+            <div className="rounded-xl bg-muted p-8">
+              <p className="text-xs text-muted-foreground">Preview institucional Maestro Beton</p>
+              <h2 className="mt-4 text-3xl font-semibold">Experiências que conectam pessoas</h2>
+              <p className="mt-2 max-w-xl text-muted-foreground">Mock simples da página Home renderizada no contexto do produto.</p>
+              {/* preview do conteúdo sendo editado — não é controle da tela, não tratar como botão morto */}
+              <Button primary>Solicitar orçamento</Button>
+            </div>
+          )}
         </div>
       </Card>
     </>
