@@ -6,7 +6,9 @@ import { slugify } from "../../../shared/utils/slugify";
 import { PRODUCT_TYPES } from "../../../core/products/moduleDefaults";
 import { useModuleSelection } from "../hooks/useModuleSelection";
 import { ModuleCheckboxList } from "./ModuleCheckboxList";
+import { StorageStrategyStep } from "./StorageStrategyStep";
 import { productsService } from "../services/productsService";
+import type { AssetStorageStrategy } from "../contracts/requests";
 import type { ProductSummary } from "../contracts/responses";
 
 /**
@@ -25,6 +27,9 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
   const [slug, setSlug] = useState("novo-produto");
   const [touchedSlug, setTouchedSlug] = useState(false);
   const { type, setType, moduleOptions, selectedModules, toggleModule, selectedList } = useModuleSelection("Site Institucional");
+  const [assetStorageStrategy, setAssetStorageStrategy] = useState<AssetStorageStrategy>("local");
+  const [s3Bucket, setS3Bucket] = useState("");
+  const [s3Region, setS3Region] = useState("");
 
   const handleNameChange = (v: string) => {
     setName(v);
@@ -38,7 +43,7 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
         name, slug, type, language: "pt-BR",
         description: "Produto institucional com conteúdo, formulários, SEO e assets governados.",
         template: "Produto operacional padrão", initialModules: selectedList,
-        tenantId, assetStorageStrategy: "local",
+        tenantId, assetStorageStrategy, s3Bucket: s3Bucket || undefined, s3Region: s3Region || undefined,
       });
       onCreated(created);
     } finally {
@@ -48,7 +53,7 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
 
   return (
     <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div {...fade} className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
+      <motion.div {...fade} className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2"><h2 className="font-semibold">Criar Produto</h2><Badge tone="violet">{tenantName}</Badge></div>
@@ -57,7 +62,7 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
           <button onClick={onClose} className="rounded-lg p-1 transition hover:bg-muted"><X size={17} /></button>
         </div>
 
-        <div className="space-y-3">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
           <Field label="Nome do produto" value={name} onChange={handleNameChange} />
           <Field label="Slug" value={slug} onChange={(v) => { setTouchedSlug(true); setSlug(slugify(v)); }} />
           <SelectLike label="Tipo" value={type} options={PRODUCT_TYPES} onChange={setType} />
@@ -65,9 +70,17 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
             <p className="mb-2 text-sm font-medium">Módulos iniciais</p>
             <ModuleCheckboxList options={moduleOptions} selected={selectedModules} onToggle={toggleModule} />
           </div>
+          <StorageStrategyStep
+            strategy={assetStorageStrategy}
+            onChange={setAssetStorageStrategy}
+            s3Bucket={s3Bucket}
+            onChangeBucket={setS3Bucket}
+            s3Region={s3Region}
+            onChangeRegion={setS3Region}
+          />
         </div>
 
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-5 flex justify-end gap-2 border-t border-border pt-4">
           <Button onClick={onClose}>Cancelar</Button>
           <Button primary onClick={handleCreate} disabled={saving || !name.trim() || !slug.trim()}>
             {saving ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
