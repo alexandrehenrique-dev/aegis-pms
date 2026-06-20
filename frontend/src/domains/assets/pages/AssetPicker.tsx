@@ -1,19 +1,37 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Image, Search } from "lucide-react";
 import { Badge, Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { assetsService } from "../services/assetsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AssetTypeIcon } from "../components/AssetBits";
+import { toast } from "../../../core/notifications/toast";
 
 export function AssetPicker() {
   const [selected, setSelected] = useState("hero-maestro-beton.jpg");
   const { data: assets, loading, error } = useAsyncData(() => assetsService.listAssets(), []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleQuickUpload = () => fileInputRef.current?.click();
+
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await assetsService.uploadFiles();
+    toast.success(`${files.length} arquivo(s) enviado(s)!`);
+    setSelected(files[0].name);
+    e.target.value = "";
+  };
+
+  const handleConfirmSelection = () => {
+    toast.success("Asset selecionado!", { description: selected });
+  };
 
   return (
     <>
+      <input ref={fileInputRef} type="file" multiple hidden onChange={handleFilesSelected} />
       <PageHeader title="Asset Picker" module="Assets" desc="Componente reutilizável para Editor, SEO, Forms e configurações futuras." badge="Picker">
-        <Button>Upload rápido</Button>
-        <Button primary>Confirmar seleção</Button>
+        <Button onClick={handleQuickUpload}>Upload rápido</Button>
+        <Button primary onClick={handleConfirmSelection}>Confirmar seleção</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>
@@ -36,7 +54,7 @@ export function AssetPicker() {
           <div className="aspect-video rounded-xl bg-muted p-4"><Image className="text-primary" /></div>
           <p className="mt-3 font-medium">{selected}</p>
           <p className="text-sm text-muted-foreground">Asset selecionado vinculado ao produto ativo.</p>
-          <Button primary>Usar asset</Button>
+          <Button primary onClick={handleConfirmSelection}>Usar asset</Button>
         </Card>
       </div>
     </>

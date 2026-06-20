@@ -1,13 +1,30 @@
-import { AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
 import { AssetMetadataFormCard } from "../components/AssetMetadataFormCard";
+import { toast } from "../../../core/notifications/toast";
+import { assetsService } from "../services/assetsService";
 
 export function AssetMetadataForm() {
+  const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await assetsService.saveMetadata();
+      toast.success("Metadados salvos!");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <>
       <PageHeader title="Editar Metadados" module="Assets" desc="Atualize descrição, tags, visibilidade e uso SEO do asset." badge="Metadados">
-        <Button>Cancelar</Button>
-        <Button primary>Salvar</Button>
+        <Button onClick={() => navigate(-1)}>Cancelar</Button>
+        <Button primary onClick={handleSave} disabled={saving}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Salvando..." : "Salvar"}</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div><AssetMetadataFormCard /></div>
