@@ -231,6 +231,14 @@ O campo `x`/`y` (posição no canvas) e `props` (lista chave/valor livre) precis
 
 **`GET /api/v1/products/{productId}/graph/orphans`** — nós sem nenhuma edge. Motivo: `OrphanEntityTable.tsx` (hoje 100% mockado, nem tipo formal ainda).
 
+### B.10 Domínios de negócio específicos por produto (Sprint 11 — registrado, não implementar ainda)
+
+Levantamento feito a partir de 6 contratos de negócio reais dos primeiros produtos a serem hospedados no Aegis (Maestro Beton, Conecta Talentos, CMSS, Alexandre Dev, Loki, WikiDev — ver `docs/sprints/11_modelo_paginas_blocos_knowledge_graph_e_mocks_produtos.md`). Diferente do restante da Seção B, estes domínios **não têm etapa criada ainda** na Sprint 02 — ficam registrados aqui para uma extensão futura, numerados como próximas etapas (23+) quando forem implementados:
+
+- **`JobPosting`/`CandidateSubmission`/`Lead`** (Conecta Talentos): vaga como conteúdo estruturado publicável (campos: cidade, modalidade, tipo, salário, requisitos, benefícios, diferenciais, status; workflow próprio Draft→Review→Published→Archived); candidatura com upload de currículo (reaproveita o domínio `asset`, com `targetType: "candidate_submission"`, amarrada a um `jobId`); lead comercial simples (empresa, responsável, contato, mensagem).
+- **`Comment`/`ContributorApplication`/`ContentSuggestion`/`BugReport` + integração Telegram** (WikiDev): fecha os module keys `COMMENTS`/`CONTRIBUTORS` que já existem no enum de módulos (etapa 06) mas não têm nenhuma entidade implementada. `Comment` precisa de moderação (`pending`/`approved`/`rejected`); os outros três são formulários simples que, além de persistir no banco, disparam notificação a um canal Telegram (tipo `report_bug`/`content_suggestion`/`contributor_application`).
+- **Tipos de conteúdo adicionais da Loki**: `manifesto`, `reflection`, `poem`, `book`, `playlist` como `type` válidos dentro do domínio `content` já existente (etapa 10) — não são entidades novas, são variações de `Content` com campos extras guardados em `metadataJson` (`Book` precisa de `isbn`/`pdfUrl`/`epubUrl`/`amazonUrl`/`physicalAvailable`; `Poem`/`Manifesto` podem referenciar uma `MusicReference` via o Knowledge Graph, já coberto pela Seção A — `nodeType: MUSIC_REFERENCE`, `edgeType: INSPIRED_BY`/`PART_OF`).
+
 ---
 
 ## C. Endpoints novos exigidos pelo fluxo de Super Admin (Sprint 09)
@@ -305,18 +313,70 @@ Motivo: nenhuma porta deve ser hardcoded no código (já mudou uma vez nesta ses
 
 ---
 
-## D. Recomendação de ordenação das sprints
+## D. Endpoints novos da Sprint 11 (modelo de páginas e correção do Knowledge Graph)
+
+Resultado da simulação dos fluxos do PMS contra os 6 contratos de produto reais (`docs/sprints/11_modelo_paginas_blocos_knowledge_graph_e_mocks_produtos.md`). **Já implementados nas etapas correspondentes da Sprint 02 (GPT)** — listados aqui só para consolidar no mesmo lugar que os demais endpoints deste relatório.
+
+### D.1 Domínio `pages` (novo — etapa 21)
+
+Faltava um jeito de modelar uma página institucional como lista ordenada de seções tipadas (`hero`, `card-list`, `gallery`, `contact`...) — `content` (Seção B.1) modela artigo/post linear, não página composta. Necessário para Maestro Beton, CMSS, Conecta Talentos (home) e Alexandre Dev (home).
+
+```txt
+GET    /api/v1/products/{productId}/pages
+GET    /api/v1/products/{productId}/pages/{pageId}
+POST   /api/v1/products/{productId}/pages
+PUT    /api/v1/products/{productId}/pages/{pageId}
+DELETE /api/v1/products/{productId}/pages/{pageId}
+POST   /api/v1/products/{productId}/pages/{pageId}/sections
+PUT    /api/v1/products/{productId}/pages/{pageId}/sections/{sectionId}
+DELETE /api/v1/products/{productId}/pages/{pageId}/sections/{sectionId}
+PUT    /api/v1/products/{productId}/pages/{pageId}/sections/reorder
+```
+
+Catálogo fechado de `BlockType`: `hero, text, rich-text, two-column, image, image-text, feature-grid, card-list, gallery, timeline, event-list, cta-section, faq, contact, footer, navbar`. Especificação completa de payloads e regras de validação por tipo de bloco: `docs/sprints/sprint-02-fundacao-backend-gpt/21_dominio_pages_secoes_e_blocos.md`.
+
+### D.2 Preview leve de nó do grafo (extensão da etapa 17 — caso WikiDev)
+
+A WikiDev precisa de um popup leve ao passar o mouse sobre uma referência dentro do corpo de um artigo — diferente da tela de detalhe completa do nó.
+
+```txt
+GET /api/v1/products/{productId}/graph/nodes/{nodeId}/preview
+```
+```ts
+type GraphNodePreview = { id: string; label: string; type: string; summary: string; difficulty?: "beginner"|"intermediate"|"advanced"; thumbnail?: string };
+```
+
+### D.3 `summary`/`difficultyLevel` em `Content` (extensão da etapa 10)
+
+`ContentRow` (Seção B.1) ganhou dois campos opcionais — `summary: string` e `difficultyLevel: "beginner"|"intermediate"|"advanced"` — como campos de primeira classe (não metadata solta), porque a WikiDev precisa filtrar/ordenar artigos por dificuldade.
+
+### D.4 Regra de ativação do Knowledge Graph por tipo de produto
+
+A criação de produto hoje não permite selecionar módulos (`CreateProductForm.tsx` usa uma lista fixa, sem Knowledge Graph) e o seed da etapa 20 habilitava `KNOWLEDGE_GRAPH` em produtos que não precisam dele (ex.: Maestro Beton). Regra correta, definida na Sprint 11:
+
+| Tipo de produto | Knowledge Graph |
+|---|---|
+| Site Institucional (Maestro Beton, CMSS) | Desligado por padrão |
+| Portal (Conecta Talentos) | Desligado por padrão (opcional no blog) |
+| Knowledge Base (WikiDev) | **Ligado por padrão** |
+| Portfolio (Alexandre Dev) | Desligado por padrão, ligável manualmente |
+| Library/Books/Music (Loki) | **Ligado por padrão** |
+
+---
+
+## E. Recomendação de ordenação das sprints
 
 1. **01** — Refactor do frontend + setup git. *(concluída.)*
 2. **02** (via GPT, `sprint-02-fundacao-backend-gpt/`) — Fundação do backend: Docker Compose, Postgres dedicado, Keycloak dedicado (porta 8282), Spring Boot, `/api/v1/me`, tenants, produtos, módulos, knowledge graph, build do React servido pelo Spring Boot.
 3. **09** — Substitui 03 e 04. *(concluída — services/contracts em todos os 10 domínios existentes, fluxo Super Admin completo via modal de 3 passos em `/select-tenant`, `.env.example` com Keycloak na porta 8282, script de build, este relatório.)*
    - ~~03~~, ~~04~~ — obsoletas, mantidas só como histórico.
 4. **10** — Refinamento de ações pendentes na UI (`10_refinamento_acoes_pendentes_ui.md`) — corrige `SelectLike`/`Field` para serem editáveis de verdade e liga ~140 botões sem `onClick` a alguma ação real. Não depende de backend.
-5. **Nova sprint a criar (recomendado, ainda não escrita)** — "Extensão da Sprint 02: endpoints de domínio" — mesma estratégia via GPT em etapas pequenas, cobrindo toda a Seção B (`content`, `assets`, `forms`, `analytics`, `users`, `audit`, `settings`, `dashboard`) mais a Seção C inteira (`tenants` CRUD e `ProductAssignment`). Sem isso, a Sprint 07 (mock↔real) só liga de fato os domínios já cobertos pela fundação (tenants, produtos, módulos, knowledge graph) — os demais continuam mockados mesmo com a infraestrutura de toggle pronta. Esta sprint deve usar os payloads exatos desta Seção B/C como especificação, não reinventar shapes.
-6. **05** — Roles/permissões por produto (liga `ModuleCatalog` ao backend real).
-7. **06** — Keycloak login UI custom (login real via Authorization Code + PKCE, porta 8282).
-8. **07** — Modo mock vs. real via `.env` (`VITE_API_MODE`) — só plenamente eficaz depois que a sprint #5 acima existir.
-9. **08** — Gaps pós Sprint 19 (Figma Make) — reavaliar depois da 09, já que o gap do Super Admin "Criar Tenant" foi resolvido por ela.
+5. **11** — Modelo de páginas/blocos, correção do Knowledge Graph e mocks dos 6 produtos (`11_modelo_paginas_blocos_knowledge_graph_e_mocks_produtos.md`) — seleção real de módulos na criação de produto, domínio `pages`, preview leve de nó, `summary`/`difficultyLevel` em `Content`. *(Mocks dos 6 produtos como produto selecionável já criados; conteúdo profundo por produto ainda pendente — ver critérios de aceite daquela sprint.)*
+6. **Extensão da Sprint 02 — concluída e integrada** como etapas `09` a `17` e `21` de `docs/sprints/sprint-02-fundacao-backend-gpt/` (renumeração feita após esta análise: as etapas antigas `09`-`12` — build do frontend, docker compose, seed, openapi/checklist — agora são `18`-`20` e `22`; a etapa `21`, domínio `pages`, foi adicionada pela Sprint 11). Cobre toda a Seção B (`content`=10, `assets`=11, `forms`=12, `analytics`=13, `users`=14, `audit`=15, `settings`+`dashboard`=16) e a Seção C inteira (`tenants` CRUD + `ProductAssignment`=09, extras do Knowledge Graph=17) — sem isso, a Sprint 07 (mock↔real) só ligaria de fato os domínios já cobertos pela fundação original (tenants, produtos, módulos, knowledge graph), deixando os demais mockados mesmo com a infraestrutura de toggle pronta.
+7. **05** — Roles/permissões por produto (liga `ModuleCatalog` ao backend real).
+8. **06** — Keycloak login UI custom (login real via Authorization Code + PKCE, porta 8282).
+9. **07** — Modo mock vs. real via `.env` (`VITE_API_MODE`) — só plenamente eficaz depois que a sprint #6 acima existir.
+10. **08** — Gaps pós Sprint 19 (Figma Make) — reavaliar depois da 09, já que o gap do Super Admin "Criar Tenant" foi resolvido por ela.
 
 ## Observação sobre o login mock de Super Admin e demais papéis
 
@@ -332,3 +392,19 @@ Para permitir simular qualquer fluxo sem backend/Keycloak, `frontend/src/core/au
 | `blocked@byop.io` | Viewer (bloqueado) | — | — (login sempre falha com `error: "blocked"`, para testar esse estado de erro) |
 
 O destino pós-login também é específico por papel (`core/permissions/roles.ts`, `getPostLoginLandingPath`): Super Admin e Tenant Admin caem no Dashboard (hub multi-produto); Product Manager cai na lista de produtos (`/products`, opera vários); Editor e Viewer caem direto no produto já selecionado (`/products/maestro-beton`, operam um produto por vez) — Viewer com as mesmas restrições de somente-leitura já aplicadas pelo `RequireRole`/`ReadOnlyBanner`.
+
+## Observação sobre os produtos mockados (atualizado pela Sprint 11)
+
+O tenant BYOP (`t1`) agora tem 9 produtos no mock (`mockProductsByUser`/`products.mocks.ts`), cobrindo os 6 contratos de negócio reais analisados na Sprint 11, mais os produtos técnicos pré-existentes:
+
+| Produto | Tipo | Contrato de origem |
+|---|---|---|
+| Maestro Beton | Site Institucional | `contrato-json-site-maestro-beton.md` |
+| Conecta Talentos | Portal | `contrato-negocio-site-conecta-talentos-rh.md` |
+| CMSS | Site Institucional | `levantamento-site-institucional-cms-first.md` |
+| Alexandre Dev | Portfolio | `contrato-cms.md` / `documento-negocios.md` |
+| Loki | Biblioteca Filosófica | `contratos-cms.md` / `documento-negocios-974819bc.md` |
+| WikiDev | Knowledge Base | `documenta-negocio-cms.md` |
+| Aion Logbook, Eirene UI, Genesis | (técnicos, pré-existentes) | — |
+
+Todos os 6 produtos de negócio já existem como produto selecionável. Popular cada um com conteúdo (páginas/artigos) fiel ao respectivo contrato é a Tarefa E da Sprint 11, ainda pendente — depende do domínio `pages` (Tarefa B) existir em código no frontend.

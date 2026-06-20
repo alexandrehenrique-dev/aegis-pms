@@ -34,6 +34,9 @@ export const mockProductsByUser: Record<string, Record<string, ProductOption[]>>
       { id: "p4", name: "Genesis", type: "Produto SaaS", status: "Ativo", modules: 7, isFavorite: true },
       { id: "p5", name: "WikiDev", type: "Knowledge Base", status: "Arquivado", modules: 3 },
       { id: "p6", name: "Conecta Talentos", type: "Portal", status: "Sem módulos", modules: 0 },
+      { id: "p11", name: "CMSS", type: "Site Institucional", status: "Ativo", modules: 5 },
+      { id: "p12", name: "Alexandre Dev", type: "Portfolio", status: "Ativo", modules: 4, isRecent: true },
+      { id: "p13", name: "Loki", type: "Biblioteca Filosófica", status: "Ativo", modules: 4 },
     ],
     t2: [
       { id: "p7", name: "Aegis Core", type: "Produto SaaS", status: "Ativo", modules: 4, isFavorite: true },
@@ -50,6 +53,9 @@ export const mockProductsByUser: Record<string, Record<string, ProductOption[]>>
       { id: "p4", name: "Genesis", type: "Produto SaaS", status: "Ativo", modules: 7, isFavorite: true },
       { id: "p5", name: "WikiDev", type: "Knowledge Base", status: "Arquivado", modules: 3 },
       { id: "p6", name: "Conecta Talentos", type: "Portal", status: "Sem módulos", modules: 0 },
+      { id: "p11", name: "CMSS", type: "Site Institucional", status: "Ativo", modules: 5 },
+      { id: "p12", name: "Alexandre Dev", type: "Portfolio", status: "Ativo", modules: 4, isRecent: true },
+      { id: "p13", name: "Loki", type: "Biblioteca Filosófica", status: "Ativo", modules: 4 },
     ],
     t2: [
       { id: "p7", name: "Aegis Core", type: "Produto SaaS", status: "Ativo", modules: 4, isFavorite: true },

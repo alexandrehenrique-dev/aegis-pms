@@ -1,5 +1,6 @@
 import { products as productMocks } from "../mocks/products.mocks";
 import { modules as moduleCatalogMocks } from "../../dashboard/mocks/dashboard.mocks";
+import { slugify } from "../../../shared/utils/slugify";
 import type { ComponentType } from "react";
 import type { ModuleState } from "../../../shared/types";
 import type { CreateProductRequest } from "../contracts/requests";
@@ -19,10 +20,6 @@ const moduleCatalogStore: ListModulesResponse = moduleCatalogMocks.map(([Icon, n
   dependency: dependency as string,
   impact: impact as string,
 }));
-
-function slugify(name: string): string {
-  return name.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-}
 
 export const productsService = {
   async listProducts(): Promise<ListProductsResponse> {

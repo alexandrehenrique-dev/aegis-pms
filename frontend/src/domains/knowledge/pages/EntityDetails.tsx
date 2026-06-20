@@ -11,6 +11,8 @@ const RESOURCE_ROUTES: Record<KGEntityType, string> = {
   Tenant: "/settings/tenant", Produto: "/products", Página: "/content/list", Asset: "/assets",
   Formulário: "/forms/list", Submission: "/forms/submissions", Lead: "/forms/submissions",
   Categoria: "/content/list", Tag: "/assets/tags", Autor: "/users", SEO: "/settings/product",
+  Tópico: "/content/list", Poema: "/content/list", Manifesto: "/content/list",
+  Música: "/knowledge/search", Livro: "/knowledge/search", Playlist: "/knowledge/search",
 };
 
 export function EntityDetails() {

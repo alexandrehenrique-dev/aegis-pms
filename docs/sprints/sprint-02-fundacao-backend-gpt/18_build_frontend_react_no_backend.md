@@ -1,6 +1,6 @@
-# Etapa 09 — Build do frontend React servido pelo Spring Boot (SPA same-origin)
+# Etapa 18 — Build do frontend React servido pelo Spring Boot (SPA same-origin)
 
-> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapa 05 concluída (Resource Server funcionando). Pode ser feita antes ou depois das etapas 06-08.
+> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapa 05 concluída (Resource Server funcionando). Pode ser feita em paralelo com as etapas 06-17 (não depende dos domínios de produto) — só precisa do Resource Server no ar.
 
 ## Contexto fixo
 

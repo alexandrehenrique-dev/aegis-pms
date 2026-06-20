@@ -5,6 +5,7 @@ import { productsService } from "../services/productsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import type { ModuleState } from "../../../shared/types";
 import type { ModuleCatalogItem } from "../contracts/responses";
+import { KNOWLEDGE_GRAPH_DEPENDENCY } from "../../../core/products/moduleDefaults";
 
 function ModuleCard({ Icon, name, desc, state, maturity, dep, impact, selected, onToggleSelect, onAction }: {
   Icon: ComponentType<{ size?: number; className?: string }>; name: string; desc: string; state: ModuleState; maturity: string; dep: string; impact: string;
@@ -47,6 +48,13 @@ export function ModuleCatalog({ compact = false }: { compact?: boolean }) {
     });
   };
 
+  const contentEnabled = list.find((x) => x.name === KNOWLEDGE_GRAPH_DEPENDENCY)?.state === "habilitado";
+
+  const blockedByDependency = (m: ModuleCatalogItem) =>
+    m.name === "Knowledge Graph" && !contentEnabled
+      ? `Knowledge Graph exige o módulo ${KNOWLEDGE_GRAPH_DEPENDENCY} habilitado primeiro.`
+      : null;
+
   const handleAction = async (m: ModuleCatalogItem) => {
     if (m.state === "habilitado") {
       toast.success("Módulo já habilitado", { description: m.name });
@@ -54,6 +62,11 @@ export function ModuleCatalog({ compact = false }: { compact?: boolean }) {
     }
     if (m.state === "futuro") {
       toast("Disponível em breve", { description: `${m.name} ainda está no roadmap.` });
+      return;
+    }
+    const blocked = blockedByDependency(m);
+    if (blocked) {
+      toast.error(blocked);
       return;
     }
     await productsService.enableModule(m.name);
@@ -65,6 +78,11 @@ export function ModuleCatalog({ compact = false }: { compact?: boolean }) {
   const handleEnableSelected = async () => {
     if (selected.size === 0) {
       toast.error("Selecione ao menos um módulo.");
+      return;
+    }
+    const blocked = list.filter((m) => selected.has(m.name) && blockedByDependency(m));
+    if (blocked.length > 0) {
+      toast.error(`Knowledge Graph exige o módulo ${KNOWLEDGE_GRAPH_DEPENDENCY} habilitado primeiro.`);
       return;
     }
     await Promise.all(Array.from(selected).map((name) => productsService.enableModule(name)));

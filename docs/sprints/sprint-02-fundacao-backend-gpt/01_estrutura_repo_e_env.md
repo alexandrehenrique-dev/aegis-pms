@@ -69,7 +69,7 @@ BACKEND_PORT=8080
 SPRING_PROFILES_ACTIVE=local
 KEYCLOAK_ISSUER_URI=http://localhost:8282/realms/aegis
 
-# Frontend (build estático servido pelo backend — ver etapa 09)
+# Frontend (build estático servido pelo backend — ver etapa 18)
 FRONTEND_DEV_PORT=5173
 
 # Storage
