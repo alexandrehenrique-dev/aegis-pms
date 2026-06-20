@@ -91,14 +91,14 @@ export function TenantSelectScreen() {
         </div>
         <div className="lg:hidden">
           <MobileDrawerMenu label="Ações de tenants" title="Ações">
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-2.5 text-sm">
+            <div className="flex items-center gap-4 rounded-xl border border-border bg-muted/40 p-2.5 text-sm mb-2">
               <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">{authUser.initials}</div>
               <div className="min-w-0">
                 <p className="truncate font-medium">{authUser.name}</p>
                 <Badge tone="violet">{roleLabels[authUser.role]}</Badge>
               </div>
             </div>
-            <Badge tone="violet">Product OS</Badge>
+            <div className="flex justify-center mb-2"><Badge tone="violet">Product OS</Badge></div>
             {isSuperAdmin && <Button primary onClick={() => setShowCreateWizard(true)} className="w-full"><Plus size={15} />Criar Tenant</Button>}
             <Button onClick={handleLogout} className="w-full"><LogOut size={14} />Sair</Button>
           </MobileDrawerMenu>

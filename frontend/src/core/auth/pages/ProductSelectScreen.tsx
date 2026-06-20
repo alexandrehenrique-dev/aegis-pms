@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
-import { motion } from "motion/react";
-import { ArrowLeft, Building2, ChevronRight, Clock3, LogOut, MoreVertical, Star } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { ArrowLeft, Building2, ChevronRight, Clock3, LogOut, MoreVertical, Plus, Star } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { getPostLoginLandingPath } from "../../permissions/roles";
 import { AegisLogo } from "../../../shared/components/AegisLogo";
@@ -13,6 +13,7 @@ import { MobileDrawerMenu } from "../../../shared/components/MobileDrawerMenu";
 // produto bloqueado/sem módulos (que não pode ser aberto) é o único jeito
 // de editá-lo ou excluí-lo, espelhando a jornada de tenant suspenso.
 import { useProductActions, type ProductPersistence } from "../../../domains/products/hooks/useProductActions";
+import { CreateProductModal } from "../../../domains/products/components/CreateProductModal";
 import type { ProductOption } from "../../../shared/types";
 
 /**
@@ -85,9 +86,11 @@ export function ProductSelectScreen() {
   const { authUser, effectiveTenant, tenantProducts, selectProduct, selectTenant, logout } = useAuth();
   const [q, setQ] = useState("");
   const [sf, setSf] = useState("todos");
+  const [showCreateProduct, setShowCreateProduct] = useState(false);
 
   if (!authUser || !effectiveTenant) return null;
 
+  const canCreateProduct = !["editor", "viewer"].includes(authUser.role);
   const filtered = tenantProducts.filter((p) => (p.name + p.type).toLowerCase().includes(q.toLowerCase()) && (sf === "todos" || p.status === sf));
   const favs = filtered.filter((p) => p.isFavorite);
   const recents = filtered.filter((p) => p.isRecent && !p.isFavorite);
@@ -96,6 +99,12 @@ export function ProductSelectScreen() {
   const handleSelect = (p: ProductOption) => { selectProduct(p); navigate(getPostLoginLandingPath(authUser.role, p)); };
   const handleBack = () => { selectTenant(null); navigate("/select-tenant"); };
   const handleLogout = () => { logout(); navigate("/login"); };
+  const handleProductCreated = (created: { id?: string; name: string; type: string; status: ProductOption["status"]; modules: number }) => {
+    setShowCreateProduct(false);
+    const product: ProductOption = { id: created.id ?? created.name, name: created.name, type: created.type, status: created.status, modules: created.modules };
+    selectProduct(product);
+    navigate(getPostLoginLandingPath(authUser.role, product));
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -114,6 +123,7 @@ export function ProductSelectScreen() {
             {["todos", "Ativo", "Pendente", "Arquivado"].map((s) => (
               <Button key={s} onClick={() => setSf(s)} primary={sf === s} className="w-full">{s}</Button>
             ))}
+            {canCreateProduct && <Button primary onClick={() => setShowCreateProduct(true)} className="w-full"><Plus size={15} />Criar Produto</Button>}
             <Button onClick={handleBack} className="w-full"><ArrowLeft size={14} />Trocar tenant</Button>
             <Button onClick={handleLogout} className="w-full"><LogOut size={14} />Sair</Button>
           </MobileDrawerMenu>
@@ -121,9 +131,12 @@ export function ProductSelectScreen() {
       </header>
       <main className="mx-auto max-w-5xl px-4 py-10">
         <motion.div {...fade}>
-          <div className="mb-6">
-            <h1 className="text-2xl font-semibold tracking-[-.02em]">Selecione um produto</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{effectiveTenant.name} · {tenantProducts.length} produto{tenantProducts.length !== 1 ? "s" : ""} · Botão direito sobre um produto bloqueado/sem módulos para editar ou excluir.</p>
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-[-.02em]">Selecione um produto</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{effectiveTenant.name} · {tenantProducts.length} produto{tenantProducts.length !== 1 ? "s" : ""} · Botão direito sobre um produto bloqueado/sem módulos para editar ou excluir.</p>
+            </div>
+            {canCreateProduct && <div className="hidden lg:block"><Button primary onClick={() => setShowCreateProduct(true)}><Plus size={15} />Criar Produto</Button></div>}
           </div>
           <div className="mb-4 flex flex-wrap gap-2">
             <div className="flex min-w-[200px] flex-1 items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
@@ -144,6 +157,16 @@ export function ProductSelectScreen() {
           )}
         </motion.div>
       </main>
+      <AnimatePresence>
+        {showCreateProduct && (
+          <CreateProductModal
+            tenantId={effectiveTenant.id}
+            tenantName={effectiveTenant.name}
+            onClose={() => setShowCreateProduct(false)}
+            onCreated={handleProductCreated}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
