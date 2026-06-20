@@ -10,7 +10,7 @@ import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
 import { ContentStatusBadge } from "./ContentStatusBadge";
 import { VersionTimeline } from "./VersionTimeline";
-import { BLOCK_TYPES, type BlockType, type Page, type Section } from "../../pages/contracts/responses";
+import type { BlockType, Page, Section } from "../../pages/contracts/responses";
 import { EntityPicker } from "../../knowledge/components/EntityPicker";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
 import { TwoColumnEditor } from "../../pages/components/TwoColumnEditor";
@@ -19,6 +19,8 @@ import { ItemsCrudEditor } from "../../pages/components/ItemsCrudEditor";
 import { ITEMS_CRUD_CONFIG } from "../../pages/itemsCrudConfig";
 import { EventsManagerDrawer } from "../../pages/components/EventsManagerDrawer";
 import { FormIdSelector } from "../../pages/components/FormIdSelector";
+import { pagesService } from "../../pages/services/pagesService";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import type { KGNode } from "../../knowledge/mocks/knowledge.mocks";
 
 const SECTION_DRAG_TYPE = "page-section";
@@ -52,6 +54,7 @@ export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, o
 }) {
   const [newType, setNewType] = useState<BlockType>("text");
   const [orderedSections, setOrderedSections] = useState<Section[]>(page?.sections ?? []);
+  const { data: blockTypes } = useAsyncData(() => pagesService.listBlockTypes(), []);
 
   useEffect(() => setOrderedSections(page?.sections ?? []), [page]);
 
@@ -85,7 +88,7 @@ export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, o
       ))}
       {page && (
         <div className="mt-3 flex items-center gap-2">
-          <SelectLike label="" value={newType} options={[...BLOCK_TYPES]} onChange={(v) => setNewType(v as BlockType)} />
+          <SelectLike label="" value={newType} options={[...(blockTypes ?? [])]} onChange={(v) => setNewType(v as BlockType)} />
           <Button onClick={() => onAddBlock(newType)}><Plus size={15} />Adicionar bloco</Button>
         </div>
       )}

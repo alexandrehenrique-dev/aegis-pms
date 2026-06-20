@@ -1,5 +1,7 @@
 import type { ProductStatus } from "../../../shared/types";
 
+export type AssetStorageStrategy = "local" | "s3";
+
 export type CreateProductRequest = {
   name: string;
   slug: string;
@@ -10,6 +12,15 @@ export type CreateProductRequest = {
   initialModules: string[];
   /** Presente quando o produto nasce dentro do wizard de Super Admin (Sprint 09, Tarefa C). */
   tenantId?: string;
+  /**
+   * Escolhida no passo "Armazenamento de assets" do wizard (Sprint 13,
+   * Tarefa H.3) — `"local"` é o default (o backend cria a estrutura de
+   * pastas do produto); `"s3"` exige bucket/região, que podem ficar em
+   * branco e ser configurados depois em Configurações do produto.
+   */
+  assetStorageStrategy: AssetStorageStrategy;
+  s3Bucket?: string;
+  s3Region?: string;
 };
 
 export type UpdateProductRequest = {
