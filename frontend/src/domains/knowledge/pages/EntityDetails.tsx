@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { AlertTriangle } from "lucide-react";
 import { Badge, Button, Card, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
-import { kgColor, type KGNode } from "../mocks/knowledge.mocks";
+import { kgColor, type KGEntityType, type KGNode } from "../mocks/knowledge.mocks";
 import { knowledgeService } from "../services/knowledgeService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { KGBadge } from "../components/KGBadge";
 
+const RESOURCE_ROUTES: Record<KGEntityType, string> = {
+  Tenant: "/settings/tenant", Produto: "/products", Página: "/content/list", Asset: "/assets",
+  Formulário: "/forms/list", Submission: "/forms/submissions", Lead: "/forms/submissions",
+  Categoria: "/content/list", Tag: "/assets/tags", Autor: "/users", SEO: "/settings/product",
+};
+
 export function EntityDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(), []);
   const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(), []);
   const [sel, setSel] = useState<KGNode | null>(null);
@@ -27,8 +34,8 @@ export function EntityDetails() {
   return (
     <>
       <PageHeader title={sel.label} desc="Entidade de negócio: dados, relações e análise de impacto operacional." badge={sel.type}>
-        <Button>Abrir recurso</Button>
-        <Button primary>Ver no Graph</Button>
+        <Button onClick={() => navigate(RESOURCE_ROUTES[sel.type] ?? "/content/list")}>Abrir recurso</Button>
+        <Button primary onClick={() => navigate("/knowledge/graph")}>Ver no Graph</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_280px]">
         <div className="space-y-4">

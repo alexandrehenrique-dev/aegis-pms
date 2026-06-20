@@ -1,12 +1,34 @@
+import { useNavigate } from "react-router";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
+import { toast } from "../../../core/notifications/toast";
+
+const EVENT_ID = "aud_8f42";
+
+function exportEventJson() {
+  const payload = { id: EVENT_ID, actor: "Ana Martins", role: "Tenant Admin", tenant: "BYOP", product: "Maestro Beton", module: "Permissions", resource: "Editor role", action: "permissão alterada", time: "ontem 18:10" };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${EVENT_ID}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function AuditEventDetail() {
+  const navigate = useNavigate();
+
+  const handleCopyId = async () => {
+    await navigator.clipboard.writeText(EVENT_ID);
+    toast.success("Copiado");
+  };
+
   return (
     <>
       <PageHeader title="Evento aud_8f42" module="Auditoria" desc="Detalhe do evento com antes/depois, payload e identificadores técnicos futuros." badge="Evento crítico">
-        <Button>Copiar ID</Button>
-        <Button>Exportar evento</Button>
-        <Button primary>Abrir recurso</Button>
+        <Button onClick={handleCopyId}>Copiar ID</Button>
+        <Button onClick={exportEventJson}>Exportar evento</Button>
+        <Button primary onClick={() => navigate("/settings/roles")}>Abrir recurso</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>

@@ -1,6 +1,10 @@
+import { useState } from "react";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { ChartContainer } from "../components/AnalyticsBits";
 import { ContentStatusBadge } from "../../content/components/ContentStatusBadge";
+
+const LANGUAGES = ["PT-BR", "EN-US"];
 
 function ContentAnalyticsTable() {
   const rows = [
@@ -24,10 +28,19 @@ function ContentAnalyticsTable() {
 }
 
 export function ContentAnalytics() {
+  const [lang, setLang] = useState<string | null>(null);
   return (
     <>
       <PageHeader title="Content Analytics" module="Analytics" desc="Mede impacto, queda, atualização, SEO e status editorial do conteúdo." badge="Conteúdo">
-        <Button>Filtrar idioma</Button>
+        <Popover>
+          <PopoverTrigger asChild><Button>Filtrar idioma{lang ? `: ${lang}` : ""}</Button></PopoverTrigger>
+          <PopoverContent>
+            <div className="flex flex-col gap-1">
+              <Button onClick={() => setLang(null)} primary={!lang}>Todos</Button>
+              {LANGUAGES.map((l) => <Button key={l} onClick={() => setLang(l)} primary={lang === l}>{l}</Button>)}
+            </div>
+          </PopoverContent>
+        </Popover>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-2">
         <ChartContainer title="Visitas por página" type="bar" />
