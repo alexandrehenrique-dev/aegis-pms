@@ -1,8 +1,16 @@
+import { useNavigate } from "react-router";
 import { Button, Card } from "../../../shared/components/Primitives";
 import { RiskBadge } from "../../../shared/components/RiskBadge";
 import type { SettingCard as SettingCardType } from "../contracts/responses";
 
+const SETTINGS_ROUTES: Record<string, string> = {
+  "Produto": "/settings/product", "Tenant": "/settings/tenant", "Equipe": "/users",
+  "Permissões": "/settings/permissions", "Integrações": "/settings/security", "Segurança": "/settings/security",
+  "Auditoria": "/audit", "SEO": "/settings/product", "Domínios futuros": "/settings/product",
+};
+
 export function SettingsCard({ c }: { c: SettingCardType }) {
+  const navigate = useNavigate();
   return (
     <Card>
       <div className="flex items-start justify-between">
@@ -10,7 +18,7 @@ export function SettingsCard({ c }: { c: SettingCardType }) {
         <RiskBadge risk={c.risk} />
       </div>
       <div className="mt-4 grid gap-2 text-xs text-muted-foreground"><span>Status: {c.status}</span><span>Última atualização: {c.lastUpdated}</span><span>Responsável: {c.owner}</span></div>
-      <Button>Abrir</Button>
+      <Button onClick={() => navigate(SETTINGS_ROUTES[c.name] ?? "/settings")}>Abrir</Button>
     </Card>
   );
 }
