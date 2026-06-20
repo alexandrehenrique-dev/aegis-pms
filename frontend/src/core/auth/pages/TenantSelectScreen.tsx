@@ -1,7 +1,7 @@
 import { useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { Boxes, Clock3, LogOut, MoreVertical, Plus } from "lucide-react";
+import { Bell, Boxes, Clock3, LogOut, MoreVertical, Plus } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import { roleLabels } from "../../permissions/roles";
 import { tenantsService } from "../../tenants/services/tenantsService";
@@ -11,6 +11,7 @@ import { Badge, Button, EmptyState, Field, fade } from "../../../shared/componen
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { MobileDrawerMenu } from "../../../shared/components/MobileDrawerMenu";
 import { toast } from "../../notifications/toast";
+import { CreateNotificationModal } from "../../notifications/components/CreateNotificationModal";
 // domains/tenants são consumidos aqui mesmo vivendo em core/auth: a gestão de
 // tenants do Super Admin reaproveita esta tela (não existe /admin/tenants
 // separado) e o wizard de onboarding inerentemente cruza para os domínios de
@@ -31,6 +32,7 @@ export function TenantSelectScreen() {
   const { data: allTenants } = useAsyncData(() => tenantsService.listTenants(), [reloadKey]);
 
   const [showCreateWizard, setShowCreateWizard] = useState(false);
+  const [showCreateNotification, setShowCreateNotification] = useState(false);
   const [editingTenant, setEditingTenant] = useState<TenantOption | null>(null);
   const [pendingDelete, setPendingDelete] = useState<TenantOption | null>(null);
   const [confirmationText, setConfirmationText] = useState("");
@@ -100,6 +102,7 @@ export function TenantSelectScreen() {
             </div>
             <div className="flex justify-center mb-2"><Badge tone="violet">Product OS</Badge></div>
             {isSuperAdmin && <Button primary onClick={() => setShowCreateWizard(true)} className="w-full"><Plus size={15} />Criar Tenant</Button>}
+            {isSuperAdmin && <Button onClick={() => setShowCreateNotification(true)} className="w-full"><Bell size={15} />Criar Notificação</Button>}
             <Button onClick={handleLogout} className="w-full"><LogOut size={14} />Sair</Button>
           </MobileDrawerMenu>
         </div>
@@ -114,7 +117,10 @@ export function TenantSelectScreen() {
               </p>
             </div>
             {isSuperAdmin && (
-              <div className="hidden lg:block"><Button primary onClick={() => setShowCreateWizard(true)}><Plus size={15} />Criar Tenant</Button></div>
+              <div className="hidden items-center gap-2 lg:flex">
+                <Button onClick={() => setShowCreateNotification(true)}><Bell size={15} />Criar Notificação</Button>
+                <Button primary onClick={() => setShowCreateWizard(true)}><Plus size={15} />Criar Tenant</Button>
+              </div>
             )}
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -167,6 +173,14 @@ export function TenantSelectScreen() {
 
       {showCreateWizard && (
         <CreateTenantWizardModal onClose={() => setShowCreateWizard(false)} onDone={refresh} />
+      )}
+
+      {showCreateNotification && (
+        <CreateNotificationModal
+          tenants={tenants}
+          onClose={() => setShowCreateNotification(false)}
+          onCreated={() => { setShowCreateNotification(false); toast.success("Notificação criada", { description: "Os destinatários escolhidos vão recebê-la na próxima vez que acessarem um produto." }); }}
+        />
       )}
 
       {editingTenant && (
