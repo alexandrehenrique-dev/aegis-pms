@@ -9,6 +9,7 @@ import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AegisLogo } from "../../../shared/components/AegisLogo";
 import { Badge, Button, EmptyState, Field, fade } from "../../../shared/components/Primitives";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
+import { MobileDrawerMenu } from "../../../shared/components/MobileDrawerMenu";
 import { toast } from "../../notifications/toast";
 // domains/tenants são consumidos aqui mesmo vivendo em core/auth: a gestão de
 // tenants do Super Admin reaproveita esta tela (não existe /admin/tenants
@@ -95,7 +96,16 @@ export function TenantSelectScreen() {
                 {isSuperAdmin ? "Todos os tenants da plataforma. Botão direito sobre um tenant para editar ou excluir." : `Você tem acesso a ${userTenants.length} tenant${userTenants.length !== 1 ? "s" : ""}.`}
               </p>
             </div>
-            {isSuperAdmin && <Button primary onClick={() => setShowCreateWizard(true)}><Plus size={15} />Criar Tenant</Button>}
+            {isSuperAdmin && (
+              <>
+                <div className="hidden lg:block"><Button primary onClick={() => setShowCreateWizard(true)}><Plus size={15} />Criar Tenant</Button></div>
+                <div className="lg:hidden">
+                  <MobileDrawerMenu label="Ações de tenants" title="Ações">
+                    <Button primary onClick={() => setShowCreateWizard(true)} className="w-full"><Plus size={15} />Criar Tenant</Button>
+                  </MobileDrawerMenu>
+                </div>
+              </>
+            )}
           </div>
           <div className="mt-6 flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar tenant..." className="w-full bg-transparent text-sm outline-none" />

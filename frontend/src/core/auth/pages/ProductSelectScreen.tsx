@@ -6,7 +6,8 @@ import { useAuth } from "../AuthContext";
 import { getPostLoginLandingPath } from "../../permissions/roles";
 import { AegisLogo } from "../../../shared/components/AegisLogo";
 import { ProductStatusBadge } from "../../../shared/components/ProductStatusBadge";
-import { EmptyState, fade } from "../../../shared/components/Primitives";
+import { Button, EmptyState, fade } from "../../../shared/components/Primitives";
+import { MobileDrawerMenu } from "../../../shared/components/MobileDrawerMenu";
 // domains/products é consumido aqui mesmo vivendo em core/auth — mesmo
 // padrão de domains/tenants em TenantSelectScreen. Botão direito em um
 // produto bloqueado/sem módulos (que não pode ser aberto) é o único jeito
@@ -119,9 +120,18 @@ export function ProductSelectScreen() {
             <div className="flex min-w-[200px] flex-1 items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar produto..." className="w-full bg-transparent text-sm outline-none" />
             </div>
-            {["todos", "Ativo", "Pendente", "Arquivado"].map((s) => (
-              <button key={s} onClick={() => setSf(s)} className={`rounded-xl border px-3 py-2 text-sm transition ${sf === s ? "border-primary bg-primary/5 text-primary" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}>{s}</button>
-            ))}
+            <div className="hidden gap-2 lg:flex">
+              {["todos", "Ativo", "Pendente", "Arquivado"].map((s) => (
+                <button key={s} onClick={() => setSf(s)} className={`rounded-xl border px-3 py-2 text-sm transition ${sf === s ? "border-primary bg-primary/5 text-primary" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}>{s}</button>
+              ))}
+            </div>
+            <div className="lg:hidden">
+              <MobileDrawerMenu label="Filtros de produto" title="Filtrar por status">
+                {["todos", "Ativo", "Pendente", "Arquivado"].map((s) => (
+                  <Button key={s} onClick={() => setSf(s)} primary={sf === s} className="w-full">{s}</Button>
+                ))}
+              </MobileDrawerMenu>
+            </div>
           </div>
           {filtered.length === 0 ? <EmptyState title="Nenhum produto encontrado" description="Ajuste os filtros ou limpe a busca." /> : (
             <div className="space-y-6">
