@@ -257,16 +257,33 @@ function WorkflowPanel() {
   );
 }
 
+function PageJsonViewer({ page }: { page: Page | null }) {
+  const [copied, setCopied] = useState(false);
+  if (!page) return <p className="text-sm text-muted-foreground">Nenhuma página carregada.</p>;
+  const json = JSON.stringify(page, null, 2);
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(json);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div>
+      <div className="mb-2 flex justify-end"><Button onClick={handleCopy}>{copied ? "Copiado!" : "Copiar JSON"}</Button></div>
+      <pre className="max-h-[480px] overflow-auto rounded-lg bg-muted p-3 text-xs">{json}</pre>
+    </div>
+  );
+}
+
 export function PropertiesPanel({ page, section }: { page: Page | null; section: Section | null }) {
   const [tab, setTab] = useState("Propriedades");
   return (
     <Card className="h-full">
       <div className="mb-3 flex gap-1 overflow-auto">
-        {["Propriedades", "SEO", "Workflow", "Histórico"].map((t) => (
+        {["Propriedades", "SEO", "Workflow", "Histórico", "JSON"].map((t) => (
           <button key={t} onClick={() => setTab(t)} className={`rounded-lg px-2 py-1 text-xs ${tab === t ? "bg-primary text-white" : "bg-muted"}`}>{t}</button>
         ))}
       </div>
-      {tab === "SEO" ? <SEOPanel page={page} /> : tab === "Workflow" ? <WorkflowPanel /> : tab === "Histórico" ? <VersionTimeline compact /> : (
+      {tab === "SEO" ? <SEOPanel page={page} /> : tab === "Workflow" ? <WorkflowPanel /> : tab === "Histórico" ? <VersionTimeline compact /> : tab === "JSON" ? <PageJsonViewer page={page} /> : (
         <div className="space-y-2 text-sm">
           {[
             ["página", page?.slug ?? "—"],
