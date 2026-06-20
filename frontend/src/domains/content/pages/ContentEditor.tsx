@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { AnimatePresence } from "motion/react";
 import { Badge, Button, EmptyState, PageHeader } from "../../../shared/components/Primitives";
 import { UnsavedChangesBanner, ConflictAlert } from "../../../shared/components/Banners";
@@ -23,6 +23,7 @@ import type { BlockType, Page } from "../../pages/contracts/responses";
  * distingue essas ações dentro do mesmo papel "Editor de Conteúdo" (07.04).
  */
 export function ContentEditor() {
+  const navigate = useNavigate();
   const { id: pageSlug } = useParams<{ id: string }>();
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,6 +114,7 @@ export function ContentEditor() {
     <>
       <AnimatePresence>{saveStatus !== "idle" && <FloatingSaveStatus key={saveStatus} status={saveStatus} onRetry={triggerSave} />}</AnimatePresence>
       <PageHeader title={`${page?.title ?? "Página"} — Editar`} desc="Edite blocos, propriedades, SEO e publicação com rastreabilidade." badge={page ? page.status : "draft"}>
+        <Button onClick={() => navigate(`/content/${page?.slug}/preview`)} disabled={!page}>Preview</Button>
         <Button onClick={triggerSave}>Salvar rascunho</Button>
         <Button primary onClick={() => { setSaveStatus("idle"); toast.success("Enviado para revisão.", { description: "Rafael Lima será notificado." }); }}>Enviar para revisão</Button>
       </PageHeader>

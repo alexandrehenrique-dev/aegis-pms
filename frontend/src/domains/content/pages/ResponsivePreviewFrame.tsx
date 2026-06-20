@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { Loader2 } from "lucide-react";
-import { Button, Card, PageHeader, SelectLike } from "../../../shared/components/Primitives";
+import { Button, Card, EmptyState, PageHeader, SelectLike, SkeletonLines } from "../../../shared/components/Primitives";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
@@ -10,6 +10,8 @@ import { slugify } from "../../../shared/utils/slugify";
 import { ArticleBody } from "../components/ArticleBody";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
 import { KGBadge } from "../../knowledge/components/KGBadge";
+import { pagesService } from "../../pages/services/pagesService";
+import { BlockRenderer } from "../../pages/components/BlockRenderer";
 
 const LANGUAGES = ["PT-BR", "EN-US", "ES-ES"];
 
@@ -40,6 +42,7 @@ function WikiDevArticlePreview({ article }: { article: { title: string; body: st
 
 export function ResponsivePreviewFrame() {
   const navigate = useNavigate();
+  const { id: pageSlug } = useParams<{ id: string }>();
   const [vp, setVp] = useState("desktop");
   const [lang, setLang] = useState(LANGUAGES[0]);
   const [submitting, setSubmitting] = useState(false);
@@ -47,6 +50,10 @@ export function ResponsivePreviewFrame() {
   const productSlug = product ? slugify(product.name) : "maestro-beton";
   const { data: productContent } = useAsyncData(() => contentService.listContentByProduct(productSlug), [productSlug]);
   const wikidevArticle = productSlug === "wikidev" ? productContent?.find((c) => c.body) : undefined;
+  const { data: page, loading: loadingPage } = useAsyncData(
+    () => (pageSlug ? pagesService.getPageBySlug(productSlug, pageSlug) : Promise.resolve(undefined)),
+    [productSlug, pageSlug],
+  );
 
   const handleSubmitForReview = async () => {
     setSubmitting(true);
@@ -60,7 +67,7 @@ export function ResponsivePreviewFrame() {
 
   return (
     <>
-      <PageHeader title="Home — Preview" module="Conteúdo" desc="Preview responsivo do conteúdo antes de revisão/publicação." badge="Preview">
+      <PageHeader title={`${page?.title ?? "Preview"} — Preview`} module="Conteúdo" desc="Preview responsivo do conteúdo antes de revisão/publicação." badge="Preview">
         <Button onClick={() => navigate(-1)}>Voltar ao editor</Button>
         <Button primary onClick={handleSubmitForReview} disabled={submitting}>{submitting && <Loader2 size={15} className="animate-spin" />}{submitting ? "Enviando..." : "Enviar para revisão"}</Button>
       </PageHeader>
@@ -73,14 +80,14 @@ export function ResponsivePreviewFrame() {
         <div className={`mx-auto rounded-2xl border border-border bg-white p-5 shadow-[0_8px_30px_rgba(28,28,28,.05)] ${vp === "mobile" ? "max-w-[375px]" : vp === "tablet" ? "max-w-[768px]" : "max-w-5xl"}`}>
           {wikidevArticle?.body ? (
             <WikiDevArticlePreview article={{ title: wikidevArticle.title, body: wikidevArticle.body }} />
-          ) : (
-            <div className="rounded-xl bg-muted p-8">
-              <p className="text-xs text-muted-foreground">Preview institucional Maestro Beton</p>
-              <h2 className="mt-4 text-3xl font-semibold">Experiências que conectam pessoas</h2>
-              <p className="mt-2 max-w-xl text-muted-foreground">Mock simples da página Home renderizada no contexto do produto.</p>
-              {/* preview do conteúdo sendo editado — não é controle da tela, não tratar como botão morto */}
-              <Button primary>Solicitar orçamento</Button>
+          ) : loadingPage ? (
+            <SkeletonLines />
+          ) : page ? (
+            <div className="divide-y divide-border">
+              {[...page.sections].sort((a, b) => a.order - b.order).map((section) => <BlockRenderer key={section.id} section={section} />)}
             </div>
+          ) : (
+            <EmptyState title="Preview indisponível" description={`Nenhuma página com slug "${pageSlug}" encontrada em ${productSlug}.`} />
           )}
         </div>
       </Card>
