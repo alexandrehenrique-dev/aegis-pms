@@ -20,8 +20,8 @@ export type NavItem = { path: string; icon: LucideIcon; label: string };
  */
 export const nav: NavItem[] = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/content", icon: FileText, label: "Conteúdo" },
   { path: "/pages", icon: Layers, label: "Páginas" },
+  { path: "/content", icon: FileText, label: "Conteúdo" },
   { path: "/assets", icon: Image, label: "Assets" },
   { path: "/forms", icon: Workflow, label: "Forms" },
   { path: "/analytics", icon: BarChart3, label: "Analytics" },
