@@ -247,9 +247,18 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
         {nestedObjectFields.map(([k, v]) => (
           <div key={k} className="rounded-lg border border-border p-3 md:col-span-2">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{k}</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              <ObjectFieldsEditor obj={v} path={[k]} onPatch={handleNestedPatch} />
-            </div>
+            {typeof v.src === "string" ? (
+              <ImageFieldEditor
+                src={v.src}
+                alt={typeof v.alt === "string" ? v.alt : ""}
+                onChangeSrc={(nv) => handleNestedPatch([k, "src"], nv)}
+                onChangeAlt={(nv) => handleNestedPatch([k, "alt"], nv)}
+              />
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                <ObjectFieldsEditor obj={v} path={[k]} onPatch={handleNestedPatch} />
+              </div>
+            )}
           </div>
         ))}
         {hasFormIdSelector && (
