@@ -2,15 +2,17 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "../../../shared/components/ui/drawer";
 import { Button, Badge, Field, SelectLike } from "../../../shared/components/Primitives";
+import { MediaField } from "../../../shared/components/MediaField";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { toast } from "../../../core/notifications/toast";
+import { formatDateTime } from "../../../shared/utils/formatDateTime";
 import { eventsService } from "../services/eventsService";
 import type { CreateEventRequest, EventVisibility, PageEvent } from "../contracts/events";
 
 const VISIBILITY_OPTIONS: EventVisibility[] = ["public", "public-summary", "private"];
 const TYPE_OPTIONS: PageEvent["type"][] = ["public", "private"];
 
-const EMPTY_EVENT: CreateEventRequest = { title: "", date: "", location: "", type: "public", visibility: "public", description: "" };
+const EMPTY_EVENT: CreateEventRequest = { title: "", date: "", location: "", type: "public", visibility: "public", description: "", image: "" };
 
 /** Preview de como o evento aparece publicamente, respeitando a regra de privacidade do contrato Maestro Beton (Seção 12). */
 function PublicPreview({ event }: { event: CreateEventRequest }) {
@@ -18,12 +20,13 @@ function PublicPreview({ event }: { event: CreateEventRequest }) {
     return <p className="text-sm text-muted-foreground">Data reservada</p>;
   }
   if (event.visibility === "public-summary") {
-    return <p className="text-sm"><b>{event.title || "Evento"}</b> — {event.date || "data a definir"}</p>;
+    return <p className="text-sm"><b>{event.title || "Evento"}</b> — {formatDateTime(event.date)}</p>;
   }
   return (
     <div className="text-sm">
+      {event.image && <div className="mb-2 rounded-lg bg-muted p-6 text-center text-xs text-muted-foreground">[foto: {event.image}]</div>}
       <p className="font-medium">{event.title || "Evento"}</p>
-      <p className="text-muted-foreground">{event.date || "data a definir"} · {event.location || "local a definir"}</p>
+      <p className="text-muted-foreground">{formatDateTime(event.date)} · {event.location || "local a definir"}</p>
       <p className="mt-1 text-muted-foreground">{event.description}</p>
     </div>
   );
@@ -36,8 +39,9 @@ function EventForm({ initial, onSave, onCancel, saving }: { initial: CreateEvent
   return (
     <div className="space-y-3">
       <Field label="Título" value={draft.title} onChange={(v) => patch({ title: v })} />
-      <Field label="Data" type="date" value={draft.date} onChange={(v) => patch({ date: v })} />
+      <Field label="Data e horário" type="datetime-local" value={draft.date} onChange={(v) => patch({ date: v })} />
       <Field label="Local" value={draft.location} onChange={(v) => patch({ location: v })} />
+      <MediaField label="Foto do evento" value={draft.image ?? ""} typeFilter="imagem" onChange={(v) => patch({ image: v })} />
       <SelectLike label="Tipo" value={draft.type} options={TYPE_OPTIONS} onChange={(v) => patch({ type: v as PageEvent["type"] })} />
       <SelectLike label="Visibilidade" value={draft.visibility} options={VISIBILITY_OPTIONS} onChange={(v) => patch({ visibility: v as EventVisibility })} />
       <Field label="Descrição" value={draft.description} onChange={(v) => patch({ description: v })} textarea />
@@ -129,7 +133,7 @@ export function EventsManagerDrawer({ productSlug, open, onOpenChange }: { produ
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-medium">{ev.title}</p>
-                      <p className="text-xs text-muted-foreground">{ev.date} · {ev.location}</p>
+                      <p className="text-xs text-muted-foreground">{formatDateTime(ev.date)} · {ev.location}</p>
                       <div className="mt-1 flex gap-1">
                         <Badge tone={ev.type === "private" ? "amber" : "green"}>{ev.type}</Badge>
                         <Badge>{ev.visibility}</Badge>

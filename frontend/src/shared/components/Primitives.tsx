@@ -130,7 +130,7 @@ export function PageHeader({ title, desc, badge = "BYOP", titleBadge, children }
   );
 }
 
-export function Field({ label, value, onChange, textarea = false, locked = false, type = "text" }: { label: string; value: string; onChange?: (v: string) => void; textarea?: boolean; locked?: boolean; type?: "text" | "date" }) {
+export function Field({ label, value, onChange, textarea = false, locked = false, type = "text" }: { label: string; value: string; onChange?: (v: string) => void; textarea?: boolean; locked?: boolean; type?: "text" | "date" | "datetime-local" }) {
   const className = `w-full rounded-lg border border-border bg-card p-3 text-sm outline-primary ${textarea ? "min-h-28" : ""} ${locked ? "cursor-not-allowed opacity-60" : ""}`;
   return (
     <label className="block">

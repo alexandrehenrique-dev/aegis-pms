@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "../../../shared/components/Primitives";
+import { formatDateTime } from "../../../shared/utils/formatDateTime";
 import { eventsService } from "../services/eventsService";
 import type { PageEvent } from "../contracts/events";
 
@@ -85,7 +86,7 @@ export function EventSelector({ productSlug, selectedIds, onChange, refreshKey =
         filtered.map((ev) => (
           <label key={ev.id} className="flex items-center gap-2 rounded-lg border border-border p-2 text-sm">
             <input type="checkbox" checked={selectedIds.includes(ev.id)} onChange={() => toggle(ev.id)} className="accent-primary" />
-            <span className="flex-1">{ev.title} <span className="text-xs text-muted-foreground">— {ev.date}</span></span>
+            <span className="flex-1">{ev.title} <span className="text-xs text-muted-foreground">— {formatDateTime(ev.date)}</span></span>
             <Badge tone={ev.type === "private" ? "amber" : "green"}>{ev.type}</Badge>
           </label>
         ))
