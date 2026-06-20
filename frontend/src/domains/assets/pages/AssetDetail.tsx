@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import { AnimatePresence } from "motion/react";
 import { Badge, Button, Card, PageHeader } from "../../../shared/components/Primitives";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
+import { PermGate } from "../../../app/guards/PermGate";
+import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 import { AssetUsagePanel } from "../components/AssetUsagePanel";
 import { toast } from "../../../core/notifications/toast";
 import { assetsService } from "../services/assetsService";
@@ -22,6 +24,8 @@ function AssetPreviewPanel() {
 
 export function AssetDetail() {
   const navigate = useNavigate();
+  const { viewAsRole } = useViewAsRole();
+  const canEdit = viewAsRole !== "viewer";
   const assetName = "hero-maestro-beton.jpg";
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
@@ -64,7 +68,7 @@ export function AssetDetail() {
         {confirmArchive && <ConfirmDialog title="Arquivar este asset?" desc="O asset deixará de aparecer nas listagens ativas. Referências em uso podem precisar revisão." danger loading={archiving} onConfirm={handleArchive} onCancel={() => setConfirmArchive(false)} />}
       </AnimatePresence>
       <PageHeader title="hero-maestro-beton.jpg" module="Assets" desc="Preview, metadados, tags, uso no sistema e ações do asset." badge="Ativo">
-        <Button onClick={() => navigate("/assets/hero-maestro-beton/metadata")}>Editar metadados</Button>
+        <PermGate allowed={canEdit}><Button onClick={() => navigate("/assets/hero-maestro-beton/metadata")}>Editar metadados</Button></PermGate>
         <Button onClick={handleCopyReference}>Copiar referência</Button>
         <Button primary onClick={handleDownload}>Baixar</Button>
       </PageHeader>
@@ -76,10 +80,12 @@ export function AssetDetail() {
             <div key={x[0]} className="mb-2 flex justify-between rounded-lg bg-muted p-2 text-sm"><span>{x[0]}</span><b className="text-right">{x[1]}</b></div>
           ))}
           <div className="mt-3 flex flex-wrap gap-1">{["hero", "seo", "institucional"].map((t) => <Badge key={t} tone="blue">{t}</Badge>)}</div>
-          <div className="mt-4 space-y-2">
-            <Button onClick={handleReplaceFile}>Substituir arquivo</Button>
-            <Button onClick={() => setConfirmArchive(true)}>Arquivar</Button>
-          </div>
+          <PermGate allowed={canEdit}>
+            <div className="mt-4 space-y-2">
+              <Button onClick={handleReplaceFile}>Substituir arquivo</Button>
+              <Button onClick={() => setConfirmArchive(true)}>Arquivar</Button>
+            </div>
+          </PermGate>
         </Card>
       </div>
     </>
