@@ -1,10 +1,10 @@
 export const forms = [
-  ["Contato Comercial", "Contato", "ativo", "248", "6.8%", "Novo contato há 12 min", "Publicado"],
-  ["Orçamento Maestro", "Orçamento", "ativo", "93", "9.4%", "Novo orçamento recebido", "Publicado"],
-  ["RSVP Evento Junho", "RSVP", "rascunho", "0", "—", "Sem respostas", "Rascunho"],
-  ["Pesquisa Pós Evento", "Pesquisa", "ativo", "61", "18.2%", "RSVP confirmado", "Publicado"],
-  ["Newsletter Institucional", "Newsletter", "sem respostas", "0", "0%", "Sem atividade há 21 dias", "Publicado"],
-  ["Cadastro Parceiros", "Cadastro", "arquivado", "37", "3.1%", "Arquivado ontem", "Arquivado"],
+  ["form-contato-comercial", "maestro-beton", "Contato Comercial", "Contato", "ativo", "248", "6.8%", "Novo contato há 12 min", "Publicado"],
+  ["form-orcamento-maestro", "maestro-beton", "Orçamento Maestro", "Orçamento", "ativo", "93", "9.4%", "Novo orçamento recebido", "Publicado"],
+  ["form-rsvp-evento-junho", "maestro-beton", "RSVP Evento Junho", "RSVP", "rascunho", "0", "—", "Sem respostas", "Rascunho"],
+  ["form-pesquisa-pos-evento", "maestro-beton", "Pesquisa Pós Evento", "Pesquisa", "ativo", "61", "18.2%", "RSVP confirmado", "Publicado"],
+  ["form-newsletter-institucional", "maestro-beton", "Newsletter Institucional", "Newsletter", "sem respostas", "0", "0%", "Sem atividade há 21 dias", "Publicado"],
+  ["form-cadastro-parceiros", "maestro-beton", "Cadastro Parceiros", "Cadastro", "arquivado", "37", "3.1%", "Arquivado ontem", "Arquivado"],
 ];
 
 export const submissionsData = [

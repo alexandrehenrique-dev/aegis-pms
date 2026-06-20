@@ -14,6 +14,7 @@ import { TwoColumnEditor } from "../../pages/components/TwoColumnEditor";
 import { ItemsCrudEditor } from "../../pages/components/ItemsCrudEditor";
 import { ITEMS_CRUD_CONFIG } from "../../pages/itemsCrudConfig";
 import { EventsManagerDrawer } from "../../pages/components/EventsManagerDrawer";
+import { FormIdSelector } from "../../pages/components/FormIdSelector";
 import type { KGNode } from "../../knowledge/mocks/knowledge.mocks";
 
 export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, onRequestDelete }: {
@@ -123,8 +124,13 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
 
   const isTwoColumn = section.type === "two-column";
   const itemsCrudConfig = ITEMS_CRUD_CONFIG[section.type];
+  const hasFormIdSelector = section.type === "contact" || section.type === "form";
   const { content } = section;
-  const excludedKeys = new Set(isTwoColumn ? ["left", "right"] : itemsCrudConfig ? [itemsCrudConfig.key] : []);
+  const excludedKeys = new Set<string>([
+    ...(isTwoColumn ? ["left", "right"] : []),
+    ...(itemsCrudConfig ? [itemsCrudConfig.key] : []),
+    ...(hasFormIdSelector ? ["formId"] : []),
+  ]);
   const fieldableContent = Object.fromEntries(Object.entries(content).filter(([k]) => !excludedKeys.has(k)));
   const stringFields = Object.entries(fieldableContent).filter(([, v]) => typeof v === "string") as [string, string][];
   const nestedObjectFields = Object.entries(fieldableContent).filter(([, v]) => isPlainObject(v)) as [string, Record<string, unknown>][];
@@ -164,6 +170,9 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
             </div>
           </div>
         ))}
+        {hasFormIdSelector && (
+          <FormIdSelector productSlug={productSlug} value={typeof content.formId === "string" ? content.formId : ""} onChange={(formId) => onChangeContent({ formId })} />
+        )}
       </div>
       {isTwoColumn && <TwoColumnEditor content={content} onChange={onChangeContent} />}
       {section.type === "event-list" && (

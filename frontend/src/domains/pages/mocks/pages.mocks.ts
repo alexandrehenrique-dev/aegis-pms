@@ -76,12 +76,8 @@ export const pagesByProduct: Record<string, Page[]> = {
           order: 4,
           content: {
             title: "Solicitar orçamento",
-            fields: [
-              { name: "tipoEvento", label: "Tipo de evento", type: "select", options: ["Casamento", "Evento corporativo", "Show"], required: true },
-              { name: "data", label: "Data do evento", type: "date", required: true },
-              { name: "cidade", label: "Cidade", type: "text", required: true },
-              { name: "convidados", label: "Número de convidados", type: "number", required: false },
-            ],
+            infoItems: [],
+            formId: "form-orcamento-maestro",
           },
         },
       ],
@@ -347,11 +343,8 @@ export const pagesByProduct: Record<string, Page[]> = {
           order: 0,
           content: {
             title: "Fale com a CMSS",
-            fields: [
-              { name: "nome", label: "Nome", type: "text", required: true },
-              { name: "email", label: "E-mail", type: "email", required: true },
-              { name: "mensagem", label: "Mensagem", type: "textarea", required: true },
-            ],
+            infoItems: [],
+            formId: "",
           },
         },
         {

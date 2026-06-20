@@ -41,8 +41,11 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, Record<string, unknown>> =
   faq: { items: [{ q: "Pergunta frequente?", a: "Resposta para a pergunta." }] },
   contact: {
     title: "Fale com a gente",
-    fields: [{ name: "nome", label: "Nome", type: "text", required: true }],
+    infoItems: [],
+    formId: "",
   },
+  form: { formId: "" },
+  download: { title: "Downloads", items: [{ title: "Documento", fileAssetId: "", fileType: "pdf" }] },
   footer: { address: "Endereço do produto", links: [{ label: "Home", href: "/" }] },
   navbar: { items: [{ label: "Home", href: "/" }] },
 };

@@ -18,6 +18,8 @@ export const BLOCK_TYPES = [
   "cta-section",
   "faq",
   "contact",
+  "form",
+  "download",
   "footer",
   "navbar",
 ] as const;
