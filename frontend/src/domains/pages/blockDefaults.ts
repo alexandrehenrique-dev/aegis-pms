@@ -18,7 +18,9 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, Record<string, unknown>> =
   hero: {
     title: "Novo título",
     subtitle: "Novo subtítulo",
+    image: { src: "", alt: "Descrição da imagem" },
     ctaPrimary: { label: "Saiba mais", href: "#" },
+    ctaSecondary: { label: "", href: "" },
   },
   text: { title: "Novo título", body: "Escreva o conteúdo aqui." },
   "rich-text": { title: "Novo título", body: "Escreva o conteúdo aqui." },
