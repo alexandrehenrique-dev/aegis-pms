@@ -43,6 +43,6 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, Record<string, unknown>> =
     title: "Fale com a gente",
     fields: [{ name: "nome", label: "Nome", type: "text", required: true }],
   },
-  footer: { address: "Endereço do produto" },
+  footer: { address: "Endereço do produto", links: [{ label: "Home", href: "/" }] },
   navbar: { items: [{ label: "Home", href: "/" }] },
 };

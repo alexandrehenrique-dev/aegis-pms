@@ -11,6 +11,8 @@ import { BLOCK_TYPES, type BlockType, type Page, type Section } from "../../page
 import { EntityPicker } from "../../knowledge/components/EntityPicker";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
 import { TwoColumnEditor } from "../../pages/components/TwoColumnEditor";
+import { ItemsCrudEditor } from "../../pages/components/ItemsCrudEditor";
+import { ITEMS_CRUD_CONFIG } from "../../pages/itemsCrudConfig";
 import type { KGNode } from "../../knowledge/mocks/knowledge.mocks";
 
 export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, onRequestDelete }: {
@@ -117,13 +119,14 @@ export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }:
   }
 
   const isTwoColumn = section.type === "two-column";
+  const itemsCrudConfig = ITEMS_CRUD_CONFIG[section.type];
   const { content } = section;
-  const fieldableContent = isTwoColumn ? Object.fromEntries(Object.entries(content).filter(([k]) => k !== "left" && k !== "right")) : content;
+  const excludedKeys = new Set(isTwoColumn ? ["left", "right"] : itemsCrudConfig ? [itemsCrudConfig.key] : []);
+  const fieldableContent = Object.fromEntries(Object.entries(content).filter(([k]) => !excludedKeys.has(k)));
   const stringFields = Object.entries(fieldableContent).filter(([, v]) => typeof v === "string") as [string, string][];
   const nestedObjectFields = Object.entries(fieldableContent).filter(([, v]) => isPlainObject(v)) as [string, Record<string, unknown>][];
   const arrayFields = Object.entries(fieldableContent).filter(([, v]) => isArrayOfObjects(v)) as [string, Record<string, unknown>[]][];
-  const handledKeys = new Set([...stringFields, ...nestedObjectFields, ...arrayFields].map(([k]) => k));
-  if (isTwoColumn) { handledKeys.add("left"); handledKeys.add("right"); }
+  const handledKeys = new Set([...stringFields.map(([k]) => k), ...nestedObjectFields.map(([k]) => k), ...arrayFields.map(([k]) => k), ...excludedKeys]);
   const advancedKeys = Object.keys(content).filter((k) => !handledKeys.has(k));
   const canLinkEntity = section.type === "text" || section.type === "rich-text";
 
@@ -166,6 +169,17 @@ export function BlockEditorCanvas({ section, onChangeContent, onRequestDelete }:
             <PopoverTrigger asChild><Button><Link2 size={15} />Linkar a outra entidade</Button></PopoverTrigger>
             <PopoverContent><EntityPicker onSelect={handleLinkEntity} /></PopoverContent>
           </Popover>
+        </div>
+      )}
+      {itemsCrudConfig && (
+        <div className="mt-4">
+          <p className="mb-2 text-sm font-medium">{itemsCrudConfig.key} ({(Array.isArray(content[itemsCrudConfig.key]) ? content[itemsCrudConfig.key] as unknown[] : []).length})</p>
+          <ItemsCrudEditor
+            items={Array.isArray(content[itemsCrudConfig.key]) ? (content[itemsCrudConfig.key] as Record<string, unknown>[]) : []}
+            onChange={(next) => onChangeContent({ [itemsCrudConfig.key]: next })}
+            newItem={itemsCrudConfig.newItem}
+            rules={itemsCrudConfig.rules}
+          />
         </div>
       )}
       {arrayFields.map(([k, items]) => (

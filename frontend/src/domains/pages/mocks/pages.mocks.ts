@@ -359,7 +359,11 @@ export const pagesByProduct: Record<string, Page[]> = {
           type: "footer",
           label: "Rodapé",
           order: 1,
-          content: { address: "Praça Central, s/n — São Sebastião", social: ["instagram", "facebook"] },
+          content: {
+            address: "Praça Central, s/n — São Sebastião",
+            social: ["instagram", "facebook"],
+            links: [{ label: "Home", href: "/" }, { label: "Contato", href: "/contato" }],
+          },
         },
       ],
     },
