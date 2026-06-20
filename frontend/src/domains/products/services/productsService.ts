@@ -48,6 +48,8 @@ export const productsService = {
     if (p) p.status = "Arquivado";
   },
 
+  async saveSettings(): Promise<void> {},
+
   async create(req: CreateProductRequest): Promise<ProductSummary> {
     const created: ProductSummary = {
       id: slugify(req.name) || slugify(req.slug),
