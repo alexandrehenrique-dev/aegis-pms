@@ -37,6 +37,8 @@ type ChannelRow = { name: string; visits: string; conversion: string; trend: str
 
 `channels` pode começar como dados estáticos/simulados (não há instrumentação de tráfego real ainda no MVP) — documentar isso explicitamente na resposta da etapa, não tentar implementar tracking de visitas agora.
 
+**Isolamento por produto** (`00_padrao_qualidade_e_arquitetura.md`, Seção 10): qualquer endpoint desta etapa para um produto fora do escopo do usuário retorna 404, nunca 403. **Module-gating** (Seção 9.2 do padrão): `AnalyticsController` anotado com `@RequireModule(ModuleKey.ANALYTICS)` — produto com módulo `ANALYTICS` desabilitado retorna 403 `MODULE_DISABLED`.
+
 ### B. Endpoint agregador do dashboard global (ver também etapa 16)
 
 `GET /api/v1/dashboard/summary` é compartilhado com o domínio `dashboard` — implementar aqui ou na etapa 16, à escolha do GPT, mas implementar só uma vez.
@@ -45,11 +47,24 @@ type ChannelRow = { name: string; visits: string; conversion: string; trend: str
 
 `GET /api/v1/products/{productId}/analytics/trends` e `GET /api/v1/products/{productId}/analytics/reports` (usados por `TrendCards.tsx`/`ReportGrid.tsx`) **não têm contrato formal no frontend ainda** — antes de implementar, é necessário abrir essas duas telas no frontend (`frontend/src/domains/analytics/pages/TrendCards.tsx` e `ReportGrid.tsx`) e definir o shape de resposta a partir do que elas efetivamente renderizam hoje (mesmo que estático). Não inventar um shape sem essa checagem — documentar o shape definido em `docs/trace/00_endpoints_esperados.md` (atualizando a Seção B.4) como parte desta etapa.
 
+### D. Padrão de qualidade e entrega (obrigatório)
+
+> Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
+
+- **Java 25** / **Spring Boot 4.1.x**. Esta etapa **não tem entidade própria** (é leitura agregada sobre `content`/`form`/`asset`) — não há rodada 1/2 (entity/repository/mapper). 100% de cobertura nas classes funcionais mesmo assim: `AnalyticsService` é a classe com lógica que precisa de teste completo (cada KPI/sinal de saúde calculado, cada cenário de "sem dados ainda").
+- Entregar em rodadas:
+  1. `AnalyticsService` (agregação via os repositories já existentes de `content`/`form`/`asset`, etapas 10-12) + testes com mocks desses repositories — cobrir caminho com dados e caminho sem dados (produto novo, zero conteúdo/submissions).
+  2. `AnalyticsController` (endpoints da Seção A) + testes `@WebMvcTest` + validação via `curl`.
+  3. Repetir o mesmo para `trends`/`reports` depois do levantamento de shape da Seção C.
+
 ## Critérios de aceite
 
 - [ ] `kpis`, `health`, `channels` respondem com os shapes acima.
 - [ ] `kpis`/`health` refletem dados reais de `content`/`form`/`asset`, não números fixos.
 - [ ] `trends`/`reports` têm contrato definido (atualizado no trace) e implementado de acordo.
+- [ ] `mvn clean verify` confirma 100% de cobertura em `AnalyticsService`/`AnalyticsController` (JaCoCo).
+- [ ] Analytics de produto fora do escopo do usuário retorna 404 (não 403).
+- [ ] Produto com módulo `ANALYTICS` desabilitado retorna 403 `MODULE_DISABLED`.
 
 ## Validação
 

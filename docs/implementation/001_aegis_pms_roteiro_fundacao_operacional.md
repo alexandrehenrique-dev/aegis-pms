@@ -372,6 +372,8 @@ Definir variáveis de ambiente necessárias para infraestrutura local.
 ## Tarefas
 
 > ⚠️ **Porta do Keycloak corrigida:** este roteiro original usa `8181`. A decisão vigente do projeto (registrada na Sprint 09 do frontend, `docs/sprints/09_servicos_integracao_fluxo_super_admin_e_build.md`) é **`8282`**. Os arquivos executáveis de `docs/sprints/sprint-02-fundacao-backend-gpt/` já usam `8282` — use sempre esses arquivos como fonte da verdade, não os valores abaixo.
+>
+> ⚠️ **Stack de backend corrigida:** este roteiro original especifica "Java 21+" e "Spring Boot 3.x" (aqui e nas Features 008/009/012). A decisão vigente é **Java 25** e **Spring Boot 4.1.x** (linha estável atual — Spring Framework 7, Jakarta EE 11, Spring Security 7, Jackson 3), registrada em `docs/sprints/sprint-02-fundacao-backend-gpt/00_padrao_qualidade_e_arquitetura.md`. Esse mesmo arquivo documenta os pontos de atenção da migração 3.x→4.x (ex.: `SecurityFilterChain` explícito, `@MockitoBean` no lugar de `@MockBean`). Use-o como fonte da verdade, não os valores "Java 21+"/"Spring Boot 3.x" abaixo.
 
 Atualizar `.env.example` com:
 

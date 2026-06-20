@@ -11,6 +11,8 @@ Dois sistemas de permissão coexistem hoje, sem estarem conectados:
 
 O que falta não é inventar o conceito — é **persistir e ligar os dois**: hoje é um array estático em memória, sem backend, sem ligação real com papel do usuário logado. É exatamente isso que o usuário descreve ao dizer "Knowledge Graph é uma funcionalidade que posso atribuir a um produto, posso modificar um produto, posso remover essa funcionalidade do produto".
 
+> **Atualização — auditoria de consistência feita antes do início do backend:** ADR-0014 (modelo canônico de papéis) e ADR-0015 (módulos como portão de acesso) já resolvem, do lado do backend, exatamente os dois pontos que esta sprint formaliza do lado do frontend. O toggle de módulo (Tarefa A/B abaixo) já tem, no backend (`sprint-02-fundacao-backend-gpt/06_modelo_core_tenant_product_modulos.md`, Seção E), um mecanismo (`@RequireModule`) que faz o módulo desabilitado bloquear de fato os endpoints — não fica só um dado consultável pela UI. E `/api/v1/me` (etapa 05 do backend) já devolve `role` no mesmo formato (`super_admin`, minúsculo, singular) que `UserRole`/`viewAsRole` já usam — a Tarefa C ("RBAC formal") não precisa de adaptador, só consumir o campo direto.
+
 ## Objetivo
 
 Modelar `ProductModule` como entidade real (produto ↔ módulo do catálogo, com estado habilitado/desabilitado e regras de dependência), e gatear toggle dessa atribuição por permissão de papel.

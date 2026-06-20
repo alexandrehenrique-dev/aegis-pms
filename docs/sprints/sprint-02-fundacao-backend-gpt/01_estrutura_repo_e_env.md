@@ -6,7 +6,7 @@
 
 Você é um engenheiro sênior trabalhando no backend do **Aegis PMS**, Product Management System do ecossistema BYOP — uma plataforma administrativa multi-produto, multi-tenant, modular e orientada a contratos (não um CMS comum).
 
-Stack obrigatória: Java 21+, Spring Boot 3.x, Spring Security OAuth2 Resource Server, Spring Data JPA, Flyway, Spring Modulith, PostgreSQL (com volume persistente dedicado), Keycloak (com PostgreSQL dedicado e persistente, nunca H2), Docker Compose. O frontend já existe em React (não é Angular — decisão registrada em ADR-0011) e será buildado e servido pelo Spring Boot na mesma origem mais adiante nesta sprint.
+Stack obrigatória: **Java 25** (não "21+", não negociável), **Spring Boot 4.1.x** (linha estável atual — vem com Spring Framework 7, Jakarta EE 11, Hibernate 7.1, Spring Security 7, Jackson 3; ver `00_padrao_qualidade_e_arquitetura.md` para os pontos de atenção na migração de 3.x para 4.x), Spring Security OAuth2 Resource Server, Spring Data JPA, Flyway, Spring Modulith, PostgreSQL (com volume persistente dedicado), Keycloak (com PostgreSQL dedicado e persistente, nunca H2), Docker Compose. O frontend já existe em React (não é Angular — decisão registrada em ADR-0011) e será buildado e servido pelo Spring Boot na mesma origem mais adiante nesta sprint.
 
 Regras que nunca podem ser violadas: não remover persistência dos bancos; não usar H2 como banco principal; não misturar regra de negócio em controller; não criar microsserviços (é um monólito modular); manter `/api/v1` como prefixo de toda API; toda etapa precisa ter critérios de aceite e validação antes de seguir para a próxima.
 
@@ -72,8 +72,19 @@ KEYCLOAK_ISSUER_URI=http://localhost:8282/realms/aegis
 # Frontend (build estático servido pelo backend — ver etapa 18)
 FRONTEND_DEV_PORT=5173
 
-# Storage
-AEGIS_STORAGE_LOCAL_PATH=./data/storage
+# Storage (estratégia por produto — local por padrão, ver etapa 11 Seção D). A pasta é criada
+# automaticamente (etapa 04, bootstrap em Java multiplataforma; etapa 19, volume Docker) — nunca
+# precisa ser criada manualmente, em nenhum sistema operacional. O código sempre grava dentro de um
+# namespace fixo "aegis/pms" abaixo deste caminho raiz (ex.: caminho final de um asset =
+# ${AEGIS_STORAGE_LOCAL_PATH}/aegis/pms/{tenantId}/{productId}/{category}/{filename}), para o mesmo
+# volume poder ser compartilhado por outros produtos BYOP no futuro sem reconfigurar nada.
+AEGIS_STORAGE_LOCAL_PATH=./data/assets
+# Opcional — só necessário se algum produto usar assetStorageStrategy "s3"
+AEGIS_STORAGE_S3_BUCKET=
+AEGIS_STORAGE_S3_REGION=
+AEGIS_STORAGE_S3_ACCESS_KEY_ID=
+AEGIS_STORAGE_S3_SECRET_ACCESS_KEY=
+AEGIS_STORAGE_S3_PRESIGNED_URL_TTL_SECONDS=900
 
 # Timezone
 TZ=America/Sao_Paulo

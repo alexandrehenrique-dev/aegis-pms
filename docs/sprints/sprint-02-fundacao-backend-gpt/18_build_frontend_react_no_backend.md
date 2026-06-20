@@ -42,6 +42,13 @@ Regras:
 
 Implementar via um `WebMvcConfigurer`/`Controller` de fallback que não intercepte `/api` nem `/actuator`.
 
+### D. Padrão de qualidade e entrega (obrigatório)
+
+> Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
+
+- **Java 25** / **Spring Boot 4.1.x**. Sem entidade/repository nesta etapa — a classe com lógica é o `Controller`/`WebMvcConfigurer` de fallback. 100% de cobertura nele mesmo assim: testar que `/api/v1/**` e `/actuator/**` nunca caem no fallback, e que qualquer outra rota cai.
+- Entregar em uma rodada só (não há entity/mapper/service aqui): `SpaFallbackController` (ou `WebMvcConfigurer` equivalente) + teste `@WebMvcTest` cobrindo os 4 cenários dos Critérios de aceite.
+
 ## Critérios de aceite
 
 - [ ] `npm run build` do frontend gera `dist/` sem erros.
@@ -49,6 +56,7 @@ Implementar via um `WebMvcConfigurer`/`Controller` de fallback que não intercep
 - [ ] Refresh em uma rota não-raiz (ex.: `/algumarota`) também retorna `index.html`, não 404.
 - [ ] `/api/v1/me` continua sendo API (401 sem token, JSON com token).
 - [ ] `/actuator/health` continua respondendo JSON, não HTML.
+- [ ] `mvn clean verify` confirma 100% de cobertura no controller/configurer de fallback (JaCoCo).
 
 ## Validação
 

@@ -43,12 +43,25 @@ type InviteUserRequest = {
 2. Criar `TenantMembership` local vinculando o `subject` do novo usuário do Keycloak ao tenant, com o `role` informado.
 3. Se o convite veio de `ProductAssignment` (etapa 09) ou de criação de tenant (etapa 09), criar também o registro correspondente (`ProductAssignment` ou marcar o tenant com o `initialAdminEmail`) apontando para o `subject` recém-criado.
 4. `inviteStatus` fica `"pendente"` até o usuário completar o cadastro no Keycloak (primeiro login bem-sucedido marca como `"ativo"` — pode ser um listener de evento do Keycloak ou verificado no próximo `GET /me`).
+5. **(Adicionado pela etapa 23, se já estiver implementada quando esta etapa for executada — senão, é um retrofit a fazer depois)** Ao final do passo 2 (criar `TenantMembership`), chamar `NotificationService.assignOnboarding(userSubject)` para o novo usuário já nascer com a notificação de onboarding pendente.
 
 ### C. Regras de negócio
 
 - E-mail duplicado no mesmo tenant é rejeitado com 409.
 - `PUT /users/{userId}` permite editar `role` e `allowedProducts`, nunca o e-mail (e-mail é imutável, é a identidade no Keycloak).
 - Usuário não pode editar/remover a si mesmo de forma que fique sem nenhum `TENANT_ADMIN`/`SUPER_ADMIN` ativo no tenant (regra de "não se trancar para fora").
+- **Isolamento por tenant** (`00_padrao_qualidade_e_arquitetura.md`, Seção 10): usuário de um tenant fora do escopo do usuário autenticado (sem membership ativa, exceto `SUPER_ADMIN`) retorna 404, nunca 403, em qualquer endpoint da Seção A.
+
+### D. Padrão de qualidade e entrega (obrigatório)
+
+> Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
+
+- **Java 25** / **Spring Boot 4.1.x**. Esta etapa **não cria entidade nova** (reaproveita `TenantMembershipRepository` da etapa 06) — a peça nova é o cliente do Keycloak Admin API. 100% de cobertura nas classes funcionais, incluindo `KeycloakAdminClient`/equivalente (testar com o client mockado, nunca chamando o Keycloak real no teste unitário).
+- Entregar em rodadas:
+  1. `KeycloakAdminClient` (wrapper do Admin REST API — criar usuário, disparar verificação) + testes com `WireMock`/mock HTTP, sem depender do Keycloak real subindo no teste.
+  2. `UserMapper` (MapStruct, `TenantMembership` + dados do Keycloak → `UserSummary`) + testes de mapper.
+  3. `UserService` (convite, regra de e-mail duplicado, regra de "não se trancar para fora") + testes com mocks — cada regra da Seção C com teste do caminho feliz e da rejeição.
+  4. `UserController` (endpoints da Seção A) + testes `@WebMvcTest` + validação via `curl`.
 
 ## Critérios de aceite
 
@@ -57,6 +70,8 @@ type InviteUserRequest = {
 - [ ] Convite com e-mail duplicado no tenant é rejeitado.
 - [ ] Detalhe e edição de usuário funcionam.
 - [ ] Remover o último `TENANT_ADMIN`/`SUPER_ADMIN` de um tenant é bloqueado.
+- [ ] Usuário/tenant fora do escopo de quem chama (sem `SUPER_ADMIN`) retorna 404 (não 403).
+- [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa (JaCoCo).
 
 ## Validação
 

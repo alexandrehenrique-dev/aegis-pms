@@ -39,11 +39,20 @@ Usuários e papéis, espelhando `frontend/src/core/auth/mocks/users.ts` (mesma s
 - `editor@byop.io` — `EDITOR` em `BYOP`, `ProductAssignment` em `maestro-beton`.
 - `viewer@byop.io` — `VIEWER` em `BYOP`, `ProductAssignment` em `maestro-beton`.
 
+> **(Adicionado pela etapa 23, se já estiver implementada — senão, retrofit a fazer depois)** A notificação `ONBOARDING` (etapa 23) é dado técnico, criada via migration Flyway (não `CommandLineRunner`), com fan-out (`UserNotificationStatus`, `autoShown=false`) para os 5 usuários acima.
+
 ### B. Seed do Knowledge Graph
 
 **WikiDev**: nodes para o produto, categoria "Programação", tópico "Java", artigo "Spring Boot", artigo "JPA". Edges: `WikiDev CONTAINS Categoria Programação`, `Categoria Programação CONTAINS Tópico Java`, `Tópico Java CONTAINS Artigo Spring Boot`, `Artigo Spring Boot RELATED_TO Artigo JPA`.
 
 **Loki**: nodes para o produto, um poema, uma música, uma playlist. Edges: `Poema INSPIRED_BY Música`, `Música PART_OF Playlist`.
+
+### C. Padrão de qualidade e entrega (obrigatório)
+
+> Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
+
+- **Java 25** / **Spring Boot 4.1.x**. Sem entidade nova nesta etapa (usa os repositories já existentes de `tenant`/`product`/`graph`/`user`) — a classe com lógica é o(s) `CommandLineRunner`(s) de seed. 100% de cobertura mesmo assim: testar que o seed é **idempotente** (rodar duas vezes não duplica tenants/produtos/nodes) e que só executa no profile `local`.
+- Entregar em uma rodada só (não há entity/mapper/service nova aqui): `DemoDataSeeder`/`KnowledgeGraphSeeder` (ou nomes equivalentes) + testes de integração (`@SpringBootTest` com profile `local`) confirmando idempotência e o critério "não roda em `prod`".
 
 ## Critérios de aceite
 
@@ -52,6 +61,8 @@ Usuários e papéis, espelhando `frontend/src/core/auth/mocks/users.ts` (mesma s
 - [ ] `super-admin@byop.io` autenticado vê os 3 tenants via `GET /api/v1/tenants`; os demais usuários veem só os seus.
 - [ ] Seed roda apenas em profile `local` (não em `prod`).
 - [ ] Grafo do WikiDev e do Loki existe e responde a consultas de `neighbors`/`related`.
+- [ ] Rodar o seed duas vezes não duplica nenhum dado (idempotente).
+- [ ] `mvn clean verify` confirma 100% de cobertura no(s) seeder(s) (JaCoCo).
 
 ## Validação
 

@@ -51,10 +51,10 @@ Subir e configurar manualmente via console admin (`http://localhost:8282`, login
 - Criar client `aegis-web`: tipo OpenID Connect, Client authentication OFF, Standard flow ON, Direct access grants OFF (a menos que precise testar temporariamente), PKCE S256 se disponível.
   - Valid redirect URIs: `http://localhost:5173/*`, `http://localhost:8080/*` (5173 = Vite; 8080 = quando o backend já estiver servindo o build do React).
   - Web origins: `http://localhost:5173`, `http://localhost:8080`.
-- Criar roles globais: `AEGIS_SUPER_ADMIN`, `TENANT_ADMIN`, `PRODUCT_MANAGER`, `CONTENT_EDITOR`, `CONTENT_REVIEWER`, `VIEWER`.
+- Criar **exatamente 5 roles globais, todas com prefixo `AEGIS_`** (ver ADR-0014 — modelo canônico de papéis, que reconcilia Keycloak ↔ backend ↔ frontend; não inventar nomes alternativos como "CONTENT_EDITOR"/"CONTENT_REVIEWER"): `AEGIS_SUPER_ADMIN`, `AEGIS_TENANT_ADMIN`, `AEGIS_PRODUCT_MANAGER`, `AEGIS_EDITOR`, `AEGIS_VIEWER`.
 - Criar um usuário de teste com uma dessas roles, e-mail verificado.
 
-Observação arquitetural: Keycloak autentica; o Aegis autoriza operacionalmente por tenant/membership/módulo (isso será implementado na etapa 06). As roles do Keycloak ficam amplas — permissões finas pertencem ao backend.
+Observação arquitetural: Keycloak autentica; o Aegis autoriza operacionalmente por tenant/membership/módulo (isso será implementado na etapa 06). As roles do Keycloak ficam amplas — permissões finas pertencem ao backend. A etapa 05 (`JwtRoleConverter`) define a regra exata de conversão de `AEGIS_<NOME>` para o que o backend (`@PreAuthorize`) e o frontend (`/api/v1/me`) consomem — ver ADR-0014.
 
 ### C. Exportar o realm para versionamento
 
@@ -75,7 +75,7 @@ Esse arquivo **não** entra no `.gitignore` — configuração de Keycloak é ve
 
 - [ ] Keycloak acessível em `http://localhost:8282`, login admin funciona.
 - [ ] Keycloak usa o `keycloak-postgres`, não H2.
-- [ ] Realm `aegis`, client `aegis-web` e as 6 roles globais existem.
+- [ ] Realm `aegis`, client `aegis-web` e as 5 roles globais existem, todas com prefixo `AEGIS_` (`AEGIS_SUPER_ADMIN`, `AEGIS_TENANT_ADMIN`, `AEGIS_PRODUCT_MANAGER`, `AEGIS_EDITOR`, `AEGIS_VIEWER` — ADR-0014).
 - [ ] Usuário de teste criado e com role atribuída.
 - [ ] Realm e usuário sobrevivem a `docker compose restart keycloak` e a `docker compose down && docker compose up -d` (sem `-v`).
 - [ ] `infra/keycloak/realm/aegis-realm.json` existe e está versionado.
