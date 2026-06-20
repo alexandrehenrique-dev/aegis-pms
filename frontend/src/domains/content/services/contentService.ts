@@ -21,6 +21,14 @@ export const contentService = {
   async listWorkflowItems(): Promise<ListWorkflowItemsResponse> {
     return wfInitialItems;
   },
+
+  /** Cria um artigo do domínio `content` (Sprint 12, Tarefa B) — distinto de `pagesService.createPage`, que cria uma `Page` institucional. */
+  async createContent(payload: { title: string; type: string; lang: string; author: string }): Promise<ContentRow> {
+    logApiCall("POST", "/api/v1/products/{productId}/content", payload);
+    const created: ContentRow = { ...payload, status: "Draft", updatedAt: "agora", publication: "—", version: "v1" };
+    contentStore.unshift(created);
+    return created;
+  },
   // Pontos de integração real (Sprint 07) — docs/trace/00_endpoints_esperados.md, Seção B.1.
   // {contentId} é placeholder: este service ainda não recebe o id do conteúdo selecionado
   // (ContentEditor/WorkflowPanel chamam estes métodos sem parâmetro hoje).

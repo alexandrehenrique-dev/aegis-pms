@@ -1,6 +1,6 @@
 import { pagesByProduct } from "../mocks/pages.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
-import type { CreateSectionRequest, ReorderSectionsRequest, UpdateSectionRequest } from "../contracts/requests";
+import type { CreatePageRequest, CreateSectionRequest, ReorderSectionsRequest, UpdateSectionRequest } from "../contracts/requests";
 import type { ListPagesResponse, Page, Section } from "../contracts/responses";
 
 // Store em memória só para a sessão do navegador — ver nota equivalente em
@@ -38,7 +38,36 @@ export const pagesService = {
     return page ? clonePage(page) : undefined;
   },
 
+  async getPageBySlug(productSlug: string, slug: string): Promise<Page | undefined> {
+    const page = pagesStore.find((p) => p.productSlug === productSlug && p.slug === slug);
+    return page ? clonePage(page) : undefined;
+  },
+
   // Pontos de integração real (Sprint 11, Tarefa B.2 / docs/trace/00_endpoints_esperados.md, Seção D.1).
+
+  async createPage(productSlug: string, req: CreatePageRequest): Promise<Page> {
+    logApiCall("POST", `/api/v1/products/${productSlug}/pages`, req);
+    const created: Page = {
+      id: `${productSlug}-${req.slug}`,
+      productSlug,
+      slug: req.slug,
+      title: req.title,
+      locale: req.locale,
+      status: "draft",
+      version: 1,
+      seo: {},
+      sections: [],
+    };
+    pagesStore.push(created);
+    return clonePage(created);
+  },
+
+  async deletePage(productSlug: string, pageId: string): Promise<void> {
+    const index = pagesStore.findIndex((p) => p.productSlug === productSlug && p.id === pageId);
+    if (index < 0) return;
+    logApiCall("DELETE", `/api/v1/products/${productSlug}/pages/${pageId}`);
+    pagesStore.splice(index, 1);
+  },
 
   async updatePage(productSlug: string, pageId: string, patch: Partial<Pick<Page, "title" | "status" | "seo">>): Promise<Page> {
     const page = findStorePage(productSlug, pageId);

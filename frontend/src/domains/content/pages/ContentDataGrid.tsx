@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { AnimatePresence } from "motion/react";
 import { Filter, Search } from "lucide-react";
 import { Badge, Button, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
@@ -7,6 +8,7 @@ import { contentService } from "../services/contentService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { ContentStatusBadge } from "../components/ContentStatusBadge";
 import { ContentCardMobile } from "../components/ContentCardMobile";
+import { NewContentModal } from "../components/NewContentModal";
 
 function FilterGroup({ label, options, value, onChange }: { label: string; options: string[]; value: string | null; onChange: (v: string | null) => void }) {
   return (
@@ -28,6 +30,7 @@ export function ContentDataGrid() {
   const [lang, setLang] = useState<string | null>(null);
   const [type, setType] = useState<string | null>(null);
   const [author, setAuthor] = useState<string | null>(null);
+  const [showNewContent, setShowNewContent] = useState(false);
   const { data: contents, loading, error } = useAsyncData(() => contentService.listContent(), []);
 
   const options = useMemo(() => ({
@@ -47,7 +50,8 @@ export function ContentDataGrid() {
 
   return (
     <>
-      <PageHeader title="Lista de Conteúdos" module="Conteúdo" desc="DataGrid operacional de páginas, seções, artigos, traduções e versões." badge="Conteúdo">
+      <AnimatePresence>{showNewContent && <NewContentModal onClose={() => setShowNewContent(false)} />}</AnimatePresence>
+      <PageHeader title="Lista de Conteúdos" module="Conteúdo" desc="DataGrid operacional de artigos, traduções e versões." badge="Conteúdo">
         <Popover>
           <PopoverTrigger asChild><Button><Filter size={15} />Status / Idioma / Tipo / Autor</Button></PopoverTrigger>
           <PopoverContent className="w-80">
@@ -57,7 +61,7 @@ export function ContentDataGrid() {
             <FilterGroup label="Autor" options={options.authors} value={author} onChange={setAuthor} />
           </PopoverContent>
         </Popover>
-        <Button primary onClick={() => navigate("/content/new/editor")}>Novo conteúdo</Button>
+        <Button primary onClick={() => setShowNewContent(true)}>Novo conteúdo</Button>
       </PageHeader>
       <div className="mb-4 rounded-2xl border border-border bg-card p-3">
         <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2">

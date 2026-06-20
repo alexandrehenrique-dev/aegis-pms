@@ -34,6 +34,9 @@ const PublishPanel = lazy(() => import("../../domains/content/pages/PublishPanel
 const VersionsPage = lazy(() => import("../../domains/content/pages/VersionsPage").then((m) => ({ default: m.VersionsPage })));
 const VersionCompareView = lazy(() => import("../../domains/content/pages/VersionCompareView").then((m) => ({ default: m.VersionCompareView })));
 
+// --- domains/pages ---
+const PagesList = lazy(() => import("../../domains/pages/pages/PagesList").then((m) => ({ default: m.PagesList })));
+
 // --- domains/assets ---
 const AssetLibrary = lazy(() => import("../../domains/assets/pages/AssetLibrary").then((m) => ({ default: m.AssetLibrary })));
 const AssetUploadScreen = lazy(() => import("../../domains/assets/pages/AssetUploadScreen").then((m) => ({ default: m.AssetUploadScreen })));
@@ -124,6 +127,8 @@ export function AppRoutes() {
             <Route path="/content/:id/publish" element={<PublishPanel />} />
             <Route path="/content/:id/versions" element={<VersionsPage />} />
             <Route path="/content/:id/compare" element={<VersionCompareView />} />
+
+            <Route path="/pages" element={<PagesList />} />
 
             <Route path="/assets" element={<AssetLibrary />} />
             <Route path="/assets/upload" element={<AssetUploadScreen />} />
