@@ -16,6 +16,8 @@ export type UpdateProductRequest = {
   name: string;
   type: string;
   status: ProductStatus;
+  /** Mesma seleção de módulos da criação (Field/checkbox por módulo, defaults por tipo) — ver EditProductModal/core/products/moduleDefaults.ts. */
+  modules: string[];
 };
 
 export type DeleteProductRequest = {

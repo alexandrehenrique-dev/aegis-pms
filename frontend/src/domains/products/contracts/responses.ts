@@ -10,9 +10,26 @@ export type ProductSummary = {
   last: string;
   score: string;
   tenantId?: string;
+  /** Módulos selecionados (chaves de `core/products/moduleDefaults.ts`) — editável, mesma UI da criação (ver EditProductModal). */
+  modulesList?: string[];
 };
 
 export type ListProductsResponse = ProductSummary[];
+
+/**
+ * Shape mínimo para Editar/Excluir um produto (ver `useProductActions`).
+ * `ProductSummary` (esta tela) e `ProductOption` (shared/types/auth —
+ * usado por `ProductSelectScreen`, core/auth) satisfazem este tipo
+ * estruturalmente, então o mesmo hook/componentes servem as duas telas
+ * sem reusar o modelo de dados de uma na outra.
+ */
+export type EditableProduct = {
+  id?: string;
+  name: string;
+  type: string;
+  status: ProductStatus;
+  modulesList?: string[];
+};
 
 export type ModuleCatalogItem = {
   Icon: ComponentType<{ size?: number; className?: string }>;

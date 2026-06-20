@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus } from "lucide-react";
+import { useAuth } from "../../../core/auth/AuthContext";
 import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 import { PermGate } from "../../../app/guards/PermGate";
 import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
@@ -14,11 +15,16 @@ const PERIODS = ["Últimos 7 dias", "Últimos 30 dias", "Últimos 90 dias"];
 export function DashboardGlobal() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
+  const { tenantProducts } = useAuth();
   const canCreate = !["editor", "viewer"].includes(viewAsRole);
   const canSeeUsers = ["super_admin", "tenant_admin"].includes(viewAsRole);
   const canSeeFinancial = viewAsRole === "super_admin";
   const { data: summary, loading, error } = useAsyncData(() => dashboardService.getSummary(), []);
   const [period, setPeriod] = useState(PERIODS[1]);
+  // Contagem real (não mock) — reflete na hora criação/edição/exclusão de produto
+  // feitas em ProductSelectScreen/ProductsList, ao contrário do resto do summary.
+  const activeProducts = tenantProducts.filter((p) => p.status === "Ativo").length;
+  const archivedProducts = tenantProducts.filter((p) => p.status === "Arquivado").length;
 
   return (
     <>
@@ -39,7 +45,7 @@ export function DashboardGlobal() {
             <PartialErrorWidget />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <KPIWidget label="Produtos ativos" value={String(summary.activeProducts)} detail={`${summary.archivedProducts} produto arquivado`} onClick={() => navigate("/products")} />
+              <KPIWidget label="Produtos ativos" value={String(activeProducts)} detail={`${archivedProducts} produto${archivedProducts === 1 ? "" : "s"} arquivado${archivedProducts === 1 ? "" : "s"}`} onClick={() => navigate("/products")} />
               <KPIWidget label="Conteúdos pendentes" value={String(summary.pendingContent)} detail={`${summary.pendingContentNeedingReview} exigem revisão`} onClick={() => navigate("/content/list")} />
               <KPIWidget label="Aprovações em aberto" value={String(summary.openApprovals)} detail={`${summary.criticalApprovals} críticas`} onClick={() => navigate("/content/workflow")} />
               <KPIWidget label="Formulários recebidos" value={String(summary.formsReceived)} detail={`+${summary.formsReceivedToday} hoje`} onClick={() => navigate("/forms/submissions")} />

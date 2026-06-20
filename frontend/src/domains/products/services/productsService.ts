@@ -30,22 +30,33 @@ export const productsService = {
     return moduleCatalogStore;
   },
 
+  // Pontos de integração real (Sprint 07) — docs/sprints/sprint-02-fundacao-backend-gpt/06*.
+
   async enableModule(moduleName: string): Promise<void> {
     const m = moduleCatalogStore.find((x) => x.name === moduleName);
-    if (m) m.state = "habilitado";
+    if (!m) return;
+    console.log(`[mock→backend] POST /api/v1/products/{productId}/modules/${moduleName}/enable`);
+    m.state = "habilitado";
   },
 
   async disableModule(moduleName: string): Promise<void> {
     const m = moduleCatalogStore.find((x) => x.name === moduleName);
-    if (m) m.state = "desabilitado";
+    if (!m) return;
+    console.log(`[mock→backend] POST /api/v1/products/{productId}/modules/${moduleName}/disable`);
+    m.state = "desabilitado";
   },
 
+  /** docs/AEGIS_PMS_V1.md §8.4: `POST /api/v1/admin/products/{productId}/archive`. */
   async archiveProduct(idOrName: string): Promise<void> {
     const p = productsStore.find((x) => x.id === idOrName || x.name === idOrName);
-    if (p) p.status = "Arquivado";
+    if (!p) return;
+    console.log(`[mock→backend] POST /api/v1/admin/products/${p.id ?? p.name}/archive`);
+    p.status = "Arquivado";
   },
 
-  async saveSettings(): Promise<void> {},
+  async saveSettings(): Promise<void> {
+    console.log("[mock→backend] PATCH /api/v1/admin/products/{productId} (settings)");
+  },
 
   /** Editar Produto (docs/implementation/004_aegis_pms_screen_inventory.md, 05.04) — nome/tipo/status; gating de role fica na UI (ver core/permissions/roles.ts). */
   async update(idOrName: string, req: UpdateProductRequest): Promise<ProductSummary> {
@@ -56,6 +67,8 @@ export const productsService = {
     p.name = req.name;
     p.type = req.type;
     p.status = req.status;
+    p.modulesList = req.modules;
+    p.modules = req.modules.length;
     return p;
   },
 
@@ -73,13 +86,16 @@ export const productsService = {
     productsStore.splice(index, 1);
   },
 
+  /** docs/AEGIS_PMS_V1.md §8.4: `POST /api/v1/admin/products`. */
   async create(req: CreateProductRequest): Promise<ProductSummary> {
+    console.log("[mock→backend] POST /api/v1/admin/products", req);
     const created: ProductSummary = {
       id: slugify(req.name) || slugify(req.slug),
       name: req.name,
       type: req.type,
       status: "Pendente",
       modules: req.initialModules.length,
+      modulesList: req.initialModules,
       last: "Produto criado agora",
       score: "—",
       tenantId: req.tenantId,

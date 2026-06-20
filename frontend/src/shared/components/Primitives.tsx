@@ -1,21 +1,28 @@
-import { type MouseEvent, type ReactNode } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { AlertTriangle, ChevronDown, Circle, Lock, Plus, Sparkles } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 export const fade = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.2 } };
 
-export function Button({ children, primary = false, onClick, disabled }: { children: ReactNode; primary?: boolean; onClick?: () => void; disabled?: boolean }) {
-  return (
+/**
+ * forwardRef é necessário porque Radix (`PopoverTrigger asChild`,
+ * `DropdownMenuTrigger asChild` etc.) clona este componente via `Slot` e
+ * precisa anexar um ref real ao `<button>` — sem isso, React avisa "Function
+ * components cannot be given refs" e o trigger não funciona corretamente.
+ */
+export const Button = forwardRef<HTMLButtonElement, { children: ReactNode; primary?: boolean } & ButtonHTMLAttributes<HTMLButtonElement>>(
+  ({ children, primary = false, className = "", ...props }, ref) => (
     <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.97] active:opacity-90 ${primary ? "border-primary bg-primary text-primary-foreground shadow-[0_4px_14px_rgba(124,58,237,.25)] hover:bg-primary/90" : "border-border bg-card text-foreground hover:bg-muted"}`}
+      ref={ref}
+      {...props}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.97] active:opacity-90 ${primary ? "border-primary bg-primary text-primary-foreground shadow-[0_4px_14px_rgba(124,58,237,.25)] hover:bg-primary/90" : "border-border bg-card text-foreground hover:bg-muted"} ${className}`}
     >
       {children}
     </button>
-  );
-}
+  ),
+);
+Button.displayName = "Button";
 
 export function SkeletonCard() {
   return (

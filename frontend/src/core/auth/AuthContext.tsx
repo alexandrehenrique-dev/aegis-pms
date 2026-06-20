@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AuthUser, ProductOption, TenantOption } from "../../shared/types";
 import { setAuthTokenProvider } from "../../shared/services/apiClient";
+import type { DeleteProductRequest, UpdateProductRequest } from "../../domains/products/contracts/requests";
 
 type AuthContextValue = {
   authUser: AuthUser | null;
@@ -17,6 +18,8 @@ type AuthContextValue = {
   selectProduct: (product: ProductOption | null) => void;
   switchTenant: (tenantId: string) => void;
   switchProduct: (productId: string) => void;
+  updateProduct: (productId: string, req: UpdateProductRequest) => void;
+  removeProduct: (productId: string, req: DeleteProductRequest) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -70,11 +73,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (p) setSelectedProduct(p);
   };
 
+  /**
+   * Editar Produto a partir de ProductSelectScreen (botão direito → menu de
+   * contexto, mesma jornada de TenantSelectScreen para tenants suspensos) —
+   * único jeito de agir sobre um produto bloqueado/sem módulos, que não pode
+   * ser aberto. Ponto de integração real (Sprint 07): `PATCH
+   * /api/v1/admin/products/{productId}` (docs/AEGIS_PMS_V1.md §8.4).
+   */
+  const updateProduct = (productId: string, req: UpdateProductRequest) => {
+    if (!effectiveTenant) return;
+    console.log(`[mock→backend] PATCH /api/v1/admin/products/${productId}`, req);
+    const tenantId = effectiveTenant.id;
+    const patch = { name: req.name, type: req.type, status: req.status, modulesList: req.modules, modules: req.modules.length };
+    setUserProducts((prev) => ({ ...prev, [tenantId]: (prev[tenantId] ?? []).map((p) => (p.id === productId ? { ...p, ...patch } : p)) }));
+    setSelectedProduct((sp) => (sp && sp.id === productId ? { ...sp, ...patch } : sp));
+  };
+
+  /** Exclusão lógica (soft delete) — `DELETE /api/v1/admin/products/{productId}` (docs/AEGIS_PMS_V1.md §8.4/§8.5: produto nunca é apagado fisicamente). */
+  const removeProduct = (productId: string, req: DeleteProductRequest) => {
+    if (!effectiveTenant) return;
+    console.log(`[mock→backend] DELETE /api/v1/admin/products/${productId}`, req);
+    const tenantId = effectiveTenant.id;
+    setUserProducts((prev) => ({ ...prev, [tenantId]: (prev[tenantId] ?? []).filter((p) => p.id !== productId) }));
+    setSelectedProduct((sp) => (sp && sp.id === productId ? null : sp));
+  };
+
   const value = useMemo<AuthContextValue>(() => ({
     authUser, selectedTenant, selectedProduct, userTenants, userProducts,
     effectiveTenant, tenantProducts, effectiveProduct,
     login, logout, selectTenant: setSelectedTenant, selectProduct: setSelectedProduct,
-    switchTenant, switchProduct,
+    switchTenant, switchProduct, updateProduct, removeProduct,
   }), [authUser, selectedTenant, selectedProduct, userTenants, userProducts, effectiveTenant, tenantProducts, effectiveProduct]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
