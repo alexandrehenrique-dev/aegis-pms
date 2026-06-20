@@ -1,5 +1,6 @@
 import type { MiniBlock } from "../contracts/responses";
 import type { Section } from "../contracts/responses";
+import { Markdown } from "../../../shared/components/Markdown";
 
 function asStr(v: unknown, fallback = ""): string {
   return typeof v === "string" ? v : fallback;
@@ -50,7 +51,7 @@ export function BlockRenderer({ section }: { section: Section }) {
       return (
         <div className="p-6">
           {c.title ? <h3 className="text-xl font-semibold">{asStr(c.title)}</h3> : null}
-          <div className="mt-2 max-w-2xl text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: asStr(c.body) }} />
+          <div className="mt-2 max-w-2xl text-sm text-muted-foreground"><Markdown>{asStr(c.body)}</Markdown></div>
         </div>
       );
 
@@ -78,7 +79,7 @@ export function BlockRenderer({ section }: { section: Section }) {
           <div className="rounded-xl bg-muted p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>
           <div>
             <h3 className="text-xl font-semibold">{asStr(c.title)}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">{asStr(c.body)}</p>
+            <div className="mt-2 text-sm text-muted-foreground"><Markdown>{asStr(c.body)}</Markdown></div>
           </div>
         </div>
       );
@@ -94,7 +95,7 @@ export function BlockRenderer({ section }: { section: Section }) {
             {items.map((item, i) => (
               <div key={i} className="rounded-lg border border-border p-3">
                 <p className="font-medium">{asStr(item.title)}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{asStr(item.desc)}</p>
+                <div className="mt-1 text-sm text-muted-foreground"><Markdown inline>{asStr(item.desc)}</Markdown></div>
               </div>
             ))}
           </div>
@@ -150,7 +151,7 @@ export function BlockRenderer({ section }: { section: Section }) {
           {items.map((item, i) => (
             <div key={i} className="rounded-lg border border-border p-3">
               <p className="font-medium">{asStr(item.q ?? item.question)}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{asStr(item.a ?? item.answer)}</p>
+              <div className="mt-1 text-sm text-muted-foreground"><Markdown inline>{asStr(item.a ?? item.answer)}</Markdown></div>
             </div>
           ))}
         </div>

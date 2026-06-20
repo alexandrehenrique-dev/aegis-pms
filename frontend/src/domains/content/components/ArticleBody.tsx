@@ -1,5 +1,5 @@
-import { Fragment } from "react";
 import { KgRefMark } from "../../knowledge/components/KgRefMark";
+import { Markdown } from "../../../shared/components/Markdown";
 
 const KG_REF_PATTERN = /\{\{kg-ref:([\w-]+):([^}]+)\}\}/g;
 
@@ -8,6 +8,8 @@ const KG_REF_PATTERN = /\{\{kg-ref:([\w-]+):([^}]+)\}\}/g;
  * `{{kg-ref:nodeId:Label}}` em referências vivas com popover ao passar o
  * mouse (Sprint 11, Tarefa C.4) — a experiência de leitura que a WikiDev
  * define como motivo de existir da plataforma ("Conhecimento Conectado").
+ * Os trechos de texto entre marcas `kg-ref` aceitam markdown (Sprint 13,
+ * Tarefa B.2) — por isso são processados em segmentos, não como bloco único.
  */
 export function ArticleBody({ body }: { body: string }) {
   const parts: Array<string | { nodeId: string; label: string }> = [];
@@ -24,7 +26,7 @@ export function ArticleBody({ body }: { body: string }) {
   return (
     <p className="leading-relaxed text-foreground">
       {parts.map((part, i) =>
-        typeof part === "string" ? <Fragment key={i}>{part}</Fragment> : <KgRefMark key={i} nodeId={part.nodeId} label={part.label} />,
+        typeof part === "string" ? <Markdown key={i} inline>{part}</Markdown> : <KgRefMark key={i} nodeId={part.nodeId} label={part.label} />,
       )}
     </p>
   );
