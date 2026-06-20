@@ -1,76 +1,122 @@
 import { useState } from "react";
-import { AlertTriangle, Loader2, Plus, Send } from "lucide-react";
+import { AlertTriangle, Link2, Loader2, Plus, Send } from "lucide-react";
 import { Badge, Button, Card, Field, SelectLike } from "../../../shared/components/Primitives";
 import { PermissionHint } from "../../../shared/components/Primitives";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
 import { ContentStatusBadge } from "./ContentStatusBadge";
 import { VersionTimeline } from "./VersionTimeline";
+import { BLOCK_TYPES, type BlockType, type Page, type Section } from "../../pages/contracts/responses";
+import { EntityPicker } from "../../knowledge/components/EntityPicker";
+import { knowledgeService } from "../../knowledge/services/knowledgeService";
+import type { KGNode } from "../../knowledge/mocks/knowledge.mocks";
 
-const INITIAL_BLOCKS = ["Hero", "Experiências", "Vídeo destaque", "Sobre", "Galeria", "Depoimentos", "CTA final", "SEO"];
-
-export function ContentStructureTree() {
-  const [blocks, setBlocks] = useState(INITIAL_BLOCKS);
-  const [selected, setSelected] = useState(blocks[0]);
-
-  const handleAddBlock = () => {
-    const name = `Novo bloco ${blocks.length + 1}`;
-    setBlocks((prev) => [...prev, name]);
-    setSelected(name);
-    toast.success("Bloco adicionado", { description: name });
-  };
+export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock }: {
+  page: Page | null; selectedId: string | null; onSelect: (id: string) => void; onAddBlock: (type: BlockType) => void;
+}) {
+  const [newType, setNewType] = useState<BlockType>("text");
+  const sections = page?.sections ?? [];
 
   return (
     <Card className="h-full">
       <h2 className="mb-3 text-lg font-semibold">Estrutura</h2>
-      {blocks.map((b, i) => (
-        <button key={b} onClick={() => setSelected(b)} className={`mb-1 flex w-full items-center justify-between rounded-lg p-2 text-left text-sm ${selected === b ? "bg-muted" : "hover:bg-muted"}`}>
-          <span>{b}</span>
-          <span className="flex gap-1"><Badge>{b === "SEO" ? "SEO" : "Bloco"}</Badge>{i === 4 && <AlertTriangle size={14} className="text-[#8A5A12]" />}</span>
+      {!page && <p className="text-sm text-muted-foreground">Nenhuma página carregada para este produto.</p>}
+      {sections.map((s, i) => (
+        <button key={s.id} onClick={() => onSelect(s.id)} className={`mb-1 flex w-full items-center justify-between rounded-lg p-2 text-left text-sm ${selectedId === s.id ? "bg-muted" : "hover:bg-muted"}`}>
+          <span>{s.label}</span>
+          <span className="flex gap-1"><Badge>{s.type}</Badge>{i === sections.length - 1 && sections.length > 4 && <AlertTriangle size={14} className="text-[#8A5A12]" />}</span>
         </button>
       ))}
-      <Button onClick={handleAddBlock}><Plus size={15} />Adicionar bloco</Button>
+      {page && (
+        <div className="mt-3 flex items-center gap-2">
+          <SelectLike label="" value={newType} options={[...BLOCK_TYPES]} onChange={(v) => setNewType(v as BlockType)} />
+          <Button onClick={() => onAddBlock(newType)}><Plus size={15} />Adicionar bloco</Button>
+        </div>
+      )}
     </Card>
   );
 }
 
-export function BlockEditorCanvas() {
-  const [title, setTitle] = useState("Maestro Beton: experiências que conectam pessoas");
-  const [subtitle, setSubtitle] = useState("Eventos, cultura e encontros em uma plataforma institucional governada.");
-  const [ctaPrimary, setCtaPrimary] = useState("Solicitar orçamento");
-  const [ctaSecondary, setCtaSecondary] = useState("Ver apresentações");
-  const [heroImage, setHeroImage] = useState("hero-maestro-beton.jpg");
-  const [alignment, setAlignment] = useState("Centro");
-  const [visibility, setVisibility] = useState("Visível");
+function ItemsEditor({ items, onChange }: { items: Record<string, unknown>[]; onChange: (items: Record<string, unknown>[]) => void }) {
+  return (
+    <div className="space-y-2">
+      {items.map((item, i) => (
+        <div key={i} className="rounded-lg border border-border p-3">
+          {typeof item.title === "string" && (
+            <Field label="Título" value={item.title} onChange={(v) => onChange(items.map((it, j) => (j === i ? { ...it, title: v } : it)))} />
+          )}
+          {typeof item.desc === "string" && (
+            <Field label="Descrição" value={item.desc} onChange={(v) => onChange(items.map((it, j) => (j === i ? { ...it, desc: v } : it)))} textarea />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function BlockEditorCanvas({ section, onChangeContent }: {
+  section: Section | null; onChangeContent: (patch: Record<string, unknown>) => void;
+}) {
+  if (!section) {
+    return (
+      <Card>
+        <h2 className="text-lg font-semibold">Editor / Canvas</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Selecione um bloco na estrutura para editar.</p>
+      </Card>
+    );
+  }
+
+  const { content } = section;
+  const stringFields = Object.entries(content).filter(([, v]) => typeof v === "string") as [string, string][];
+  const items = Array.isArray(content.items) ? (content.items as Record<string, unknown>[]) : null;
+  const advancedKeys = Object.keys(content).filter((k) => k !== "items" && typeof content[k] !== "string");
+  const canLinkEntity = section.type === "text" || section.type === "rich-text";
+
+  const handleLinkEntity = async (node: KGNode) => {
+    const body = typeof content.body === "string" ? content.body : "";
+    onChangeContent({ body: `${body}${body ? " " : ""}{{kg-ref:${node.id}:${node.label}}}` });
+    await knowledgeService.createEdge(section.id, node.id, "relacionado a");
+    toast.success("Referência linkada", { description: `${node.label} inserido no corpo e relação criada no grafo.` });
+  };
 
   return (
     <Card>
-      <h2 className="text-lg font-semibold">Editor / Canvas — Hero</h2>
-      <p className="mb-4 text-sm text-muted-foreground">Cockpit de conteúdo por blocos, não textarea gigante.</p>
+      <h2 className="text-lg font-semibold">Editor / Canvas — {section.label}</h2>
+      <p className="mb-4 text-sm text-muted-foreground">Bloco do tipo <b>{section.type}</b>, vindo de `pagesService` — não é mais uma string solta.</p>
       <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Título" value={title} onChange={setTitle} />
-        <Field label="Subtítulo" value={subtitle} onChange={setSubtitle} />
-        <Field label="CTA principal" value={ctaPrimary} onChange={setCtaPrimary} />
-        <Field label="CTA secundário" value={ctaSecondary} onChange={setCtaSecondary} />
-        <SelectLike label="Imagem hero" value={heroImage} options={["hero-maestro-beton.jpg", "hero-evento-2024.jpg", "hero-equipe.jpg"]} onChange={setHeroImage} />
-        <SelectLike label="Alinhamento" value={alignment} options={["Esquerda", "Centro", "Direita"]} onChange={setAlignment} />
-        <SelectLike label="Visibilidade" value={visibility} options={["Visível", "Oculto"]} onChange={setVisibility} />
+        {stringFields.map(([k, v]) => (
+          <Field key={k} label={k} value={v} onChange={(nv) => onChangeContent({ [k]: nv })} textarea={k === "body"} />
+        ))}
       </div>
-      <div className="mt-5 rounded-2xl border border-border bg-muted p-6">
-        <p className="font-mono text-xs text-muted-foreground">Preview parcial</p>
-        <h3 className="mt-3 max-w-xl text-2xl font-semibold">{title}</h3>
-        <p className="mt-2 max-w-xl text-sm text-muted-foreground">{subtitle}</p>
-        {/* preview do conteúdo sendo editado — não é controle da tela, não tratar como botão morto */}
-        <div className="mt-4 flex gap-2"><Button primary>{ctaPrimary}</Button><Button>{ctaSecondary}</Button></div>
-      </div>
+      {canLinkEntity && (
+        <div className="mt-3">
+          <Popover>
+            <PopoverTrigger asChild><Button><Link2 size={15} />Linkar a outra entidade</Button></PopoverTrigger>
+            <PopoverContent><EntityPicker onSelect={handleLinkEntity} /></PopoverContent>
+          </Popover>
+        </div>
+      )}
+      {items && (
+        <div className="mt-4">
+          <p className="mb-2 text-sm font-medium">Itens ({items.length})</p>
+          <ItemsEditor items={items} onChange={(next) => onChangeContent({ items: next })} />
+        </div>
+      )}
+      {advancedKeys.length > 0 && (
+        <details className="mt-4 rounded-xl border border-border bg-muted p-3 text-xs">
+          <summary className="cursor-pointer font-medium">Dados avançados ({advancedKeys.join(", ")})</summary>
+          <pre className="mt-2 overflow-auto">{JSON.stringify(Object.fromEntries(advancedKeys.map((k) => [k, content[k]])), null, 2)}</pre>
+        </details>
+      )}
     </Card>
   );
 }
 
-function SEOPanel() {
-  const [title, setTitle] = useState("Maestro Beton | Experiências");
-  const [description, setDescription] = useState("Conheça experiências e apresentações do Maestro Beton.");
-  const [keywords, setKeywords] = useState("maestro, eventos, apresentações");
+function SEOPanel({ page }: { page: Page | null }) {
+  const [title, setTitle] = useState(page?.seo.title ?? "Maestro Beton | Experiências");
+  const [description, setDescription] = useState(page?.seo.description ?? "Conheça experiências e apresentações do Maestro Beton.");
+  const [keywords, setKeywords] = useState(page?.seo.keywords ?? "maestro, eventos, apresentações");
   return (
     <div className="space-y-3">
       <Field label="Title" value={title} onChange={setTitle} />
@@ -117,7 +163,7 @@ function WorkflowPanel() {
   );
 }
 
-export function PropertiesPanel() {
+export function PropertiesPanel({ page, section }: { page: Page | null; section: Section | null }) {
   const [tab, setTab] = useState("Propriedades");
   return (
     <Card className="h-full">
@@ -126,9 +172,16 @@ export function PropertiesPanel() {
           <button key={t} onClick={() => setTab(t)} className={`rounded-lg px-2 py-1 text-xs ${tab === t ? "bg-primary text-white" : "bg-muted"}`}>{t}</button>
         ))}
       </div>
-      {tab === "SEO" ? <SEOPanel /> : tab === "Workflow" ? <WorkflowPanel /> : tab === "Histórico" ? <VersionTimeline compact /> : (
+      {tab === "SEO" ? <SEOPanel page={page} /> : tab === "Workflow" ? <WorkflowPanel /> : tab === "Histórico" ? <VersionTimeline compact /> : (
         <div className="space-y-2 text-sm">
-          {[["slug", "home"], ["tipo", "Página"], ["idioma", "PT-BR"], ["autor", "Marina Costa"], ["status", "Draft"], ["versão", "v18"], ["última atualização", "há 2 min"]].map((x) => (
+          {[
+            ["página", page?.slug ?? "—"],
+            ["bloco", section?.label ?? "—"],
+            ["tipo de bloco", section?.type ?? "—"],
+            ["idioma", page?.locale ?? "—"],
+            ["status", page?.status ?? "—"],
+            ["versão", page ? `v${page.version}` : "—"],
+          ].map((x) => (
             <div key={x[0]} className="flex justify-between rounded-lg bg-muted p-2"><span>{x[0]}</span><b>{x[1]}</b></div>
           ))}
         </div>
