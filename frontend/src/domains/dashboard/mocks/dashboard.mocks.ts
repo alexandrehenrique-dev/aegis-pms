@@ -27,7 +27,7 @@ export const modules = [
   [Boxes, "Forms", "Capturar respostas e oportunidades do produto.", "habilitado", "MVP", "Conteúdo", "Entrada operacional"],
   [BarChart3, "Analytics", "Acompanhar sinais de performance.", "habilitado", "V1", "Eventos", "Decisão baseada em dados"],
   [Globe2, "SEO", "Controlar presença e preview público.", "desabilitado", "MVP", "Conteúdo", "Descoberta orgânica"],
-  [Sparkles, "Knowledge Graph", "Conectar entidades do produto.", "dependência", "V1", "Conteúdo + Assets", "Conhecimento navegável"],
+  [Sparkles, "Knowledge Graph", "Conectar entidades do produto.", "dependência", "V1", "Conteúdo", "Conhecimento navegável"],
   [Workflow, "Workflow", "Revisar, aprovar e publicar com rastreio.", "habilitado", "MVP", "Usuários", "Controle editorial"],
   [Clock3, "Versionamento", "Comparar e restaurar versões.", "futuro", "Futuro", "Workflow", "Memória operacional"],
   [ShieldCheck, "Auditoria", "Rastrear decisões e mudanças relevantes.", "sem permissão", "MVP", "Permissões", "Governança"],

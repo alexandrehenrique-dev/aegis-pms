@@ -9,11 +9,12 @@ import { productsService } from "../../products/services/productsService";
 import { productAssignmentsService } from "../../users/services/productAssignmentsService";
 import { usersService } from "../../users/services/usersService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { PRODUCT_TYPE_MODULE_DEFAULTS } from "../../../core/products/moduleDefaults";
 import type { TenantOption } from "../../../shared/types";
 import type { ProductSummary } from "../../products/contracts/responses";
 import type { ProductAssignmentSummary } from "../../users/contracts/productAssignments";
 
-const INITIAL_MODULES = ["Conteúdo", "Assets", "Forms", "Analytics", "SEO", "Workflow"];
+const INITIAL_MODULES = PRODUCT_TYPE_MODULE_DEFAULTS["Site Institucional"].filter((m) => m.default).map((m) => m.key);
 
 type Step = 1 | 2 | 3 | 4;
 
