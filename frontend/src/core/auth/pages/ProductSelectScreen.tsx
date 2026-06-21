@@ -24,11 +24,12 @@ import type { ProductOption } from "../../../shared/types";
  * qualquer modal aberto no meio da edição.
  */
 function PCard({ p, onSelect }: { p: ProductOption; onSelect: (p: ProductOption) => void }) {
-  const { updateProduct, removeProduct } = useAuth();
+  const { updateProduct, removeProduct, toggleFavorite } = useAuth();
   const disabled = p.status === "Arquivado" || p.modules === 0;
   const persistence: ProductPersistence = {
     update: async (req) => updateProduct(p.id, req),
     remove: async (req) => removeProduct(p.id, req),
+    toggleFavorite: () => toggleFavorite(p.id),
   };
   // AuthContext já é reativo (setUserProducts dispara o re-render via
   // tenantProducts derivado) — não precisa de um refresh manual aqui,
