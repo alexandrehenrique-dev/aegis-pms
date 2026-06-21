@@ -1,10 +1,17 @@
 import { useRef, useState } from "react";
-import { motion } from "motion/react";
-import { Bold, Italic, Link2, List, X } from "lucide-react";
-import { Button, fade } from "./Primitives";
+import { Bold, Code, Heading1, Heading2, Heading3, Heading4, Italic, Link2, List, Quote, X } from "lucide-react";
+import { Button } from "./Primitives";
+import { ModalShell } from "./ModalShell";
 import { Markdown } from "./Markdown";
 
-type ToolbarAction = "bold" | "italic" | "list" | "link";
+type ToolbarAction = "bold" | "italic" | "list" | "link" | "h1" | "h2" | "h3" | "h4" | "code" | "quote";
+
+/** Aplica um prefixo de bloco (`#`, `>`, etc.) em cada linha selecionada — usado por headings e citação. */
+function prefixLines(before: string, selected: string, after: string, prefix: string, placeholder: string): { next: string; cursor: number } {
+  const lines = (selected || placeholder).split("\n").map((line) => `${prefix}${line}`).join("\n");
+  const next = `${before}${lines}${after}`;
+  return { next, cursor: before.length + lines.length };
+}
 
 function applyToolbarAction(value: string, selectionStart: number, selectionEnd: number, action: ToolbarAction): { next: string; cursor: number } {
   const before = value.slice(0, selectionStart);
@@ -23,6 +30,16 @@ function applyToolbarAction(value: string, selectionStart: number, selectionEnd:
     const label = selected || "texto do link";
     const next = `${before}[${label}](https://)${after}`;
     return { next, cursor: before.length + label.length + 3 };
+  }
+  if (action === "h1") return prefixLines(before, selected, after, "# ", "Título 1");
+  if (action === "h2") return prefixLines(before, selected, after, "## ", "Título 2");
+  if (action === "h3") return prefixLines(before, selected, after, "### ", "Título 3");
+  if (action === "h4") return prefixLines(before, selected, after, "#### ", "Título 4");
+  if (action === "quote") return prefixLines(before, selected, after, "> ", "Citação");
+  if (action === "code") {
+    const code = selected || "código";
+    const next = `${before}\`\`\`\n${code}\n\`\`\`${after}`;
+    return { next, cursor: before.length + 4 + code.length };
   }
   // list
   const lines = (selected || "item da lista").split("\n").map((line) => `- ${line}`).join("\n");
@@ -54,18 +71,25 @@ export function MarkdownEditModal({ title = "Editar texto", value, onSave, onClo
   };
 
   return (
-    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div {...fade} className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-2xl border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
+    <ModalShell onClose={onClose} maxWidthClassName="max-w-3xl">
+      <div className="flex max-h-[85vh] flex-col">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">{title}</h3>
           <button onClick={onClose} aria-label="Fechar" className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted"><X size={16} /></button>
         </div>
 
-        <div className="mt-4 flex gap-1 border-b border-border pb-3">
+        <div className="mt-4 flex flex-wrap gap-1 border-b border-border pb-3">
+          <button onClick={() => runAction("h1")} title="Título 1" className="rounded-lg p-2 transition hover:bg-muted"><Heading1 size={15} /></button>
+          <button onClick={() => runAction("h2")} title="Título 2" className="rounded-lg p-2 transition hover:bg-muted"><Heading2 size={15} /></button>
+          <button onClick={() => runAction("h3")} title="Título 3" className="rounded-lg p-2 transition hover:bg-muted"><Heading3 size={15} /></button>
+          <button onClick={() => runAction("h4")} title="Título 4" className="rounded-lg p-2 transition hover:bg-muted"><Heading4 size={15} /></button>
+          <span className="mx-1 w-px self-stretch bg-border" />
           <button onClick={() => runAction("bold")} title="Negrito" className="rounded-lg p-2 transition hover:bg-muted"><Bold size={15} /></button>
           <button onClick={() => runAction("italic")} title="Itálico" className="rounded-lg p-2 transition hover:bg-muted"><Italic size={15} /></button>
           <button onClick={() => runAction("list")} title="Lista" className="rounded-lg p-2 transition hover:bg-muted"><List size={15} /></button>
           <button onClick={() => runAction("link")} title="Link" className="rounded-lg p-2 transition hover:bg-muted"><Link2 size={15} /></button>
+          <button onClick={() => runAction("quote")} title="Citação" className="rounded-lg p-2 transition hover:bg-muted"><Quote size={15} /></button>
+          <button onClick={() => runAction("code")} title="Bloco de código" className="rounded-lg p-2 transition hover:bg-muted"><Code size={15} /></button>
         </div>
 
         <div className="mt-3 grid flex-1 gap-3 overflow-auto md:grid-cols-2">
@@ -85,7 +109,7 @@ export function MarkdownEditModal({ title = "Editar texto", value, onSave, onClo
           <Button onClick={onClose}>Cancelar</Button>
           <Button primary onClick={() => onSave(draft)}>Salvar texto</Button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </ModalShell>
   );
 }
