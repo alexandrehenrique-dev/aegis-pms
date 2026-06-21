@@ -64,6 +64,7 @@ Confirmar, nesta ordem, tudo o que foi construído nas etapas 01-21:
 - [ ] Nenhum `Repository` do projeto está sem Javadoc na interface ou em algum método.
 - [ ] Nenhum uso de `@MockBean`/`@SpyBean` em nenhum teste do projeto.
 - [ ] `aegis-postman-collection.json` tem uma pasta por etapa (03 a 22), a pasta "Auth" autentica e captura `{{token}}` automaticamente para os 5 usuários de teste, e importar a collection no Postman permite rodar todo o fluxo (login → CRUD de cada domínio) sem editar nenhum request manualmente.
+- [ ] `SPRINT-RESULTADO.md` tem uma entrada por etapa concluída (01 a 22, sem nenhuma faltando), cada uma com classes criadas, endpoints confirmados e as decisões que a etapa deixou a critério do GPT já registradas (não vazias/genéricas).
 
 ## Validação
 
@@ -83,6 +84,10 @@ http://localhost:8080/swagger-ui/index.html
 ```
 
 Percorrer o checklist da seção C item a item.
+
+## Artefato de continuidade — `SPRINT-RESULTADO.md`
+
+> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
 
 ## Commit sugerido
 
