@@ -79,9 +79,11 @@ function MetadataPanel({ content, knowledgeGraphEnabled, onPatchMetadata }: {
   return <p className="text-sm text-muted-foreground">Este tipo de conteúdo não tem metadados adicionais.</p>;
 }
 
-export function ContentArticleEditor({ content, knowledgeGraphEnabled, onChange }: {
+export function ContentArticleEditor({ content, knowledgeGraphEnabled, productSlug, onChange }: {
   content: ContentRow;
+  /** Mesmo gate usado por `MetadataPanel` para "Vincular música" (Sprint 11) — reaproveitado aqui para o botão "Vincular a outro conteúdo" da toolbar de markdown (Sprint 16, Tarefa C.4): as duas features exigem o mesmo módulo "Knowledge Graph" habilitado no produto, calculado por `ContentEditor.tsx`. */
   knowledgeGraphEnabled: boolean;
+  productSlug?: string;
   onChange: (patch: Partial<ContentRow>) => void;
 }) {
   const handlePatchMetadata = (patch: Record<string, unknown>) => onChange({ metadata: { ...content.metadata, ...patch } });
@@ -91,11 +93,13 @@ export function ContentArticleEditor({ content, knowledgeGraphEnabled, onChange 
       <Card>
         <Field label="Título" value={content.title} onChange={(v) => onChange({ title: v })} />
         <div className="mt-4">
-          <MarkdownField label="Corpo (markdown)" value={content.body ?? ""} onChange={(v) => onChange({ body: v })} />
+          <MarkdownField label="Corpo (markdown)" value={content.body ?? ""} onChange={(v) => onChange({ body: v })} enableEntityLink={knowledgeGraphEnabled} productSlug={productSlug} />
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Use <code>{"{{kg-ref:nodeId:Label}}"}</code> dentro do corpo para criar uma referência ao Knowledge Graph — a conexão é criada automaticamente ao salvar.
-        </p>
+        {knowledgeGraphEnabled && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Use o botão "Vincular a outro conteúdo" na barra de ferramentas do editor de markdown para linkar este texto a outra entidade do Knowledge Graph.
+          </p>
+        )}
       </Card>
       <Card>
         <h2 className="mb-3 text-lg font-semibold">Metadados — {content.type}</h2>
