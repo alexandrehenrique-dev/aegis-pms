@@ -60,7 +60,7 @@ export const roleBlockedRoutePrefixes: Record<UserRole, string[]> = {
   ],
   viewer: [
     "/settings", "/users", "/audit", "/products/new",
-    "/content/*/editor", "/forms/new", "/assets/upload", "/assets/*/metadata", "/assets/*/tags",
+    "/content/*/editor", "/pages/*/editor", "/forms/new", "/assets/upload", "/assets/*/metadata", "/assets/*/tags",
     "/content/*/workflow", "/knowledge/graph", "/knowledge/relationships", "/knowledge/entities",
     "/knowledge/search", "/knowledge/orphans", "/knowledge/insights",
   ],

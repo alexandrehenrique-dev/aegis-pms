@@ -3,6 +3,8 @@ import type { WFItem } from "../mocks/content.mocks";
 export type DifficultyLevel = "beginner" | "intermediate" | "advanced";
 
 export type ContentRow = {
+  /** Identidade real do `Content` (Sprint 15, Tarefa A) — usado para roteamento ao editor dedicado, nunca o `title` em slug improvisado. */
+  id: string;
   title: string; type: string; lang: string; author: string;
   status: string; updatedAt: string; publication: string; version: string;
   /** Campos de primeira classe adicionados na Sprint 11 (caso WikiDev) — não são metadata solta, pois a Knowledge Base precisa filtrar/ordenar por dificuldade e mostrar resumo em previews leves (ver `domains/knowledge` `GraphNodePreview`). */

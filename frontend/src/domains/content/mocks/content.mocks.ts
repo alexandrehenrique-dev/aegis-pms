@@ -61,9 +61,9 @@ export const wfImpact: Partial<Record<WFStatus, string>> = {
  */
 export const contentByProduct: Record<string, ContentRow[]> = {
   "conecta-talentos": [
-    { title: "Como montar um processo seletivo enxuto", type: "Artigo", lang: "PT-BR", author: "Conecta Talentos", status: "Published", updatedAt: "há 3 dias", publication: "Publicado", version: "v2" },
-    { title: "5 sinais de que sua empresa precisa de consultoria de RH", type: "Artigo", lang: "PT-BR", author: "Conecta Talentos", status: "Published", updatedAt: "há 9 dias", publication: "Publicado", version: "v1" },
-    { title: "Diversidade como vantagem competitiva", type: "Artigo", lang: "PT-BR", author: "Conecta Talentos", status: "Draft", updatedAt: "ontem", publication: "—", version: "v1" },
+    { id: "conecta-processo-seletivo-enxuto", title: "Como montar um processo seletivo enxuto", type: "Artigo", lang: "PT-BR", author: "Conecta Talentos", status: "Published", updatedAt: "há 3 dias", publication: "Publicado", version: "v2" },
+    { id: "conecta-sinais-consultoria-rh", title: "5 sinais de que sua empresa precisa de consultoria de RH", type: "Artigo", lang: "PT-BR", author: "Conecta Talentos", status: "Published", updatedAt: "há 9 dias", publication: "Publicado", version: "v1" },
+    { id: "conecta-diversidade-vantagem-competitiva", title: "Diversidade como vantagem competitiva", type: "Artigo", lang: "PT-BR", author: "Conecta Talentos", status: "Draft", updatedAt: "ontem", publication: "—", version: "v1" },
   ],
 
   // WikiDev: estrutura categoria → tópico → artigo (Sprint 11, Tarefa E.2).
@@ -72,6 +72,7 @@ export const contentByProduct: Record<string, ContentRow[]> = {
   // da Tarefa C (ver domains/knowledge/mocks/knowledge.mocks.ts:wikidevKgNodes).
   wikidev: [
     {
+      id: "wikidev-introducao-spring-boot",
       title: "Introdução ao Spring Boot", type: "Artigo", lang: "PT-BR", author: "Equipe WikiDev",
       status: "Published", updatedAt: "há 2 dias", publication: "Publicado", version: "v3",
       category: "Programação", topic: "Java",
@@ -80,6 +81,7 @@ export const contentByProduct: Record<string, ContentRow[]> = {
       body: "Spring Boot é um framework que simplifica a criação de aplicações Spring prontas para produção. Ele se integra com {{kg-ref:node-jpa:JPA}} para persistência de dados e pode ser facilmente empacotado em containers com {{kg-ref:node-docker:Docker}} para deploy em qualquer ambiente.",
     },
     {
+      id: "wikidev-jpa-na-pratica",
       title: "JPA na prática", type: "Artigo", lang: "PT-BR", author: "Equipe WikiDev",
       status: "Published", updatedAt: "há 5 dias", publication: "Publicado", version: "v2",
       category: "Programação", topic: "Java",
@@ -87,6 +89,7 @@ export const contentByProduct: Record<string, ContentRow[]> = {
       difficultyLevel: "intermediate",
     },
     {
+      id: "wikidev-docker-para-desenvolvedores-java",
       title: "Docker para desenvolvedores Java", type: "Artigo", lang: "PT-BR", author: "Equipe WikiDev",
       status: "Draft", updatedAt: "hoje", publication: "—", version: "v1",
       category: "Programação", topic: "Java",
@@ -96,18 +99,20 @@ export const contentByProduct: Record<string, ContentRow[]> = {
   ],
 
   loki: [
-    { title: "Manifesto do Silêncio", type: "Manifesto", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 1 semana", publication: "Publicado", version: "v1", metadata: { playlistId: "node-playlist-introspeccao" } },
-    { title: "Manifesto da Errância", type: "Manifesto", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 2 semanas", publication: "Publicado", version: "v1" },
-    { title: "Sobre o esquecimento", type: "Reflexão", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 4 dias", publication: "Publicado", version: "v2" },
-    { title: "Sobre o tempo que insiste", type: "Reflexão", lang: "PT-BR", author: "Loki", status: "Draft", updatedAt: "ontem", publication: "—", version: "v1" },
-    { title: "Vigília", type: "Poema", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 3 dias", publication: "Publicado", version: "v1", metadata: { musicReferenceId: "node-musica-clair" } },
-    { title: "Fragmento noturno", type: "Poema", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 6 dias", publication: "Publicado", version: "v1" },
-    { title: "Insônia", type: "Poema", lang: "PT-BR", author: "Loki", status: "Draft", updatedAt: "hoje", publication: "—", version: "v1" },
+    { id: "loki-manifesto-do-silencio", title: "Manifesto do Silêncio", type: "Manifesto", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 1 semana", publication: "Publicado", version: "v1", metadata: { playlistId: "node-playlist-introspeccao" } },
+    { id: "loki-manifesto-da-errancia", title: "Manifesto da Errância", type: "Manifesto", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 2 semanas", publication: "Publicado", version: "v1" },
+    { id: "loki-sobre-o-esquecimento", title: "Sobre o esquecimento", type: "Reflexão", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 4 dias", publication: "Publicado", version: "v2" },
+    { id: "loki-sobre-o-tempo-que-insiste", title: "Sobre o tempo que insiste", type: "Reflexão", lang: "PT-BR", author: "Loki", status: "Draft", updatedAt: "ontem", publication: "—", version: "v1" },
+    { id: "loki-vigilia", title: "Vigília", type: "Poema", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 3 dias", publication: "Publicado", version: "v1", metadata: { musicReferenceId: "node-musica-clair" } },
+    { id: "loki-fragmento-noturno", title: "Fragmento noturno", type: "Poema", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 6 dias", publication: "Publicado", version: "v1" },
+    { id: "loki-insonia", title: "Insônia", type: "Poema", lang: "PT-BR", author: "Loki", status: "Draft", updatedAt: "hoje", publication: "—", version: "v1" },
     {
+      id: "loki-fragmentos",
       title: "Fragmentos", type: "Livro", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 1 mês", publication: "Publicado", version: "v1",
       metadata: { isbn: "978-65-00-00000-0", pdfUrl: "/downloads/fragmentos.pdf", epubUrl: "/downloads/fragmentos.epub", physicalAvailable: false },
     },
     {
+      id: "loki-introspeccao",
       title: "Introspecção", type: "Playlist", lang: "PT-BR", author: "Loki", status: "Published", updatedAt: "há 2 dias", publication: "Publicado", version: "v1",
       metadata: { trackCount: 14, provider: "Spotify", url: "https://open.spotify.com/playlist/introspeccao" },
     },
