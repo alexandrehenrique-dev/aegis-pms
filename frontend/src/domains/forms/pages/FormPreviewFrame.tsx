@@ -21,7 +21,7 @@ export function FormPreviewFrame() {
       </PageHeader>
       <Card>
         <div className="mb-4 flex flex-wrap gap-2">{["desktop", "tablet", "mobile", "vazio", "preenchido", "inválido", "enviado", "erro"].map((v) => <Button key={v} onClick={() => setState(v)}>{v}</Button>)}</div>
-        <div className={`mx-auto rounded-2xl border border-border bg-white p-5 ${state === "mobile" ? "max-w-[375px]" : state === "tablet" ? "max-w-[768px]" : "max-w-4xl"}`}>
+        <div className={`light isolate mx-auto rounded-2xl border border-border bg-white p-5 ${state === "mobile" ? "max-w-[375px]" : state === "tablet" ? "max-w-[768px]" : "max-w-4xl"}`}>
           <h2 className="text-2xl font-semibold">Contato Comercial</h2>
           <p className="mt-1 text-sm text-muted-foreground">Solicite uma proposta para o Maestro Beton.</p>
           {["Nome", "Email", "Telefone", "Mensagem"].map((f, i) => (

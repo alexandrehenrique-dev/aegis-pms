@@ -24,7 +24,7 @@ function WikiDevArticlePreview({ article }: { article: { title: string; body: st
     <div className="rounded-xl bg-muted p-8">
       <p className="text-xs text-muted-foreground">Preview de artigo publicado — WikiDev</p>
       <h2 className="mt-4 text-3xl font-semibold">{article.title}</h2>
-      <div className="mt-4 max-w-xl"><ArticleBody body={article.body} /></div>
+      <div className="mt-4 max-w-xl"><ArticleBody body={article.body} forceLightProse /></div>
       {related && related.length > 0 && (
         <div className="mt-6 max-w-xl rounded-lg border border-border bg-card p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Relacionados</p>
@@ -80,7 +80,7 @@ export function ResponsivePreviewFrame() {
           {["mobile", "tablet", "desktop"].map((v) => <Button key={v} onClick={() => setVp(v)} primary={vp === v}>{v}</Button>)}
           <SelectLike label="Idioma" value={lang} options={LANGUAGES} onChange={setLang} />
         </div>
-        <div className={`mx-auto rounded-2xl border border-border bg-white p-5 shadow-[0_8px_30px_rgba(28,28,28,.05)] ${vp === "mobile" ? "max-w-[375px]" : vp === "tablet" ? "max-w-[768px]" : "max-w-5xl"}`}>
+        <div className={`light isolate mx-auto rounded-2xl border border-border bg-white p-5 shadow-[0_8px_30px_rgba(28,28,28,.05)] ${vp === "mobile" ? "max-w-[375px]" : vp === "tablet" ? "max-w-[768px]" : "max-w-5xl"}`}>
           {wikidevArticle?.body ? (
             <WikiDevArticlePreview article={{ title: wikidevArticle.title, body: wikidevArticle.body }} />
           ) : loadingPage ? (
@@ -88,7 +88,7 @@ export function ResponsivePreviewFrame() {
           ) : page ? (
             <div className="divide-y divide-border">
               {globals && <GlobalNavbar globals={globals} />}
-              {[...page.sections].sort((a, b) => a.order - b.order).map((section) => <BlockRenderer key={section.id} section={section} />)}
+              {[...page.sections].sort((a, b) => a.order - b.order).map((section) => <BlockRenderer key={section.id} section={section} forceLightProse />)}
               {globals && <GlobalFooter globals={globals} />}
             </div>
           ) : (
