@@ -42,3 +42,4 @@ Ajuste visual pequeno, correção de typo, refactor local sem impacto, bugfix se
 | ADR-0014 | Modelo canônico de papéis (Keycloak ↔ Backend ↔ Frontend) | ACCEPTED |
 | ADR-0015 | Módulos de produto como portão de acesso (module-gating) | ACCEPTED |
 | ADR-0016 | Knowledge Graph: relação entre conteúdos, não entre componentes de página | ACCEPTED |
+| ADR-0017 | Templates de produto: esqueleto de páginas por tipo, e o tipo Custom | ACCEPTED |

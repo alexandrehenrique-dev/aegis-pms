@@ -99,6 +99,8 @@ type WFItem = { id: string; title: string; type: string; lang: string; author: s
 
 ## Validação
 
+> **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os à pasta desta etapa em `aegis-postman-collection.json` (collection cumulativa, autenticação via `{{token}}` herdado da pasta "Auth") e devolva o JSON completo atualizado para download.
+
 ```bash
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/products/<productId>/content
 

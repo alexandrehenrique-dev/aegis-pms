@@ -82,6 +82,8 @@ Esse arquivo **não** entra no `.gitignore` — configuração de Keycloak é ve
 
 ## Validação
 
+> **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os à pasta desta etapa em `aegis-postman-collection.json` (collection cumulativa, autenticação via `{{token}}` herdado da pasta "Auth") e devolva o JSON completo atualizado para download.
+
 ```bash
 curl http://localhost:8282/realms/aegis/.well-known/openid-configuration
 # deve retornar JSON com issuer = http://localhost:8282/realms/aegis

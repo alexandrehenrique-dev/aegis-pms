@@ -15,13 +15,18 @@ Configurações de produto/tenant editáveis, matriz de permissões por role, e 
 ### A. `settings` — endpoints
 
 ```txt
-GET /api/v1/products/{productId}/settings/overview
-PUT /api/v1/products/{productId}/settings
-PUT /api/v1/tenants/{tenantId}                      (já existe, etapa 09 — reaproveitar)
-GET /api/v1/tenants/{tenantId}/roles
-PUT /api/v1/tenants/{tenantId}/roles
-GET /api/v1/tenants/{tenantId}/permission-matrix
+GET  /api/v1/products/{productId}/settings/overview
+PUT  /api/v1/products/{productId}/settings
+PUT  /api/v1/tenants/{tenantId}                      (já existe, etapa 09 — reaproveitar)
+GET  /api/v1/tenants/{tenantId}/roles
+PUT  /api/v1/tenants/{tenantId}/roles
+POST /api/v1/tenants/{tenantId}/roles/restore-defaults
+GET  /api/v1/tenants/{tenantId}/permission-matrix
+POST /api/v1/tenants/{tenantId}/permission-matrix/restore-defaults
+POST /api/v1/tenants/{tenantId}/permission-matrix/preview      body: { role: string }
 ```
+
+> **`restore-defaults` (roles e matriz) e `permission-matrix/preview` adicionados nesta revisão** — auditoria de cobertura encontrou que o frontend (`settingsService.restoreDefaultRoles`/`restoreDefaultPermissions`/`generateAccessPreview`) já chamava três caminhos que nenhuma etapa documentava, e que a Seção A (parágrafo abaixo) tinha uma afirmação **contraditória** sobre `AccessPreviewPanel` ("calcula no client, sem endpoint próprio") — corrigida agora. `restore-defaults` (ambos): reverte `RolePermission`/roles do tenant para o catálogo padrão de fábrica — idempotente, sem efeito sobre customizações de outros tenants. `permission-matrix/preview`: dado um `role`, devolve a navegação/capacidades resultantes **sem persistir nada** — é uma simulação somente leitura (não confundir com `PUT /permission-matrix`, que de fato altera).
 
 Payloads:
 
@@ -35,7 +40,7 @@ type SettingCard = {
 
 `roles`/`permission-matrix`: modelar como uma matriz `role × permissão` (ex.: `{ role: string; permissions: Record<string, boolean> }[]`), onde as permissões são as mesmas chaves já usadas em `core/permissions/roles.ts` no frontend (`roleVisibleNav`, `roleBlockedRoutePrefixes`) — não inventar uma nomenclatura de permissão diferente da que o frontend já usa, para a Sprint 05 (fora do GPT) conseguir ligar uma na outra sem tradução.
 
-`AccessPreviewPanel.tsx` (simulação de "como ficaria a navegação para o papel X") consome o mesmo `GET /permission-matrix`, calculando a simulação no client — não precisa de endpoint próprio.
+`AccessPreviewPanel.tsx` (simulação de "como ficaria a navegação para o papel X") consome `POST /permission-matrix/preview` (ver acima) — **não** calcula no client; o backend é a fonte de verdade de permissão (mesmo princípio já usado em `implementation/011`, "UI nunca decide permissão").
 
 ### B. `dashboard` — endpoint agregador
 
@@ -78,11 +83,15 @@ Implementar como agregador puro: consulta `products` (ativos/arquivados), `conte
 - [ ] `settings/overview` retorna os cards esperados.
 - [ ] `roles`/`permission-matrix` usam as mesmas chaves de permissão do frontend (`core/permissions/roles.ts`).
 - [ ] Editar permissões como papel não autorizado retorna 403.
+- [ ] `restore-defaults` (roles e matriz) reverte para o catálogo padrão e é idempotente.
+- [ ] `permission-matrix/preview` devolve a simulação sem persistir nenhuma alteração.
 - [ ] `dashboard/summary` retorna números reais (não fixos) agregados dos outros domínios.
 - [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa (JaCoCo).
 - [ ] `RolePermissionRepository` tem Javadoc na interface e em todo método.
 
 ## Validação
+
+> **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os à pasta desta etapa em `aegis-postman-collection.json` (collection cumulativa, autenticação via `{{token}}` herdado da pasta "Auth") e devolva o JSON completo atualizado para download.
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/products/<productId>/settings/overview

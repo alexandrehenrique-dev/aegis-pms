@@ -19,7 +19,13 @@ GET  /api/v1/tenants/{tenantId}/users
 POST /api/v1/tenants/{tenantId}/users/invite
 GET  /api/v1/tenants/{tenantId}/users/{userId}
 PUT  /api/v1/tenants/{tenantId}/users/{userId}
+POST /api/v1/tenants/{tenantId}/users/{userId}/resend-invite
+POST /api/v1/tenants/{tenantId}/users/{userId}/block
 ```
+
+> **`resend-invite`/`block` adicionados nesta revisão** — auditoria de cobertura encontrou que `usersService.resendInvite`/`blockUser` (frontend) já chamavam esses dois caminhos sem nenhuma etapa documentá-los. `resend-invite`: só válido para usuário com `inviteStatus: "pendente"` (senão 400 — usuário já ativo não precisa reenviar convite); dispara de novo o fluxo de verificação do Keycloak (mesmo mecanismo da Seção B). `block`: marca `TenantMembership.status` como inativo/bloqueado (não deleta o registro) — usuário bloqueado não consegue mais autenticar nesse tenant; sujeito à mesma regra de "não se trancar para fora" da Seção C (não pode bloquear o último `TENANT_ADMIN`/`SUPER_ADMIN` ativo).
+>
+> **Nota de divergência de path (auditoria de cobertura):** o frontend mock hoje (`usersService.invite`, `productAssignmentsService.assign`) chama `/api/v1/admin/users/invite` e `/api/v1/admin/products/{productId}/assignments` — paths que nunca apareceram em nenhuma etapa e que **não** são o padrão canônico. O padrão correto, usado em todas as etapas (06, 09, 14, 15, 16, 23) é sempre escopado por `tenantId`/`productId` no path (`/tenants/{tenantId}/users/...`, `/products/{productId}/users`), nunca um prefixo `/admin/...` solto sem o escopo na URL — escopar pelo path é o que sustenta a regra de isolamento da Seção 10 do padrão de qualidade. Implementar **só** os paths desta etapa (e da etapa 09); a reconciliação do frontend mock para os paths corretos é tarefa da Sprint 07 (toggle mock↔real), não desta etapa de backend.
 
 Payloads:
 
@@ -71,9 +77,13 @@ type InviteUserRequest = {
 - [ ] Detalhe e edição de usuário funcionam.
 - [ ] Remover o último `TENANT_ADMIN`/`SUPER_ADMIN` de um tenant é bloqueado.
 - [ ] Usuário/tenant fora do escopo de quem chama (sem `SUPER_ADMIN`) retorna 404 (não 403).
+- [ ] `resend-invite` em usuário já ativo (não pendente) é rejeitado com 400; em usuário pendente, dispara o fluxo de verificação de novo.
+- [ ] `block` impede login subsequente do usuário nesse tenant; bloquear o último `TENANT_ADMIN`/`SUPER_ADMIN` ativo é rejeitado (mesma regra de "não se trancar para fora").
 - [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa (JaCoCo).
 
 ## Validação
+
+> **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os à pasta desta etapa em `aegis-postman-collection.json` (collection cumulativa, autenticação via `{{token}}` herdado da pasta "Auth") e devolva o JSON completo atualizado para download.
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/tenants/<tenantId>/users/invite \
