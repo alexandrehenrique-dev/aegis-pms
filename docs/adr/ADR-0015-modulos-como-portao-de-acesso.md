@@ -49,7 +49,7 @@ Negativas / trade-offs:
 ## Impactos
 
 - **Backend**: etapa 06 ganha a tarefa de implementar `@RequireModule`/`ModuleAccessAspect`; etapas 07, 10, 11, 12, 13, 17, 21 ganham a tarefa de anotar seus controllers e um cenário de teste (`módulo desabilitado → 403 MODULE_DISABLED`) nos critérios de aceite; etapa 22 (checklist final) ganha um item de auditoria cruzada confirmando que todo domínio gateável está de fato anotado.
-- **Frontend**: nenhuma mudança imediata de código — Sprint 05 (ainda não executada) já previa o toggle; esta ADR só garante que, quando o backend existir, o toggle terá efeito real e o frontend pode tratar `MODULE_DISABLED` de forma genérica quando integrar.
+- **Frontend**: auditoria de refinamento (Sprint 15) encontrou que isso já é um problema **hoje**, não só uma preocupação futura — `AppShell.tsx` (sidebar) filtra item de navegação só por `roleVisibleNav[viewAsRole]` (papel), sem checar `product.modulesList`; um produto sem Knowledge Graph habilitado ainda mostra o item "Knowledge Graph" na sidebar para quem tem permissão de papel. Corrigido na Sprint 15, Tarefa E — filtro passa a exigir as duas condições (módulo do produto **e** papel do usuário), não uma ou outra.
 
 ## Links Relacionados
 
