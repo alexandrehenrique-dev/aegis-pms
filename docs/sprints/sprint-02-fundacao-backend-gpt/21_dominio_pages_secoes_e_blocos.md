@@ -20,6 +20,22 @@ CRUD de páginas compostas por seções tipadas e reordenáveis, com catálogo f
 
 **PageSection**: `id`, `pageId`, `type` (`BlockType`, catálogo fechado abaixo), `variant?`, `order` (inteiro, define a posição na página), `contentJson` (conteúdo específico do bloco — schema validado por `type`, ver Tarefa C), `settingsJson?` (configurações visuais — `columns`, `align`, `loop`, etc., nunca classe CSS), `createdAt`, `updatedAt`.
 
+### A.1 `Event` (agenda) — entidade própria, não "content type" genérico
+
+> Corrigido depois de uma auditoria de aderência entre este documento e o frontend real: a Seção C (regra do bloco `event-list`) descrevia `source` como uma referência a um "content type" genérico (`{ type: "contentType", contentType: string }`) — mas o frontend já implementou eventos como **domínio próprio**, com `EventsManagerDrawer.tsx`/`eventsService.ts` e contrato dedicado (`domains/pages/contracts/events.ts`), nunca como um `Content` do domínio da etapa 10. O backend formaliza isso como entidade própria, não como busca por tipo de conteúdo.
+
+**Event**: `id`, `tenantId`, `productId`, `title`, `datetime` (instante único, ISO 8601 com data **e** hora — nunca dois campos separados de data/hora; o frontend já manda um único valor combinado, ex. `"2026-07-12T16:00"`), `location`, `type` (`"public"|"private"`), `visibility` (mesmo catálogo que `domains/pages/contracts/events.ts` já define no frontend — copiar os valores exatos de lá, não inventar um novo), `description` (markdown, mesma sanitização da Seção C abaixo), `imageAssetId?`, `createdAt`, `updatedAt`.
+
+```txt
+GET    /api/v1/products/{productId}/events
+POST   /api/v1/products/{productId}/events
+GET    /api/v1/products/{productId}/events/{eventId}
+PUT    /api/v1/products/{productId}/events/{eventId}
+DELETE /api/v1/products/{productId}/events/{eventId}
+```
+
+A regra do bloco `event-list` (Seção C) passa a referenciar este endpoint, com filtro opcional (ex.: por período/visibilidade), nunca um "content type" — `source: { filter?: { from?: string; to?: string; visibility?: string } }`.
+
 ### B. Catálogo fechado de `BlockType`
 
 ```txt
@@ -44,7 +60,7 @@ Cada `BlockType` tem regras mínimas de validação sobre `contentJson` antes de
 | `image`, `gallery` | todo item de imagem exige `alt` |
 | `card-list`, `feature-grid` | `items` com pelo menos 1 e no máximo 12 elementos |
 | qualquer tipo com `acceptsChildren` preenchido (hoje só `two-column`) | os filhos (`left`/`right` no caso do `two-column`) só podem ser de um `type` presente na lista `acceptsChildren` daquele bloco; um filho do mesmo tipo do pai (recursão) é sempre rejeitado, mesmo que o tipo esteja na lista — evita layout recursivo descontrolado. Esta é uma regra **genérica** (validar contra `acceptsChildren` do catálogo, não um `if (type === "two-column")` hardcoded), para já valer para qualquer bloco futuro que ganhe sub-blocos |
-| `event-list` | `source` deve referenciar um content type válido (`{ type: "contentType", contentType: string, filter?: object }`) — a seção não embute a lista de eventos diretamente, ela aponta para onde buscar |
+| `event-list` | `source` referencia o domínio próprio `Event` da Seção A.1 (`{ filter?: { from?: string; to?: string; visibility?: string } }`) — a seção não embute a lista de eventos diretamente, ela aponta para onde buscar; **nunca** um "content type" genérico (ver Seção A.1 — correção de aderência) |
 | `contact` | `formId` deve existir e referenciar um `FormDefinition` do mesmo produto (domínio `form`, etapa 12) — **não tem mais um array de campos próprio**; se o frontend mandar `fields[]` em vez de `formId`, rejeitar com 400 (é o formato antigo, divergente do contrato) |
 | `form` | mesma regra do `contact`: `formId` deve existir e referenciar um `FormDefinition` do mesmo produto — bloco genérico para embutir um formulário já criado em qualquer página, não só na seção de contato |
 | `download` | `items[]` cada um com `fileAssetId` de um `Asset` existente (qualquer categoria, tipicamente `pdf`/`document`) e `title` não vazio |
@@ -128,12 +144,12 @@ Regra: se o produto ainda não tem `ProductGlobals` (produto recém-criado), `GE
 
 > Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
 
-- **Java 25** / **Spring Boot 4.1.x**. Javadoc obrigatório na interface e em todo método de `PageRepository`, `PageSectionRepository`, `ProductGlobalsRepository`. Mappers via MapStruct (`PageMapper`, `PageSectionMapper`, `ProductGlobalsMapper`). 100% de cobertura nas classes funcionais — incluindo `SectionContentValidationService` (a função `validateSectionContent` da Seção C, que é a classe mais crítica desta etapa: cada linha da tabela de validação precisa de pelo menos um teste de caminho feliz e um de rejeição) e o sanitizador de markdown reaproveitado da etapa 10.
+- **Java 25** / **Spring Boot 4.1.x**. Javadoc obrigatório na interface e em todo método de `PageRepository`, `PageSectionRepository`, `ProductGlobalsRepository`, `EventRepository`. Mappers via MapStruct (`PageMapper`, `PageSectionMapper`, `ProductGlobalsMapper`, `EventMapper`). 100% de cobertura nas classes funcionais — incluindo `SectionContentValidationService` (a função `validateSectionContent` da Seção C, que é a classe mais crítica desta etapa: cada linha da tabela de validação precisa de pelo menos um teste de caminho feliz e um de rejeição) e o sanitizador de markdown reaproveitado da etapa 10.
 - Entregar em rodadas:
-  1. `Page`, `PageSection`, `ProductGlobals` (entities) + `PageRepository`, `PageSectionRepository`, `ProductGlobalsRepository` + testes `@DataJpaTest`.
-  2. `PageMapper`, `PageSectionMapper`, `ProductGlobalsMapper` (MapStruct) + testes de mapper.
-  3. `SectionContentValidationService` + `PageService` + `ProductGlobalsService` (regras das Seções C/E/F) + testes com mocks — cada `BlockType` da tabela da Seção C com pelo menos 2 testes (válido e inválido).
-  4. `PageController`, `ProductGlobalsController` (endpoints da Seção D/F) + testes `@WebMvcTest` + validação via `curl`.
+  1. `Page`, `PageSection`, `ProductGlobals`, `Event` (entities, Seção A.1 incluída) + `PageRepository`, `PageSectionRepository`, `ProductGlobalsRepository`, `EventRepository` + testes `@DataJpaTest`.
+  2. `PageMapper`, `PageSectionMapper`, `ProductGlobalsMapper`, `EventMapper` (MapStruct) + testes de mapper.
+  3. `SectionContentValidationService` + `PageService` + `ProductGlobalsService` + `EventService` (regras das Seções C/E/F/A.1) + testes com mocks — cada `BlockType` da tabela da Seção C com pelo menos 2 testes (válido e inválido).
+  4. `PageController`, `ProductGlobalsController`, `EventController` (endpoints da Seção D/F/A.1) + testes `@WebMvcTest` + validação via `curl`.
 
 ## Critérios de aceite
 
@@ -148,6 +164,8 @@ Regra: se o produto ainda não tem `ProductGlobals` (produto recém-criado), `GE
 - [ ] `GET /products/{productId}/globals` nunca retorna 404 (objeto vazio se ainda não configurado); `PUT` faz upsert.
 - [ ] Página/seção de produto fora do escopo do usuário retorna 404 (não 403).
 - [ ] Produto com módulo `PAGES` desabilitado retorna 403 `MODULE_DISABLED` em `PageController` (não afeta `ProductGlobalsController`).
+- [ ] `Event` é entidade própria (`EventController`), nunca resolvido como "content type"; CRUD completo funciona; `datetime` é um único valor ISO com data e hora (nunca dois campos separados).
+- [ ] Bloco `event-list` referencia `Event` via filtro (período/visibilidade), nunca um `contentType`.
 - [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa, incluindo `SectionContentValidationService` (JaCoCo).
 - [ ] `PageRepository`/`PageSectionRepository`/`ProductGlobalsRepository` têm Javadoc na interface e em todo método.
 

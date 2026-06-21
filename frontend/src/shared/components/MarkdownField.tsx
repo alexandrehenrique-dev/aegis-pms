@@ -8,7 +8,12 @@ import { MarkdownEditModal } from "./MarkdownEditModal";
  * Em vez do `<textarea>` simples, mostra uma pré-visualização e um botão
  * "Editar texto" que abre a `MarkdownEditModal`.
  */
-export function MarkdownField({ label, value, onChange }: { label: string; value: string; onChange: (next: string) => void }) {
+export function MarkdownField({ label, value, onChange, enableEntityLink = false, productSlug }: {
+  label: string; value: string; onChange: (next: string) => void;
+  /** Sprint 16, Tarefa C.4 — repassado ao `MarkdownEditModal`; default `false` para todo uso fora do editor de conteúdo. */
+  enableEntityLink?: boolean;
+  productSlug?: string;
+}) {
   const [editing, setEditing] = useState(false);
 
   return (
@@ -24,6 +29,8 @@ export function MarkdownField({ label, value, onChange }: { label: string; value
         <MarkdownEditModal
           title={label}
           value={value}
+          enableEntityLink={enableEntityLink}
+          productSlug={productSlug}
           onClose={() => setEditing(false)}
           onSave={(next) => {
             onChange(next);

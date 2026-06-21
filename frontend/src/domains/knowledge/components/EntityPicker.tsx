@@ -7,14 +7,19 @@ import type { KGNode } from "../mocks/knowledge.mocks";
  * Busca leve de entidade para linkar uma referência inline (`kg-ref`)
  * durante a autoria (Sprint 11, Tarefa C.3) — versão embutível do que
  * `EntitySearch.tsx` faz como tela cheia.
+ *
+ * `productSlug` restringe a busca aos nós do mesmo produto do conteúdo em
+ * edição (ADR-0016: uma edge nunca conecta nós de produtos diferentes) —
+ * sem isto, o autor poderia escolher (e o `createEdge` rejeitaria depois,
+ * silenciosamente) uma entidade de outro produto.
  */
-export function EntityPicker({ onSelect }: { onSelect: (node: KGNode) => void }) {
+export function EntityPicker({ productSlug, onSelect }: { productSlug: string; onSelect: (node: KGNode) => void }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<KGNode[]>([]);
 
   useEffect(() => {
-    knowledgeService.searchNodes(q).then(setResults);
-  }, [q]);
+    knowledgeService.searchNodes(q, productSlug).then(setResults);
+  }, [q, productSlug]);
 
   return (
     <div className="w-72">

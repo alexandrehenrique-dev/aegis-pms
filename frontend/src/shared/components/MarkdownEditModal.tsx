@@ -1,10 +1,20 @@
 import { useRef, useState } from "react";
-import { Bold, Code, Heading1, Heading2, Heading3, Heading4, Italic, Link2, List, Quote, X } from "lucide-react";
+import { Bold, Code, Heading1, Heading2, Heading3, Heading4, Italic, Link2, List, Network, Quote, X } from "lucide-react";
 import { Button } from "./Primitives";
 import { ModalShell } from "./ModalShell";
 import { Markdown } from "./Markdown";
+import { EntityPicker } from "../../domains/knowledge/components/EntityPicker";
+import type { KGNode } from "../../domains/knowledge/mocks/knowledge.mocks";
 
 type ToolbarAction = "bold" | "italic" | "list" | "link" | "h1" | "h2" | "h3" | "h4" | "code" | "quote";
+
+/** Insere `{{kg-ref:nodeId:Label}}` na posição do cursor (Sprint 16, Tarefa C) — mesma mecânica de inserção das demais `ToolbarAction`, parametrizada pelo nó escolhido em vez de um texto fixo. */
+function insertEntityRef(value: string, selectionStart: number, selectionEnd: number, node: KGNode): { next: string; cursor: number } {
+  const before = value.slice(0, selectionStart);
+  const after = value.slice(selectionEnd);
+  const ref = `{{kg-ref:${node.id}:${node.label}}}`;
+  return { next: `${before}${ref}${after}`, cursor: before.length + ref.length };
+}
 
 /** Aplica um prefixo de bloco (`#`, `>`, etc.) em cada linha selecionada — usado por headings e citação. */
 function prefixLines(before: string, selected: string, after: string, prefix: string, placeholder: string): { next: string; cursor: number } {
@@ -54,9 +64,17 @@ function applyToolbarAction(value: string, selectionStart: number, selectionEnd:
  * ações primária/secundária distintas no rodapé), o mesmo espírito do modal
  * "Novo Pomodoro" do Aion Logbook citado como referência.
  */
-export function MarkdownEditModal({ title = "Editar texto", value, onSave, onClose }: { title?: string; value: string; onSave: (next: string) => void; onClose: () => void }) {
+export function MarkdownEditModal({ title = "Editar texto", value, onSave, onClose, enableEntityLink = false, productSlug }: {
+  title?: string; value: string; onSave: (next: string) => void; onClose: () => void;
+  /** Sprint 16, Tarefa C.4 — só `true` para usos de `MarkdownField` no domínio `content`, com o módulo "Knowledge Graph" habilitado no produto efetivo; demais usos (descrição de evento, FAQ, etc.) ficam no padrão `false`, sem o botão. */
+  enableEntityLink?: boolean;
+  /** Obrigatório quando `enableEntityLink` é `true` — escopa a busca do `EntityPicker` ao produto do conteúdo em edição (ADR-0016). */
+  productSlug?: string;
+}) {
   const [draft, setDraft] = useState(value);
+  const [showEntityPicker, setShowEntityPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastSelection = useRef({ start: 0, end: 0 });
 
   const runAction = (action: ToolbarAction) => {
     const el = textareaRef.current;
@@ -67,6 +85,23 @@ export function MarkdownEditModal({ title = "Editar texto", value, onSave, onClo
     requestAnimationFrame(() => {
       el?.focus();
       el?.setSelectionRange(cursor, cursor);
+    });
+  };
+
+  const openEntityPicker = () => {
+    const el = textareaRef.current;
+    lastSelection.current = { start: el?.selectionStart ?? draft.length, end: el?.selectionEnd ?? draft.length };
+    setShowEntityPicker(true);
+  };
+
+  const handleSelectEntity = (node: KGNode) => {
+    const { start, end } = lastSelection.current;
+    const { next, cursor } = insertEntityRef(draft, start, end, node);
+    setDraft(next);
+    setShowEntityPicker(false);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(cursor, cursor);
     });
   };
 
@@ -90,6 +125,12 @@ export function MarkdownEditModal({ title = "Editar texto", value, onSave, onClo
           <button onClick={() => runAction("link")} title="Link" className="rounded-lg p-2 transition hover:bg-muted"><Link2 size={15} /></button>
           <button onClick={() => runAction("quote")} title="Citação" className="rounded-lg p-2 transition hover:bg-muted"><Quote size={15} /></button>
           <button onClick={() => runAction("code")} title="Bloco de código" className="rounded-lg p-2 transition hover:bg-muted"><Code size={15} /></button>
+          {enableEntityLink && (
+            <>
+              <span className="mx-1 w-px self-stretch bg-border" />
+              <button onClick={openEntityPicker} title="Vincular a outro conteúdo" className="rounded-lg p-2 transition hover:bg-muted"><Network size={15} /></button>
+            </>
+          )}
         </div>
 
         <div className="mt-3 grid flex-1 gap-3 overflow-auto md:grid-cols-2">
@@ -110,6 +151,18 @@ export function MarkdownEditModal({ title = "Editar texto", value, onSave, onClo
           <Button primary onClick={() => onSave(draft)}>Salvar texto</Button>
         </div>
       </div>
+
+      {showEntityPicker && productSlug && (
+        <ModalShell onClose={() => setShowEntityPicker(false)} maxWidthClassName="max-w-sm">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">Vincular a outro conteúdo</h3>
+            <button onClick={() => setShowEntityPicker(false)} aria-label="Fechar" className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted"><X size={16} /></button>
+          </div>
+          <div className="mt-3">
+            <EntityPicker productSlug={productSlug} onSelect={handleSelectEntity} />
+          </div>
+        </ModalShell>
+      )}
     </ModalShell>
   );
 }

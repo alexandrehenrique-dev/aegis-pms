@@ -44,7 +44,7 @@ export function NewContentModal({ onClose }: { onClose: () => void }) {
         navigate(`/pages/${created.slug}/editor`);
         return;
       }
-      const created = await contentService.createContent({ title, type, lang, author: author || "Eu" });
+      const created = await contentService.createContent({ title, type, lang, author: author || "Eu" }, product);
       toast.success("Artigo criado", { description: `${created.title} entrou como rascunho.` });
       onClose();
       navigate(`/content/${created.id}/editor`);

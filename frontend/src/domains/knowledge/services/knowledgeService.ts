@@ -6,15 +6,37 @@ import type { EdgeType, GraphNodePreview, ListEdgesResponse, ListNodesResponse, 
 // domains/products/services/productsService.ts. Os 3 conjuntos (Maestro
 // Beton, WikiDev, Loki) convivem aqui porque `getNodePreview`/`createEdge`
 // precisam resolver nós de qualquer produto (caso WikiDev, Tarefa C).
-const allNodes: KGNode[] = [...kgNodes, ...wikidevKgNodes, ...lokiKgNodes];
-const allEdges: KGEdge[] = [...kgEdges, ...wikidevKgEdges, ...lokiKgEdges];
+const PRODUCT_NODE_SEEDS: { slug: string; nodes: KGNode[]; edges: KGEdge[] }[] = [
+  { slug: "maestro-beton", nodes: kgNodes, edges: kgEdges },
+  { slug: "wikidev", nodes: wikidevKgNodes, edges: wikidevKgEdges },
+  { slug: "loki", nodes: lokiKgNodes, edges: lokiKgEdges },
+];
+
+const allNodes: KGNode[] = PRODUCT_NODE_SEEDS.flatMap((g) => g.nodes);
+const allEdges: KGEdge[] = PRODUCT_NODE_SEEDS.flatMap((g) => g.edges);
+
+/**
+ * Produto-dono de cada nó (ADR-0016: uma edge só conecta nós do mesmo
+ * produto, nunca cross-produto) — populado a partir dos 3 conjuntos de seed
+ * acima e atualizado por `ensureNodeForContent` para nós criados em runtime.
+ */
+const nodeProductSlug = new Map<string, string>(PRODUCT_NODE_SEEDS.flatMap((g) => g.nodes.map((n) => [n.id, g.slug] as const)));
 
 export const knowledgeService = {
+  /**
+   * Sprint 16, Tarefa A — antes retornava só `kgNodes` (mock estático do
+   * Maestro Beton), nunca o store mutável em que `createEdge`/
+   * `ensureNodeForContent` escrevem; uma edge criada nunca aparecia aqui.
+   * Sem filtro por produto (telas de visualização do grafo ainda chamam sem
+   * argumento) — é um problema pré-existente e maior, fora do escopo desta
+   * sprint, que tratou da jornada de criação de conexão, não da
+   * re-arquitetura das telas de visualização.
+   */
   async listNodes(): Promise<ListNodesResponse> {
-    return kgNodes;
+    return allNodes;
   },
   async listEdges(): Promise<ListEdgesResponse> {
-    return kgEdges;
+    return allEdges;
   },
   // Pontos de integração real (Sprint 07) — sem endpoint formalizado ainda em
   // docs/trace/00_endpoints_esperados.md (só o GET de orphans existe, Seção B.5);
@@ -49,9 +71,12 @@ export const knowledgeService = {
       .sort((a, b) => b.weight - a.weight);
   },
 
-  async searchNodes(query: string): Promise<KGNode[]> {
+  /** Busca por label entre os nós de um produto (Sprint 16: `EntityPicker`, ao vincular durante a autoria, nunca deve listar nó de outro produto — ADR-0016). Sem `productSlug`, busca em todos (uso por `EntitySearch.tsx`/`GraphCanvasView.tsx`, fora da jornada de vínculo). */
+  async searchNodes(query: string, productSlug?: string): Promise<KGNode[]> {
     const q = query.toLowerCase();
-    return allNodes.filter((n) => !q || (n.label + n.type).toLowerCase().includes(q));
+    return allNodes
+      .filter((n) => !productSlug || nodeProductSlug.get(n.id) === productSlug)
+      .filter((n) => !q || (n.label + n.type).toLowerCase().includes(q));
   },
 
   /**
@@ -60,15 +85,38 @@ export const knowledgeService = {
    * `createEdge` referenciaria um `sourceNodeId` inexistente e o backend
    * real rejeitaria com 404 ("Edge exige sourceNodeId e targetNodeId
    * existentes", etapa 07). Cria o nó automaticamente se ainda não existir.
+   * `productSlug` marca o produto-dono do nó (idempotente mesmo se o nó já
+   * existir) — é o que permite `createEdge` aplicar a regra de mesmo produto.
    */
-  async ensureNodeForContent(nodeId: string, label: string, type: KGEntityType = "Página"): Promise<void> {
+  async ensureNodeForContent(nodeId: string, label: string, productSlug: string, type: KGEntityType = "Página"): Promise<void> {
+    nodeProductSlug.set(nodeId, productSlug);
     if (allNodes.some((n) => n.id === nodeId)) return;
     logApiCall("POST", "/api/v1/products/{productId}/graph/nodes", { id: nodeId, label, type });
     allNodes.push({ id: nodeId, label, type, status: "ativo", x: 0, y: 0, props: [] });
   },
 
-  /** Cria uma aresta do catálogo fechado de `edgeType` ao linkar uma referência inline (`kg-ref`) durante a autoria — Sprint 11, Tarefa C.3 / Sprint 12, Tarefa H.1 (docs/trace, Seção A: `POST .../graph/edges`). */
-  async createEdge(from: string, to: string, edgeType: EdgeType = "RELATED_TO"): Promise<void> {
+  /**
+   * Cria uma aresta do catálogo fechado de `edgeType` ao linkar uma
+   * referência inline (`kg-ref`) durante a autoria — Sprint 11, Tarefa C.3 /
+   * Sprint 12, Tarefa H.1 (docs/trace, Seção A: `POST .../graph/edges`).
+   *
+   * Validações deliberadamente mais permissivas que o backend real (etapa
+   * 07, Seção C.1, que rejeitaria com 400) porque o mock não tem validação
+   * de transação: não bloqueia o salvamento do conteúdo, só não cria a edge
+   * e loga um aviso — (1) nó de destino inexistente, (2) nó de destino de
+   * outro produto (ADR-0016: edge nunca cruza produto), (3) edge idêntica já
+   * existente (evita duplicar ao salvar o mesmo conteúdo sem mudar as refs).
+   */
+  async createEdge(from: string, to: string, productSlug: string, edgeType: EdgeType = "RELATED_TO"): Promise<void> {
+    if (!allNodes.some((n) => n.id === to)) {
+      console.warn(`knowledgeService.createEdge: nó de destino "${to}" não existe — edge não criada.`);
+      return;
+    }
+    if (nodeProductSlug.get(to) !== productSlug) {
+      console.warn(`knowledgeService.createEdge: nó de destino "${to}" pertence a outro produto — Knowledge Graph não conecta conteúdos de produtos diferentes (ADR-0016). Edge não criada.`);
+      return;
+    }
+    if (allEdges.some((e) => e.from === from && e.to === to && e.verb === edgeType)) return;
     logApiCall("POST", "/api/v1/products/{productId}/graph/edges", { from, to, edgeType });
     allEdges.push({ from, to, verb: edgeType });
   },

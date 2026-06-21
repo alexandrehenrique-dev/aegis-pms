@@ -7,6 +7,7 @@ import { toast } from "../../../core/notifications/toast";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { resolveEnabledModules } from "../../../core/products/moduleDefaults";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { slugify } from "../../../shared/utils/slugify";
 import { contentService } from "../services/contentService";
 import { ContentArticleEditor } from "../components/ContentArticleEditor";
 import type { ContentRow } from "../contracts/responses";
@@ -26,6 +27,7 @@ export function ContentEditor() {
   const { id } = useParams<{ id: string }>();
   const { product } = useCurrentProduct();
   const knowledgeGraphEnabled = resolveEnabledModules(product).includes("Knowledge Graph");
+  const productSlug = product ? slugify(product.name) : "maestro-beton";
 
   const { data: foundContent, loading } = useAsyncData(() => (id ? contentService.getContent(id) : Promise.resolve(undefined)), [id]);
   const [content, setContent] = useState<ContentRow | null>(null);
@@ -48,7 +50,7 @@ export function ContentEditor() {
       pendingPatch.current = null;
       if (!patchToSave) return;
       setSaveStatus("saving");
-      await contentService.updateContent(id, patchToSave);
+      await contentService.updateContent(id, patchToSave, product);
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 3000);
     }, CONTENT_SAVE_DEBOUNCE_MS);
@@ -83,7 +85,7 @@ export function ContentEditor() {
         <Button onClick={() => navigate(`/content/${content.id}/preview`)}>Preview</Button>
         <Button primary onClick={handleSubmitForReview}>Enviar para revisão</Button>
       </PageHeader>
-      <ContentArticleEditor content={content} knowledgeGraphEnabled={knowledgeGraphEnabled} onChange={handleChange} />
+      <ContentArticleEditor content={content} knowledgeGraphEnabled={knowledgeGraphEnabled} productSlug={productSlug} onChange={handleChange} />
     </>
   );
 }
