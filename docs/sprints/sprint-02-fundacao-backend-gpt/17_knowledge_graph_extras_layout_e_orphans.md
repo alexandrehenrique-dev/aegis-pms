@@ -27,9 +27,14 @@ Adicionar colunas `x` (float), `y` (float) — posição no canvas, atualizada q
 ```txt
 PATCH /api/v1/products/{productId}/graph/nodes/{nodeId}/position   body: { x: number; y: number }
 GET   /api/v1/products/{productId}/graph/orphans
+POST  /api/v1/products/{productId}/graph/orphans/{nodeId}/resolve   body: { action: string }
+POST  /api/v1/products/{productId}/graph/orphans/resolve            body: { ids: string[] }
+POST  /api/v1/products/{productId}/graph/insights/review            body: { text: string }
 ```
 
 `GET /graph/orphans` retorna `KGNode[]` — nós que não aparecem como `sourceNodeId` nem `targetNodeId` de nenhuma `GraphEdge` do produto. Motivo: `OrphanEntityTable.tsx`, hoje sem nenhum tipo formal no frontend — ao implementar este endpoint, também é necessário definir e documentar (atualizar `docs/trace/00_endpoints_esperados.md`) o shape de cada linha da tabela, incluindo o campo `action` (ação sugerida: "Arquivar", "Vincular", "Associar", "Mesclar", "Revisar" — ver `OrphanEntityTable.tsx` no frontend).
+
+> **Endpoints de ação adicionados nesta revisão** (ver ADR-0016): o frontend mock (`knowledgeService.resolveOrphan`/`resolveOrphans`/`markInsightReviewed`) já chama estes três caminhos por convenção REST há tempo, mas nenhuma etapa os havia formalizado — `resolve` (um órfão ou em lote) aplica a `action` escolhida na `OrphanEntityTable` (arquivar/vincular/associar/mesclar/revisar — decisão de cada `action` é responsabilidade desta etapa, documentar o que cada uma faz de fato no backend); `insights/review` marca como revisado um "insight" textual de sugestão de conexão (feature de curadoria, não bloqueia nada se ainda não tiver lógica de sugestão real — pode só persistir `reviewed=true` para o texto/hash informado).
 
 ### C. Ajuste no DTO de resposta dos endpoints já existentes (etapa 07)
 
@@ -72,6 +77,8 @@ Implementação: não precisa de tabela nova — `summary`/`difficulty` vêm do 
 - [ ] `GET /graph/orphans` retorna só nós sem nenhuma edge.
 - [ ] Shape de `OrphanEntityTable` documentado no trace report.
 - [ ] `GET .../preview` retorna o shape leve `GraphNodePreview`, populado a partir do `Content` associado quando existir.
+- [ ] `POST .../orphans/{id}/resolve` e `POST .../orphans/resolve` aplicam a `action` informada e o(s) nó(s) deixam de aparecer em `GET /graph/orphans` quando a ação resolve a orfandade (ex.: "Vincular" cria uma edge).
+- [ ] `POST .../insights/review` marca o insight como revisado (idempotente — chamar duas vezes não duplica nem falha).
 - [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa (JaCoCo).
 
 ## Validação

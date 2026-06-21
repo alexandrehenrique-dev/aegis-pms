@@ -20,11 +20,14 @@ Cobertura confirmada nos arquivos de `docs/sprints/sprint-02-fundacao-backend-gp
 | `/products/{productId}` | GET | Telas de detalhe de produto em todos os domínios | Detalhe de um produto específico |
 | `/products/{productId}/modules/{moduleKey}/enable` | POST | `ModuleCatalog.tsx` (Sprint 05 liga o catálogo real) | Habilita um módulo do catálogo para o produto, respeitando dependências |
 | `/products/{productId}/modules/{moduleKey}/disable` | POST | idem | Desabilita um módulo |
-| `/products/{productId}/graph/nodes` | GET, POST | `domains/knowledge` (Knowledge Graph) | Lista/cria nós do grafo de conhecimento do produto |
+| `/products/{productId}/graph/nodes` | GET, POST | `domains/knowledge` (Knowledge Graph) | Lista/cria nós do grafo de conhecimento do produto — `GET` aceita `?q={label}` para busca por entidade (sustenta `EntityPicker.tsx` ao linkar uma referência durante a autoria, ver ADR-0016) |
 | `/products/{productId}/graph/nodes/{nodeId}` | GET | idem | Detalhe de um nó |
-| `/products/{productId}/graph/edges` | POST | idem | Cria uma relação entre dois nós |
+| `/products/{productId}/graph/edges` | POST | idem | Cria uma relação entre dois nós — chamado automaticamente ao salvar um `Content` com referência inline `kg-ref` (ADR-0016, Sprint 16), nunca por desenho manual no canvas |
 | `/products/{productId}/graph/nodes/{nodeId}/neighbors` | GET | idem | Vizinhos diretos de um nó (1 hop) |
 | `/products/{productId}/graph/nodes/{nodeId}/related` | GET | idem | Entidades relacionadas (N hops) |
+| `/products/{productId}/graph/orphans/{nodeId}/resolve` | POST | `OrphanEntityTable.tsx` | Aplica uma ação de curadoria (Arquivar/Vincular/Associar/Mesclar/Revisar) a um nó órfão — etapa 17 |
+| `/products/{productId}/graph/orphans/resolve` | POST | idem | Mesma ação, em lote, para vários nós órfãos |
+| `/products/{productId}/graph/insights/review` | POST | painel de insights do grafo | Marca um insight textual de sugestão de conexão como revisado |
 | `http://localhost:8282/realms/aegis/...` | OIDC | Login real (Sprint 06) | Autenticação via Keycloak (Authorization Code + PKCE) |
 
 ---
@@ -227,7 +230,9 @@ type KGEntityType = "Tenant" | "Produto" | "Página" | "Asset" | "Formulário" |
 type KGNode = { id: string; label: string; type: KGEntityType; status: string; x: number; y: number; props: { k: string; v: string }[] };
 type KGEdge = { from: string; to: string; verb: string };
 ```
-O campo `x`/`y` (posição no canvas) e `props` (lista chave/valor livre) precisam existir no backend ou ser calculados/armazenados em algum lugar — hoje são fixos no mock. Motivo: `GraphCanvasView.tsx` precisa de posição persistente para o layout não "saltar" a cada carregamento; `props` é o que populao painel de detalhe em `EntityDetails.tsx`.
+O campo `x`/`y` (posição no canvas) e `props` (lista chave/valor livre) precisam existir no backend ou ser calculados/armazenados em algum lugar — hoje são fixos no mock. Motivo: `GraphCanvasView.tsx` precisa de posição persistente para o layout não "saltar" a cada carregamento; `props` é o que popula o painel de detalhe em `EntityDetails.tsx`.
+
+> **Correção de aderência (ADR-0016, Sprint 16):** uma auditoria de uso real encontrou que `knowledgeService.createEdge`/`ensureNodeForContent` (frontend) nunca eram chamadas por nenhum fluxo de autoria de conteúdo, e que `listNodes()`/`listEdges()` liam de um array de mock estático diferente do array que essas duas funções mutavam — ou seja, mesmo uma chamada manual a `createEdge` nunca apareceria em `GraphCanvasView`. A Sprint 16 corrige as duas coisas no frontend (mock); o contrato dos endpoints acima não muda, mas vale registrar que a criação de edge **só** deve ocorrer a partir do salvamento de um `Content` com referência inline `kg-ref` (ver `EntityPicker.tsx` integrado ao editor) — nunca por uma ação de desenho manual no `GraphCanvasView`, que é só visualização/curadoria.
 
 **`GET /api/v1/products/{productId}/graph/orphans`** — nós sem nenhuma edge. Motivo: `OrphanEntityTable.tsx` (hoje 100% mockado, nem tipo formal ainda).
 
