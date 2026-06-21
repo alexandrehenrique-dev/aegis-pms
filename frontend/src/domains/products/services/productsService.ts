@@ -2,6 +2,10 @@ import { products as productMocks } from "../mocks/products.mocks";
 import { modules as moduleCatalogMocks } from "../../dashboard/mocks/dashboard.mocks";
 import { slugify } from "../../../shared/utils/slugify";
 import { logApiCall } from "../../../shared/services/devLog";
+import { pagesService } from "../../pages/services/pagesService";
+import { DEFAULT_BLOCK_CONTENT } from "../../pages/blockDefaults";
+import { PRODUCT_PAGE_SKELETONS } from "../../../core/products/productTemplates";
+import type { ProductTypeKey } from "../../../core/products/moduleDefaults";
 import type { ComponentType } from "react";
 import type { ModuleState } from "../../../shared/types";
 import type { CreateProductRequest, DeleteProductRequest, UpdateProductRequest } from "../contracts/requests";
@@ -100,6 +104,17 @@ export const productsService = {
       tenantId: req.tenantId,
     };
     productsStore.push(created);
+
+    const skeleton = PRODUCT_PAGE_SKELETONS[req.type as ProductTypeKey];
+    if (skeleton) {
+      for (const pageSkeleton of skeleton) {
+        const page = await pagesService.createPage(created.id!, { slug: pageSkeleton.slug, title: pageSkeleton.title, locale: "pt-BR" });
+        for (const section of pageSkeleton.sections) {
+          await pagesService.createSection(created.id!, page.id, { type: section.type, label: section.label, content: DEFAULT_BLOCK_CONTENT[section.type] });
+        }
+      }
+    }
+
     return created;
   },
 };
