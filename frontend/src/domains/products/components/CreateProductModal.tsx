@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { motion } from "motion/react";
 import { CheckCircle2, Loader2, X } from "lucide-react";
-import { Badge, Button, Field, SelectLike, fade } from "../../../shared/components/Primitives";
+import { Badge, Button, Field, SelectLike } from "../../../shared/components/Primitives";
+import { ModalShell } from "../../../shared/components/ModalShell";
 import { slugify } from "../../../shared/utils/slugify";
 import { PRODUCT_TYPES } from "../../../core/products/moduleDefaults";
 import { useModuleSelection } from "../hooks/useModuleSelection";
@@ -52,8 +52,8 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
   };
 
   return (
-    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div {...fade} className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
+    <ModalShell onClose={onClose} maxWidthClassName="max-w-lg">
+      <div className="flex max-h-[85vh] flex-col">
         <div className="mb-5 flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2"><h2 className="font-semibold">Criar Produto</h2><Badge tone="violet">{tenantName}</Badge></div>
@@ -87,7 +87,7 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
             {saving ? "Criando..." : "Criar produto"}
           </Button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </ModalShell>
   );
 }

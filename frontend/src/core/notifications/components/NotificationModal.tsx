@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { AlertTriangle } from "lucide-react";
 import { fade } from "../../../shared/components/Primitives";
@@ -11,9 +12,16 @@ import type { Notification } from "../contracts/notification";
  * qualquer outro tipo criado pelo Super Admin) e renderiza título + corpo
  * via `<Markdown>`. O mesmo componente serve tanto o gatilho automático
  * (`PendingNotificationGate`) quanto o clique num item do sino.
+ *
+ * Renderiza via `createPortal` direto em `document.body` (Sprint 15, Tarefa
+ * D.3) — quando aberta a partir do sino dentro de `AppShell`, um ancestral
+ * com `transform` (a animação Framer Motion do próprio `AppShell`/header)
+ * virava o "containing block" deste `fixed`, descentralizando a modal em
+ * relação à viewport real. Mesmo motivo documentado em `Notifications.tsx`
+ * e `ContextActionMenu.tsx` para o uso de portal.
  */
 export function NotificationModal({ notification, onClose }: { notification: Notification; onClose: () => void }) {
-  return (
+  return createPortal(
     <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
       <motion.div {...fade} className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 text-center">
@@ -30,6 +38,7 @@ export function NotificationModal({ notification, onClose }: { notification: Not
         </div>
         <button onClick={onClose} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 active:scale-[0.97] shadow-[0_4px_14px_rgba(124,58,237,.25)]">Entendi</button>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 }
