@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { Search, X } from "lucide-react";
 import { Badge, Button, Card, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
@@ -7,6 +8,7 @@ import { knowledgeService } from "../services/knowledgeService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 
 export function EntitySearch() {
+  const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(), []);
@@ -44,7 +46,7 @@ export function EntitySearch() {
           {res.map((n) => {
             const c = kgColor[n.type] || "#374151";
             return (
-              <Card key={n.id}>
+              <Card key={n.id} onClick={() => navigate(`/knowledge/entities/${n.id}`)}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span style={{ color: c }} className="text-[10px] font-bold uppercase tracking-wider">{n.type}</span>
