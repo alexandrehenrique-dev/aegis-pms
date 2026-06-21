@@ -1,5 +1,6 @@
 import { allTenants } from "../mocks/tenants.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
+import { notificationsService } from "../../notifications/services/notificationsService";
 import type { TenantOption } from "../../../shared/types";
 import type { CreateTenantRequest, DeleteTenantRequest, UpdateTenantRequest } from "../contracts/requests";
 import type { ListTenantsResponse, TenantDetailResponse } from "../contracts/responses";
@@ -34,10 +35,25 @@ export const tenantsService = {
   async update(id: string, req: UpdateTenantRequest): Promise<TenantOption> {
     const tenant = tenantsStore.find((t) => t.id === id);
     if (!tenant) throw { status: 404, message: `Tenant ${id} não encontrado.` };
+    const previousStatus = tenant.status;
     logApiCall("PUT", `/api/v1/admin/tenants/${id}`, req);
     tenant.name = req.name;
     tenant.plan = req.plan;
     tenant.status = req.status;
+
+    if (previousStatus !== req.status) {
+      const suspended = req.status === "suspenso";
+      await notificationsService.create({
+        type: suspended ? "WARNING" : "GENERAL",
+        title: suspended ? "Tenant suspenso" : "Tenant reativado",
+        bodyMarkdown: suspended
+          ? "Este tenant foi suspenso pelo administrador da plataforma. Contate o suporte para mais informações."
+          : "Este tenant foi reativado.",
+        presentationMode: "BELL_ONLY",
+        recipients: { mode: "tenant", tenantId: id },
+      });
+    }
+
     return tenant;
   },
 
