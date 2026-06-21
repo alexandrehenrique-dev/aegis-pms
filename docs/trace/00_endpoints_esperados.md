@@ -342,7 +342,15 @@ DELETE /api/v1/products/{productId}/pages/{pageId}/sections/{sectionId}
 PUT    /api/v1/products/{productId}/pages/{pageId}/sections/reorder
 ```
 
-Catálogo fechado de `BlockType` (atualizado pela Sprint 13 — `footer`/`navbar` saíram, `audio`/`social-links` entraram, ver D.6): `hero, text, rich-text, two-column, image, image-text, feature-grid, card-list, gallery, timeline, event-list, cta-section, faq, contact, audio, social-links`. Especificação completa de payloads e regras de validação por tipo de bloco: `docs/sprints/sprint-02-fundacao-backend-gpt/21_dominio_pages_secoes_e_blocos.md`.
+Catálogo fechado de `BlockType` (atualizado pela Sprint 13 — `footer`/`navbar` saíram, `audio`/`social-links`/`form`/`download` entraram, ver D.6 — e nesta revisão, `video`/`video-gallery`): `hero, text, rich-text, two-column, image, image-text, feature-grid, card-list, gallery, timeline, event-list, cta-section, faq, contact, form, download, audio, social-links, video, video-gallery`. Especificação completa de payloads e regras de validação por tipo de bloco: `docs/sprints/sprint-02-fundacao-backend-gpt/21_dominio_pages_secoes_e_blocos.md`.
+
+**`video`/`video-gallery` (adicionados nesta revisão)** — caso de uso real confirmado (Maestro Beton, `docs/AEGIS_PMS_V1.md` §17) e categoria de asset `"video"` já provisionada (Seção B.2) sem nenhum bloco que a usasse:
+```ts
+type VideoContent = { title?: string; source: "upload" | "youtube"; fileAssetId: string; youtubeUrl: string; autoplay: boolean };
+type VideoGalleryItem = { title: string; source: "upload" | "youtube"; fileAssetId: string; youtubeUrl: string };
+type VideoGalleryContent = { items: VideoGalleryItem[] };
+```
+Motivo: mesmo padrão do bloco `audio` (Seção D.6) — card único (`video`) ou lista (`video-gallery`), upload OU link externo (YouTube em vez de Spotify). Sem endpoint próprio — é `contentJson` de uma `PageSection` como qualquer outro `BlockType`.
 
 ### D.2 Preview leve de nó do grafo (extensão da etapa 17 — caso WikiDev)
 

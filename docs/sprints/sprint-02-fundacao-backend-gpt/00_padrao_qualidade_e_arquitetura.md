@@ -1,4 +1,4 @@
-# Padrão de qualidade, arquitetura e entrega — vale para TODAS as etapas (01-24)
+# Padrão de qualidade, arquitetura e entrega — vale para TODAS as etapas (01-25)
 
 > Este arquivo é a fonte da verdade do padrão. Cada etapa de domínio (06, 07, 09-17, 21) já traz um resumo deste padrão na própria etapa, porque cada arquivo precisa ser colável isoladamente numa conversa nova do GPT, sem depender de ter colado este arquivo antes. Se houver qualquer divergência entre o resumo numa etapa e este arquivo, **este arquivo prevalece** — ele é mais detalhado de propósito.
 >
@@ -187,7 +187,7 @@ Os 5 papéis, sempre nesta ordem de prioridade quando uma resolução precisar e
 
 `ProductModule.enabled` (etapa 06) não é só um dado consultável pela UI — é um **portão real** que os próprios endpoints de domínio verificam antes de processar qualquer requisição. Mecanismo: anotação `@RequireModule(ModuleKey.X)` no método do controller + `ModuleAccessAspect` (Spring AOP, implementado na etapa 06) que verifica `ProductModule.enabled=true` para o `productId` do path; se desabilitado, `403` com corpo `{"error": "MODULE_DISABLED", "moduleKey": "X"}` — vale até para `SUPER_ADMIN`.
 
-Domínios gateados por módulo (etapa → `@RequireModule`): `07`/`17` → `KNOWLEDGE_GRAPH`; `10` → `CONTENT`; `11` → `ASSETS`; `12` → `FORMS`; `13` → `ANALYTICS`; `21` → `PAGES`. Domínios **não** gateados (fundação, sempre disponíveis): `09` (tenants/ProductAssignment), `14` (users), `15` (audit), `16` (settings/dashboard), `23` (notification).
+Domínios gateados por módulo (etapa → `@RequireModule`): `07`/`17` → `KNOWLEDGE_GRAPH`; `10` → `CONTENT`; `11` → `ASSETS`; `12` → `FORMS`; `13` → `ANALYTICS`; `21` → `PAGES`. Domínios **não** gateados (fundação, sempre disponíveis): `09` (tenants/ProductAssignment), `14` (users), `15` (audit), `16` (settings/dashboard), `23` (notification), `25` (feedback — reportar problema não depende de nenhum módulo do produto).
 
 Toda etapa de domínio gateada por módulo adiciona, nos próprios critérios de aceite, o cenário "módulo desabilitado para o produto → 403 `MODULE_DISABLED`" como teste obrigatório de Rodada 4 (controller).
 
@@ -224,3 +224,32 @@ As etapas 06, 07, 09, 11 e 16 já aplicam a regra "recurso de outro tenant/produ
 2. Se o recurso existe mas pertence a outro tenant/produto: **404**, nunca 403 — não revelar que o recurso existe para quem não tem acesso a ele.
 3. Toda etapa de domínio (10, 12, 13, 14, 15, 17, 21, 23 incluídas, sem exceção) adiciona um cenário de teste explícito desta regra na Rodada 3 (Service, com mocks) e repete como critério de aceite — não é opcional só porque a etapa não cita a palavra "tenant" no nome.
 4. Esta regra é independente do module-gating (Seção 9.2): module-gating bloqueia porque o **produto** não tem o módulo ligado; isolamento bloqueia porque o recurso **não pertence** ao escopo do usuário. Um endpoint pode (e geralmente vai) precisar das duas checagens, nesta ordem: módulo habilitado → depois, recurso pertence ao escopo do usuário.
+
+## 12. Artefato de continuidade entre etapas: `SPRINT-RESULTADO.md`
+
+Cada etapa é colada numa conversa **nova** do GPT — sem memória do que foi decidido nas etapas anteriores. Isso já causou retrabalho: decisões que uma etapa explicitamente deixava "a cargo do GPT, documentar a escolha" (ex.: ordem de habilitação de módulos com dependência, formato exato do `id` legível do feedback, se o provisionamento de pasta é síncrono ou assíncrono) ficavam presas só naquela conversa, perdidas ao abrir a próxima. A partir desta revisão, todo esse conhecimento passa por um único arquivo cumulativo, versionado junto da pasta de etapas: `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md`.
+
+### 12.1 Regra de uso (você, fora do GPT)
+
+- **Ao colar uma etapa nova numa conversa nova do GPT, cole também o conteúdo atual de `SPRINT-RESULTADO.md` junto** (a partir da etapa 02 — a etapa 01 é a primeira, ainda não há nada para herdar). Isso substitui a memória que o GPT não tem.
+- Ao final de cada etapa, antes de comitar, peça ao GPT o **arquivo `SPRINT-RESULTADO.md` completo e atualizado** (igual ao padrão já estabelecido para a collection Postman, Seção 11.2 — sempre o arquivo inteiro, nunca um diff) e salve-o, sobrescrevendo o anterior.
+
+### 12.2 Template fixo de cada entrada (uma por etapa, nunca reescrever entradas de etapas já concluídas)
+
+```md
+## Etapa NN — <título da etapa> (concluída em <data>)
+
+**Classes criadas/alteradas:** lista exata (entity, repository, mapper, service, controller, policy) — nomes reais, não genéricos, para a próxima etapa saber o que já existe e nunca duplicar ou renomear por conta própria.
+
+**Endpoints confirmados:** método + path exatamente como implementado. Se algum divergiu do que o `.md` da etapa pedia, anotar a divergência e o motivo aqui — não deixar a divergência só na memória da conversa que já vai se perder.
+
+**Decisões de implementação registradas pelo GPT:** toda vez que o `.md` da etapa dizia algo como "decisão de implementação do GPT, documentar a escolha" — a escolha real feita, com uma frase de motivo. Isto é o item mais importante desta seção — é exatamente o tipo de decisão que se perde entre conversas se não for escrita aqui.
+
+**Retrofits pendentes para etapas futuras:** todo "se a etapa X já existir, chame Y; senão, retrofit a fazer depois" (padrão já usado nas etapas 14/23, 09/24) que **não** pôde ser resolvido agora porque a etapa X ainda não tinha sido executada — para a etapa X, quando chegar a vez dela, saber que precisa voltar e completar isto.
+
+**Cobertura de testes:** confirmação de que `mvn clean verify`/`jacoco:check` passou em 100% para as classes desta etapa.
+```
+
+### 12.3 O que NÃO entra neste arquivo
+
+Código-fonte completo, payloads de exemplo já documentados no próprio `.md` da etapa, e qualquer coisa já coberta pela collection Postman (Seção 11) — `SPRINT-RESULTADO.md` é sobre **decisões e estado**, não duplicar o que já está em outro artefato. Etapas que não tiveram nenhuma decisão delegada ao GPT podem ter uma entrada curta (1-2 linhas em "Decisões") — não inventar conteúdo para preencher a seção.
