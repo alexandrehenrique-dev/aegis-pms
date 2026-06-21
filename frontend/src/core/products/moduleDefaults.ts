@@ -9,7 +9,8 @@ export type ProductTypeKey =
   | "Knowledge Base"
   | "Portfolio"
   | "Library/Books/Music"
-  | "Produto SaaS";
+  | "Produto SaaS"
+  | "Custom";
 
 export const PRODUCT_TYPES: ProductTypeKey[] = [
   "Site Institucional",
@@ -18,6 +19,7 @@ export const PRODUCT_TYPES: ProductTypeKey[] = [
   "Portfolio",
   "Library/Books/Music",
   "Produto SaaS",
+  "Custom",
 ];
 
 export type ModuleOption = {
@@ -57,7 +59,7 @@ export function resolveEnabledModules(product: { type: string; modulesList?: str
   return defaults ? defaults.filter((m) => m.default).map((m) => m.key) : [];
 }
 
-export const PRODUCT_TYPE_MODULE_DEFAULTS: Record<ProductTypeKey, ModuleOption[]> = {
+export const PRODUCT_TYPE_MODULE_DEFAULTS: Partial<Record<ProductTypeKey, ModuleOption[]>> = {
   "Site Institucional": [
     { key: "Páginas", default: true },
     { key: "Conteúdo", default: true },

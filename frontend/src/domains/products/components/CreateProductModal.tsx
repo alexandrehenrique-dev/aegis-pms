@@ -42,7 +42,7 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
       const created = await productsService.create({
         name, slug, type, language: "pt-BR",
         description: "Produto institucional com conteúdo, formulários, SEO e assets governados.",
-        template: "Produto operacional padrão", initialModules: selectedList,
+        initialModules: selectedList,
         tenantId, assetStorageStrategy, s3Bucket: s3Bucket || undefined, s3Region: s3Region || undefined,
       });
       onCreated(created);
