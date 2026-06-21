@@ -29,6 +29,8 @@ export type EditableProduct = {
   type: string;
   status: ProductStatus;
   modulesList?: string[];
+  /** Sprint 15, Tarefa E.1 — presente apenas quando o chamador é `ProductSelectScreen` (vem de `ProductOption`); habilita o item Favoritar/Desfavoritar no menu de contexto. */
+  isFavorite?: boolean;
 };
 
 export type ModuleCatalogItem = {

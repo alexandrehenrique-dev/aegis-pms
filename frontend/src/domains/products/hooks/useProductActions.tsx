@@ -12,6 +12,8 @@ import type { UpdateProductRequest, DeleteProductRequest } from "../contracts/re
 export type ProductPersistence = {
   update: (req: UpdateProductRequest) => Promise<void>;
   remove: (req: DeleteProductRequest) => Promise<void>;
+  /** Sprint 15, Tarefa E.1 — opcional: só `ProductSelectScreen` injeta isso hoje, ver `ProductContextMenu`. */
+  toggleFavorite?: () => void;
 };
 
 /**
@@ -42,6 +44,11 @@ export function useProductActions(product: EditableProduct, persistence: Product
 
   const openEdit = () => { setContextMenu(null); setEditing(true); };
   const openDelete = () => { setContextMenu(null); setPendingDelete(true); };
+  const handleToggleFavorite = () => {
+    setContextMenu(null);
+    persistence.toggleFavorite?.();
+    toast.success(product.isFavorite ? `${product.name} removido dos favoritos.` : `${product.name} adicionado aos favoritos.`);
+  };
 
   const handleSave = async (req: UpdateProductRequest) => {
     await persistence.update(req);
@@ -70,7 +77,14 @@ export function useProductActions(product: EditableProduct, persistence: Product
   const portal = createPortal(
     <>
       {contextMenu && (
-        <ProductContextMenu position={contextMenu} onEdit={openEdit} onDelete={openDelete} onClose={() => setContextMenu(null)} />
+        <ProductContextMenu
+          position={contextMenu}
+          isFavorite={product.isFavorite}
+          onToggleFavorite={persistence.toggleFavorite ? handleToggleFavorite : undefined}
+          onEdit={openEdit}
+          onDelete={openDelete}
+          onClose={() => setContextMenu(null)}
+        />
       )}
       {editing && (
         <EditProductModal product={product} onClose={() => setEditing(false)} onSave={handleSave} />

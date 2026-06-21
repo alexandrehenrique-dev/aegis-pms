@@ -22,6 +22,7 @@ type AuthContextValue = {
   switchProduct: (productId: string) => void;
   updateProduct: (productId: string, req: UpdateProductRequest) => void;
   removeProduct: (productId: string, req: DeleteProductRequest) => void;
+  toggleFavorite: (productId: string) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -92,6 +93,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSelectedProduct((sp) => (sp && sp.id === productId ? { ...sp, ...patch } : sp));
   };
 
+  /**
+   * Favoritar/desfavoritar produto (Sprint 15, Tarefa E.1) — antes só existia
+   * a estrela visual em `isFavorite === true`, sem nenhum caminho para
+   * desmarcar. Acesso via `ProductContextMenu` (botão direito), disponível a
+   * qualquer papel que veja `/select-product`, não só quem gerencia produtos
+   * (favoritar é preferência pessoal, não administração).
+   */
+  const toggleFavorite = (productId: string) => {
+    if (!effectiveTenant) return;
+    const tenantId = effectiveTenant.id;
+    setUserProducts((prev) => ({
+      ...prev,
+      [tenantId]: (prev[tenantId] ?? []).map((p) => (p.id === productId ? { ...p, isFavorite: !p.isFavorite } : p)),
+    }));
+    setSelectedProduct((sp) => (sp && sp.id === productId ? { ...sp, isFavorite: !sp.isFavorite } : sp));
+  };
+
   /** Exclusão lógica (soft delete) — `DELETE /api/v1/admin/products/{productId}` (docs/AEGIS_PMS_V1.md §8.4/§8.5: produto nunca é apagado fisicamente). */
   const removeProduct = (productId: string, req: DeleteProductRequest) => {
     if (!effectiveTenant) return;
@@ -105,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authUser, selectedTenant, selectedProduct, userTenants, userProducts,
     effectiveTenant, tenantProducts, effectiveProduct,
     login, logout, selectTenant: setSelectedTenant, selectProduct: setSelectedProduct,
-    switchTenant, switchProduct, updateProduct, removeProduct,
+    switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite,
   }), [authUser, selectedTenant, selectedProduct, userTenants, userProducts, effectiveTenant, tenantProducts, effectiveProduct]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

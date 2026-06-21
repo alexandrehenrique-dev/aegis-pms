@@ -1,6 +1,6 @@
 import { BarChart3, FileText, Image, LayoutDashboard, Layers, Settings, ShieldCheck, Sparkles, Workflow, type LucideIcon } from "lucide-react";
 
-export type NavItem = { path: string; icon: LucideIcon; label: string };
+export type NavItem = { path: string; icon: LucideIcon; label: string; moduleKey?: string };
 
 /**
  * Main sidebar navigation, in display order. Replaces the old `nav`
@@ -18,14 +18,25 @@ export type NavItem = { path: string; icon: LucideIcon; label: string };
  * faz sentido reaparecer como item fixo dentro do workspace de um produto
  * já selecionado.
  */
+/**
+ * `moduleKey` (Sprint 15, Tarefa B) mapeia 1:1 com as chaves de
+ * `PRODUCT_TYPE_MODULE_DEFAULTS`/`ModuleOption.key` (`core/products/moduleDefaults.ts`)
+ * — é o que `AppShell` usa para também checar `effectiveProduct.modulesList`
+ * (via `resolveEnabledModules`) antes de mostrar o item, além do papel do
+ * usuário. Item sem `moduleKey` (Dashboard, Configurações, Auditoria) é
+ * estrutural do workspace e nunca depende de módulo — só de papel. Ao
+ * adicionar um item novo aqui que corresponda a um módulo opcional, declare
+ * o `moduleKey` correspondente ou ele ficará visível mesmo com o módulo
+ * desabilitado no produto (era exatamente esse o gap do ADR-0015).
+ */
 export const nav: NavItem[] = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/pages", icon: Layers, label: "Páginas" },
-  { path: "/content", icon: FileText, label: "Conteúdo" },
-  { path: "/assets", icon: Image, label: "Assets" },
-  { path: "/forms", icon: Workflow, label: "Forms" },
-  { path: "/analytics", icon: BarChart3, label: "Analytics" },
-  { path: "/knowledge", icon: Sparkles, label: "Knowledge Graph" },
+  { path: "/pages", icon: Layers, label: "Páginas", moduleKey: "Páginas" },
+  { path: "/content", icon: FileText, label: "Conteúdo", moduleKey: "Conteúdo" },
+  { path: "/assets", icon: Image, label: "Assets", moduleKey: "Assets" },
+  { path: "/forms", icon: Workflow, label: "Forms", moduleKey: "Forms" },
+  { path: "/analytics", icon: BarChart3, label: "Analytics", moduleKey: "Analytics" },
+  { path: "/knowledge", icon: Sparkles, label: "Knowledge Graph", moduleKey: "Knowledge Graph" },
   { path: "/settings", icon: Settings, label: "Configurações" },
   { path: "/audit", icon: ShieldCheck, label: "Auditoria" },
 ];

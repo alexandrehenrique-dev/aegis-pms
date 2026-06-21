@@ -40,6 +40,23 @@ export const KNOWLEDGE_GRAPH_DEPENDENCY = "Conteúdo";
  */
 export const ECOMMERCE_MODULE_KEY = "E-commerce";
 
+/**
+ * Produtos seedados nos mocks (`core/auth/mocks/users.ts`) não carregam
+ * `modulesList` — só produtos criados via `CreateProductModal`/`CreateProductForm`
+ * nesta sessão têm essa lista explícita. Sem isto, qualquer gate por módulo
+ * (sidebar, FAQ por módulo, campos condicionais do editor de conteúdo) ficaria
+ * vazio para todo produto de demonstração pré-existente. Fallback: módulos
+ * padrão do tipo de produto (`PRODUCT_TYPE_MODULE_DEFAULTS`) quando
+ * `modulesList` não existir (Sprint 13, Tarefa O; reaproveitado na Sprint 15,
+ * Tarefas B e A).
+ */
+export function resolveEnabledModules(product: { type: string; modulesList?: string[] } | null): string[] {
+  if (!product) return [];
+  if (product.modulesList) return product.modulesList;
+  const defaults = PRODUCT_TYPE_MODULE_DEFAULTS[product.type as ProductTypeKey];
+  return defaults ? defaults.filter((m) => m.default).map((m) => m.key) : [];
+}
+
 export const PRODUCT_TYPE_MODULE_DEFAULTS: Record<ProductTypeKey, ModuleOption[]> = {
   "Site Institucional": [
     { key: "Páginas", default: true },

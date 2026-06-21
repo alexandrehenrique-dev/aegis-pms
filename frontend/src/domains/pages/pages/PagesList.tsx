@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence } from "motion/react";
-import { Plus, Trash2 } from "lucide-react";
+import { Calendar, Plus, Trash2 } from "lucide-react";
 import { Badge, Button, Card, EmptyState, Field, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
+import { EventsManagerDrawer } from "../components/EventsManagerDrawer";
 import { PermGate } from "../../../app/guards/PermGate";
 import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 import { toast } from "../../../core/notifications/toast";
@@ -77,6 +78,7 @@ export function PagesList() {
   const { data: loadedPages, loading, error } = useAsyncData(() => pagesService.listPages(productSlug), [productSlug]);
   const [pages, setPages] = useState<Page[]>([]);
   const [showNewPage, setShowNewPage] = useState(false);
+  const [showEventsManager, setShowEventsManager] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -88,7 +90,7 @@ export function PagesList() {
     const created = await pagesService.createPage(productSlug, req);
     toast.success("Página criada", { description: created.title });
     setShowNewPage(false);
-    navigate(`/content/${created.slug}/editor`);
+    navigate(`/pages/${created.slug}/editor`);
   };
 
   const handleDelete = async () => {
@@ -120,12 +122,20 @@ export function PagesList() {
           onConfirm={handleDelete}
         />
       )}
+      <EventsManagerDrawer productSlug={productSlug} open={showEventsManager} onOpenChange={setShowEventsManager} />
       <PageHeader title="Páginas" desc="Páginas institucionais deste produto — cada uma é composta por seções e blocos." badge={product?.name ?? "Produto"}>
+        {/* Tarefa E.3 — `Event` é entidade própria do produto (etapa 21 do backend), não de uma página específica; antes só era possível abrir o gerenciador de dentro de um bloco "event-list". */}
+        <Button onClick={() => setShowEventsManager(true)}><Calendar size={15} />Ver todos os eventos</Button>
         <PermGate allowed={canEdit}><Button onClick={() => navigate("/products/globals")}>Navbar, footer e redes sociais</Button></PermGate>
         <PermGate allowed={canEdit}><Button primary onClick={() => setShowNewPage(true)}><Plus size={15} />Nova página</Button></PermGate>
       </PageHeader>
       {pages.length === 0 ? (
-        <EmptyState title="Nenhuma página criada" description="Crie a primeira página institucional deste produto." />
+        <EmptyState
+          title="Nenhuma página criada"
+          description="Crie a primeira página institucional deste produto."
+          primaryAction={canEdit ? { label: "Criar página", onClick: () => setShowNewPage(true) } : undefined}
+          secondaryAction={{ label: "Ver documentação", onClick: () => navigate("/help") }}
+        />
       ) : (
         <div className="grid gap-3">
           {pages.map((p) => (
@@ -140,7 +150,7 @@ export function PagesList() {
                 </div>
                 <PermGate allowed={canEdit}>
                   <div className="flex gap-2">
-                    <Button onClick={() => navigate(`/content/${p.slug}/editor`)}>Editar</Button>
+                    <Button onClick={() => navigate(`/pages/${p.slug}/editor`)}>Editar</Button>
                     <Button onClick={() => setPendingDeleteId(p.id)}><Trash2 size={14} />Excluir</Button>
                   </div>
                 </PermGate>

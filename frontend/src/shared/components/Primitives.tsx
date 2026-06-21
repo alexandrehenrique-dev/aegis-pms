@@ -98,16 +98,29 @@ export function PartialErrorWidget() {
   );
 }
 
-export function EmptyState({ compact = false, title = "Nenhum produto criado ainda.", description = "Comece criando o primeiro item para operar este contexto digital." }: { compact?: boolean; title?: string; description?: string }) {
+export type EmptyStateAction = { label: string; onClick: () => void };
+
+/**
+ * Sprint 15, Tarefa E.2 — antes, a versão não-`compact` sempre renderizava
+ * dois botões hardcoded ("Criar produto"/"Ver documentação") sem `onClick`,
+ * herdados por qualquer tela que não passasse título/descrição customizados
+ * (ex.: lista de páginas vazia mostrava texto e ação de "produto"). Os
+ * botões agora só aparecem quando o chamador passa `primaryAction`/
+ * `secondaryAction` explicitamente — nenhuma ação implícita, nenhum botão
+ * morto.
+ */
+export function EmptyState({ compact = false, title = "Nenhum item encontrado.", description = "Ajuste os filtros ou crie o primeiro item para este contexto.", primaryAction, secondaryAction }: {
+  compact?: boolean; title?: string; description?: string; primaryAction?: EmptyStateAction; secondaryAction?: EmptyStateAction;
+}) {
   return (
     <div className={`rounded-xl border border-dashed border-border bg-muted/40 text-center ${compact ? "p-3" : "p-8"}`}>
       <Sparkles className="mx-auto mb-2 text-primary" size={compact ? 18 : 28} />
       <p className="font-medium">{title}</p>
       <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-muted-foreground">{description}</p>
-      {!compact && (
+      {!compact && (primaryAction || secondaryAction) && (
         <div className="mt-4 flex justify-center gap-2">
-          <Button primary><Plus size={15} />Criar produto</Button>
-          <Button>Ver documentação</Button>
+          {primaryAction && <Button primary onClick={primaryAction.onClick}><Plus size={15} />{primaryAction.label}</Button>}
+          {secondaryAction && <Button onClick={secondaryAction.onClick}>{secondaryAction.label}</Button>}
         </div>
       )}
     </div>

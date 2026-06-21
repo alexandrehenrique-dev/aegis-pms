@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, X, AlertTriangle } from "lucide-react";
+import { Info, Search, X, AlertTriangle } from "lucide-react";
 import { Button, EmptyState, PageHeader, Card, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { kgColor, KG_H, KG_W, type KGEdge, type KGNode } from "../mocks/knowledge.mocks";
 import { knowledgeService } from "../services/knowledgeService";
@@ -126,6 +126,11 @@ export function GraphCanvasView() {
         ) : (
           <Card>
             <EmptyState compact title="Selecione um nó" description="Clique em qualquer entidade para ver detalhes, relações e análise de impacto." />
+            {/* Tarefa G.1 — não existe (nem está prevista) uma UI manual de "desenhar uma conexão"; sem isto, a sensação era de grafo "só mock", sem entender o mecanismo real de criação de aresta. */}
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <Info size={14} className="mt-0.5 shrink-0 text-primary" />
+              <p>Conexões são criadas automaticamente ao referenciar <code className="rounded bg-muted px-1 py-0.5">{"{{kg-ref:nodeId:Label}}"}</code> no corpo de um conteúdo (domínio Conteúdo) — não há, ainda, uma forma de desenhar uma aresta manualmente aqui no canvas.</p>
+            </div>
             <div className="mt-4 space-y-1">
               <p className="mb-2 text-xs font-medium">Tipos de entidade</p>
               {Object.entries(kgColor).map(([type, color]) => (
