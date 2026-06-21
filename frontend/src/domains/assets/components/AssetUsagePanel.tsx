@@ -5,7 +5,7 @@ export function AssetBrokenUsageAlert() {
   return <div className="mt-3 rounded-xl border border-destructive/20 bg-[#FDEBE8] p-3 text-sm text-destructive">Antes de arquivar ou substituir, revise impactos: este asset está em uso público.</div>;
 }
 
-const USAGE_ROUTES = ["/content/home/editor", "/content/sobre/editor", "/settings/product", "/content/home/preview"];
+const USAGE_ROUTES = ["/pages/home/editor", "/pages/sobre/editor", "/settings/product", "/content/home/preview"];
 
 export function AssetUsagePanel() {
   const navigate = useNavigate();

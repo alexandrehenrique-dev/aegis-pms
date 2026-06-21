@@ -17,8 +17,8 @@ export function ContentCardMobile({ row }: { row: ContentRow }) {
       </div>
       <p className="mt-3 text-sm text-muted-foreground">Última atualização: {row.updatedAt} · {row.version}</p>
       <div className="mt-3 flex gap-2">
-        <PermGate allowed={canEdit}><Button onClick={() => navigate(`/content/${row.title.toLowerCase()}/editor`)}>Editar</Button></PermGate>
-        <Button onClick={() => navigate(`/content/${row.title.toLowerCase()}/preview`)}>Preview</Button>
+        <PermGate allowed={canEdit}><Button onClick={() => navigate(`/content/${row.id}/editor`)}>Editar</Button></PermGate>
+        <Button onClick={() => navigate(`/content/${row.id}/preview`)}>Preview</Button>
       </div>
     </Card>
   );

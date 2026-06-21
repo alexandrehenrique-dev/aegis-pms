@@ -86,8 +86,8 @@ export function ContentDataGrid() {
               <thead className="bg-muted text-xs text-muted-foreground"><tr>{["", "Título", "Tipo", "Idioma", "Autor", "Status", "Última atualização", "Publicação", "Versão", "Ações"].map((h) => <th key={h} className="p-3 font-medium">{h}</th>)}</tr></thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.title} className="border-t border-border hover:bg-muted/40">
-                    <td className="p-3"><input type="checkbox" onChange={(e) => setSel(e.target.checked ? [...sel, r.title] : sel.filter((x) => x !== r.title))} /></td>
+                  <tr key={r.id} className="border-t border-border hover:bg-muted/40">
+                    <td className="p-3"><input type="checkbox" onChange={(e) => setSel(e.target.checked ? [...sel, r.id] : sel.filter((x) => x !== r.id))} /></td>
                     <td className="p-3">{r.title}</td>
                     <td className="p-3">{r.type}</td>
                     <td className="p-3">{r.lang}</td>
@@ -98,9 +98,9 @@ export function ContentDataGrid() {
                     <td className="p-3">{r.version}</td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <PermGate allowed={canEdit}><Button onClick={() => navigate(`/content/${r.title.toLowerCase()}/editor`)}>Abrir</Button></PermGate>
-                        <Button onClick={() => navigate(`/content/${r.title.toLowerCase()}/preview`)}>Preview</Button>
-                        <Button onClick={() => navigate(`/content/${r.title.toLowerCase()}/versions`)}>Histórico</Button>
+                        <PermGate allowed={canEdit}><Button onClick={() => navigate(`/content/${r.id}/editor`)}>Abrir</Button></PermGate>
+                        <Button onClick={() => navigate(`/content/${r.id}/preview`)}>Preview</Button>
+                        <Button onClick={() => navigate(`/content/${r.id}/versions`)}>Histórico</Button>
                       </div>
                     </td>
                   </tr>
@@ -108,7 +108,7 @@ export function ContentDataGrid() {
               </tbody>
             </table>
           </div>
-          <div className="grid gap-3 lg:hidden">{rows.map((r) => <ContentCardMobile key={r.title} row={r} />)}</div>
+          <div className="grid gap-3 lg:hidden">{rows.map((r) => <ContentCardMobile key={r.id} row={r} />)}</div>
         </>
       )}
     </>
