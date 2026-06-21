@@ -14,7 +14,7 @@ CRUD de notificações pelo Super Admin, com fan-out para os destinatários corr
 
 ### A. Entidades
 
-**Notification**: `id`, `type` (`"ONBOARDING"|"FEATURE"|"WARNING"|"MAINTENANCE"|"GENERAL"`), `title`, `bodyMarkdown` (texto markdown — mesma convenção/regra de sanitização das etapas 10 e 21: allowlist `p, strong, em, ul, ol, li, blockquote, h2, h3, a, br`, bloquear `javascript:`/`data:`, nunca `<script>`/`<iframe>`), `presentationMode` (`"MODAL_ONCE"|"BELL_ONLY"`), `createdBySubject`, `createdAt`, `updatedAt`.
+**Notification**: `id`, `type` (`"ONBOARDING"|"FEATURE"|"WARNING"|"MAINTENANCE"|"GENERAL"`), `title`, `bodyMarkdown` (texto markdown — mesma convenção/regra de sanitização das etapas 10 e 21: allowlist `p, strong, em, ul, ol, li, blockquote, h2, h3, a, br, span (span só com atributo class, e só um dos 6 valores fixos de cor da Sprint 18 — nunca style nem qualquer outro atributo)`, bloquear `javascript:`/`data:`, nunca `<script>`/`<iframe>`), `presentationMode` (`"MODAL_ONCE"|"BELL_ONLY"`), `createdBySubject`, `createdAt`, `updatedAt`.
 
 **UserNotificationStatus**: `id`, `notificationId`, `userSubject`, `autoShown` (boolean, default `false`), `read` (boolean, default `false`), `readAt?`, `shownAt?`, `createdAt`. Constraint única em `(notificationId, userSubject)` — um destinatário nunca tem duas linhas de status para a mesma notificação.
 

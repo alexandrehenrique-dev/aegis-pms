@@ -47,7 +47,7 @@ Confirmar, nesta ordem, tudo o que foi construído nas etapas 01-21:
 
 **Domínios de produto**: `content`, `assets`, `forms`/`submissions`, `analytics`, `users`, `audit`, `settings`, `dashboard` — cada um responde aos endpoints da etapa correspondente (09-16) com os payloads exatos descritos em `docs/trace/00_endpoints_esperados.md`.
 
-**Pages (etapa 21)**: página pode ser criada com seções; seção fora do catálogo de `BlockType` é rejeitada; `hero` sem `title` ou imagem sem `alt` é rejeitado; reordenar seções persiste a nova ordem; excluir página remove seções em cascata.
+**Pages (etapa 21)**: página pode ser criada com seções; seção fora do catálogo de `BlockType` é rejeitada; `hero` sem `title` ou imagem sem `alt` é rejeitado; reordenar seções persiste a nova ordem; excluir página remove seções em cascata; bloco `video` aceita upload (`category: "video"`) e YouTube, rejeitando URL fora do regex; `video-gallery` respeita o limite de 50 itens.
 
 **Knowledge Graph**: node pode ser criado · edge pode ser criada · neighbor pode ser consultado · edge inválida é bloqueada · cross-tenant é bloqueado · `x`/`y`/`props` persistem (etapa 17) · `/graph/orphans` retorna nós sem edge · `/graph/nodes/{nodeId}/preview` retorna o shape leve (`summary`/`difficulty` vindo do `Content` quando aplicável) · seed inicial funciona.
 

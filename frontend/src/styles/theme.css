@@ -200,3 +200,66 @@
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
 }
+
+/*
+ * Paleta fechada de cor de texto no markdown (Sprint 18, Tarefa B.3) — reaproveita
+ * os tokens de tema já calibrados para contraste em claro/escuro (--chart-*,
+ * --byop-violet) em vez de hex fixos, para nunca depender só do tema claro.
+ */
+.text-aegis-red { color: var(--chart-5); }
+.text-aegis-blue { color: var(--chart-2); }
+.text-aegis-green { color: var(--chart-3); }
+.text-aegis-amber { color: var(--chart-4); }
+.text-aegis-violet { color: var(--byop-violet); }
+
+/*
+ * Escopo "papel branco" (Sprint 18, Tarefa C) — os previews de conteúdo e de
+ * formulário simulam a página publicada de verdade para um visitante, então
+ * nunca devem reagir ao tema escuro do editor. Redeclara as variáveis de
+ * tema com os valores claros do `:root`, vencendo a cascata mesmo dentro de
+ * um ancestral `.dark` (CSS custom properties resolvem pelo ancestral mais
+ * próximo que as redeclara, não pelo tema). Não cobre `dark:prose-invert`
+ * (que não usa estas variáveis) — para isso, ver a prop `forceLightProse`
+ * de `Markdown.tsx`, usada junto deste wrapper nos dois previews.
+ */
+.light {
+  /*
+   * `color` é uma propriedade herdada que `body { @apply text-foreground }`
+   * já resolveu (e fixou) num valor concreto fora deste escopo — redeclarar
+   * só as variáveis abaixo não basta para texto sem classe utilitária
+   * própria (headings, parágrafos simples), porque a herança de `color`
+   * usa o valor computado do ancestral mais próximo que a define, não
+   * reavalia `var()` em cada descendente. Por isso `color` precisa ser
+   * fixado aqui também, não só as variáveis.
+   */
+  color: #1d1d1f;
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
+  --popover: #ffffff;
+  --popover-foreground: #1d1d1f;
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+  --secondary: #f0ebff;
+  --secondary-foreground: #4c1d95;
+  --muted: #f5f5f7;
+  --muted-foreground: #6e6e73;
+  --accent: #8b5cf6;
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.08);
+  --input: rgba(0, 0, 0, 0.08);
+  --input-background: #ffffff;
+  --switch-background: #d1d1d6;
+  --ring: #8b5cf6;
+  --chart-1: #8b5cf6;
+  --chart-2: #3b82f6;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  --byop-violet: #8b5cf6;
+  --byop-violet-soft: rgba(139, 92, 246, 0.12);
+  --byop-violet-dark: #7c3aed;
+}

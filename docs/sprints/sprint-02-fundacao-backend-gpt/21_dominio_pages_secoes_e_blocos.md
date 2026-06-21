@@ -41,12 +41,15 @@ A regra do bloco `event-list` (Seção C) passa a referenciar este endpoint, com
 ```txt
 hero, text, rich-text, two-column, image, image-text,
 feature-grid, card-list, gallery, timeline, event-list,
-cta-section, faq, contact, form, download, audio, social-links
+cta-section, faq, contact, form, download, audio, social-links,
+video, video-gallery
 ```
 
 `type` desconhecido na criação/edição de uma seção é rejeitado com 400 — mesmo princípio já usado no catálogo de módulos (etapa 06) e no catálogo de tipos de nó do grafo (etapa 07): catálogo fechado no backend, nunca aberto a qualquer string vinda do frontend.
 
 > **Atualização (Sprint 13 do frontend):** `footer` e `navbar` **saíram** deste catálogo — não são mais um tipo de seção de página. Navbar, footer e redes sociais passaram a ser uma entidade própria por produto (`ProductGlobals`, Seção F) e nunca mais devem aparecer como `PageSection.type`. `audio` e `social-links` **entraram** — ver regras de validação na Seção C.
+
+> **`video`/`video-gallery` adicionados nesta revisão** — caso de uso real confirmado (Maestro Beton precisa de vídeos de apresentações/shows, `docs/AEGIS_PMS_V1.md` §17) e categoria de asset `"video"` já provisionada desde a etapa 11, mas sem nenhum `BlockType` que a usasse até agora. `video` é um card único (mesmo espírito do `audio`); `video-gallery` é a variação em lista (mesmo espírito do `gallery`/`download`) — ver regras de validação na Seção C. **Permissões: nenhuma nova** — os dois seguem exatamente o mesmo gate de papel que qualquer outro `BlockType` (`SUPER_ADMIN`/`TENANT_ADMIN`/`PRODUCT_MANAGER`/`EDITOR` editam, `VIEWER` só lê) e o mesmo `@RequireModule(ModuleKey.PAGES)` do `PageController` (etapa 21 já gateado) — não criam nem exigem módulo novo.
 
 Cada entrada do catálogo tem também uma propriedade `acceptsChildren: BlockType[] | null` — define se aquele tipo de bloco aceita sub-blocos e, se sim, quais tipos são permitidos como filho. Hoje só `two-column` tem essa propriedade preenchida (`["text", "rich-text", "image", "cta"]`), mas o mecanismo de validação (Seção C) deve ser genérico — qualquer `BlockType` futuro pode ganhar `acceptsChildren` sem precisar de uma regra nova no código, só uma entrada nova nesta tabela.
 
@@ -66,11 +69,13 @@ Cada `BlockType` tem regras mínimas de validação sobre `contentJson` antes de
 | `download` | `items[]` cada um com `fileAssetId` de um `Asset` existente (qualquer categoria, tipicamente `pdf`/`document`) e `title` não vazio |
 | `audio` | `source` ∈ `"upload" \| "spotify-track" \| "spotify-playlist"`; se `upload`, exige `fileAssetId` de um `Asset` existente com `type` de áudio; se `spotify-*`, exige `spotifyUrl` válida (`https://open.spotify.com/...`); `autoplay` é `boolean`, default `false` |
 | `social-links` | `items[]` cada um com `platform` (string não vazia) e `href` (URL válida) |
+| `video` | `source` ∈ `"upload" \| "youtube"`; se `upload`, exige `fileAssetId` de um `Asset` existente com `category: "video"` (etapa 11); se `youtube`, exige `youtubeUrl` válida (regex `^https://(www\.)?youtube\.com/watch\?v=[\w-]{6,}$` ou `^https://youtu\.be/[\w-]{6,}$`); `autoplay` é `boolean`, default `false` |
+| `video-gallery` | `items[]` com pelo menos 1 e no máximo 50 elementos (mesmo limite do `gallery`); cada item validado com a **mesma regra do `video`** acima (`source`/`fileAssetId`/`youtubeUrl`), mais `title` não vazio (label do item na galeria) |
 | demais tipos | apenas validação de schema JSON genérica (campos esperados presentes) |
 
 Reaproveitar a mesma estratégia de validação por chave dinâmica já usada na etapa 06 (catálogo de módulos) e etapa 07 (catálogos de node/edge type) — uma função `validateSectionContent(type, contentJson)` central, não validação espalhada.
 
-> **Markdown e sanitização (Sprint 13):** qualquer campo de texto longo dentro de `contentJson` (`body` de `text`/`rich-text`/`two-column`, `description` de qualquer bloco) é markdown — mesma convenção e mesma regra de sanitização da etapa 10 (allowlist `p, strong, em, ul, ol, li, blockquote, h2, h3, a, br`; bloquear `javascript:`/`data:`; nunca `<script>`/`<iframe>`). Aplicar ao salvar a seção (`POST`/`PUT` de section), não só na hora de renderizar.
+> **Markdown e sanitização (Sprint 13):** qualquer campo de texto longo dentro de `contentJson` (`body` de `text`/`rich-text`/`two-column`, `description` de qualquer bloco) é markdown — mesma convenção e mesma regra de sanitização da etapa 10 (allowlist `p, strong, em, ul, ol, li, blockquote, h2, h3, a, br, span (span só com atributo class, e só um dos 6 valores fixos de cor da Sprint 18 — nunca style nem qualquer outro atributo)`; bloquear `javascript:`/`data:`; nunca `<script>`/`<iframe>`). Aplicar ao salvar a seção (`POST`/`PUT` de section), não só na hora de renderizar.
 
 ### D. Endpoints
 
@@ -166,6 +171,8 @@ Regra: se o produto ainda não tem `ProductGlobals` (produto recém-criado), `GE
 - [ ] Produto com módulo `PAGES` desabilitado retorna 403 `MODULE_DISABLED` em `PageController` (não afeta `ProductGlobalsController`).
 - [ ] `Event` é entidade própria (`EventController`), nunca resolvido como "content type"; CRUD completo funciona; `datetime` é um único valor ISO com data e hora (nunca dois campos separados).
 - [ ] Bloco `event-list` referencia `Event` via filtro (período/visibilidade), nunca um `contentType`.
+- [ ] `video` com `source: "upload"` exige `fileAssetId` de um asset `category: "video"` existente; com `source: "youtube"` exige `youtubeUrl` válida (regex da Seção C); URL que não bate com o regex é rejeitada com 400.
+- [ ] `video-gallery` com mais de 50 itens é rejeitado; item sem `title` é rejeitado.
 - [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa, incluindo `SectionContentValidationService` (JaCoCo).
 - [ ] `PageRepository`/`PageSectionRepository`/`ProductGlobalsRepository` têm Javadoc na interface e em todo método.
 
