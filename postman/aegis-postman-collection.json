@@ -1,0 +1,96 @@
+{
+  "info": {
+    "name": "Aegis PMS",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "keycloakIssuer",
+      "value": "http://localhost:8282/realms/aegis"
+    },
+    {
+      "key": "clientId",
+      "value": "aegis-web"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Estrutura do repositório e variáveis de ambiente",
+      "description": "Validação manual da Etapa 01. Esta etapa não define endpoints HTTP; os itens documentam os comandos de validação exigidos pelo artefato da sprint.",
+      "item": [
+        {
+          "name": "Manual - tree -L 2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/__manual__/tree-L-2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "__manual__",
+                "tree-L-2"
+              ]
+            },
+            "description": "Executar no terminal, na raiz do repositório: `tree -L 2`. Valida a estrutura base criada/confirmada."
+          }
+        },
+        {
+          "name": "Manual - cp .env.example .env",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/__manual__/copy-env-example",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "__manual__",
+                "copy-env-example"
+              ]
+            },
+            "description": "Executar no terminal, na raiz do repositório: `cp .env.example .env`. Valida que o arquivo de exemplo pode originar o `.env` local."
+          }
+        },
+        {
+          "name": "Manual - cat .env",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/__manual__/cat-env",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "__manual__",
+                "cat-env"
+              ]
+            },
+            "description": "Executar no terminal, na raiz do repositório: `cat .env`. Valida visualmente as variáveis locais sem segredos reais de produção."
+          }
+        }
+      ]
+    }
+  ]
+}

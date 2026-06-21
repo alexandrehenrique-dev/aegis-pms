@@ -1,0 +1,3 @@
+# Etapa 01: arquivo estrutural. Serviços PostgreSQL, Keycloak e backend serão definidos nas etapas próprias.
+name: ${COMPOSE_PROJECT_NAME:-aegis-pms}
+services: {}
