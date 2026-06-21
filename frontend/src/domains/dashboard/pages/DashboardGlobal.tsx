@@ -1,22 +1,28 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { AnimatePresence } from "motion/react";
 import { Plus } from "lucide-react";
 import { useAuth } from "../../../core/auth/AuthContext";
 import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
+import { getPostLoginLandingPath } from "../../../core/permissions/roles";
 import { PermGate } from "../../../app/guards/PermGate";
 import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { OperationalTimeline } from "../../../shared/components/OperationalTimeline";
+import { CreateProductModal } from "../../products/components/CreateProductModal";
 import { dashboardService } from "../services/dashboardService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import type { ProductOption } from "../../../shared/types";
+import type { ProductSummary } from "../../products/contracts/responses";
 
 const PERIODS = ["Últimos 7 dias", "Últimos 30 dias", "Últimos 90 dias"];
 
 export function DashboardGlobal() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
-  const { tenantProducts } = useAuth();
+  const { authUser, effectiveTenant, tenantProducts, selectProduct } = useAuth();
   const canCreate = !["editor", "viewer"].includes(viewAsRole);
+  const [showCreateProduct, setShowCreateProduct] = useState(false);
   const canSeeUsers = ["super_admin", "tenant_admin"].includes(viewAsRole);
   const canSeeFinancial = viewAsRole === "super_admin";
   const { data: summary, loading, error } = useAsyncData(() => dashboardService.getSummary(), []);
@@ -26,8 +32,25 @@ export function DashboardGlobal() {
   const activeProducts = tenantProducts.filter((p) => p.status === "Ativo").length;
   const archivedProducts = tenantProducts.filter((p) => p.status === "Arquivado").length;
 
+  // Tarefa C.2 — `/products/new` não corresponde a nenhuma tela de criação
+  // real (só existe o modal); antes o usuário ficava preso na tela anterior.
+  // Mesmo padrão de `ProductSelectScreen.tsx`: abre o modal e, no sucesso,
+  // navega para o produto recém-criado.
+  const handleProductCreated = (created: ProductSummary) => {
+    setShowCreateProduct(false);
+    if (!authUser) return;
+    const product: ProductOption = { id: created.id ?? created.name, name: created.name, type: created.type, status: created.status, modules: created.modules };
+    selectProduct(product);
+    navigate(getPostLoginLandingPath(authUser.role, product));
+  };
+
   return (
     <>
+      <AnimatePresence>
+        {showCreateProduct && effectiveTenant && (
+          <CreateProductModal tenantId={effectiveTenant.id} tenantName={effectiveTenant.name} onClose={() => setShowCreateProduct(false)} onCreated={handleProductCreated} />
+        )}
+      </AnimatePresence>
       <PageHeader title="Dashboard Global" desc="Visão operacional dos produtos digitais deste tenant." badge="Tenant BYOP">
         <Popover>
           <PopoverTrigger asChild><Button>{period}</Button></PopoverTrigger>
@@ -35,7 +58,7 @@ export function DashboardGlobal() {
             <div className="flex flex-col gap-1">{PERIODS.map((p) => <Button key={p} onClick={() => setPeriod(p)} primary={period === p}>{p}</Button>)}</div>
           </PopoverContent>
         </Popover>
-        <PermGate allowed={canCreate}><Button primary onClick={() => navigate("/products/new")}><Plus size={15} />Criar produto</Button></PermGate>
+        <PermGate allowed={canCreate}><Button primary onClick={() => setShowCreateProduct(true)}><Plus size={15} />Criar produto</Button></PermGate>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
