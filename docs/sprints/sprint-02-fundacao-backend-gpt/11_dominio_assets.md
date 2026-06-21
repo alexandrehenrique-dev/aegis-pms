@@ -57,8 +57,18 @@ type UpdateAssetMetadataRequest = {
 
 ### C. Regras de negócio
 
-- **Asset não é só imagem (confirmado pela Sprint 13 do frontend):** `type` já é genérico (mime/categoria) — o upload precisa aceitar PDF, áudio (mp3/wav) e documentos de verdade, não só imagem. Casos confirmados nos contratos de negócio: currículo em PDF (Alexandre Dev, WikiDev), upload de currículo de candidato (Conecta Talentos, registrado em B.10), upload de música avulsa para o bloco de áudio (Loki). Limite de tamanho deve poder variar por categoria (ex.: 5MB para imagem, 15MB para PDF, 30MB para áudio) — não um único limite fixo para tudo.
-- Upload valida tipo/tamanho (definir limite razoável, ex. 25MB para imagem/documento, configurável).
+- **Asset não é só imagem (confirmado pela Sprint 13 do frontend):** `type` já é genérico (mime/categoria) — o upload precisa aceitar PDF, áudio (mp3/wav), vídeo e documentos de verdade, não só imagem. Casos confirmados nos contratos de negócio: currículo em PDF (Alexandre Dev, WikiDev), upload de currículo de candidato (Conecta Talentos, registrado em B.10), upload de música avulsa para o bloco de áudio (Loki), vídeo de apresentações/shows (Maestro Beton, `docs/AEGIS_PMS_V1.md` §17 — bloco `video`/`video-gallery`, etapa 21). Limite de tamanho varia por categoria — tabela de referência (configurável via `application.yml`, nunca hardcoded):
+
+  | `category` | Mime types aceitos | Limite default |
+  |---|---|---|
+  | `image` | `image/jpeg`, `image/png`, `image/webp`, `image/svg+xml` | 5MB |
+  | `pdf` | `application/pdf` | 15MB |
+  | `audio` | `audio/mpeg`, `audio/wav`, `audio/ogg` | 30MB |
+  | `video` | `video/mp4`, `video/webm`, `video/quicktime` | 250MB |
+  | `document` | demais mime types de documento (`.docx`, `.xlsx`, `.csv`, ...) | 15MB |
+
+  **`video` precisa de configuração extra**: 250MB é muito acima do default do Spring (`spring.servlet.multipart.max-file-size`/`max-request-size`, default 1MB) — esta etapa **precisa** elevar os dois para pelo menos o limite da categoria `video` na configuração do `application.yml` (etapa 04), senão o upload de vídeo falha silenciosamente com 413 antes mesmo de chegar no `AssetService`. Documentar a escolha do limite exato no código (comentário citando esta tabela).
+- Upload valida tipo/tamanho contra a tabela acima — rejeitar com 400/413 se o mime type não estiver na lista da categoria ou o arquivo exceder o limite.
 - Excluir um asset com `usage` não vazio exige confirmação explícita no payload (`{ force: true }`) — replicando o cuidado já aplicado em exclusão de tenant na etapa 09.
 - Tag duplicada (mesmo nome, mesmo produto) é rejeitada com 409; "mesclar tags" (ação do frontend `AssetTagManager.tsx`) é implementável como: criar a tag destino se não existir, mover todas as `AssetTagAssignment` da tag origem para a destino, excluir a tag origem.
 
@@ -152,6 +162,8 @@ Fora de escopo desta etapa **implementar** a migração, mas a regra precisa exi
 ## Critérios de aceite
 
 - [ ] Upload de asset funciona e retorna o `AssetSummary` criado.
+- [ ] Upload de vídeo (`category: "video"`) até 250MB funciona; `spring.servlet.multipart.max-file-size`/`max-request-size` configurados acima desse limite (não o default de 1MB do Spring).
+- [ ] Upload com mime type fora da lista da categoria, ou acima do limite de tamanho, é rejeitado (400/413).
 - [ ] Metadados podem ser editados.
 - [ ] Tags podem ser criadas, usadas em assets, e removidas.
 - [ ] Excluir asset em uso sem `force` é rejeitado; com `force: true` funciona.
@@ -187,6 +199,10 @@ curl -X POST http://localhost:8080/api/v1/products/<productId>/assets \
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/assets/<assetId>/resolve
 # esperado: { "id": "...", "url": "...", "contentType": "application/pdf" }
 ```
+
+## Artefato de continuidade — `SPRINT-RESULTADO.md`
+
+> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
 
 ## Commit sugerido
 

@@ -92,10 +92,22 @@ export function PageEditor() {
    * "chamadas de API" mockadas logadas via `devLog`) imediatamente. Agora o
    * patch mais recente fica pendente em `pendingContentPatch` e só é
    * persistido `CONTENT_SAVE_DEBOUNCE_MS` depois da última tecla.
+   *
+   * O `setPage` otimista abaixo (Sprint 18 — bug encontrado em teste manual)
+   * é obrigatório, não cosmético: os campos de bloco são controlados por
+   * `section.content`, que só refletia o patch depois do debounce + round-trip
+   * assíncrono do mock. Cada tecla disparava `setSaveStatus("dirty")` — um
+   * re-render síncrono — e o React reescreve `<input value>` a cada commit
+   * independente de diff, então o caractere recém-digitado era sobrescrito de
+   * volta ao valor antigo antes da tecla seguinte. Resultado: digitar mais
+   * rápido que `CONTENT_SAVE_DEBOUNCE_MS` perdia quase todos os caracteres,
+   * sobrevivendo só o último. Atualizar `page` localmente a cada tecla resolve
+   * isso sem tocar no debounce, que continua só controlando a persistência.
    */
   const handleChangeContent = (patch: Record<string, unknown>) => {
     if (!page || !selectedSectionId) return;
     setSaveStatus("dirty");
+    setPage((prev) => (prev ? { ...prev, sections: prev.sections.map((s) => (s.id === selectedSectionId ? { ...s, content: { ...s.content, ...patch } } : s)) } : prev));
     const mergedPatch = { ...pendingContentPatch.current?.patch, ...patch };
     pendingContentPatch.current = { sectionId: selectedSectionId, patch: mergedPatch };
     if (contentDebounceTimer.current) clearTimeout(contentDebounceTimer.current);

@@ -8,6 +8,18 @@ const assetsStore: AssetSummary[] = assets.map(([name, type, size, status, tags,
 
 const assetTagsStore: string[] = [...assetTags];
 
+function inferAssetType(file: File): string {
+  if (file.type.startsWith("image/")) return "imagem";
+  if (file.type === "application/pdf") return "PDF";
+  if (file.type.startsWith("audio/")) return "áudio";
+  if (file.type.startsWith("video/")) return "vídeo";
+  return "qualquer";
+}
+
+function formatSize(bytes: number): string {
+  return bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
 export const assetsService = {
   async listAssets(): Promise<ListAssetsResponse> {
     return assetsStore;
@@ -50,6 +62,12 @@ export const assetsService = {
   },
   async uploadFiles(): Promise<void> {
     logApiCall("POST", "/api/v1/products/{productId}/assets/upload");
+  },
+  /** Upload de um arquivo real do sistema do usuário (Sprint 18, Tarefa D.2) — reaproveitado por qualquer picker fora do contexto de assets (ex.: anexo do `FeedbackModal`), nunca um endpoint de upload próprio por domínio. Devolve o `assetId` (mock: o próprio `name`) para referenciar o asset criado. */
+  async upload(file: File): Promise<{ assetId: string }> {
+    logApiCall("POST", "/api/v1/products/{productId}/assets", { name: file.name, size: file.size });
+    assetsStore.push({ name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
+    return { assetId: file.name };
   },
   async downloadAsset(name: string): Promise<void> {
     logApiCall("GET", `/api/v1/products/{productId}/assets/${name}/download`);

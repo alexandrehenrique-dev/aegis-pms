@@ -8,9 +8,9 @@ import { AssetTypeIcon } from "./AssetBits";
 import { toast } from "../../../core/notifications/toast";
 import type { AssetSummary } from "../contracts/responses";
 
-export type AssetTypeFilter = "imagem" | "PDF" | "áudio" | "qualquer";
+export type AssetTypeFilter = "imagem" | "PDF" | "áudio" | "vídeo" | "qualquer";
 
-const FILTER_OPTIONS: AssetTypeFilter[] = ["qualquer", "imagem", "PDF", "áudio"];
+const FILTER_OPTIONS: AssetTypeFilter[] = ["qualquer", "imagem", "PDF", "áudio", "vídeo"];
 
 /**
  * Variante modal do `AssetPicker` (Sprint 13, Tarefa C) — diferente da tela

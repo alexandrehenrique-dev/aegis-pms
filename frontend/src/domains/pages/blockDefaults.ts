@@ -49,5 +49,7 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, Record<string, unknown>> =
   form: { formId: "" },
   download: { title: "Downloads", items: [{ title: "Documento", fileAssetId: "", fileType: "pdf" }] },
   audio: { title: "Faixa", source: "upload", fileAssetId: "", spotifyUrl: "", autoplay: false },
+  video: { title: "", source: "upload", fileAssetId: "", youtubeUrl: "", autoplay: false },
+  "video-gallery": { items: [] },
   "social-links": { items: [{ platform: "instagram", href: "" }] },
 };

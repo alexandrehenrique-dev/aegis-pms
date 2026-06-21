@@ -47,7 +47,7 @@ Confirmar, nesta ordem, tudo o que foi construído nas etapas 01-21:
 
 **Domínios de produto**: `content`, `assets`, `forms`/`submissions`, `analytics`, `users`, `audit`, `settings`, `dashboard` — cada um responde aos endpoints da etapa correspondente (09-16) com os payloads exatos descritos em `docs/trace/00_endpoints_esperados.md`.
 
-**Pages (etapa 21)**: página pode ser criada com seções; seção fora do catálogo de `BlockType` é rejeitada; `hero` sem `title` ou imagem sem `alt` é rejeitado; reordenar seções persiste a nova ordem; excluir página remove seções em cascata.
+**Pages (etapa 21)**: página pode ser criada com seções; seção fora do catálogo de `BlockType` é rejeitada; `hero` sem `title` ou imagem sem `alt` é rejeitado; reordenar seções persiste a nova ordem; excluir página remove seções em cascata; bloco `video` aceita upload (`category: "video"`) e YouTube, rejeitando URL fora do regex; `video-gallery` respeita o limite de 50 itens.
 
 **Knowledge Graph**: node pode ser criado · edge pode ser criada · neighbor pode ser consultado · edge inválida é bloqueada · cross-tenant é bloqueado · `x`/`y`/`props` persistem (etapa 17) · `/graph/orphans` retorna nós sem edge · `/graph/nodes/{nodeId}/preview` retorna o shape leve (`summary`/`difficulty` vindo do `Content` quando aplicável) · seed inicial funciona.
 
@@ -64,6 +64,7 @@ Confirmar, nesta ordem, tudo o que foi construído nas etapas 01-21:
 - [ ] Nenhum `Repository` do projeto está sem Javadoc na interface ou em algum método.
 - [ ] Nenhum uso de `@MockBean`/`@SpyBean` em nenhum teste do projeto.
 - [ ] `aegis-postman-collection.json` tem uma pasta por etapa (03 a 22), a pasta "Auth" autentica e captura `{{token}}` automaticamente para os 5 usuários de teste, e importar a collection no Postman permite rodar todo o fluxo (login → CRUD de cada domínio) sem editar nenhum request manualmente.
+- [ ] `SPRINT-RESULTADO.md` tem uma entrada por etapa concluída (01 a 22, sem nenhuma faltando), cada uma com classes criadas, endpoints confirmados e as decisões que a etapa deixou a critério do GPT já registradas (não vazias/genéricas).
 
 ## Validação
 
@@ -83,6 +84,10 @@ http://localhost:8080/swagger-ui/index.html
 ```
 
 Percorrer o checklist da seção C item a item.
+
+## Artefato de continuidade — `SPRINT-RESULTADO.md`
+
+> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
 
 ## Commit sugerido
 

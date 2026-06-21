@@ -11,7 +11,7 @@ const KG_REF_PATTERN = /\{\{kg-ref:([\w-]+):([^}]+)\}\}/g;
  * Os trechos de texto entre marcas `kg-ref` aceitam markdown (Sprint 13,
  * Tarefa B.2) — por isso são processados em segmentos, não como bloco único.
  */
-export function ArticleBody({ body }: { body: string }) {
+export function ArticleBody({ body, forceLightProse = false }: { body: string; forceLightProse?: boolean }) {
   const parts: Array<string | { nodeId: string; label: string }> = [];
   let lastIndex = 0;
   for (const match of body.matchAll(KG_REF_PATTERN)) {
@@ -26,7 +26,7 @@ export function ArticleBody({ body }: { body: string }) {
   return (
     <p className="leading-relaxed text-foreground">
       {parts.map((part, i) =>
-        typeof part === "string" ? <Markdown key={i} inline>{part}</Markdown> : <KgRefMark key={i} nodeId={part.nodeId} label={part.label} />,
+        typeof part === "string" ? <Markdown key={i} inline forceLightProse={forceLightProse}>{part}</Markdown> : <KgRefMark key={i} nodeId={part.nodeId} label={part.label} />,
       )}
     </p>
   );

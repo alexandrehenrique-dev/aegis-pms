@@ -69,7 +69,7 @@ type WFItem = { id: string; title: string; type: string; lang: string; author: s
 - Só quem tem papel `SUPER_ADMIN`, `TENANT_ADMIN` ou `PRODUCT_MANAGER` pode publicar (`transition` para `Published`) — `EDITOR`/`VIEWER` podem mover até `In Review`, nunca além.
 - Toda transição grava uma `ContentVersion` nova.
 - `publish` é um atalho para `transition` com `to: "Published"` que também atualiza `publication` (data/canal).
-- **Sanitização de markdown** (não negociável, mesma regra que vale para `pages` na etapa 21): rejeitar/limpar tags HTML fora de uma allowlist mínima (`p, strong, em, ul, ol, li, blockquote, h2, h3, a, br`), bloquear `javascript:`/`data:` em links, nunca aceitar `<script>`/`<iframe>` dentro do markdown. Aplicar ao salvar (`PUT`/`transition`), não só na hora de renderizar.
+- **Sanitização de markdown** (não negociável, mesma regra que vale para `pages` na etapa 21): rejeitar/limpar tags HTML fora de uma allowlist mínima (`p, strong, em, ul, ol, li, blockquote, h2, h3, a, br, span (span só com atributo class, e só um dos 6 valores fixos de cor da Sprint 18 — nunca style nem qualquer outro atributo)`), bloquear `javascript:`/`data:` em links, nunca aceitar `<script>`/`<iframe>` dentro do markdown. Aplicar ao salvar (`PUT`/`transition`), não só na hora de renderizar.
 - **Integração com Knowledge Graph** (ver etapa 07, Seção C.1): ao salvar `bodyMarkdown` contendo referências inline `{{kg-ref:nodeId:Label}}`, chamar o equivalente de `KnowledgeGraphService` para garantir o node do conteúdo e criar as edges — `kg-ref` para `nodeId` inexistente é rejeitado (400) nesta etapa, antes de persistir o conteúdo.
 - **Isolamento por produto** (`00_padrao_qualidade_e_arquitetura.md`, Seção 10): conteúdo de um produto que não está no escopo do usuário autenticado retorna 404, nunca 403, em qualquer endpoint da Seção B.
 - **Module-gating** (`00_padrao_qualidade_e_arquitetura.md`, Seção 9.2): `ContentController` anotado com `@RequireModule(ModuleKey.CONTENT)` — produto com módulo `CONTENT` desabilitado retorna 403 `MODULE_DISABLED`.
@@ -113,6 +113,10 @@ curl -X POST http://localhost:8080/api/v1/products/<productId>/content/<contentI
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"from":"Draft","to":"Published"}'
 ```
+
+## Artefato de continuidade — `SPRINT-RESULTADO.md`
+
+> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
 
 ## Commit sugerido
 

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { CheckCircle2, Loader2, Plus, X } from "lucide-react";
 import { fade, Button } from "../../../shared/components/Primitives";
 import { toast } from "../toast";
 import { useAuth } from "../../auth/AuthContext";
+import { assetsService } from "../../../domains/assets/services/assetsService";
+import { feedbackService } from "../services/feedbackService";
 
 export function FeedbackModal({ screenName, onClose }: { screenName: string; onClose: () => void }) {
   const { authUser, effectiveTenant, effectiveProduct } = useAuth();
@@ -12,20 +14,47 @@ export function FeedbackModal({ screenName, onClose }: { screenName: string; onC
   const [desc, setDesc] = useState("");
   const [pri, setPri] = useState<string>("média");
   const [ctx, setCtx] = useState(true);
-  const [fakeFile, setFakeFile] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<{ name: string; assetId: string } | null>(null);
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [issueId, setIssueId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const handleSubmit = () => {
+  /** Upload acontece já na escolha do arquivo (Sprint 18, Tarefa D.2) — `<input type="file">` real do sistema do usuário, nunca o picker de assets existentes. Falha aqui nunca bloqueia o envio do feedback (Tarefa D.4). */
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setAttachmentUploading(true);
+    try {
+      const { assetId } = await assetsService.upload(file);
+      setAttachment({ name: file.name, assetId });
+    } catch {
+      setAttachment(null);
+      toast.error("Não foi possível enviar o anexo.", { description: "Você ainda pode enviar o feedback sem ele." });
+    } finally {
+      setAttachmentUploading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!desc.trim()) return;
     setLoading(true);
-    setTimeout(() => {
-      const id = `AGS-${Math.floor(1000 + Math.random() * 9000)}`;
+    try {
+      const { id } = await feedbackService.create({
+        productId: effectiveProduct?.id,
+        category: cat,
+        priority: pri,
+        description: desc,
+        screenName: ctx ? screenName : undefined,
+        attachmentAssetId: attachment?.assetId,
+      });
       setIssueId(id);
-      setLoading(false);
       toast.success(`Feedback registrado · ${id}`, { description: "Será revisado em breve.", duration: 5000 });
-    }, 850);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const copy = () => {
@@ -76,7 +105,10 @@ export function FeedbackModal({ screenName, onClose }: { screenName: string; onC
           )}
           <div className="flex items-center justify-between">
             <label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={ctx} onChange={(e) => setCtx(e.target.checked)} className="accent-primary" />Incluir contexto da tela</label>
-            <button onClick={() => setFakeFile(fakeFile ? null : `screenshot-${Date.now().toString().slice(-4)}.png`)} className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs transition hover:bg-muted">{fakeFile ? <><CheckCircle2 size={12} className="text-primary" /><span className="max-w-[120px] truncate">{fakeFile}</span></> : <><Plus size={12} />Anexar arquivo</>}</button>
+            <input ref={fileInputRef} type="file" hidden onChange={handleFileSelected} />
+            <button onClick={() => fileInputRef.current?.click()} disabled={attachmentUploading} className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60">
+              {attachmentUploading ? <><Loader2 size={12} className="animate-spin" />Enviando...</> : attachment ? <><CheckCircle2 size={12} className="text-primary" /><span className="max-w-[120px] truncate">{attachment.name}</span></> : <><Plus size={12} />Anexar arquivo</>}
+            </button>
           </div>
         </div>
         <div className="mt-5 flex justify-end gap-2"><Button onClick={onClose}>Cancelar</Button><Button primary onClick={handleSubmit} disabled={!desc.trim() || loading}>{loading ? <><Loader2 size={15} className="animate-spin" />Enviando...</> : "Enviar feedback"}</Button></div>

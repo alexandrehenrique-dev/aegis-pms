@@ -33,7 +33,7 @@ function MiniBlockPreview({ block }: { block: MiniBlock }) {
  * fixo. Pensado para ser reaproveitado futuramente pela renderização
  * pública real (fora de escopo desta sprint).
  */
-export function BlockRenderer({ section }: { section: Section }) {
+export function BlockRenderer({ section, forceLightProse = false }: { section: Section; forceLightProse?: boolean }) {
   const c = section.content;
 
   switch (section.type) {
@@ -58,7 +58,7 @@ export function BlockRenderer({ section }: { section: Section }) {
       return (
         <div className="p-6">
           {c.title ? <h3 className="text-xl font-semibold">{asStr(c.title)}</h3> : null}
-          <div className="mt-2 max-w-2xl text-sm text-muted-foreground"><Markdown>{asStr(c.body)}</Markdown></div>
+          <div className="mt-2 max-w-2xl text-sm text-muted-foreground"><Markdown forceLightProse={forceLightProse}>{asStr(c.body)}</Markdown></div>
         </div>
       );
 
@@ -86,7 +86,7 @@ export function BlockRenderer({ section }: { section: Section }) {
           <div className="rounded-xl bg-muted p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>
           <div>
             <h3 className="text-xl font-semibold">{asStr(c.title)}</h3>
-            <div className="mt-2 text-sm text-muted-foreground"><Markdown>{asStr(c.body)}</Markdown></div>
+            <div className="mt-2 text-sm text-muted-foreground"><Markdown forceLightProse={forceLightProse}>{asStr(c.body)}</Markdown></div>
           </div>
         </div>
       );
@@ -102,7 +102,7 @@ export function BlockRenderer({ section }: { section: Section }) {
             {items.map((item, i) => (
               <div key={i} className="rounded-lg border border-border p-3">
                 <p className="font-medium">{asStr(item.title)}</p>
-                <div className="mt-1 text-sm text-muted-foreground"><Markdown inline>{asStr(item.desc)}</Markdown></div>
+                <div className="mt-1 text-sm text-muted-foreground"><Markdown inline forceLightProse={forceLightProse}>{asStr(item.desc)}</Markdown></div>
               </div>
             ))}
           </div>
@@ -162,7 +162,7 @@ export function BlockRenderer({ section }: { section: Section }) {
           {items.map((item, i) => (
             <div key={i} className="rounded-lg border border-border p-3">
               <p className="font-medium">{asStr(item.q ?? item.question)}</p>
-              <div className="mt-1 text-sm text-muted-foreground"><Markdown inline>{asStr(item.a ?? item.answer)}</Markdown></div>
+              <div className="mt-1 text-sm text-muted-foreground"><Markdown inline forceLightProse={forceLightProse}>{asStr(item.a ?? item.answer)}</Markdown></div>
             </div>
           ))}
         </div>
@@ -195,6 +195,37 @@ export function BlockRenderer({ section }: { section: Section }) {
             <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">[embed Spotify {source === "spotify-track" ? "(faixa)" : "(playlist)"}: {asStr(c.spotifyUrl, "nenhuma URL")}]</div>
           )}
           {c.autoplay ? <p className="mt-1 text-xs text-muted-foreground">Autoplay ativado.</p> : null}
+        </div>
+      );
+    }
+
+    case "video": {
+      const source = asStr(c.source, "upload");
+      return (
+        <div className="p-6">
+          {c.title ? <h3 className="mb-2 text-xl font-semibold">{asStr(c.title)}</h3> : null}
+          {source === "upload" ? (
+            <div className="flex aspect-video items-center justify-center rounded-lg border border-border text-sm text-muted-foreground">[player de vídeo: {asStr(c.fileAssetId, "nenhum arquivo selecionado")}]</div>
+          ) : (
+            <div className="flex aspect-video items-center justify-center rounded-lg border border-border text-sm text-muted-foreground">[embed YouTube: {asStr(c.youtubeUrl, "nenhuma URL")}]</div>
+          )}
+          {c.autoplay ? <p className="mt-1 text-xs text-muted-foreground">Autoplay ativado.</p> : null}
+        </div>
+      );
+    }
+
+    case "video-gallery": {
+      const items = asArray(c.items);
+      return (
+        <div className="grid grid-cols-2 gap-3 p-6 md:grid-cols-3">
+          {items.map((item, i) => (
+            <div key={i} className="flex aspect-video flex-col items-center justify-center rounded-lg bg-muted p-2 text-center text-xs text-muted-foreground">
+              {asStr(item.source, "upload") === "upload"
+                ? `[vídeo: ${asStr(item.fileAssetId, "nenhum arquivo")}]`
+                : `[YouTube: ${asStr(item.youtubeUrl, "nenhuma URL")}]`}
+              <span className="mt-1 font-medium text-foreground">{asStr(item.title, "Sem título")}</span>
+            </div>
+          ))}
         </div>
       );
     }

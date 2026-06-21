@@ -14,7 +14,7 @@ CRUD de notificações pelo Super Admin, com fan-out para os destinatários corr
 
 ### A. Entidades
 
-**Notification**: `id`, `type` (`"ONBOARDING"|"FEATURE"|"WARNING"|"MAINTENANCE"|"GENERAL"`), `title`, `bodyMarkdown` (texto markdown — mesma convenção/regra de sanitização das etapas 10 e 21: allowlist `p, strong, em, ul, ol, li, blockquote, h2, h3, a, br`, bloquear `javascript:`/`data:`, nunca `<script>`/`<iframe>`), `presentationMode` (`"MODAL_ONCE"|"BELL_ONLY"`), `createdBySubject`, `createdAt`, `updatedAt`.
+**Notification**: `id`, `type` (`"ONBOARDING"|"FEATURE"|"WARNING"|"MAINTENANCE"|"GENERAL"`), `title`, `bodyMarkdown` (texto markdown — mesma convenção/regra de sanitização das etapas 10 e 21: allowlist `p, strong, em, ul, ol, li, blockquote, h2, h3, a, br, span (span só com atributo class, e só um dos 6 valores fixos de cor da Sprint 18 — nunca style nem qualquer outro atributo)`, bloquear `javascript:`/`data:`, nunca `<script>`/`<iframe>`), `presentationMode` (`"MODAL_ONCE"|"BELL_ONLY"`), `createdBySubject`, `createdAt`, `updatedAt`.
 
 **UserNotificationStatus**: `id`, `notificationId`, `userSubject`, `autoShown` (boolean, default `false`), `read` (boolean, default `false`), `readAt?`, `shownAt?`, `createdAt`. Constraint única em `(notificationId, userSubject)` — um destinatário nunca tem duas linhas de status para a mesma notificação.
 
@@ -125,6 +125,10 @@ curl -i -X POST http://localhost:8080/api/v1/notifications \
   2. `NotificationMapper` (MapStruct) + testes de mapper.
   3. `NotificationService` (criação + fan-out por tipo de `target`, `pending-modal`, `mark-shown`/`mark-read`, integração com a etapa 14) + testes com mocks — cada tipo de `target` (`ALL`/`TENANT`/`USERS`) com teste próprio, incluindo o caso de `userId` inexistente.
   4. `NotificationController` (endpoints da Seção B) + testes `@WebMvcTest` (incluindo o 403 para papel não autorizado) + validação via `curl`.
+
+## Artefato de continuidade — `SPRINT-RESULTADO.md`
+
+> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
 
 ## Commit sugerido
 

@@ -4,7 +4,7 @@ import { Button, Field } from "./Primitives";
 import { AssetPickerModal, type AssetTypeFilter } from "../../domains/assets/components/AssetPickerModal";
 import type { AssetSummary } from "../../domains/assets/contracts/responses";
 
-const FILTER_LABEL: Record<AssetTypeFilter, string> = { imagem: "imagem", PDF: "PDF", áudio: "áudio", qualquer: "arquivo" };
+const FILTER_LABEL: Record<AssetTypeFilter, string> = { imagem: "imagem", PDF: "PDF", áudio: "áudio", "vídeo": "vídeo", qualquer: "arquivo" };
 
 /** Sugere um `alt` legível a partir do nome do arquivo (Sprint 13, Tarefa C.2): remove extensão e separadores, capitaliza. */
 export function suggestAltFromFilename(filename: string): string {

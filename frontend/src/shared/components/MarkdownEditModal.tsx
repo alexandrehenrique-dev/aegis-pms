@@ -1,12 +1,40 @@
 import { useRef, useState } from "react";
-import { Bold, Code, Heading1, Heading2, Heading3, Heading4, Italic, Link2, List, Network, Quote, X } from "lucide-react";
+import { Bold, Code, Heading1, Heading2, Heading3, Heading4, Italic, Link2, List, Network, Palette, Quote, X } from "lucide-react";
 import { Button } from "./Primitives";
 import { ModalShell } from "./ModalShell";
 import { Markdown } from "./Markdown";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { EntityPicker } from "../../domains/knowledge/components/EntityPicker";
 import type { KGNode } from "../../domains/knowledge/mocks/knowledge.mocks";
 
 type ToolbarAction = "bold" | "italic" | "list" | "link" | "h1" | "h2" | "h3" | "h4" | "code" | "quote";
+
+/**
+ * Paleta fechada de cor de texto (Sprint 18, Tarefa B.1) — exatamente 5 cores
+ * fixas mais "Padrão" (remover cor), nunca um input de cor livre/hex. Cada
+ * `colorClass` é 1:1 com uma das 6 classes definidas em `theme.css`,
+ * replicadas na allowlist de sanitização do `Markdown.tsx`.
+ */
+const TEXT_COLORS = [
+  { id: "red", label: "Vermelho", colorClass: "text-aegis-red", swatchClass: "bg-[var(--chart-5)]" },
+  { id: "blue", label: "Azul", colorClass: "text-aegis-blue", swatchClass: "bg-[var(--chart-2)]" },
+  { id: "green", label: "Verde", colorClass: "text-aegis-green", swatchClass: "bg-[var(--chart-3)]" },
+  { id: "amber", label: "Âmbar", colorClass: "text-aegis-amber", swatchClass: "bg-[var(--chart-4)]" },
+  { id: "violet", label: "Violeta", colorClass: "text-aegis-violet", swatchClass: "bg-[var(--byop-violet)]" },
+] as const;
+
+const COLOR_SPAN_PATTERN = /^<span class="(text-aegis-(?:red|blue|green|amber|violet))">([\s\S]*)<\/span>$/;
+
+/** Envolve (ou desenvolve, se `colorClass` for `null`) o texto selecionado num `<span class="text-aegis-*">` — mesma mecânica de inserção das demais `ToolbarAction`. */
+function applyColor(value: string, selectionStart: number, selectionEnd: number, colorClass: string | null): { next: string; cursor: number } {
+  const before = value.slice(0, selectionStart);
+  const selected = value.slice(selectionStart, selectionEnd);
+  const after = value.slice(selectionEnd);
+  const alreadyWrapped = selected.match(COLOR_SPAN_PATTERN);
+  const inner = alreadyWrapped ? alreadyWrapped[2] : (selected || "texto colorido");
+  const replacement = colorClass ? `<span class="${colorClass}">${inner}</span>` : inner;
+  return { next: `${before}${replacement}${after}`, cursor: before.length + replacement.length };
+}
 
 /** Insere `{{kg-ref:nodeId:Label}}` na posição do cursor (Sprint 16, Tarefa C) — mesma mecânica de inserção das demais `ToolbarAction`, parametrizada pelo nó escolhido em vez de um texto fixo. */
 function insertEntityRef(value: string, selectionStart: number, selectionEnd: number, node: KGNode): { next: string; cursor: number } {
@@ -94,6 +122,21 @@ export function MarkdownEditModal({ title = "Editar texto", value, onSave, onClo
     setShowEntityPicker(true);
   };
 
+  const captureSelectionForColor = () => {
+    const el = textareaRef.current;
+    lastSelection.current = { start: el?.selectionStart ?? draft.length, end: el?.selectionEnd ?? draft.length };
+  };
+
+  const handlePickColor = (colorClass: string | null) => {
+    const { start, end } = lastSelection.current;
+    const { next, cursor } = applyColor(draft, start, end, colorClass);
+    setDraft(next);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(cursor, cursor);
+    });
+  };
+
   const handleSelectEntity = (node: KGNode) => {
     const { start, end } = lastSelection.current;
     const { next, cursor } = insertEntityRef(draft, start, end, node);
@@ -125,6 +168,20 @@ export function MarkdownEditModal({ title = "Editar texto", value, onSave, onClo
           <button onClick={() => runAction("link")} title="Link" className="rounded-lg p-2 transition hover:bg-muted"><Link2 size={15} /></button>
           <button onClick={() => runAction("quote")} title="Citação" className="rounded-lg p-2 transition hover:bg-muted"><Quote size={15} /></button>
           <button onClick={() => runAction("code")} title="Bloco de código" className="rounded-lg p-2 transition hover:bg-muted"><Code size={15} /></button>
+          <span className="mx-1 w-px self-stretch bg-border" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <button onClick={captureSelectionForColor} title="Cor do texto" className="rounded-lg p-2 transition hover:bg-muted"><Palette size={15} /></button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-2">
+              <div className="flex items-center gap-1.5">
+                {TEXT_COLORS.map((c) => (
+                  <button key={c.id} title={c.label} onClick={() => handlePickColor(c.colorClass)} className={`h-7 w-7 rounded-full border border-border ${c.swatchClass} transition hover:scale-110`} />
+                ))}
+                <button title="Padrão (remover cor)" onClick={() => handlePickColor(null)} className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-xs text-muted-foreground transition hover:bg-muted">✕</button>
+              </div>
+            </PopoverContent>
+          </Popover>
           {enableEntityLink && (
             <>
               <span className="mx-1 w-px self-stretch bg-border" />
