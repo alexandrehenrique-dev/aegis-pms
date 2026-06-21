@@ -227,7 +227,7 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
   const handleLinkEntity = async (node: KGNode) => {
     const body = typeof content.body === "string" ? content.body : "";
     onChangeContent({ body: `${body}${body ? " " : ""}{{kg-ref:${node.id}:${node.label}}}` });
-    await knowledgeService.ensureNodeForContent(section.id, section.label);
+    await knowledgeService.ensureNodeForContent(section.id, section.label, productSlug);
     await knowledgeService.createEdge(section.id, node.id, "RELATED_TO");
     toast.success("Referência linkada", { description: `${node.label} inserido no corpo e relação criada no grafo.` });
   };
@@ -288,7 +288,7 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
         <div className="mt-3">
           <Popover>
             <PopoverTrigger asChild><Button><Link2 size={15} />Linkar a outra entidade</Button></PopoverTrigger>
-            <PopoverContent><EntityPicker onSelect={handleLinkEntity} /></PopoverContent>
+            <PopoverContent><EntityPicker productSlug={productSlug} onSelect={handleLinkEntity} /></PopoverContent>
           </Popover>
         </div>
       )}

@@ -17,9 +17,11 @@ const MUSIC_LINKED_TYPES = new Set(["Post", "Manifesto", "Reflexão", "Poema"]);
  * específicos do ADR-0012 (isbn, pdfUrl, musicReferenceId...) tinha onde
  * aparecer.
  */
-function MetadataPanel({ content, knowledgeGraphEnabled, onPatchMetadata }: {
+function MetadataPanel({ content, knowledgeGraphEnabled, productSlug, onPatchMetadata }: {
   content: ContentRow;
   knowledgeGraphEnabled: boolean;
+  /** Obrigatório para o `EntityPicker` de "Vincular música" (ADR-0016) — escopa a busca ao produto do conteúdo em edição. */
+  productSlug?: string;
   onPatchMetadata: (patch: Record<string, unknown>) => void;
 }) {
   const metadata = content.metadata ?? {};
@@ -39,12 +41,12 @@ function MetadataPanel({ content, knowledgeGraphEnabled, onPatchMetadata }: {
                 <span className="truncate">{typeof metadata.musicReferenceLabel === "string" ? metadata.musicReferenceLabel : musicReferenceId}</span>
                 <Button onClick={() => onPatchMetadata({ musicReferenceId: undefined, musicReferenceLabel: undefined })}>Remover</Button>
               </div>
-            ) : (
+            ) : productSlug ? (
               <Popover>
                 <PopoverTrigger asChild><Button><Link2 size={14} />Buscar entidade musical</Button></PopoverTrigger>
-                <PopoverContent><EntityPicker onSelect={handleLinkMusic} /></PopoverContent>
+                <PopoverContent><EntityPicker productSlug={productSlug} onSelect={handleLinkMusic} /></PopoverContent>
               </Popover>
-            )}
+            ) : null}
           </div>
         ) : (
           <p className="self-end text-xs text-muted-foreground">Vincular música exige o módulo Knowledge Graph habilitado neste produto.</p>
@@ -103,7 +105,7 @@ export function ContentArticleEditor({ content, knowledgeGraphEnabled, productSl
       </Card>
       <Card>
         <h2 className="mb-3 text-lg font-semibold">Metadados — {content.type}</h2>
-        <MetadataPanel content={content} knowledgeGraphEnabled={knowledgeGraphEnabled} onPatchMetadata={handlePatchMetadata} />
+        <MetadataPanel content={content} knowledgeGraphEnabled={knowledgeGraphEnabled} productSlug={productSlug} onPatchMetadata={handlePatchMetadata} />
       </Card>
     </div>
   );
