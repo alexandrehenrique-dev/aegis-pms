@@ -3,23 +3,8 @@ import { Card, PageHeader } from "../../../shared/components/Primitives";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../../shared/components/ui/accordion";
 import { useCurrentProduct } from "../../products/useCurrentProduct";
 import { useFeedbackModal } from "../../notifications/FeedbackModalContext";
-import { PRODUCT_TYPE_MODULE_DEFAULTS, type ProductTypeKey } from "../../products/moduleDefaults";
+import { resolveEnabledModules } from "../../products/moduleDefaults";
 import { MODULE_FAQ_TOPICS, PLATFORM_OVERVIEW_TOPICS } from "../helpTopics";
-
-/**
- * Produtos seedados nos mocks (`core/auth/mocks/users.ts`) não carregam
- * `modulesList` — só produtos criados via `CreateProductForm` nesta sessão
- * têm essa lista explícita. Sem isto, a FAQ por módulo ficaria vazia para
- * todo produto de demonstração pré-existente. Fallback: módulos padrão do
- * tipo de produto (`PRODUCT_TYPE_MODULE_DEFAULTS`) quando `modulesList` não
- * existir.
- */
-function resolveEnabledModules(product: { type: string; modulesList?: string[] } | null): string[] {
-  if (!product) return [];
-  if (product.modulesList) return product.modulesList;
-  const defaults = PRODUCT_TYPE_MODULE_DEFAULTS[product.type as ProductTypeKey];
-  return defaults ? defaults.filter((m) => m.default).map((m) => m.key) : [];
-}
 
 /**
  * Central de Ajuda (Sprint 13, Tarefa O) — antes, o botão "?" do `AppShell`
