@@ -6,6 +6,7 @@ import { AlertTriangle, Building2, CheckCircle2, Clock3, HelpCircle, LogOut, Men
 import { useAuth } from "../../core/auth/AuthContext";
 import { useViewAsRole } from "../../core/permissions/ViewAsRoleContext";
 import { roleDescriptions, roleLabels, roleVisibleNav } from "../../core/permissions/roles";
+import { resolveEnabledModules } from "../../core/products/moduleDefaults";
 import { isRouteBlocked } from "../../core/permissions/roles";
 import { SimulationBanner } from "../../core/permissions/components/SimulationBanner";
 import { ReadOnlyBanner } from "../../core/permissions/components/ReadOnlyBanner";
@@ -43,6 +44,7 @@ export function AppShell() {
 
   const [mobile, setMobile] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const { open: showFeedback, setOpen: setShowFeedback } = useFeedbackModal();
   const [transitioning, setTransitioning] = useState(false);
 
@@ -60,6 +62,20 @@ export function AppShell() {
     }
   }, [location.pathname]);
 
+  // Sprint 15, Tarefa D.2 — único dropdown do AppShell sem overlay nem
+  // clique-fora (diferente de `Notifications.tsx`, que já tem overlay).
+  // Mesmo padrão de "ref + listener de mousedown no document" de
+  // `ContextActionMenu.tsx`, adaptado porque aqui o gatilho fica no próprio
+  // header (sem portal) em vez de um menu de contexto posicionado livre.
+  useEffect(() => {
+    if (!showUserMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setShowUserMenu(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showUserMenu]);
+
   if (!authUser || !effectiveTenant || !effectiveProduct) return null;
 
   const handleLogout = () => { logout(); navigate("/login"); };
@@ -69,6 +85,13 @@ export function AppShell() {
 
   const userTenantSwitcherItems: SwitcherItem[] = userTenants.filter((t) => t.status === "ativo").map((t) => ({ id: t.id, name: t.name, meta: t.plan }));
   const productSwitcherItems: SwitcherItem[] = tenantProducts.filter((p) => p.status !== "Arquivado" && p.modules > 0).map((p) => ({ id: p.id, name: p.name, meta: p.type }));
+
+  // Sprint 15, Tarefa B (ADR-0015) — item de nav ligado a um módulo opcional
+  // só aparece quando o módulo está habilitado NESTE produto, além do papel
+  // permitir; antes só o papel era checado, então até Super Admin via
+  // "Knowledge Graph" num produto sem o módulo habilitado.
+  const enabledModules = resolveEnabledModules(effectiveProduct);
+  const visibleNav = nav.filter((item) => roleVisibleNav[viewAsRole].has(item.path) && (!item.moduleKey || enabledModules.includes(item.moduleKey)));
 
   const tabs = tabsForPath(location.pathname);
   const blocked = isRouteBlocked(viewAsRole, location.pathname);
@@ -83,7 +106,7 @@ export function AppShell() {
         <div><p className="font-semibold tracking-[-.02em]">Aegis PMS</p><p className="text-[11px] text-muted-foreground">Product OS</p></div>
       </div>
       <nav className="space-y-1">
-        {nav.filter((item) => roleVisibleNav[viewAsRole].has(item.path)).map((item) => {
+        {visibleNav.map((item) => {
           const Icon = item.icon;
           const active = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
           return (
@@ -122,7 +145,7 @@ export function AppShell() {
           <Notifications />
           <button onClick={() => setTheme(themeNext[theme])} className="rounded-xl border border-border bg-card p-2 transition hover:bg-muted" title="Alternar tema">{themeIcon}</button>
           <button onClick={() => navigate("/help")} className="rounded-xl border border-border bg-card p-2 transition hover:bg-muted" title="Central de Ajuda"><HelpCircle size={16} /></button>
-          <div className="relative">
+          <div className="relative" ref={userMenuRef}>
             <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-2.5 text-sm transition hover:bg-muted">
               <div className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">{authUser.initials}</div>
               <span className="hidden sm:block">{authUser.name.split(" ")[0]}</span>
