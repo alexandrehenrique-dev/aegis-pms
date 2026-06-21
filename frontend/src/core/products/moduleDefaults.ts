@@ -43,6 +43,33 @@ export const KNOWLEDGE_GRAPH_DEPENDENCY = "Conteúdo";
 export const ECOMMERCE_MODULE_KEY = "E-commerce";
 
 /**
+ * Catálogo completo de módulos (união das chaves de todos os tipos em
+ * `PRODUCT_TYPE_MODULE_DEFAULTS`) — usado só por `Custom` (Sprint 17, Tarefa
+ * C.1): sem isto, `useModuleSelection` resolveria `moduleOptions` para um
+ * array vazio para `Custom` e `ModuleCheckboxList` não teria nenhum checkbox
+ * para o Tenant Admin habilitar manualmente.
+ */
+export const ALL_MODULE_KEYS = [
+  "Páginas",
+  "Conteúdo",
+  "Assets",
+  "Forms",
+  "SEO",
+  "Analytics",
+  "Knowledge Graph",
+  ECOMMERCE_MODULE_KEY,
+  "Vagas",
+  "Submissions",
+  "Comentários",
+  "Contribuidores",
+  "Portfolio",
+  "Library",
+  "Books",
+  "Music",
+  "Workflow",
+] as const;
+
+/**
  * Produtos seedados nos mocks (`core/auth/mocks/users.ts`) não carregam
  * `modulesList` — só produtos criados via `CreateProductModal`/`CreateProductForm`
  * nesta sessão têm essa lista explícita. Sem isto, qualquer gate por módulo
@@ -116,4 +143,7 @@ export const PRODUCT_TYPE_MODULE_DEFAULTS: Partial<Record<ProductTypeKey, Module
     { key: "Knowledge Graph", default: false },
     { key: ECOMMERCE_MODULE_KEY, default: false, comingSoon: true },
   ],
+  // "Custom" (Sprint 17, ADR-0017): produto nasce em branco — todos os módulos
+  // do catálogo disponíveis, mas nenhum pré-marcado.
+  Custom: ALL_MODULE_KEYS.map((key) => ({ key, default: false })),
 };
