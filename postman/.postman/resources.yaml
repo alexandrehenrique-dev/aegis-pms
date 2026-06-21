@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: f060830a-bdb7-4714-95f5-f7bb1982c0a9
+
+localResources:
+  collections:
+    - ../aegis-postman-collection.json

@@ -1,0 +1,9 @@
+$kind: collection
+description: Validação da Etapa 03. Keycloak deve usar PostgreSQL dedicado, realm aegis, client aegis-web e roles globais AEGIS_*.
+auth:
+  - id: 51616558-0098-44a0-b932-62c30ce6f713
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{token}}"
+order: 2000

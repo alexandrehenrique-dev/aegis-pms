@@ -66,7 +66,7 @@ Solução para o MVP: manter o issuer **externo** (`http://localhost:8282/realms
       - aegis-network
 ```
 
-Adicionar `aegis_assets_data` à lista de `volumes:` nomeados do `docker-compose.yml` (mesmo nível de `aegis_postgres_data`/`keycloak_postgres_data` já existentes) — **persistente, nunca efêmero**, mesma regra já aplicada aos bancos (ADR-0005/ADR-0010).
+Adicionar `aegis_assets_data` à lista de `volumes:` nomeados do `docker-compose.yml` (mesmo nível de `aegis_postgres_data`/`keycloak_aegis_postgres_data` já existentes) — **persistente, nunca efêmero**, mesma regra já aplicada aos bancos (ADR-0005/ADR-0010).
 
 ### D. Pasta de storage: automática tanto containerizado quanto local (Sprint 13 do frontend)
 

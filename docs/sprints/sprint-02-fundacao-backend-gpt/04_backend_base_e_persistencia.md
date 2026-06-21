@@ -51,7 +51,7 @@ backend/src/main/java/br/com/byop/aegis
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://${AEGIS_DB_HOST:localhost}:${AEGIS_DB_PORT:5432}/${AEGIS_DB_NAME:aegis_pms}
+    url: jdbc:postgresql://${AEGIS_DB_HOST:localhost}:${AEGIS_DB_PORT:5434}/${AEGIS_DB_NAME:aegis_pms}
     username: ${AEGIS_DB_USER:aegis_user}
     password: ${AEGIS_DB_PASSWORD:aegis_password}
   jpa:

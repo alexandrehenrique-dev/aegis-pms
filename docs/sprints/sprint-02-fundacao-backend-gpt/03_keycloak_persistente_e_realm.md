@@ -43,6 +43,8 @@ Adicionar ao `docker-compose.yml`:
       - aegis-network
 ```
 
+> `KC_DB_URL_HOST`/`depends_on` referenciam `keycloak-postgres` — o **nome do serviço** no compose (DNS interno do Docker), não o `container_name` (`keycloak-postgres-aegis`, etapa 02) — os dois nomes existem por motivos diferentes, não confundir.
+
 ### B. Realm, client e roles
 
 Subir e configurar manualmente via console admin (`http://localhost:8282`, login `admin`/`admin`):
@@ -88,7 +90,7 @@ Esse arquivo **não** entra no `.gitignore` — configuração de Keycloak é ve
 curl http://localhost:8282/realms/aegis/.well-known/openid-configuration
 # deve retornar JSON com issuer = http://localhost:8282/realms/aegis
 
-docker exec -it keycloak-postgres psql -U keycloak_user -d keycloak -c "SELECT count(*) FROM realm;"
+docker exec -it keycloak-postgres-aegis psql -U keycloak_aegis_user -d keycloak_aegis -c "SELECT count(*) FROM realm;"
 # esperado: count >= 1
 
 docker compose restart keycloak

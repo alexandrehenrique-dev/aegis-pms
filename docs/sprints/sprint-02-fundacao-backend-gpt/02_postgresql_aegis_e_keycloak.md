@@ -53,7 +53,7 @@ Adicionar ao mesmo `docker-compose.yml`:
 ```yaml
   keycloak-postgres:
     image: postgres:16
-    container_name: keycloak-postgres
+    container_name: keycloak-postgres-aegis
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${KEYCLOAK_DB_NAME}
@@ -63,7 +63,7 @@ Adicionar ao mesmo `docker-compose.yml`:
     ports:
       - "${KEYCLOAK_DB_PORT}:5432"
     volumes:
-      - keycloak_postgres_data:/var/lib/postgresql/data
+      - keycloak_aegis_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d ${KEYCLOAK_DB_NAME}"]
       interval: 10s
@@ -73,12 +73,14 @@ Adicionar ao mesmo `docker-compose.yml`:
       - aegis-network
 ```
 
-Adicionar `keycloak_postgres_data:` na seção `volumes:` do compose.
+> **Nomenclatura com sufixo "_aegis"** (`container_name: keycloak-postgres-aegis`, `KEYCLOAK_DB_NAME=keycloak_aegis`, `KEYCLOAK_DB_USER=keycloak_aegis_user`, ports `5434`/`5435` — ver `.env.example`) — escolhida para nunca colidir com outro PostgreSQL/Keycloak já presente no mesmo host (ex.: outros produtos BYOP). O **nome do serviço** no compose continua `keycloak-postgres` (é o que `depends_on`/DNS interno do Docker usa); só o `container_name` (visível em `docker ps`) e os valores de `.env` ganham o sufixo.
+
+Adicionar `keycloak_aegis_postgres_data:` na seção `volumes:` do compose.
 
 ## Critérios de aceite
 
-- [ ] `aegis-postgres` e `keycloak-postgres` sobem como containers separados.
-- [ ] Cada um tem volume nomeado próprio (`aegis_postgres_data`, `keycloak_postgres_data`).
+- [ ] `aegis-postgres` e `keycloak-postgres-aegis` sobem como containers separados (nomes de serviço `aegis-postgres`/`keycloak-postgres`; nomes de container `aegis-postgres`/`keycloak-postgres-aegis`).
+- [ ] Cada um tem volume nomeado próprio (`aegis_postgres_data`, `keycloak_aegis_postgres_data`).
 - [ ] Dados persistem após `docker compose down` (sem `-v`) e novo `up`.
 - [ ] Dados só desaparecem com `docker compose down -v` (comportamento esperado e aceitável só em ambiente de desenvolvimento, nunca em produção).
 
@@ -95,7 +97,7 @@ docker exec -it aegis-postgres psql -U aegis_user -d aegis_pms -c "SELECT curren
 docker exec -it aegis-postgres psql -U aegis_user -d aegis_pms -c "CREATE TABLE IF NOT EXISTS persistence_test(id INT PRIMARY KEY); INSERT INTO persistence_test(id) VALUES (1) ON CONFLICT DO NOTHING;"
 
 # testar keycloak
-docker exec -it keycloak-postgres psql -U keycloak_user -d keycloak -c "SELECT current_database();"
+docker exec -it keycloak-postgres-aegis psql -U keycloak_aegis_user -d keycloak_aegis -c "SELECT current_database();"
 
 # validar persistencia
 docker compose down

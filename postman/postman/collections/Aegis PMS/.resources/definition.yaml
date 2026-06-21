@@ -1,0 +1,16 @@
+$kind: collection
+variables:
+  baseUrl: http://localhost:8080/api/v1
+  keycloakIssuer: http://localhost:8282/realms/aegis
+  clientId: aegis-web
+  token: ""
+  keycloakBaseUrl: http://localhost:8282
+  keycloakDbContainer: keycloak-postgres-aegis
+  keycloakDbUser: keycloak_aegis_user
+  keycloakDbName: keycloak_aegis
+auth:
+  - id: 3e589bf0-06e6-4681-9104-4a9872fd077a
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{token}}"

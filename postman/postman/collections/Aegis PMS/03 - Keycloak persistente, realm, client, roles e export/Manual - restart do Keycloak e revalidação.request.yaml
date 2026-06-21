@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Executar: docker compose restart keycloak. Depois revalidar login admin, presença do realm aegis, client aegis-web, usuário de teste e roles AEGIS_*."
+url: "{{baseUrl}}/__manual__/docker-compose-restart-keycloak"
+method: GET
+order: 3000

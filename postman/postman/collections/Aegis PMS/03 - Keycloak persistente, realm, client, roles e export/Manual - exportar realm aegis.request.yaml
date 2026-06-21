@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Executar: mkdir -p infra/keycloak/realm && docker exec -it aegis-keycloak /opt/keycloak/bin/kc.sh export --dir /tmp/keycloak-export --realm aegis --users realm_file && docker cp aegis-keycloak:/tmp/keycloak-export/aegis-realm.json ./infra/keycloak/realm/aegis-realm.json. O arquivo deve ser versionado."
+url: "{{baseUrl}}/__manual__/keycloak-export-realm"
+method: GET
+order: 4000

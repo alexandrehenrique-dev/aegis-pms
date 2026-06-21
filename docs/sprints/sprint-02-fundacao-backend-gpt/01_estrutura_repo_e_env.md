@@ -49,13 +49,14 @@ COMPOSE_PROJECT_NAME=aegis-pms
 AEGIS_DB_NAME=aegis_pms
 AEGIS_DB_USER=aegis_user
 AEGIS_DB_PASSWORD=aegis_password
-AEGIS_DB_PORT=5432
+AEGIS_DB_PORT=5434
 
-# Keycloak PostgreSQL
-KEYCLOAK_DB_NAME=keycloak
-KEYCLOAK_DB_USER=keycloak_user
-KEYCLOAK_DB_PASSWORD=keycloak_password
-KEYCLOAK_DB_PORT=5433
+# Keycloak PostgreSQL (nomes com sufixo "_aegis" — ver etapa 02 — para nunca colidir com outro
+# Postgres/Keycloak já existente no ambiente, ex. outros produtos BYOP rodando na mesma máquina)
+KEYCLOAK_DB_NAME=keycloak_aegis
+KEYCLOAK_DB_USER=keycloak_aegis_user
+KEYCLOAK_DB_PASSWORD=keycloak_aegis_password
+KEYCLOAK_DB_PORT=5435
 
 # Keycloak
 KEYCLOAK_ADMIN=admin

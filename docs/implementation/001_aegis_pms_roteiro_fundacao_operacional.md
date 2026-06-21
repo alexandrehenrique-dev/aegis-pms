@@ -385,13 +385,14 @@ COMPOSE_PROJECT_NAME=aegis-pms
 AEGIS_DB_NAME=aegis_pms
 AEGIS_DB_USER=aegis_user
 AEGIS_DB_PASSWORD=aegis_password
-AEGIS_DB_PORT=5432
+AEGIS_DB_PORT=5434
 
-# Keycloak PostgreSQL
-KEYCLOAK_DB_NAME=keycloak
-KEYCLOAK_DB_USER=keycloak_user
-KEYCLOAK_DB_PASSWORD=keycloak_password
-KEYCLOAK_DB_PORT=5433
+# Keycloak PostgreSQL (sufixo "_aegis" — correção posterior, ver etapa 02/03 da Sprint 02 e
+# `docs/sprints/sprint-02-fundacao-backend-gpt/01_estrutura_repo_e_env.md` para os nomes finais)
+KEYCLOAK_DB_NAME=keycloak_aegis
+KEYCLOAK_DB_USER=keycloak_aegis_user
+KEYCLOAK_DB_PASSWORD=keycloak_aegis_password
+KEYCLOAK_DB_PORT=5435
 
 # Keycloak
 KEYCLOAK_ADMIN=admin
@@ -562,13 +563,15 @@ Não usar banco H2/dev interno do Keycloak para persistência real.
 Usar PostgreSQL dedicado:
 
 ```txt
-keycloak-postgres
+keycloak-postgres   (nome do serviço; container_name: keycloak-postgres-aegis)
 ```
+
+> Sufixo `-aegis`/`_aegis` (container, banco, usuário) adicionado depois (ver `docs/sprints/sprint-02-fundacao-backend-gpt/02_postgresql_aegis_e_keycloak.md`), para nunca colidir com outro Postgres/Keycloak já presente no ambiente.
 
 Volume:
 
 ```txt
-keycloak_postgres_data
+keycloak_aegis_postgres_data
 ```
 
 ## Serviço esperado
@@ -576,7 +579,7 @@ keycloak_postgres_data
 ```yaml
 keycloak-postgres:
   image: postgres:16
-  container_name: keycloak-postgres
+  container_name: keycloak-postgres-aegis
   restart: unless-stopped
   environment:
     POSTGRES_DB: ${KEYCLOAK_DB_NAME}
@@ -586,7 +589,7 @@ keycloak-postgres:
   ports:
     - "${KEYCLOAK_DB_PORT}:5432"
   volumes:
-    - keycloak_postgres_data:/var/lib/postgresql/data
+    - keycloak_aegis_postgres_data:/var/lib/postgresql/data
   healthcheck:
     test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d ${KEYCLOAK_DB_NAME}"]
     interval: 10s
@@ -596,9 +599,9 @@ keycloak-postgres:
 
 ## Critérios de aceite
 
-- `keycloak-postgres` sobe.
-- Banco `keycloak` existe.
-- Usuário `keycloak_user` conecta.
+- `keycloak-postgres` sobe (serviço); container aparece como `keycloak-postgres-aegis`.
+- Banco `keycloak_aegis` existe.
+- Usuário `keycloak_aegis_user` conecta.
 - Volume dedicado existe.
 - Banco do Keycloak é separado do banco Aegis.
 
@@ -606,7 +609,7 @@ keycloak-postgres:
 
 ```bash
 docker compose up -d keycloak-postgres
-docker exec -it keycloak-postgres psql -U keycloak_user -d keycloak -c "SELECT current_database();"
+docker exec -it keycloak-postgres-aegis psql -U keycloak_aegis_user -d keycloak_aegis -c "SELECT current_database();"
 ```
 
 Esperado:
@@ -614,7 +617,7 @@ Esperado:
 ```txt
  current_database
 ------------------
- keycloak
+ keycloak_aegis
 ```
 
 Validar volumes:
@@ -731,7 +734,7 @@ Verificar novamente.
 ## Validação no banco
 
 ```bash
-docker exec -it keycloak-postgres psql -U keycloak_user -d keycloak -c "SELECT count(*) FROM realm;"
+docker exec -it keycloak-postgres-aegis psql -U keycloak_aegis_user -d keycloak_aegis -c "SELECT count(*) FROM realm;"
 ```
 
 Esperado:
@@ -2262,7 +2265,7 @@ Infra:
 
 - [ ] `docker compose up -d` sobe tudo.
 - [ ] `aegis-postgres` está healthy.
-- [ ] `keycloak-postgres` está healthy.
+- [ ] `keycloak-postgres-aegis` (container do serviço `keycloak-postgres`) está healthy.
 - [ ] `keycloak` está acessível.
 - [ ] `backend` está acessível.
 - [ ] volumes existem.

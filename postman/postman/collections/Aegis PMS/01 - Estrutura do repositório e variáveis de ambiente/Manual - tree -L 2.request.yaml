@@ -1,0 +1,5 @@
+$kind: http-request
+description: "Executar no terminal, na raiz do repositório: `tree -L 2`. Valida a estrutura base criada/confirmada."
+url: "{{baseUrl}}/__manual__/tree-L-2"
+method: GET
+order: 1000

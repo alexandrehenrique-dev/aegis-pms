@@ -33,7 +33,7 @@ Cenários obrigatórios (domínios): editar/excluir tenant; `super_admin` lista 
 
 Confirmar, nesta ordem, tudo o que foi construído nas etapas 01-21:
 
-**Infra**: `docker compose up -d` sobe tudo · `aegis-postgres` healthy · `keycloak-postgres` healthy · `keycloak` acessível · `backend` acessível · volumes existem (incluindo `aegis_assets_data`, etapa 19) · dados persistem após restart · pasta de storage local existe automaticamente tanto containerizado quanto via `mvn spring-boot:run` direto (etapa 04), em qualquer SO.
+**Infra**: `docker compose up -d` sobe tudo · `aegis-postgres` healthy · `keycloak-postgres-aegis` healthy (nome do container; serviço `keycloak-postgres`) · `keycloak` acessível · `backend` acessível · volumes existem (`aegis_postgres_data`, `keycloak_aegis_postgres_data`, `aegis_assets_data` da etapa 19) · portas corretas (`aegis-postgres` em `5434`, `keycloak-postgres-aegis` em `5435`, ambas só no host — internamente os containers continuam na porta `5432` do Postgres) · dados persistem após restart · pasta de storage local existe automaticamente tanto containerizado quanto via `mvn spring-boot:run` direto (etapa 04), em qualquer SO.
 
 **Keycloak**: realm `aegis` existe · client `aegis-web` existe · as 5 roles globais existem, todas com prefixo `AEGIS_` (`AEGIS_SUPER_ADMIN`, `AEGIS_TENANT_ADMIN`, `AEGIS_PRODUCT_MANAGER`, `AEGIS_EDITOR`, `AEGIS_VIEWER` — ADR-0014, nunca "CONTENT_EDITOR" ou variante) · os 5 usuários de teste existem e persistem após restart · token pode ser emitido para cada um · OpenID config acessível.
 

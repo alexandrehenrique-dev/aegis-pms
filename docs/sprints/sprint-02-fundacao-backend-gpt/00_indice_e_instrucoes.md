@@ -28,7 +28,7 @@ A Sprint 02 é a exceção: ela cobre a fundação inteira do backend (Docker, P
 
 ## Regras que valem para todas as etapas (não negociáveis)
 
-- Keycloak **deve** usar PostgreSQL dedicado e persistente (`keycloak-postgres`, volume `keycloak_postgres_data`) — nunca H2, nunca volume efêmero. Ver ADR-0005.
+- Keycloak **deve** usar PostgreSQL dedicado e persistente (serviço `keycloak-postgres`, container `keycloak-postgres-aegis`, volume `keycloak_aegis_postgres_data`, banco `keycloak_aegis`/usuário `keycloak_aegis_user`, porta `5435` no host — sufixo `_aegis`/`-aegis` para nunca colidir com outro Postgres/Keycloak já presente no ambiente) — nunca H2, nunca volume efêmero. Ver ADR-0005.
 - O PostgreSQL do Aegis também é dedicado e persistente (`aegis-postgres`, volume `aegis_postgres_data`). Ver ADR-0010.
 - O frontend **não é Angular** — é React (ver `docs/adr/ADR-0011-frontend-framework-react.md`). Onde `implementation/001` menciona Angular (Features 017/018), a etapa `18` desta pasta substitui isso por "buildar e servir o React existente em `frontend/`". Não recrie um frontend Angular.
 - Os payloads das etapas 09-17 e 21 (domínios de produto) **não são inventados nesta sprint** — são os mesmos contratos TypeScript que `frontend/src/domains/*/contracts/` já define hoje (Sprint 09 do frontend, fora do GPT), mais os achados da Sprint 11 (domínio `pages`, preview leve de nó do grafo, `summary`/`difficultyLevel` em `Content`). Se o GPT sugerir um shape diferente do descrito na etapa, prevaleça o shape da etapa/trace report, não a sugestão do GPT.
