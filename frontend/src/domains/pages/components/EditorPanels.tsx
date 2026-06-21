@@ -15,6 +15,7 @@ import { EntityPicker } from "../../knowledge/components/EntityPicker";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
 import { TwoColumnEditor } from "./TwoColumnEditor";
 import { AudioBlockEditor } from "./AudioBlockEditor";
+import { VideoBlockEditor } from "./VideoBlockEditor";
 import { ItemsCrudEditor } from "./ItemsCrudEditor";
 import { ITEMS_CRUD_CONFIG } from "../itemsCrudConfig";
 import { EventsManagerDrawer } from "./EventsManagerDrawer";
@@ -203,6 +204,7 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
 
   const isTwoColumn = section.type === "two-column";
   const isAudio = section.type === "audio";
+  const isVideo = section.type === "video";
   const isEventList = section.type === "event-list";
   const itemsCrudConfig = ITEMS_CRUD_CONFIG[section.type];
   const hasFormIdSelector = section.type === "contact" || section.type === "form";
@@ -210,6 +212,7 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
   const excludedKeys = new Set<string>([
     ...(isTwoColumn ? ["left", "right"] : []),
     ...(isAudio ? ["source", "fileAssetId", "spotifyUrl", "autoplay"] : []),
+    ...(isVideo ? ["source", "fileAssetId", "youtubeUrl", "autoplay"] : []),
     ...(isEventList ? ["selectedEventIds"] : []),
     ...(itemsCrudConfig ? [itemsCrudConfig.key] : []),
     ...(hasFormIdSelector ? ["formId"] : []),
@@ -272,6 +275,7 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
       </div>
       {isTwoColumn && <TwoColumnEditor content={content} onChange={onChangeContent} />}
       {isAudio && <AudioBlockEditor content={content} onChange={onChangeContent} />}
+      {isVideo && <VideoBlockEditor content={content} onChange={onChangeContent} />}
       {isEventList && (
         <div className="mt-3 space-y-3">
           <EventSelector

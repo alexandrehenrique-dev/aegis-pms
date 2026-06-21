@@ -28,5 +28,6 @@ export const ITEMS_CRUD_CONFIG: Partial<Record<BlockType, ItemCrudConfig>> = {
   timeline: { key: "items", newItem: { date: "", title: "", desc: "" } },
   faq: { key: "items", newItem: { q: "", a: "" }, rules: { requiredFields: ["q", "a"] } },
   download: { key: "items", newItem: { title: "", fileAssetId: "", fileType: "pdf" }, rules: { requiredFields: ["title", "fileAssetId"] } },
+  "video-gallery": { key: "items", newItem: { title: "", source: "upload", fileAssetId: "", youtubeUrl: "" }, rules: { requiredFields: ["title"], maxItems: 50 } },
   "social-links": { key: "items", newItem: { platform: "", href: "" }, rules: { requiredFields: ["platform", "href"] } },
 };

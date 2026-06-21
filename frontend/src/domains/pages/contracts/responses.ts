@@ -21,6 +21,8 @@ export const BLOCK_TYPES = [
   "form",
   "download",
   "audio",
+  "video",
+  "video-gallery",
   "social-links",
 ] as const;
 

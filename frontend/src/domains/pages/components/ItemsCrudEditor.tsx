@@ -5,6 +5,7 @@ import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { MarkdownField } from "../../../shared/components/MarkdownField";
 import { MediaField } from "../../../shared/components/MediaField";
 import type { ItemCrudRule } from "../itemsCrudConfig";
+import { isValidYoutubeUrl } from "../videoUrl";
 
 const MARKDOWN_ITEM_KEYS = new Set(["desc", "a", "body"]);
 
@@ -84,6 +85,16 @@ export function ItemsCrudEditor({ items, onChange, newItem, rules }: {
               }
               if (k === "fileAssetId") {
                 return <div key={k} className="md:col-span-2"><MediaField label={label} value={v as string} typeFilter="qualquer" onChange={onFieldChange} />{missing && <p className="mt-1 text-xs text-destructive">Campo obrigatório.</p>}</div>;
+              }
+              if (k === "youtubeUrl") {
+                const invalidUrl = (v as string).trim() !== "" && !isValidYoutubeUrl(v as string);
+                return (
+                  <div key={k} className="md:col-span-2">
+                    <Field label={label} value={v as string} onChange={onFieldChange} />
+                    {missing && <p className="mt-1 text-xs text-destructive">Campo obrigatório.</p>}
+                    {invalidUrl && <p className="mt-1 text-xs text-destructive">URL do YouTube inválida — use https://www.youtube.com/watch?v=... ou https://youtu.be/...</p>}
+                  </div>
+                );
               }
               if (MARKDOWN_ITEM_KEYS.has(k)) {
                 return <div key={k} className="md:col-span-2"><MarkdownField label={label} value={v as string} onChange={onFieldChange} />{missing && <p className="mt-1 text-xs text-destructive">Campo obrigatório.</p>}</div>;
