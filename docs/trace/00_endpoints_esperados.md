@@ -18,7 +18,7 @@ Cobertura confirmada nos arquivos de `docs/sprints/sprint-02-fundacao-backend-gp
 | `/tenants/{tenantId}` | GET, PUT, DELETE | `TenantSettings.tsx`, `EditTenantModal.tsx`, `TenantContextMenu.tsx` (Excluir) | Ver/editar/excluir um tenant específico — ver payloads completos na Seção C |
 | `/products` | GET, POST | `CreateProductForm.tsx`, `ProductSelectScreen.tsx`, `domains/products` | Lista produtos do tenant atual ou cria um novo produto (opcionalmente já vinculado a um `tenantId`, fluxo do wizard) |
 | `/products/{productId}` | GET | Telas de detalhe de produto em todos os domínios | Detalhe de um produto específico |
-| `/products/{productId}/modules/{moduleKey}/enable` | POST | `ModuleCatalog.tsx` (Sprint 05 liga o catálogo real) | Habilita um módulo do catálogo para o produto, respeitando dependências |
+| `/products/{productId}/modules/{moduleKey}/enable` | POST | `ModuleCatalog.tsx` (Sprint 05 liga o catálogo real) | Habilita um módulo do catálogo para o produto, respeitando dependências (`KNOWLEDGE_GRAPH` exige `CONTENT` — `core/products/moduleDefaults.ts`; validação formalizada na etapa 06 nesta revisão) |
 | `/products/{productId}/modules/{moduleKey}/disable` | POST | idem | Desabilita um módulo |
 | `/products/{productId}/graph/nodes` | GET, POST | `domains/knowledge` (Knowledge Graph) | Lista/cria nós do grafo de conhecimento do produto — `GET` aceita `?q={label}` para busca por entidade (sustenta `EntityPicker.tsx` ao linkar uma referência durante a autoria, ver ADR-0016) |
 | `/products/{productId}/graph/nodes/{nodeId}` | GET | idem | Detalhe de um nó |
@@ -167,6 +167,10 @@ Motivo: `InviteUserDrawer.tsx`.
 
 **`GET /api/v1/tenants/{tenantId}/users/{userId}`**, **`PUT .../users/{userId}`** — Motivo: `UserDetailPanel.tsx` (hoje só leitura; "Editar permissões" ainda sem ação real).
 
+**`POST /api/v1/tenants/{tenantId}/users/{userId}/resend-invite`**, **`POST .../users/{userId}/block`** — adicionados nesta revisão (auditoria de cobertura): `usersService.resendInvite`/`blockUser` já chamavam esses caminhos sem documentação formal. Motivo: ações de `UserTable.tsx`/`UserDetailPanel.tsx` sobre um usuário pendente/ativo. Ver regras completas na etapa 14.
+
+> **Nota de divergência de path:** o frontend mock hoje chama `/api/v1/admin/users/invite` e `/api/v1/admin/products/{productId}/assignments` (sem `tenantId`/sem escopo no path) — paths que nunca foram o padrão documentado aqui nem nas etapas. O canônico é sempre escopado (`/tenants/{tenantId}/users/...`, `/products/{productId}/users`); a reconciliação do mock para o path correto é tarefa da Sprint 07 (toggle mock↔real), não do backend.
+
 ### B.6 `audit`
 
 Telas: `AuditTimeline`, `AuditEventDetail`.
@@ -201,9 +205,9 @@ Motivo: grid de cards (Produto, Tenant, Equipe, Permissões, Integrações, Segu
 
 **`PUT /api/v1/tenants/{tenantId}`** — ver Seção C (mesmo endpoint do CRUD de tenant).
 
-**`GET /api/v1/tenants/{tenantId}/roles`**, **`PUT .../roles`** — Motivo: `RoleManagement.tsx`.
+**`GET /api/v1/tenants/{tenantId}/roles`**, **`PUT .../roles`**, **`POST .../roles/restore-defaults`** — Motivo: `RoleManagement.tsx`. `restore-defaults` adicionado nesta revisão (cobria `settingsService.restoreDefaultRoles`, sem endpoint documentado antes).
 
-**`GET /api/v1/tenants/{tenantId}/permission-matrix`** — Motivo: `PermissionMatrixView.tsx`, `AccessPreviewPanel.tsx` (simulação de papel sobre a matriz real).
+**`GET /api/v1/tenants/{tenantId}/permission-matrix`**, **`POST .../permission-matrix/restore-defaults`**, **`POST .../permission-matrix/preview`** — Motivo: `PermissionMatrixView.tsx`; `AccessPreviewPanel.tsx` consome **`preview`**, não calcula no client (correção desta revisão — afirmação anterior de "calcula no client" estava errada e contradizia o `logApiCall` real do frontend).
 
 ### B.8 `dashboard`
 

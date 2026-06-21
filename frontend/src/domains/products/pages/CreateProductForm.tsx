@@ -8,10 +8,26 @@ import { productsService } from "../services/productsService";
 import { tenantsService } from "../../../core/tenants/services/tenantsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { PRODUCT_TYPES } from "../../../core/products/moduleDefaults";
+import { PRODUCT_PAGE_SKELETONS } from "../../../core/products/productTemplates";
 import { useModuleSelection } from "../hooks/useModuleSelection";
 import { ModuleCheckboxList } from "../components/ModuleCheckboxList";
 import { StorageStrategyStep } from "../components/StorageStrategyStep";
 import type { AssetStorageStrategy } from "../contracts/requests";
+
+function PageSkeletonPreview({ type }: { type: string }) {
+  const skeleton = PRODUCT_PAGE_SKELETONS[type as keyof typeof PRODUCT_PAGE_SKELETONS];
+  if (skeleton) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Este produto nasce com {skeleton.length} página{skeleton.length === 1 ? "" : "s"}: {skeleton.map((p) => p.title).join(", ")}.
+      </p>
+    );
+  }
+  if (type === "Custom") {
+    return <p className="text-sm text-muted-foreground">Este produto nasce em branco — sem páginas, sem módulos pré-habilitados.</p>;
+  }
+  return <p className="text-sm text-muted-foreground">Este produto nasce sem páginas — módulos recomendados já vêm pré-marcados.</p>;
+}
 
 function ProductSummaryPanel({ slug, tenantName, moduleCount }: { slug: string; tenantName?: string; moduleCount: number }) {
   return (
@@ -46,7 +62,7 @@ export function CreateProductForm() {
     setSaving(true);
     try {
       const product = await productsService.create({
-        name, slug, type, language: "pt-BR", description, template: "Produto operacional padrão",
+        name, slug, type, language: "pt-BR", description,
         initialModules: selectedList, tenantId: tenantId ?? undefined,
         assetStorageStrategy, s3Bucket: s3Bucket || undefined, s3Region: s3Region || undefined,
       });
@@ -67,14 +83,14 @@ export function CreateProductForm() {
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <Card>
           <div className="grid gap-4 md:grid-cols-2">
-            {/* fixo por enquanto: tenant/idioma/template do wizard são fixos no MVP — ADR/Sprint 09 */}
+            {/* fixo por enquanto: tenant/idioma do wizard são fixos no MVP — ADR/Sprint 09 */}
             {tenantId && <SelectLike label="Tenant" value={tenant?.name ?? "Carregando..."} locked />}
             <Field label="Nome do produto" value={name} onChange={setName} />
             <Field label="Slug" value={slug} onChange={setSlug} />
             <SelectLike label="Tipo" value={type} options={PRODUCT_TYPES} onChange={setType} />
             <SelectLike label="Idioma padrão" value="Português (Brasil)" locked />
             <div className="md:col-span-2"><Field label="Descrição" value={description} onChange={setDescription} textarea /></div>
-            <SelectLike label="Template inicial" value="Produto operacional padrão" locked />
+            <div className="md:col-span-2"><PageSkeletonPreview type={type} /></div>
             <div className="md:col-span-2">
               <p className="mb-2 text-sm font-medium">Módulos iniciais</p>
               <p className="mb-2 text-xs text-muted-foreground">Pré-marcados pelo tipo de produto escolhido — desmarque/marque antes de confirmar.</p>

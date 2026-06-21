@@ -1,4 +1,4 @@
-# Padrão de qualidade, arquitetura e entrega — vale para TODAS as etapas (01-23)
+# Padrão de qualidade, arquitetura e entrega — vale para TODAS as etapas (01-24)
 
 > Este arquivo é a fonte da verdade do padrão. Cada etapa de domínio (06, 07, 09-17, 21) já traz um resumo deste padrão na própria etapa, porque cada arquivo precisa ser colável isoladamente numa conversa nova do GPT, sem depender de ter colado este arquivo antes. Se houver qualquer divergência entre o resumo numa etapa e este arquivo, **este arquivo prevalece** — ele é mais detalhado de propósito.
 >
@@ -190,6 +190,29 @@ Os 5 papéis, sempre nesta ordem de prioridade quando uma resolução precisar e
 Domínios gateados por módulo (etapa → `@RequireModule`): `07`/`17` → `KNOWLEDGE_GRAPH`; `10` → `CONTENT`; `11` → `ASSETS`; `12` → `FORMS`; `13` → `ANALYTICS`; `21` → `PAGES`. Domínios **não** gateados (fundação, sempre disponíveis): `09` (tenants/ProductAssignment), `14` (users), `15` (audit), `16` (settings/dashboard), `23` (notification).
 
 Toda etapa de domínio gateada por módulo adiciona, nos próprios critérios de aceite, o cenário "módulo desabilitado para o produto → 403 `MODULE_DISABLED`" como teste obrigatório de Rodada 4 (controller).
+
+## 11. Entrega de validação: collection Postman cumulativa, não só curl
+
+Toda etapa traz, na própria seção "Validação", um bloco de `curl` — isso continua existindo e continua sendo a **especificação exata** de cada request (método, path, headers, body), não muda. O que muda é a forma de **entregar** a validação: em vez de só rodar os `curl`s manualmente uma vez e descartar, cada etapa adiciona os mesmos requests a uma **collection Postman cumulativa única**, `aegis-postman-collection.json` (Postman Collection Format v2.1), que cresce uma pasta por etapa e é devolvida (o JSON completo, para download) ao final de cada etapa.
+
+### 11.1 Estrutura da collection (criada na etapa 03, estendida a partir daí)
+
+- **Variáveis de collection** (`variable`, na raiz do JSON): `baseUrl` (`http://localhost:8080/api/v1`), `keycloakIssuer` (`http://localhost:8282/realms/aegis`), `clientId` (`aegis-web`), e `token` (vazio até a primeira autenticação — preenchido automaticamente, ver 11.2). Toda URL de request usa `{{baseUrl}}/...`, nunca o host hardcoded.
+- **Pasta "Auth" (criada na etapa 03, junto do Keycloak)**: um request `POST {{keycloakIssuer}}/protocol/openid-connect/token` por usuário de teste (`super-admin`, `admin`, `pm`, `editor`, `viewer` — mesmos 5 da etapa 20) — body `x-www-form-urlencoded` com `grant_type=password`, `client_id={{clientId}}`, `username=<usuário>`, `password=senha123` (mesma senha de teste da etapa 20). Rodar qualquer um desses requests troca o "usuário atual" da sessão de teste.
+- **Script de captura automática do token** (aba "Scripts" → "Post-response" de cada request da pasta "Auth", Postman moderno — ou `event: ["test"]` no JSON exportado):
+  ```js
+  const body = pm.response.json();
+  pm.collectionVariables.set("token", body.access_token);
+  ```
+  Isso elimina copiar/colar token manualmente — rodar um request de "Auth" já deixa `{{token}}` pronto para todo o resto da collection.
+- **Authorization no nível da collection** (não em cada request individual): `Bearer Token`, valor `{{token}}`, com cada request/pasta nova herdando ("Inherit auth from parent") — assim nenhum request precisa configurar autenticação própria, só os da pasta "Auth" (que não exigem token, são o próprio login).
+- **Uma pasta por etapa de domínio** (`03 - Keycloak`, `05 - Me`, `06 - Core`, `07 - Knowledge Graph`, `09 - Tenants e ProductAssignment`, ..., até `24 - Templates de produto`), cada uma com um request por `curl` documentado na etapa correspondente — mesmo método, path, body; descrição do request (campo `description` do Postman) cita a regra de negócio que aquele request valida, para a collection servir como documentação executável, não só uma lista de chamadas soltas.
+
+### 11.2 O que o GPT entrega ao final de cada etapa
+
+Além do código da etapa, o GPT entrega o JSON **completo e atualizado** de `aegis-postman-collection.json` (a collection inteira, não um diff) — pronto para download e importação direta no Postman. Etapas que gateiam por módulo ou têm regra de isolamento por tenant (Seções 9 e 10 deste padrão) incluem, na mesma pasta, ao menos um request que prova o caminho de **rejeição** (403 `MODULE_DISABLED`, 404 cross-tenant) — não só o caminho feliz, mesmo princípio já exigido dos testes automatizados (Seção 5).
+
+A pasta "Auth" da etapa 03 nunca precisa ser refeita nas etapas seguintes — só as pastas de domínio são adicionadas incrementalmente, sempre por cima do mesmo arquivo (a collection de uma etapa nunca substitui a estrutura já validada nas etapas anteriores, só soma).
 
 ## 10. Isolamento entre tenants e produtos — obrigatório em todo domínio, não só nos que já mencionam
 

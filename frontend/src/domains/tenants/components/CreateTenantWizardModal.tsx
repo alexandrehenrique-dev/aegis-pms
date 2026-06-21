@@ -14,7 +14,7 @@ import type { TenantOption } from "../../../shared/types";
 import type { ProductSummary } from "../../products/contracts/responses";
 import type { ProductAssignmentSummary } from "../../users/contracts/productAssignments";
 
-const INITIAL_MODULES = PRODUCT_TYPE_MODULE_DEFAULTS["Site Institucional"].filter((m) => m.default).map((m) => m.key);
+const INITIAL_MODULES = (PRODUCT_TYPE_MODULE_DEFAULTS["Site Institucional"] ?? []).filter((m) => m.default).map((m) => m.key);
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -69,7 +69,7 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
     try {
       const created = await productsService.create({
         name: productName, slug: productSlug, type: "Site Institucional", language: "pt-BR",
-        description: "Produto criado pelo wizard de onboarding do Super Admin.", template: "Produto operacional padrão",
+        description: "Produto criado pelo wizard de onboarding do Super Admin.",
         initialModules: INITIAL_MODULES, tenantId: tenant.id, assetStorageStrategy: "local",
       });
       setProduct(created);

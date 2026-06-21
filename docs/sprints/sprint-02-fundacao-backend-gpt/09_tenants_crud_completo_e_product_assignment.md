@@ -30,6 +30,8 @@ type UpdateTenantRequest = { name: string; plan: string; status: "ativo" | "susp
 // Response: TenantOption atualizado
 ```
 
+> **(Adicionado pela etapa 24, se já estiver implementada quando esta etapa for executada — senão, é um retrofit a fazer depois)** Se `status` mudar de valor (`"ativo"` → `"suspenso"` ou vice-versa), chamar `NotificationService.create(...)` notificando os usuários do tenant (`target: { type: "TENANT", tenantId }`) — ver etapa 24, Seção D, para o texto/tipo exatos. `update` sem mudança de status não cria notificação nenhuma.
+
 **`DELETE /api/v1/tenants/{tenantId}`** *(novo)*:
 ```ts
 type DeleteTenantRequest = { confirmationText: string }; // nome do tenant, digitado pelo usuário
@@ -92,6 +94,8 @@ Validação obrigatória: exatamente um de `userId` ou `inviteEmail` deve vir pr
 - [ ] `ProductAssignmentRepository` tem Javadoc na interface e em todo método.
 
 ## Validação
+
+> **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os à pasta desta etapa em `aegis-postman-collection.json` (collection cumulativa, autenticação via `{{token}}` herdado da pasta "Auth") e devolva o JSON completo atualizado para download.
 
 ```bash
 # super admin vê todos os tenants

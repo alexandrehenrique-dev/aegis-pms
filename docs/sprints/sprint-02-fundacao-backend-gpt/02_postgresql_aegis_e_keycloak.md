@@ -84,6 +84,8 @@ Adicionar `keycloak_postgres_data:` na seção `volumes:` do compose.
 
 ## Validação
 
+> **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os à pasta desta etapa em `aegis-postman-collection.json` (collection cumulativa, autenticação via `{{token}}` herdado da pasta "Auth") e devolva o JSON completo atualizado para download.
+
 ```bash
 docker compose up -d aegis-postgres keycloak-postgres
 docker compose logs -f aegis-postgres keycloak-postgres

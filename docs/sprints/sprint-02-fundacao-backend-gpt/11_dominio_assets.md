@@ -167,6 +167,8 @@ Fora de escopo desta etapa **implementar** a migração, mas a regra precisa exi
 
 ## Validação
 
+> **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os à pasta desta etapa em `aegis-postman-collection.json` (collection cumulativa, autenticação via `{{token}}` herdado da pasta "Auth") e devolva o JSON completo atualizado para download.
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/products/<productId>/assets \
   -H "Authorization: Bearer $TOKEN" -F "file=@./teste.png" -F "friendlyName=Teste"

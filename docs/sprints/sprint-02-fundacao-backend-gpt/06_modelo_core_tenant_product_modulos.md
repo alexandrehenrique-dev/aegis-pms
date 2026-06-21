@@ -20,6 +20,8 @@ Modelar Tenant, TenantMembership, Product e ProductModule, com os endpoints mín
 
 **Product**: `id`, `tenantId`, `key` (único por tenant), `name`, `type`, `status`, `defaultLocale`, `assetStorageStrategy` (`"local"|"s3"`, default `"local"`), `createdAt`, `updatedAt`.
 
+> **`type` é catálogo fechado, não string livre** (ver ADR-0017): `"Site Institucional" | "Portal" | "Knowledge Base" | "Portfolio" | "Library/Books/Music" | "Produto SaaS" | "Custom"` — os mesmos 7 valores de `ProductTypeKey` (frontend, `core/products/moduleDefaults.ts`). `type` desconhecido na criação é rejeitado com 400, mesmo princípio já usado para `moduleKey`/`BlockType`/`nodeType`. É este campo que a etapa 24 usa para decidir o esqueleto de páginas e os módulos recomendados a pré-habilitar — `"Custom"` é o único valor que não dispara nenhum dos dois.
+
 > `assetStorageStrategy` foi adicionado pela Sprint 13 do frontend — escolhido no wizard de criação de produto (passo novo, ver Sprint 13). Ao criar o produto com `assetStorageStrategy: "local"`, o backend deve provisionar a estrutura de pastas do produto no storage local **como parte da transação de criação** (ou logo após, de forma assíncrona com retry — decisão do GPT, documentar a escolha), delegando para o domínio `asset` (etapa 11, Seção D) — `ProductService` chama `AssetStorageProvisioningService.provisionFor(productId, strategy)`, não o contrário. Detalhe completo da estratégia de storage (Strategy pattern, S3, resolução por UUID, riscos) está na etapa 11 — esta etapa só registra o campo e o ponto de integração.
 
 **ProductModule**: `id`, `productId`, `moduleKey`, `enabled`, `settingsJson`, `createdAt`, `updatedAt`.
@@ -35,6 +37,8 @@ COMMENTS, CONTRIBUTORS, KNOWLEDGE_GRAPH, ECOMMERCE
 `ECOMMERCE` foi adicionado pela Sprint 13 do frontend — **registrado, não implementado**. Nenhuma etapa desta sprint cria carrinho/checkout/pagamento; o módulo existe no enum só para já ter um lugar reservado quando essa funcionalidade for desenhada (sprint futura dedicada). Deve poder ser listado e (no máximo) habilitado/desabilitado como qualquer outro módulo, sem nenhuma regra de negócio própria por enquanto.
 
 Módulo desconhecido deve gerar erro de validação.
+
+> **Dependência entre módulos (adicionado nesta revisão — auditoria de cobertura)**: o frontend (`core/products/moduleDefaults.ts`, `KNOWLEDGE_GRAPH_DEPENDENCY = "Conteúdo"`) já define que `KNOWLEDGE_GRAPH` exige `CONTENT` habilitado, mas nenhuma etapa validava isso no backend — só a UI sugeria a dependência, nunca bloqueava de fato (mesmo tipo de gap que motivou a ADR-0015). `POST .../modules/{moduleKey}/enable` passa a validar: se o `moduleKey` tiver uma dependência registrada e ela não estiver habilitada no produto, rejeitar com 400 (`{"error": "MODULE_DEPENDENCY_MISSING", "moduleKey": "KNOWLEDGE_GRAPH", "requires": "CONTENT"}`). O mapa de dependências (hoje só `KNOWLEDGE_GRAPH → CONTENT`) fica num `Map<ModuleKey, ModuleKey>`/equivalente no `ProductModuleService`, não hardcoded num `if` solto — outras dependências futuras (frontend já lista mais, ex. catálogo de módulos da Sprint 05) só precisam de uma entrada nova nesse mapa. `disable` do módulo dependência (`CONTENT`) com `KNOWLEDGE_GRAPH` ainda habilitado: também rejeitar com 400 pelo mesmo motivo (nunca deixar o produto num estado inconsistente em nenhuma direção).
 
 ### C. Endpoints mínimos
 
@@ -89,12 +93,16 @@ As etapas 07/17 (`KNOWLEDGE_GRAPH`), 10 (`CONTENT`), 11 (`ASSETS`), 12 (`FORMS`)
 - [ ] Criar produto vinculado a um tenant funciona.
 - [ ] Listagem de produtos respeita membership do usuário autenticado.
 - [ ] Habilitar/desabilitar módulo em produto funciona e rejeita `moduleKey` desconhecido.
+- [ ] Habilitar `KNOWLEDGE_GRAPH` sem `CONTENT` habilitado é rejeitado com 400 `MODULE_DEPENDENCY_MISSING`; habilitando `CONTENT` primeiro, `KNOWLEDGE_GRAPH` passa a ser aceito.
+- [ ] Desabilitar `CONTENT` com `KNOWLEDGE_GRAPH` ainda habilitado é rejeitado com 400.
 - [ ] Tudo persiste corretamente (sobrevive a restart do backend).
 - [ ] Criar produto com `assetStorageStrategy: "local"` (ou omitido, usando o default) provisiona a estrutura de pastas do produto (ver etapa 11, Seção D) antes de retornar 201.
 - [ ] Criar produto com `assetStorageStrategy: "s3"` não tenta criar pasta local nenhuma.
 - [ ] `@RequireModule`/`ModuleAccessAspect` existem e bloqueiam com 403 `MODULE_DISABLED` quando o módulo do path está desabilitado no produto, mesmo para `SUPER_ADMIN` (ADR-0015).
 
 ## Validação
+
+> **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os à pasta desta etapa em `aegis-postman-collection.json` (collection cumulativa, autenticação via `{{token}}` herdado da pasta "Auth") e devolva o JSON completo atualizado para download.
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/tenants \
@@ -103,7 +111,7 @@ curl -X POST http://localhost:8080/api/v1/tenants \
 
 curl -X POST http://localhost:8080/api/v1/products \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"tenantId":"<tenant-id>","key":"maestro-beton","name":"Maestro Beton","type":"MUSICIAN_SITE","defaultLocale":"pt-BR"}'
+  -d '{"tenantId":"<tenant-id>","key":"maestro-beton","name":"Maestro Beton","type":"Site Institucional","defaultLocale":"pt-BR"}'
 
 curl http://localhost:8080/api/v1/products/<productId> -H "Authorization: Bearer $TOKEN"
 # esperado: inclui "modules": [{"moduleKey": "...", "enabled": ...}]
