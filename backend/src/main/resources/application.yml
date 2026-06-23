@@ -2,6 +2,12 @@ spring:
   application:
     name: aegis-pms-backend
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8282/realms/aegis}
+
   datasource:
     url: jdbc:postgresql://${AEGIS_DB_HOST:localhost}:${AEGIS_DB_PORT:5434}/${AEGIS_DB_NAME:aegis_pms}
     username: ${AEGIS_DB_USER:aegis_user}
