@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{backendBaseUrl}}/api/v1/me"
+method: GET
+headers:
+  Authorization: "{{bearer_token_18qx}}"
+scripts:
+  - type: afterResponse
+    code: pm.test('status is 401', function () { pm.response.to.have.status(401); });
+    language: text/javascript
+order: 2000

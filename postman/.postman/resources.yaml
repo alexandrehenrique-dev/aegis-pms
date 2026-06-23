@@ -5,3 +5,7 @@ workspace:
 localResources:
   collections:
     - ../aegis-postman-collection.json
+
+cloudResources:
+  collections:
+    ../postman/collections/Aegis PMS — Sprint 05 — Identity and Access: 22f5472d-47b6-49dd-91dd-c837c3bb9e6a

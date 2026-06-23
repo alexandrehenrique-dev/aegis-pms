@@ -1,0 +1,10 @@
+$kind: collection
+description: "Collection da Sprint 05 do Aegis PMS. Contexto: Resource Server com Keycloak e endpoint autenticado GET /api/v1/me. O grant_type=password é usado apenas para validação manual backend desta sprint, não representa o fluxo oficial da SPA."
+variables:
+  backendBaseUrl: http://localhost:8080
+  keycloakBaseUrl: http://localhost:8282
+  realm: aegis
+  clientId: aegis-web
+  username: loki
+  password: "123456"
+  token: ""
