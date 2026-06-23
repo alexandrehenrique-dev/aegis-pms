@@ -14,6 +14,7 @@
 
 # ---------- OS ----------
 .DS_Store
+**/.DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
@@ -44,6 +45,7 @@ secrets/
 
 # ---------- Backend: Java / Spring Boot / Maven / Gradle ----------
 target/
+**/target/
 !.mvn/wrapper/maven-wrapper.jar
 .mvn/wrapper/maven-wrapper.properties
 *.class
