@@ -35,7 +35,7 @@ class LocalStorageBootstrapTest {
 
         LocalStorageBootstrap bootstrap = new LocalStorageBootstrap(fileInsteadOfDirectory.toString());
 
-        assertThatThrownBy(() -> bootstrap.run(new DefaultApplicationArguments()))
+        assertThatThrownBy(() -> runBootstrap(bootstrap))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Falha ao preparar storage local em:");
     }
@@ -50,11 +50,15 @@ class LocalStorageBootstrapTest {
 
             LocalStorageBootstrap bootstrap = new LocalStorageBootstrap(tempDir.toString());
 
-            assertThatThrownBy(() -> bootstrap.run(new DefaultApplicationArguments()))
+            assertThatThrownBy(() -> runBootstrap(bootstrap))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Storage local sem permissão de escrita em:");
         } finally {
             Files.setPosixFilePermissions(storageRoot, PosixFilePermissions.fromString("rwxrwxrwx"));
         }
+    }
+
+    private void runBootstrap(LocalStorageBootstrap bootstrap) {
+        bootstrap.run(new DefaultApplicationArguments());
     }
 }

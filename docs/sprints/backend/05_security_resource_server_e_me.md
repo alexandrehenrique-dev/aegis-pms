@@ -95,7 +95,7 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/me
 # esperado: 200 com os claims
 ```
 
-(O `grant_type=password` aqui é só para teste manual via curl nesta etapa de backend — não é a estratégia de login da SPA, que será resolvida na Sprint 06 deste plano, fora do GPT.)
+(O `grant_type=password` aqui é só para validação direta desta etapa — não é a estratégia de login da SPA. A **etapa 06** (`06_auth_proxy_smtp_e_convite.md`) cria os endpoints `POST /api/v1/auth/login`, `POST /api/v1/auth/logout` e `POST /api/v1/auth/refresh` que o frontend usa: o backend faz o proxy para o Keycloak internamente, o frontend nunca conhece a URL do Keycloak. A Sprint 06 do frontend (`docs/sprints/frontend/06_keycloak_login_ui_custom.md`) consome esses endpoints proxy, não o Keycloak diretamente.)
 
 ## Artefato de continuidade — `SPRINT-RESULTADO.md`
 

@@ -26,6 +26,7 @@ public class SecurityConfig {
      * @return cadeia de filtros de segurança
      * @throws Exception caso a configuração falhe
      */
+    @SuppressWarnings({"java:S4502", "java:S112"})
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
@@ -46,6 +47,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll()
                 )

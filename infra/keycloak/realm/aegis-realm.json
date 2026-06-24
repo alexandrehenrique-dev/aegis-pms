@@ -457,53 +457,6 @@
   "webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister" : false,
   "webAuthnPolicyPasswordlessAcceptableAaguids" : [ ],
   "webAuthnPolicyPasswordlessExtraOrigins" : [ ],
-  "users" : [ {
-    "id" : "aae4e8ea-2cee-4f3a-b261-c5083377bc57",
-    "username" : "loki",
-    "firstName" : "loki",
-    "lastName" : "de asgard",
-    "email" : "loki@teste.com",
-    "emailVerified" : true,
-    "createdTimestamp" : 1782224877493,
-    "enabled" : true,
-    "totp" : false,
-    "credentials" : [ {
-      "id" : "0635f026-c59f-4a42-8c5f-52f984bf85c2",
-      "type" : "password",
-      "userLabel" : "My password",
-      "createdDate" : 1782224890472,
-      "secretData" : "{\"value\":\"bocbGBwTDM1YveWx27qUyyWrNxDTIlxNLFymPyw04As=\",\"salt\":\"h6asV/luYJPMKr3HKLl3pQ==\",\"additionalParameters\":{}}",
-      "credentialData" : "{\"hashIterations\":5,\"algorithm\":\"argon2\",\"additionalParameters\":{\"hashLength\":[\"32\"],\"memory\":[\"7168\"],\"type\":[\"id\"],\"version\":[\"1.3\"],\"parallelism\":[\"1\"]}}"
-    } ],
-    "disableableCredentialTypes" : [ ],
-    "requiredActions" : [ ],
-    "realmRoles" : [ "default-roles-aegis", "AEGIS_SUPER_ADMIN" ],
-    "notBefore" : 0,
-    "groups" : [ ]
-  }, {
-    "id" : "fc713a07-2545-4591-afce-027b9251b596",
-    "username" : "teste",
-    "firstName" : "Teste",
-    "lastName" : "da silva",
-    "email" : "admin@test.local",
-    "emailVerified" : true,
-    "createdTimestamp" : 1782062830806,
-    "enabled" : true,
-    "totp" : false,
-    "credentials" : [ {
-      "id" : "7dc3ec42-928d-45b1-a364-636216e1fadc",
-      "type" : "password",
-      "userLabel" : "My password",
-      "createdDate" : 1782062865104,
-      "secretData" : "{\"value\":\"CnWpBEcP6IcNXKVU/s5pV9yPuGGcda0L3OxkY+ustcs=\",\"salt\":\"ojYsMbo/0oJEijzK5YTwaA==\",\"additionalParameters\":{}}",
-      "credentialData" : "{\"hashIterations\":5,\"algorithm\":\"argon2\",\"additionalParameters\":{\"hashLength\":[\"32\"],\"memory\":[\"7168\"],\"type\":[\"id\"],\"version\":[\"1.3\"],\"parallelism\":[\"1\"]}}"
-    } ],
-    "disableableCredentialTypes" : [ ],
-    "requiredActions" : [ "UPDATE_PASSWORD" ],
-    "realmRoles" : [ "default-roles-aegis", "AEGIS_SUPER_ADMIN" ],
-    "notBefore" : 0,
-    "groups" : [ ]
-  } ],
   "scopeMappings" : [ {
     "clientScope" : "offline_access",
     "roles" : [ "offline_access" ]
@@ -1335,7 +1288,18 @@
     "xXSSProtection" : "1; mode=block",
     "strictTransportSecurity" : "max-age=31536000; includeSubDomains"
   },
-  "smtpServer" : { },
+  "smtpServer" : {
+    "replyToDisplayName" : "Aegis PMS",
+    "starttls" : "false",
+    "auth" : "",
+    "port" : "1025",
+    "host" : "mailhog",
+    "replyTo" : "alexandre.henrique.dev@gmail.com",
+    "from" : "alexandre.henrique.dev@gmail.com",
+    "fromDisplayName" : "Aegis PMS",
+    "envelopeFrom" : "",
+    "ssl" : "false"
+  },
   "eventsEnabled" : false,
   "eventsListeners" : [ "jboss-logging" ],
   "enabledEventTypes" : [ ],
@@ -2091,7 +2055,11 @@
     "cibaAuthRequestedUserHint" : "login_hint",
     "oauth2DeviceCodeLifespan" : "600",
     "oauth2DevicePollingInterval" : "5",
+    "clientOfflineSessionMaxLifespan" : "0",
+    "clientSessionIdleTimeout" : "0",
     "parRequestUriLifespan" : "60",
+    "clientSessionMaxLifespan" : "0",
+    "clientOfflineSessionIdleTimeout" : "0",
     "cibaInterval" : "5",
     "realmReusableOtpCode" : "false"
   },
