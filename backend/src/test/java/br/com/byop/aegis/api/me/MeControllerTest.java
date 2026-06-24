@@ -22,11 +22,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = MeController.class)
 @Import({
-
         SecurityConfig.class,
-
         MeResponseMapper.class
-
 })
 class MeControllerTest {
 
