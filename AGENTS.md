@@ -73,6 +73,7 @@ Estas regras vêm de decisões já tomadas (ADRs) e não devem ser revisadas por
 - **A SPA é servida pelo próprio Spring Boot, mesma origem** (ADR-0009) — não introduzir CORS nem hospedagem separada sem novo ADR.
 - **O Produto é o centro do sistema** (Constituição, ARTIGO VI) — nenhuma feature deve subordinar Produto a Tenant, Usuário ou Conteúdo.
 - **A tela de login atual (UI/UX) não muda** quando o Keycloak real for integrado — ver `docs/sprints/06_keycloak_login_ui_custom.md`. Não expor a tela nativa do Keycloak ao usuário final.
+- **Organização modular é obrigatória** — antes de criar qualquer nova classe, o agente deve analisar a estrutura do módulo correspondente e posicionar a classe no pacote de responsabilidade adequado. É proibido criar classes diretamente no pacote raiz do módulo ou mover classes entre módulos sem autorização explícita. Toda integração entre módulos deve ocorrer exclusivamente por APIs públicas expostas (`NamedInterface`), nunca por entidades, repositories ou services internos.
 
 ## 4. Onde registrar observações
 

@@ -75,6 +75,21 @@
       "key": "s3ProductId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "articleNodeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "topicNodeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "graphEdgeId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -1168,6 +1183,438 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Placeholder manual: substitua quando houver endpoint de domínio anotado com @RequireModule', () => { pm.expect(true).to.eql(true); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Knowledge Graph",
+      "description": "Endpoints da Sprint 08 — Knowledge Graph MVP.",
+      "item": [
+        {
+          "name": "Criar ARTICLE node",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/graph/nodes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "graph",
+                "nodes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"ARTICLE\",\n  \"refType\": \"ARTICLE\",\n  \"refId\": \"article-postman-{{$timestamp}}\",\n  \"label\": \"Article Knowledge Graph Postman\",\n  \"slug\": \"article-knowledge-graph-postman\",\n  \"metadataJson\": \"{\\\"source\\\":\\\"postman\\\"}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('ARTICLE preservado', () => pm.expect(json.nodeType).to.eql('ARTICLE'));",
+                  "pm.collectionVariables.set('articleNodeId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criar TOPIC node",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/graph/nodes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "graph",
+                "nodes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeType\": \"TOPIC\",\n  \"refType\": \"TOPIC\",\n  \"refId\": \"topic-postman-{{$timestamp}}\",\n  \"label\": \"Knowledge Graph Topic\",\n  \"slug\": \"knowledge-graph-topic\",\n  \"metadataJson\": \"{\\\"source\\\":\\\"postman\\\"}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('TOPIC preservado', () => pm.expect(json.nodeType).to.eql('TOPIC'));",
+                  "pm.collectionVariables.set('topicNodeId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criar edge TAGGED_WITH",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/graph/edges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "graph",
+                "edges"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceNodeId\": \"{{articleNodeId}}\",\n  \"targetNodeId\": \"{{topicNodeId}}\",\n  \"edgeType\": \"TAGGED_WITH\",\n  \"weight\": 1.0,\n  \"metadataJson\": \"{\\\"source\\\":\\\"postman\\\"}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('TAGGED_WITH preservado', () => pm.expect(json.edgeType).to.eql('TAGGED_WITH'));",
+                  "pm.collectionVariables.set('graphEdgeId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar neighbors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/graph/nodes/{{articleNodeId}}/neighbors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "graph",
+                "nodes",
+                "{{articleNodeId}}",
+                "neighbors"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('resposta é array', () => pm.expect(json).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar nodes com q",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/graph/nodes?q=topic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "graph",
+                "nodes"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "topic"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('resposta é array', () => pm.expect(json).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar nodes sem q",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/graph/nodes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "graph",
+                "nodes"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('resposta é array', () => pm.expect(json).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar node por id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/graph/nodes/{{articleNodeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "graph",
+                "nodes",
+                "{{articleNodeId}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('id preservado', () => pm.expect(json.id).to.eql(pm.collectionVariables.get('articleNodeId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar related",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/graph/nodes/{{topicNodeId}}/related",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "graph",
+                "nodes",
+                "{{topicNodeId}}",
+                "related"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('resposta é array', () => pm.expect(json).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Erro com node inexistente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/graph/nodes/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "graph",
+                "nodes",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "const json = pm.response.json();",
+                  "pm.test('erro claro', () => pm.expect(json.error).to.eql('GRAPH_NODE_NOT_FOUND'));"
                 ]
               }
             }
