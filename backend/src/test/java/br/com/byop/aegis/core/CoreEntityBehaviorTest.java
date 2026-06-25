@@ -1,19 +1,21 @@
 package br.com.byop.aegis.core;
 
-import br.com.byop.aegis.core.product.AssetStorageStrategy;
-import br.com.byop.aegis.core.product.ModuleKey;
-import br.com.byop.aegis.core.product.Product;
-import br.com.byop.aegis.core.product.ProductAssignment;
-import br.com.byop.aegis.core.product.ProductAssignmentRole;
-import br.com.byop.aegis.core.product.ProductAssignmentStatus;
-import br.com.byop.aegis.core.product.ProductModule;
-import br.com.byop.aegis.core.product.ProductStatus;
-import br.com.byop.aegis.core.product.ProductTypeKey;
-import br.com.byop.aegis.core.tenant.Tenant;
-import br.com.byop.aegis.core.tenant.TenantMembership;
-import br.com.byop.aegis.core.tenant.TenantMembershipStatus;
-import br.com.byop.aegis.core.tenant.TenantStatus;
+import br.com.byop.aegis.product.domain.AssetStorageStrategy;
+import br.com.byop.aegis.product.api.ModuleKey;
+import br.com.byop.aegis.product.domain.Product;
+import br.com.byop.aegis.product.domain.ProductAssignment;
+import br.com.byop.aegis.product.domain.ProductAssignmentRole;
+import br.com.byop.aegis.product.domain.ProductAssignmentStatus;
+import br.com.byop.aegis.product.domain.ProductModule;
+import br.com.byop.aegis.product.domain.ProductStatus;
+import br.com.byop.aegis.product.domain.ProductTypeKey;
+import br.com.byop.aegis.tenant.domain.Tenant;
+import br.com.byop.aegis.tenant.domain.TenantMembership;
+import br.com.byop.aegis.tenant.domain.TenantMembershipStatus;
+import br.com.byop.aegis.tenant.domain.TenantStatus;
 import org.junit.jupiter.api.Test;
+
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -52,7 +54,7 @@ class CoreEntityBehaviorTest {
     @Test
     void shouldChangeProductStateAndDefaultStorage() {
         Product product = new Product(
-                new Tenant("tenant", "Tenant"),
+                UUID.fromString("11111111-1111-1111-1111-111111111111"),
                 "product",
                 "Product",
                 ProductTypeKey.CUSTOM,
@@ -107,7 +109,7 @@ class CoreEntityBehaviorTest {
 
     private Product product() {
         return new Product(
-                new Tenant("tenant", "Tenant"),
+                UUID.fromString("22222222-2222-2222-2222-222222222222"),
                 "product",
                 "Product",
                 ProductTypeKey.SITE_INSTITUCIONAL,

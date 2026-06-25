@@ -1,9 +1,9 @@
 package br.com.byop.aegis.core;
 
-import br.com.byop.aegis.core.product.AssetStorageStrategy;
-import br.com.byop.aegis.core.product.Product;
-import br.com.byop.aegis.core.product.ProductTypeKey;
-import br.com.byop.aegis.core.tenant.Tenant;
+import br.com.byop.aegis.product.domain.AssetStorageStrategy;
+import br.com.byop.aegis.product.domain.Product;
+import br.com.byop.aegis.product.domain.ProductTypeKey;
+import br.com.byop.aegis.tenant.domain.Tenant;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 
@@ -17,7 +17,7 @@ public abstract class RepositoryTestSupport {
 
     protected Product product(Tenant tenant, String suffix) {
         return new Product(
-                tenant,
+                tenant.getId(),
                 "product-" + suffix,
                 "Product " + suffix,
                 ProductTypeKey.SITE_INSTITUCIONAL,

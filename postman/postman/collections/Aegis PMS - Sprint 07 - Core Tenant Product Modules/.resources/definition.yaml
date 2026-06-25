@@ -12,6 +12,9 @@ variables:
   productId: ""
   s3ProductKey: ""
   s3ProductId: ""
+  articleNodeId: ""
+  topicNodeId: ""
+  graphEdgeId: ""
 scripts:
   - type: http:beforeRequest
     code: |-
