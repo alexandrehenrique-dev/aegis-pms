@@ -36,6 +36,7 @@ class KeycloakAdminClientTest {
         KeycloakProperties properties = new KeycloakProperties(
                 "http://localhost:8282/realms/aegis",
                 wireMockServer.baseUrl(),
+                "/admin/realms/",
                 "aegis",
                 "aegis-web",
                 "admin-cli",
@@ -111,6 +112,28 @@ class KeycloakAdminClientTest {
     }
 
     @Test
+    void shouldThrowWhenAdminTokenBodyIsNull() {
+        wireMockServer.stubFor(post(urlEqualTo("/realms/master/protocol/openid-connect/token"))
+                .willReturn(ok()));
+
+        assertThrows(
+                KeycloakAuthenticationException.class,
+                () -> client.findUsers()
+        );
+    }
+
+    @Test
+    void shouldThrowWhenAdminTokenDoesNotContainAccessToken() {
+        wireMockServer.stubFor(post(urlEqualTo("/realms/master/protocol/openid-connect/token"))
+                .willReturn(okJson("{}")));
+
+        assertThrows(
+                KeycloakAuthenticationException.class,
+                () -> client.findUsers()
+        );
+    }
+
+    @Test
     void shouldThrowWhenUserLookupFails() {
         stubAdminToken();
 
@@ -180,6 +203,78 @@ class KeycloakAdminClientTest {
     }
 
     @Test
+    void shouldNormalizeConfiguredAdminRealmsPath() {
+        KeycloakAdminClient customClient = new KeycloakAdminClient(
+                RestClient.builder().build(),
+                new KeycloakProperties(
+                        "http://localhost:8282/realms/aegis",
+                        wireMockServer.baseUrl(),
+                        "admin/realms",
+                        "aegis",
+                        "aegis-web",
+                        "admin-cli",
+                        "admin",
+                        "admin"
+                )
+        );
+        stubAdminToken();
+
+        wireMockServer.stubFor(
+                get(urlEqualTo("/admin/realms/aegis/users"))
+                        .withHeader("Authorization", equalTo("Bearer admin-token"))
+                        .willReturn(okJson("[]"))
+        );
+
+        List<UserResponse> users = customClient.findUsers();
+
+        assertTrue(users.isEmpty());
+        wireMockServer.verify(getRequestedFor(urlEqualTo("/admin/realms/aegis/users")));
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenFindUsersBodyIsNull() {
+        stubAdminToken();
+
+        wireMockServer.stubFor(
+                get(urlEqualTo("/admin/realms/aegis/users"))
+                        .withHeader("Authorization", equalTo("Bearer admin-token"))
+                        .willReturn(ok())
+        );
+
+        List<UserResponse> users = client.findUsers();
+
+        assertTrue(users.isEmpty());
+    }
+
+    @Test
+    void shouldIgnoreNullUsersWhenFindingUsers() {
+        stubAdminToken();
+
+        wireMockServer.stubFor(
+                get(urlEqualTo("/admin/realms/aegis/users"))
+                        .withHeader("Authorization", equalTo("Bearer admin-token"))
+                        .willReturn(okJson("""
+                            [
+                              null,
+                              {
+                                "id": "user-1",
+                                "username": "loki",
+                                "email": "loki@teste.com",
+                                "firstName": "loki",
+                                "lastName": "de asgard",
+                                "enabled": true
+                              }
+                            ]
+                            """))
+        );
+
+        List<UserResponse> users = client.findUsers();
+
+        assertEquals(1, users.size());
+        assertEquals("user-1", users.getFirst().id());
+    }
+
+    @Test
     void shouldFindUserById() {
         stubAdminToken();
 
@@ -230,6 +325,21 @@ class KeycloakAdminClientTest {
         wireMockServer.stubFor(
                 get(urlEqualTo("/admin/realms/aegis/users/user-1"))
                         .willReturn(serverError())
+        );
+
+        assertThrows(
+                KeycloakAuthenticationException.class,
+                () -> client.findUserById("user-1")
+        );
+    }
+
+    @Test
+    void shouldThrowWhenFindUserByIdBodyIsNull() {
+        stubAdminToken();
+
+        wireMockServer.stubFor(
+                get(urlEqualTo("/admin/realms/aegis/users/user-1"))
+                        .willReturn(ok())
         );
 
         assertThrows(

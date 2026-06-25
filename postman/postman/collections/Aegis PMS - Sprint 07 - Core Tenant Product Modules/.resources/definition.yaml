@@ -1,0 +1,23 @@
+$kind: collection
+description: "Collection de validação da Sprint 07 — Modelo core: Tenant, Membership, Product e Catálogo de Módulos. Login Keycloak via auth proxy com usuário loki / 123456. Executar em ordem."
+variables:
+  baseUrl: http://localhost:8080
+  username: loki
+  password: "123456"
+  token: ""
+  refreshToken: ""
+  tenantKey: ""
+  tenantId: ""
+  productKey: ""
+  productId: ""
+  s3ProductKey: ""
+  s3ProductId: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      if (!pm.collectionVariables.get('baseUrl')) { pm.collectionVariables.set('baseUrl', 'http://localhost:8080'); }
+      if (!pm.collectionVariables.get('username')) { pm.collectionVariables.set('username', 'loki'); }
+      if (!pm.collectionVariables.get('password')) { pm.collectionVariables.set('password', '123456'); }
+      if (!pm.collectionVariables.get('tenantKey')) { pm.collectionVariables.set('tenantKey', 'byop-' + Date.now()); }
+      if (!pm.collectionVariables.get('productKey')) { pm.collectionVariables.set('productKey', 'maestro-beton-' + Date.now()); }
+    language: text/javascript

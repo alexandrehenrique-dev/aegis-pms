@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/products"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tenantId": "{{tenantId}}",
+      "key": "invalid-type-{{productKey}}",
+      "name": "Produto Inválido",
+      "type": "Tipo Inexistente",
+      "defaultLocale": "pt-BR"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 400', () => pm.response.to.have.status(400));
+      pm.test('erro presente', () => pm.expect(pm.response.json().error).to.be.a('string'));
+    language: text/javascript
+order: 6000
