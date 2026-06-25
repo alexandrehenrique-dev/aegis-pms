@@ -9,10 +9,16 @@ import { getProductSlug } from "../../../shared/utils/productSlugs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../shared/components/ui/dropdown-menu";
 import { toast } from "../../../core/notifications/toast";
 import { productsService } from "../services/productsService";
+import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
 import type { ProductSummary } from "../contracts/responses";
 
 export function ProductCard({ p }: { p: ProductSummary }) {
   const navigate = useNavigate();
+  const { viewAsRole } = useViewAsRole();
+  // ADR-0018: SUPER_ADMIN não entra no fluxo de conteúdo do produto — o botão
+  // leva à mesma rota (metadados/módulos/configurações), mas o rótulo deixa
+  // claro que ele está administrando a plataforma, não operando o produto.
+  const isSuperAdmin = viewAsRole === "super_admin";
   const slug = getProductSlug(p.name);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -51,7 +57,7 @@ export function ProductCard({ p }: { p: ProductSummary }) {
             <button className="rounded-lg p-1 hover:bg-muted"><MoreHorizontal size={18} /></button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={handleOpen}><ExternalLink size={14} />Abrir</DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleOpen}><ExternalLink size={14} />{isSuperAdmin ? "Gerenciar" : "Abrir"}</DropdownMenuItem>
             <DropdownMenuItem onSelect={handleFavorite}><Star size={14} />Favoritar</DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onSelect={() => setConfirmArchive(true)}><Archive size={14} />Arquivar</DropdownMenuItem>
           </DropdownMenuContent>
@@ -63,7 +69,7 @@ export function ProductCard({ p }: { p: ProductSummary }) {
         <div className="rounded-lg bg-muted p-3"><p className="text-xs text-muted-foreground">Atividade</p><p className="truncate font-semibold">Hoje</p></div>
       </div>
       <p className="mt-4 text-sm text-muted-foreground">{p.last}</p>
-      <Button primary onClick={handleOpen}><ExternalLink size={15} />Abrir produto</Button>
+      <Button primary onClick={handleOpen}><ExternalLink size={15} />{isSuperAdmin ? "Gerenciar" : "Abrir produto"}</Button>
     </Card>
   );
 }

@@ -43,3 +43,6 @@ Ajuste visual pequeno, correção de typo, refactor local sem impacto, bugfix se
 | ADR-0015 | Módulos de produto como portão de acesso (module-gating) | ACCEPTED |
 | ADR-0016 | Knowledge Graph: relação entre conteúdos, não entre componentes de página | ACCEPTED |
 | ADR-0017 | Templates de produto: esqueleto de páginas por tipo, e o tipo Custom | ACCEPTED |
+| ADR-0018 | Escopo do SUPER_ADMIN: operador de plataforma, não de produto | ACCEPTED |
+| ADR-0019 | Visibilidade de produtos e usuários por papel | ACCEPTED |
+| ADR-0020 | Ciclo de vida do usuário: remoção, inativação e restauração | ACCEPTED |

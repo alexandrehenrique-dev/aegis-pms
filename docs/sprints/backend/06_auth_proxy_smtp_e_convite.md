@@ -203,6 +203,8 @@ infra/keycloak/themes/aegis/
         └── password-reset.ftl
 ```
 
+> **Nota:** Os templates `productAssignment.ftl` e `productAccessRevoked.ftl` (e-mails informativos de atribuição/revogação de produto) são necessários pelas etapas 10 e 15, mas **não fazem parte do escopo desta etapa** — esta etapa foi executada antes da ADR-0020 existir. Esses templates estão documentados em `06.1_hotfix_templates_email_produto.md`.
+
 Montar o volume no `docker-compose.yml` (Keycloak):
 
 ```yaml

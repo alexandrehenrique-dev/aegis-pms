@@ -7,12 +7,15 @@
  */
 
 import { logApiCall } from "./devLog";
+import { toast } from "../../core/notifications/toast";
 
 export type ApiError = {
   status: number;
   message: string;
   /** Erros de campo, quando o backend retornar validação (ex.: 422). */
   fieldErrors?: Record<string, string>;
+  /** Código de erro de negócio do backend (ex.: "PRODUCT_CONTENT_ACCESS_DENIED"). */
+  code?: string;
 };
 
 type TokenProvider = () => string | null;
@@ -51,14 +54,25 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!response.ok) {
     let message = `Erro ${response.status} ao chamar ${path}`;
     let fieldErrors: Record<string, string> | undefined;
+    let code: string | undefined;
     try {
       const body = await response.json();
       message = body?.message ?? message;
       fieldErrors = body?.fieldErrors;
+      code = body?.error;
     } catch {
       /* corpo de erro não é JSON; mantém a mensagem padrão */
     }
-    const apiError: ApiError = { status: response.status, message, fieldErrors };
+
+    // ADR-0018: SUPER_ADMIN sabe que o produto existe mas não tem
+    // ProductAssignment para ele — diferente de um 403 genérico (sem
+    // permissão de papel), por isso a mensagem é contextual, não um redirect
+    // para a tela de "Sem permissão" genérica.
+    if (response.status === 403 && code === "PRODUCT_CONTENT_ACCESS_DENIED") {
+      toast.error("Você não tem acesso ao conteúdo deste produto. Solicite atribuição ao administrador.");
+    }
+
+    const apiError: ApiError = { status: response.status, message, fieldErrors, code };
     throw apiError;
   }
 

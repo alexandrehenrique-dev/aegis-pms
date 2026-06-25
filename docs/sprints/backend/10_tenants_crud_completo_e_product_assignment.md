@@ -65,9 +65,23 @@ type ProductAssignmentSummary = {
   status: "atribuido" | "convidado";
 };
 ```
-Validação obrigatória: exatamente um de `userId` ou `inviteEmail` deve vir preenchido — rejeitar (400) se vierem os dois ou nenhum. Se `userId`, o usuário precisa já ter `TenantMembership` ativa no mesmo tenant do produto (senão 404/400 — não dá para atribuir produto a alguém de fora do tenant). Se `inviteEmail`, dispara o mesmo mecanismo de convite usado em `POST /tenants` e em `POST /tenants/{tenantId}/users/invite` (etapa 14).
+Validação obrigatória: exatamente um de `userId` ou `inviteEmail` deve vir preenchido — rejeitar (400) se vierem os dois ou nenhum. Se `userId`, o usuário precisa já ter `TenantMembership` ativa no mesmo tenant do produto (senão 404/400 — não dá para atribuir produto a alguém de fora do tenant). Se `inviteEmail`, dispara o mesmo mecanismo de convite usado em `POST /tenants` e em `POST /tenants/{tenantId}/users/invite` (etapa 15).
 
-**`DELETE /api/v1/products/{productId}/users/{userId}`** — remove a atribuição.
+**Fluxos distintos por tipo de atribuição (ADR-0020):**
+
+- **Path `userId` (usuário já existente)**: o usuário tem conta no Keycloak e `TenantMembership` ativa. Não precisa de novo convite. Ações obrigatórias após criar o `ProductAssignment`:
+  1. Buscar o e-mail do usuário no Keycloak (`GET /admin/realms/aegis/users/{keycloakId}`)
+  2. Enviar e-mail informativo via SMTP (template `productAssignment.ftl` — ver ADR-0020): "Você foi adicionado ao produto X"
+  3. Criar notificação interna via `NotificationService` (se etapa 24 já disponível): `type: "PRODUCT_ACCESS_GRANTED"`, `target: { userSubject }`
+  4. **Nenhum `required_actions` é disparado** — o usuário já tem senha, não precisa redefinir
+
+- **Path `inviteEmail` (usuário novo)**: cria conta no Keycloak com `requiredActions: ["UPDATE_PASSWORD"]`, cria `TenantMembership`, dispara e-mail de convite via `executeActionsEmail` (mesmo template `executeActions.ftl` da etapa 06), cria o `ProductAssignment` com `status: "convidado"`
+
+**`DELETE /api/v1/products/{productId}/users/{userId}`** — remove a atribuição (ADR-0020, Seção 1):
+- Deleta o `ProductAssignment` (hard delete — o usuário perde acesso imediatamente)
+- Não toca na `TenantMembership` nem no Keycloak
+- Envia notificação interna: `type: "PRODUCT_ACCESS_REVOKED"` (se módulo de notificações ativo)
+- Notifica por e-mail: "Seu acesso ao produto X foi removido" (template `productAccessRevoked.ftl` — pode ser simples, mesmo layout do `productAssignment.ftl`)
 
 ### C. Padrão de qualidade e entrega (obrigatório)
 

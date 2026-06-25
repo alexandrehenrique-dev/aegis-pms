@@ -3,6 +3,7 @@ import { CheckCircle2, Loader2, X } from "lucide-react";
 import { Badge, Button, Field, SelectLike } from "../../../shared/components/Primitives";
 import { ModalShell } from "../../../shared/components/ModalShell";
 import { slugify } from "../../../shared/utils/slugify";
+import { slugError, textLengthError } from "../../../shared/utils/validation";
 import { PRODUCT_TYPES } from "../../../core/products/moduleDefaults";
 import { useModuleSelection } from "../hooks/useModuleSelection";
 import { ModuleCheckboxList } from "./ModuleCheckboxList";
@@ -30,6 +31,11 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
   const [assetStorageStrategy, setAssetStorageStrategy] = useState<AssetStorageStrategy>("local");
   const [s3Bucket, setS3Bucket] = useState("");
   const [s3Region, setS3Region] = useState("");
+  const [touched, setTouched] = useState<{ name?: boolean; slug?: boolean }>({});
+
+  const nameErr = textLengthError(name, 3, 100, "Nome do produto");
+  const slugErr = slugError(slug);
+  const hasErrors = !!nameErr || !!slugErr;
 
   const handleNameChange = (v: string) => {
     setName(v);
@@ -37,6 +43,8 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
   };
 
   const handleCreate = async () => {
+    setTouched({ name: true, slug: true });
+    if (hasErrors) return;
     setSaving(true);
     try {
       const created = await productsService.create({
@@ -63,8 +71,8 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
         </div>
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
-          <Field label="Nome do produto" value={name} onChange={handleNameChange} />
-          <Field label="Slug" value={slug} onChange={(v) => { setTouchedSlug(true); setSlug(slugify(v)); }} />
+          <Field label="Nome do produto" value={name} onChange={handleNameChange} onBlur={() => setTouched((t) => ({ ...t, name: true }))} error={touched.name ? nameErr : undefined} />
+          <Field label="Slug" value={slug} onChange={(v) => { setTouchedSlug(true); setSlug(slugify(v)); }} onBlur={() => setTouched((t) => ({ ...t, slug: true }))} error={touched.slug ? slugErr : undefined} />
           <SelectLike label="Tipo" value={type} options={PRODUCT_TYPES} onChange={setType} />
           <div>
             <p className="mb-2 text-sm font-medium">Módulos iniciais</p>
@@ -82,7 +90,7 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
 
         <div className="mt-5 flex justify-end gap-2 border-t border-border pt-4">
           <Button onClick={onClose}>Cancelar</Button>
-          <Button primary onClick={handleCreate} disabled={saving || !name.trim() || !slug.trim()}>
+          <Button primary onClick={handleCreate} disabled={saving || hasErrors}>
             {saving ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
             {saving ? "Criando..." : "Criar produto"}
           </Button>

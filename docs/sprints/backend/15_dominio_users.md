@@ -1,37 +1,62 @@
-# Etapa 14 — Domínio `users` (listagem, convite, detalhe por tenant)
+# Etapa 15 — Domínio `users` (listagem, convite, detalhe, remoção e restauração por tenant)
 
-> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 03 (Keycloak/realm) e 09 (Tenant CRUD + ProductAssignment) concluídas — convite de usuário cria conta no Keycloak, não só registro local.
+> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 06 (SMTP + KeycloakAdminClient), 07 (modelo core + ProductAccessResolver) e 10 (Tenant CRUD + ProductAssignment) concluídas.
 
 ## Contexto fixo
 
-Telas `UserTable`, `InviteUserDrawer`, `UserDetailPanel` — hoje 100% mock. Payloads conforme `docs/trace/00_endpoints_esperados.md` (Seção B.5). Este endpoint de convite é reaproveitado pela etapa 09 (convite ao criar tenant) e por `ProductAssignment` com `inviteEmail` — implementar aqui de forma que ambas as etapas possam chamá-lo.
+Telas `UserTable`, `InviteUserDrawer`, `UserDetailPanel` — hoje 100% mock. Payloads conforme `docs/trace/00_endpoints_esperados.md` (Seção B.5). Esta etapa implementa o ciclo de vida completo do usuário: convite → ativo → bloqueado/removido → restaurado (ADR-0020). O mecanismo de convite via Keycloak Admin API (já documentado na etapa 06 como `KeycloakAdminClient`) é reaproveitado aqui — não recriar.
 
 ## Objetivo
 
-Listar usuários de um tenant, convidar novos usuários (criando conta no Keycloak via Admin API), e ver/editar detalhe de um usuário.
+Listar usuários (filtrado por papel — ADR-0019), convidar novos usuários, ver/editar detalhe, bloquear, remover (soft delete) e restaurar acesso.
 
 ## Tarefas
 
 ### A. Endpoints
 
 ```txt
-GET  /api/v1/tenants/{tenantId}/users
-POST /api/v1/tenants/{tenantId}/users/invite
-GET  /api/v1/tenants/{tenantId}/users/{userId}
-PUT  /api/v1/tenants/{tenantId}/users/{userId}
-POST /api/v1/tenants/{tenantId}/users/{userId}/resend-invite
-POST /api/v1/tenants/{tenantId}/users/{userId}/block
+GET    /api/v1/tenants/{tenantId}/users
+POST   /api/v1/tenants/{tenantId}/users/invite
+GET    /api/v1/tenants/{tenantId}/users/{userId}
+PUT    /api/v1/tenants/{tenantId}/users/{userId}
+POST   /api/v1/tenants/{tenantId}/users/{userId}/resend-invite
+POST   /api/v1/tenants/{tenantId}/users/{userId}/block
+DELETE /api/v1/tenants/{tenantId}/users/{userId}   ← NOVO — soft delete (ADR-0020)
+POST   /api/v1/tenants/{tenantId}/users/{userId}/restore  ← NOVO — restauração (ADR-0020)
 ```
 
-> **`resend-invite`/`block` adicionados nesta revisão** — auditoria de cobertura encontrou que `usersService.resendInvite`/`blockUser` (frontend) já chamavam esses dois caminhos sem nenhuma etapa documentá-los. `resend-invite`: só válido para usuário com `inviteStatus: "pendente"` (senão 400 — usuário já ativo não precisa reenviar convite); dispara de novo o fluxo de verificação do Keycloak (mesmo mecanismo da Seção B). `block`: marca `TenantMembership.status` como inativo/bloqueado (não deleta o registro) — usuário bloqueado não consegue mais autenticar nesse tenant; sujeito à mesma regra de "não se trancar para fora" da Seção C (não pode bloquear o último `TENANT_ADMIN`/`SUPER_ADMIN` ativo).
->
-> **Nota de divergência de path (auditoria de cobertura):** o frontend mock hoje (`usersService.invite`, `productAssignmentsService.assign`) chama `/api/v1/admin/users/invite` e `/api/v1/admin/products/{productId}/assignments` — paths que nunca apareceram em nenhuma etapa e que **não** são o padrão canônico. O padrão correto, usado em todas as etapas (06, 09, 14, 15, 16, 23) é sempre escopado por `tenantId`/`productId` no path (`/tenants/{tenantId}/users/...`, `/products/{productId}/users`), nunca um prefixo `/admin/...` solto sem o escopo na URL — escopar pelo path é o que sustenta a regra de isolamento da Seção 10 do padrão de qualidade. Implementar **só** os paths desta etapa (e da etapa 09); a reconciliação do frontend mock para os paths corretos é tarefa da Sprint 07 (toggle mock↔real), não desta etapa de backend.
+**`resend-invite`**: só válido para usuário com `inviteStatus: "pendente"` (senão 400); dispara de novo `executeActionsEmail` no Keycloak.
+
+**`block`**: marca `TenantMembership.status = "bloqueado"` (reversível via `unblock` — que é `PUT /users/{userId}` com `status: "ativo"`). Não desabilita no Keycloak, não remove `ProductAssignment`s. Usuário bloqueado é impedido de autenticar via verificação de status da membership no `GET /me`. Sujeito à regra de "não se trancar para fora" (Seção C).
+
+**`DELETE` (soft delete — ADR-0020)**: remoção definitiva de um usuário do tenant:
+1. Verifica regra de "não se trancar para fora"
+2. `TenantMembership.status = "removido"` (novo status — distinto de `"bloqueado"`)
+3. Revoga todos os `ProductAssignment`s ativos do usuário neste tenant (`status = "removido"`)
+4. Verifica se o usuário ainda tem `TenantMembership` ativa em **outros** tenants. Se sim: não toca no Keycloak. Se não: `PUT /admin/realms/aegis/users/{keycloakId}` com `{ enabled: false }`
+5. Registra evento de auditoria `USER_REMOVED_FROM_TENANT`
+6. Envia e-mail informativo: "Seu acesso ao tenant X foi removido" (template simples, sem link de ação)
+7. Cria notificação interna: `type: "TENANT_ACCESS_REVOKED"` (se etapa 24 disponível)
+8. Resposta: `204 No Content`
+
+**`POST .../restore` (ADR-0020)**: reativação de usuário removido ou bloqueado:
+1. Verifica que `TenantMembership.status` é `"removido"` ou `"bloqueado"` (senão 400)
+2. `TenantMembership.status = "ativo"`
+3. Se Keycloak estava `enabled: false`: reabilitar (`enabled: true`) via Admin API
+4. Dispara `executeActionsEmail` com `["UPDATE_PASSWORD"]` — força redefinição de senha na primeira entrada
+5. Registra evento de auditoria `USER_RESTORED_TO_TENANT`
+6. Envia e-mail: "Seu acesso ao tenant X foi restaurado. Defina uma nova senha para continuar." (mesmo template `executeActions.ftl` da etapa 06)
+7. **Não** restaura `ProductAssignment`s automaticamente — o admin precisa re-atribuir produtos manualmente
+8. Resposta: `200` com `UserSummary` atualizado
+
+> **Nota de divergência de path (auditoria de cobertura):** o frontend mock hoje (`usersService.invite`, `productAssignmentsService.assign`) chama `/api/v1/admin/users/invite` e `/api/v1/admin/products/{productId}/assignments` — paths que nunca apareceram em nenhuma etapa e que **não** são o padrão canônico. O padrão correto, usado em todas as etapas, é sempre escopado por `tenantId`/`productId` no path, nunca um prefixo `/admin/...` solto — escopar pelo path é o que sustenta a regra de isolamento da Seção 10 do padrão de qualidade. Reconciliação do frontend: Sprint 07 (toggle mock↔real).
 
 Payloads:
 
 ```ts
 type UserSummary = {
   name: string; email: string; role: string; products: string;
+  // status: "ativo" | "bloqueado" | "convidado" | "removido"
   status: string; lastAccess: string; inviteStatus: string;
 };
 // GET /users → UserSummary[]
@@ -45,40 +70,58 @@ type InviteUserRequest = {
 
 ### B. Mecanismo de convite (via Keycloak Admin API)
 
-1. Criar usuário no Keycloak (Admin REST API, client `aegis-web` ou um client de serviço dedicado com permissão de admin no realm) com `enabled: true`, `emailVerified: false`, e disparar o fluxo de "Update Password"/verificação de e-mail nativo do Keycloak (não inventar um sistema de e-mail próprio nesta fase — usar o que o Keycloak já oferece).
-2. Criar `TenantMembership` local vinculando o `subject` do novo usuário do Keycloak ao tenant, com o `role` informado.
-3. Se o convite veio de `ProductAssignment` (etapa 09) ou de criação de tenant (etapa 09), criar também o registro correspondente (`ProductAssignment` ou marcar o tenant com o `initialAdminEmail`) apontando para o `subject` recém-criado.
-4. `inviteStatus` fica `"pendente"` até o usuário completar o cadastro no Keycloak (primeiro login bem-sucedido marca como `"ativo"` — pode ser um listener de evento do Keycloak ou verificado no próximo `GET /me`).
-5. **(Adicionado pela etapa 23, se já estiver implementada quando esta etapa for executada — senão, é um retrofit a fazer depois)** Ao final do passo 2 (criar `TenantMembership`), chamar `NotificationService.assignOnboarding(userSubject)` para o novo usuário já nascer com a notificação de onboarding pendente.
+> `KeycloakAdminClient` já foi implementado na etapa 06 (`06_auth_proxy_smtp_e_convite.md`). **Não recriar** — injetar a classe existente e chamar os métodos já testados: `createUser(...)` e `executeActionsEmail(keycloakId, ["UPDATE_PASSWORD"])`.
+
+1. Chamar `KeycloakAdminClient.createUser(email, name)` → retorna `keycloakId` (UUID do novo usuário no realm).
+2. Criar `TenantMembership` local com `userSubject = keycloakId`, `role` informado, `status = "convidado"`.
+3. Chamar `KeycloakAdminClient.executeActionsEmail(keycloakId, ["UPDATE_PASSWORD"])` → Keycloak envia e-mail via SMTP configurado (MailHog em dev).
+4. Se o convite veio de `ProductAssignment` (etapa 10) ou de criação de tenant (etapa 10), criar também o registro correspondente apontando para o `keycloakId` recém-criado.
+5. `inviteStatus` fica `"pendente"` até o usuário definir senha via link do e-mail (primeiro login bem-sucedido via `POST /auth/login` retorna token válido → `GET /me` atualiza `inviteStatus = "ativo"`).
+6. **(Retrofit pós-etapa 24)** Após criar `TenantMembership`, chamar `NotificationService.assignOnboarding(userSubject)`.
 
 ### C. Regras de negócio
 
 - E-mail duplicado no mesmo tenant é rejeitado com 409.
 - `PUT /users/{userId}` permite editar `role` e `allowedProducts`, nunca o e-mail (e-mail é imutável, é a identidade no Keycloak).
-- Usuário não pode editar/remover a si mesmo de forma que fique sem nenhum `TENANT_ADMIN`/`SUPER_ADMIN` ativo no tenant (regra de "não se trancar para fora").
-- **Isolamento por tenant** (`00_padrao_qualidade_e_arquitetura.md`, Seção 10): usuário de um tenant fora do escopo do usuário autenticado (sem membership ativa, exceto `SUPER_ADMIN`) retorna 404, nunca 403, em qualquer endpoint da Seção A.
+- Usuário não pode editar/remover/bloquear a si mesmo de forma que fique sem nenhum `TENANT_ADMIN`/`SUPER_ADMIN` ativo no tenant (regra de "não se trancar para fora" — aplicável a `PUT`, `block`, `DELETE` e `restore` que mude papel).
+- **Isolamento por tenant** (`00_padrao_qualidade_e_arquitetura.md`, Seção 10): usuário de um tenant fora do escopo de quem chama (sem membership ativa, exceto `SUPER_ADMIN`) retorna 404, nunca 403, em qualquer endpoint da Seção A.
+- **Listagem filtrada por papel (ADR-0019)** — `GET /tenants/{tenantId}/users` não usa o mesmo filtro para todos:
+
+  | Papel do caller | Usuários retornados |
+  |---|---|
+  | `SUPER_ADMIN` | Todos os usuários do tenant |
+  | `TENANT_ADMIN` | Todos os usuários do tenant |
+  | `PRODUCT_MANAGER` | Apenas usuários que compartilham ao menos um produto com o caller (via `ProductAssignment`) |
+  | `EDITOR` / `VIEWER` | Idem `PRODUCT_MANAGER` |
+
+  O critério de filtro é determinado pelo `UserService` a partir do papel do `AuthenticatedUser` — nunca recebido como parâmetro de query do cliente.
 
 ### D. Padrão de qualidade e entrega (obrigatório)
 
 > Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
 
-- **Java 25** / **Spring Boot 4.1.x**. Esta etapa **não cria entidade nova** (reaproveita `TenantMembershipRepository` da etapa 06) — a peça nova é o cliente do Keycloak Admin API. 100% de cobertura nas classes funcionais, incluindo `KeycloakAdminClient`/equivalente (testar com o client mockado, nunca chamando o Keycloak real no teste unitário).
+- **Java 25** / **Spring Boot 4.1.x**. `KeycloakAdminClient` **já existe** (etapa 06) — não recriar; apenas injetar e testar os novos fluxos com mock. 100% de cobertura nas classes funcionais desta etapa.
 - Entregar em rodadas:
-  1. `KeycloakAdminClient` (wrapper do Admin REST API — criar usuário, disparar verificação) + testes com `WireMock`/mock HTTP, sem depender do Keycloak real subindo no teste.
-  2. `UserMapper` (MapStruct, `TenantMembership` + dados do Keycloak → `UserSummary`) + testes de mapper.
-  3. `UserService` (convite, regra de e-mail duplicado, regra de "não se trancar para fora") + testes com mocks — cada regra da Seção C com teste do caminho feliz e da rejeição.
-  4. `UserController` (endpoints da Seção A) + testes `@WebMvcTest` + validação via `curl`.
+  1. `UserMapper` (MapStruct, `TenantMembership` + dados do Keycloak → `UserSummary`, incluindo `status: "removido"`) + testes de mapper.
+  2. `UserService` — convite (delegando para `KeycloakAdminClient` existente), regra de e-mail duplicado, regra de "não se trancar para fora", filtro de listagem por papel (Seção C) — testes com mocks para cada regra + filtro por papel.
+  3. `UserService` (continuação) — `softDelete`: sequência de 8 passos da Seção A; `restore`: sequência de 8 passos da Seção A — testes cobrindo: remoção do último TENANT_ADMIN bloqueada; usuário com outros tenants não desabilita Keycloak; restore de usuário já ativo retorna 400.
+  4. `UserController` (todos os endpoints da Seção A) + testes `@WebMvcTest` + validação via `curl`.
 
 ## Critérios de aceite
 
-- [ ] Listar usuários de um tenant funciona.
-- [ ] Convidar usuário cria conta real no Keycloak e `TenantMembership` local.
-- [ ] Convite com e-mail duplicado no tenant é rejeitado.
+- [ ] `GET /tenants/{tenantId}/users` com token de `TENANT_ADMIN` retorna todos os usuários do tenant.
+- [ ] `GET /tenants/{tenantId}/users` com token de `PRODUCT_MANAGER` retorna apenas usuários que compartilham ao menos um produto com o caller.
+- [ ] Convidar usuário cria conta real no Keycloak (via `KeycloakAdminClient` da etapa 06) e `TenantMembership` local.
+- [ ] Convite com e-mail duplicado no tenant é rejeitado com 409.
 - [ ] Detalhe e edição de usuário funcionam.
-- [ ] Remover o último `TENANT_ADMIN`/`SUPER_ADMIN` de um tenant é bloqueado.
-- [ ] Usuário/tenant fora do escopo de quem chama (sem `SUPER_ADMIN`) retorna 404 (não 403).
-- [ ] `resend-invite` em usuário já ativo (não pendente) é rejeitado com 400; em usuário pendente, dispara o fluxo de verificação de novo.
-- [ ] `block` impede login subsequente do usuário nesse tenant; bloquear o último `TENANT_ADMIN`/`SUPER_ADMIN` ativo é rejeitado (mesma regra de "não se trancar para fora").
+- [ ] Remover o último `TENANT_ADMIN`/`SUPER_ADMIN` ativo é bloqueado (DELETE retorna 422 ou 400).
+- [ ] `DELETE /users/{userId}` marca `TenantMembership.status = "removido"`, revoga `ProductAssignment`s e desabilita conta no Keycloak se sem outros tenants ativos.
+- [ ] `DELETE /users/{userId}` para usuário com membership ativa em outro tenant: **não** desabilita conta no Keycloak.
+- [ ] `POST .../restore` reativa `TenantMembership`, reabilita Keycloak se estava desabilitado, dispara `executeActionsEmail(["UPDATE_PASSWORD"])`.
+- [ ] `POST .../restore` em usuário já ativo retorna 400.
+- [ ] `resend-invite` em usuário já ativo (não pendente) é rejeitado com 400.
+- [ ] `block` impede login do usuário nesse tenant; bloquear o último `TENANT_ADMIN`/`SUPER_ADMIN` ativo é rejeitado.
+- [ ] Usuário/tenant fora do escopo de quem chama retorna 404, nunca 403.
 - [ ] `mvn clean verify` confirma 100% de cobertura nas classes elegíveis desta etapa (JaCoCo).
 
 ## Validação
@@ -86,11 +129,23 @@ type InviteUserRequest = {
 > **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os à pasta desta etapa em `aegis-postman-collection.json` (collection cumulativa, autenticação via `{{token}}` herdado da pasta "Auth") e devolva o JSON completo atualizado para download.
 
 ```bash
+# convidar usuário
 curl -X POST http://localhost:8080/api/v1/tenants/<tenantId>/users/invite \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"name":"Joao Alves","email":"joao@byop.com","role":"Editor","allowedProducts":"Maestro Beton"}'
 
+# listar usuários (TENANT_ADMIN vê todos; PRODUCT_MANAGER vê apenas compartilhados)
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/tenants/<tenantId>/users
+
+# remover usuário do tenant (soft delete)
+curl -X DELETE http://localhost:8080/api/v1/tenants/<tenantId>/users/<userId> \
+  -H "Authorization: Bearer $TOKEN"
+# esperado: 204 No Content
+
+# restaurar usuário removido
+curl -X POST http://localhost:8080/api/v1/tenants/<tenantId>/users/<userId>/restore \
+  -H "Authorization: Bearer $TOKEN"
+# esperado: 200 com UserSummary atualizado (status="ativo", inviteStatus="pendente" — nova senha obrigatória)
 ```
 
 ## Artefato de continuidade — `SPRINT-RESULTADO.md`
@@ -101,5 +156,5 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/tenants/<ten
 
 ```bash
 git add backend/
-git commit -m "feat(backend): dominio users com convite via keycloak admin api"
+git commit -m "feat(backend): dominio users com convite, soft-delete, restore e listagem por papel"
 ```

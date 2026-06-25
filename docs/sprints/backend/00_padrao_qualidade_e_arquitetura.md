@@ -225,6 +225,17 @@ As etapas 06, 07, 09, 11 e 16 já aplicam a regra "recurso de outro tenant/produ
 3. Toda etapa de domínio (10, 12, 13, 14, 15, 17, 21, 23 incluídas, sem exceção) adiciona um cenário de teste explícito desta regra na Rodada 3 (Service, com mocks) e repete como critério de aceite — não é opcional só porque a etapa não cita a palavra "tenant" no nome.
 4. Esta regra é independente do module-gating (Seção 9.2): module-gating bloqueia porque o **produto** não tem o módulo ligado; isolamento bloqueia porque o recurso **não pertence** ao escopo do usuário. Um endpoint pode (e geralmente vai) precisar das duas checagens, nesta ordem: módulo habilitado → depois, recurso pertence ao escopo do usuário.
 
+**Regra adicional — conteúdo de produto para SUPER_ADMIN (ADR-0018):**
+
+5. Para domínios de **conteúdo de produto** (content, pages, assets, forms, analytics, knowledge graph — etapas 08, 11, 12, 13, 17, 21), a verificação de acesso usa o `ProductAccessResolver` implementado na etapa 07 **antes** do module-gating:
+   - `SUPER_ADMIN` com `ProductAssignment` ativo para o produto → passa (usa papel do assignment)
+   - `SUPER_ADMIN` sem `ProductAssignment` → **403** `PRODUCT_CONTENT_ACCESS_DENIED` — diferente do 404 cross-tenant, porque o SUPER_ADMIN sabe que o produto existe
+   - `TENANT_ADMIN` com `TenantMembership` no tenant do produto → passa
+   - `PRODUCT_MANAGER | EDITOR | VIEWER` com `ProductAssignment` → passa
+   - Qualquer outro caso → 404
+6. Domínios de **infraestrutura** (tenants, users, settings, audit, notifications — etapas 09, 10, 15, 16, 24) **não** usam `ProductAccessResolver` — seguem apenas a regra geral dos itens 1-4 acima.
+7. `ProductAccessResolver` centraliza esta lógica. **Nunca duplicar** a lógica de acesso de conteúdo em cada Service — sempre delegar ao `ProductAccessResolver` e cobrir os 5 cenários (SUPER_ADMIN com/sem assignment, TENANT_ADMIN, PRODUCT_MANAGER, cross-tenant) nos testes da Rodada 3 da etapa de domínio correspondente.
+
 ## 12. Artefato de continuidade entre etapas: `SPRINT-RESULTADO.md`
 
 Cada etapa é colada numa conversa **nova** do GPT — sem memória do que foi decidido nas etapas anteriores. Isso já causou retrabalho: decisões que uma etapa explicitamente deixava "a cargo do GPT, documentar a escolha" (ex.: ordem de habilitação de módulos com dependência, formato exato do `id` legível do feedback, se o provisionamento de pasta é síncrono ou assíncrono) ficavam presas só naquela conversa, perdidas ao abrir a próxima. A partir desta revisão, todo esse conhecimento passa por um único arquivo cumulativo, versionado junto da pasta de etapas: `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md`.
