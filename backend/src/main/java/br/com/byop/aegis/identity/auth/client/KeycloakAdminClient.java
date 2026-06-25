@@ -12,7 +12,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Component
@@ -24,6 +26,7 @@ public class KeycloakAdminClient {
     private static final String USERNAME = "username";
     private static final String ACCESS_TOKEN = "access_token";
     private static final String ADMIN_API_ERROR = "Error communicating with Keycloak Admin API";
+    private static final String EMPTY_ADMIN_RESPONSE = "Empty response from Keycloak Admin API";
 
     private final RestClient restClient;
     private final KeycloakProperties properties;
@@ -59,7 +62,10 @@ public class KeycloakAdminClient {
                     .body(new ParameterizedTypeReference<>() {
                     });
 
-            return users.stream()
+            return Optional.ofNullable(users)
+                    .orElseGet(Collections::emptyList)
+                    .stream()
+                    .filter(Objects::nonNull)
                     .map(KeycloakAdminClient::toUserResponse)
                     .toList();
 
@@ -78,7 +84,7 @@ public class KeycloakAdminClient {
                     .retrieve()
                     .body(KeycloakUserResponse.class);
 
-            return toUserResponse(user);
+            return toUserResponse(requireAdminResponse(user));
 
         } catch (RestClientException exception) {
             throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
@@ -87,7 +93,7 @@ public class KeycloakAdminClient {
 
     private String usersEndpoint() {
         return properties.internalBaseUrl()
-                + "/admin/realms/"
+                + normalizedAdminRealmsPath()
                 + properties.realm()
                 + "/users";
     }
@@ -97,6 +103,7 @@ public class KeycloakAdminClient {
     }
 
     private static UserResponse toUserResponse(KeycloakUserResponse user) {
+        Objects.requireNonNull(user, "user is required");
         return new UserResponse(
                 user.id(),
                 user.username(),
@@ -121,7 +128,7 @@ public class KeycloakAdminClient {
                 .retrieve()
                 .body(KeycloakAdminTokenResponse.class);
 
-        return response.accessToken();
+        return requireAdminAccessToken(requireAdminResponse(response));
     }
 
     private Optional<String> findUserIdByEmail(String email, String accessToken) {
@@ -136,6 +143,7 @@ public class KeycloakAdminClient {
         }
 
         return Arrays.stream(users)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .map(KeycloakUserResponse::id);
     }
@@ -157,7 +165,7 @@ public class KeycloakAdminClient {
 
     private String usersEndpoint(String email) {
         return properties.internalBaseUrl()
-                + "/admin/realms/"
+                + normalizedAdminRealmsPath()
                 + properties.realm()
                 + "/users?email="
                 + email
@@ -166,12 +174,32 @@ public class KeycloakAdminClient {
 
     private String executeActionsEmailEndpoint(String userId) {
         return properties.internalBaseUrl()
-                + "/admin/realms/"
+                + normalizedAdminRealmsPath()
                 + properties.realm()
                 + "/users/"
                 + userId
                 + "/execute-actions-email?client_id="
                 + properties.webClientId();
+    }
+
+    private String normalizedAdminRealmsPath() {
+        String path = requireAdminResponse(properties.adminRealmsPath());
+        String withLeadingSlash = path.startsWith("/") ? path : "/" + path;
+        return withLeadingSlash.endsWith("/") ? withLeadingSlash : withLeadingSlash + "/";
+    }
+
+    private static <T> T requireAdminResponse(T response) {
+        if (response == null) {
+            throw new KeycloakAuthenticationException(EMPTY_ADMIN_RESPONSE);
+        }
+        return response;
+    }
+
+    private static String requireAdminAccessToken(KeycloakAdminTokenResponse response) {
+        if (response.accessToken() == null) {
+            throw new KeycloakAuthenticationException(EMPTY_ADMIN_RESPONSE);
+        }
+        return response.accessToken();
     }
 
     private record KeycloakAdminTokenResponse(

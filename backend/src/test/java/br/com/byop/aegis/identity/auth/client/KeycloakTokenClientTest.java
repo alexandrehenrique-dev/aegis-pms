@@ -38,6 +38,7 @@ class KeycloakTokenClientTest {
                 new KeycloakProperties(
                         "issuer",
                         wireMockServer.baseUrl(),
+                        "/admin/realms/",
                         "aegis",
                         "aegis-web",
                         "admin-cli",
@@ -76,16 +77,14 @@ class KeycloakTokenClientTest {
 
     @Test
     void shouldThrowInvalidCredentials() {
+        stubUnauthorizedTokenEndpoint("""
+                {
+                  "error": "invalid_grant",
+                  "error_description": "Invalid user credentials"
+                }
+                """);
 
-        wireMockServer.stubFor(
-                post(urlEqualTo("/realms/aegis/protocol/openid-connect/token"))
-                        .willReturn(unauthorized())
-        );
-
-        assertThrows(
-                InvalidCredentialsException.class,
-                () -> client.login("loki", "wrong")
-        );
+        assertLoginThrows(InvalidCredentialsException.class);
     }
 
     @Test
@@ -115,10 +114,7 @@ class KeycloakTokenClientTest {
     @Test
     void shouldThrowRefreshExpired() {
 
-        wireMockServer.stubFor(
-                post(urlEqualTo("/realms/aegis/protocol/openid-connect/token"))
-                        .willReturn(unauthorized())
-        );
+        stubUnauthorizedTokenEndpoint();
 
         assertThrows(
                 RefreshTokenExpiredException.class,
@@ -179,29 +175,10 @@ class KeycloakTokenClientTest {
     }
 
     @Test
-
     void shouldThrowInvalidCredentialsWhenUnauthorizedBodyIsBlank() {
+        stubUnauthorizedTokenEndpoint("");
 
-        wireMockServer.stubFor(
-
-                post(urlEqualTo("/realms/aegis/protocol/openid-connect/token"))
-
-                        .willReturn(unauthorized()
-
-                                .withHeader("Content-Type", "application/json")
-
-                                .withBody(""))
-
-        );
-
-        assertThrows(
-
-                InvalidCredentialsException.class,
-
-                () -> client.login("loki", "wrong")
-
-        );
-
+        assertLoginThrows(InvalidCredentialsException.class);
     }
 
     @Test
@@ -234,14 +211,30 @@ class KeycloakTokenClientTest {
 
     @Test
     void shouldThrowInvalidCredentialsWhenUnauthorizedBodyIsNull() {
+        stubUnauthorizedTokenEndpoint();
 
+        assertLoginThrows(InvalidCredentialsException.class);
+    }
+
+    private void stubUnauthorizedTokenEndpoint() {
         wireMockServer.stubFor(
                 post(urlEqualTo("/realms/aegis/protocol/openid-connect/token"))
                         .willReturn(unauthorized())
         );
+    }
 
+    private void stubUnauthorizedTokenEndpoint(String body) {
+        wireMockServer.stubFor(
+                post(urlEqualTo("/realms/aegis/protocol/openid-connect/token"))
+                        .willReturn(unauthorized()
+                                .withHeader("Content-Type", "application/json")
+                                .withBody(body))
+        );
+    }
+
+    private <T extends Throwable> void assertLoginThrows(Class<T> exceptionType) {
         assertThrows(
-                InvalidCredentialsException.class,
+                exceptionType,
                 () -> client.login("loki", "wrong")
         );
     }
