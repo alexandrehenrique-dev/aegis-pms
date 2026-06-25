@@ -38,7 +38,9 @@ export const roleDescriptions: Record<UserRole, string> = {
 // Routes visible in the main sidebar nav per role (replaces the old `roleVisibleNav`
 // Set<Screen> keyed by nav item key — now keyed by the nav item's route path).
 export const roleVisibleNav: Record<UserRole, Set<string>> = {
-  super_admin: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings", "/audit"]),
+  // SUPER_ADMIN é operador de plataforma (ADR-0018): gerencia tenants, produtos,
+  // usuários e infraestrutura, mas não acessa conteúdo de produtos de clientes (LGPD).
+  super_admin: new Set(["/dashboard", "/products", "/settings", "/audit"]),
   tenant_admin: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings", "/audit"]),
   product_manager: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings"]),
   editor: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics"]),
@@ -48,7 +50,11 @@ export const roleVisibleNav: Record<UserRole, Set<string>> = {
 // Route prefixes blocked per role (replaces the old `roleBlockedScreens` Set<Screen>).
 // A route is blocked if it starts with any of these prefixes.
 export const roleBlockedRoutePrefixes: Record<UserRole, string[]> = {
-  super_admin: [],
+  // ADR-0018: SUPER_ADMIN não acessa conteúdo de produtos de clientes (LGPD).
+  // Para seus próprios produtos (com ProductAssignment), o backend libera via
+  // ProductAccessResolver — esta restrição de UI é só o caminho feliz; a
+  // restrição real é enforçada pelo backend (403 PRODUCT_CONTENT_ACCESS_DENIED).
+  super_admin: ["/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge"],
   tenant_admin: ["/settings/security"],
   product_manager: [
     "/settings/tenant", "/users", "/settings/permissions", "/settings/roles", "/settings/access-preview",

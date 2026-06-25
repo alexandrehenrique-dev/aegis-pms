@@ -10,6 +10,8 @@ import { productAssignmentsService } from "../../users/services/productAssignmen
 import { usersService } from "../../users/services/usersService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { PRODUCT_TYPE_MODULE_DEFAULTS } from "../../../core/products/moduleDefaults";
+import { slugify } from "../../../shared/utils/slugify";
+import { emailError, slugError, textLengthError } from "../../../shared/utils/validation";
 import type { TenantOption } from "../../../shared/types";
 import type { ProductSummary } from "../../products/contracts/responses";
 import type { ProductAssignmentSummary } from "../../users/contracts/productAssignments";
@@ -38,11 +40,34 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
   // Step 1 fields
   const [tenantName, setTenantName] = useState("Novo Tenant");
   const [tenantSlug, setTenantSlug] = useState("novo-tenant");
+  const [touchedTenantSlug, setTouchedTenantSlug] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
+  const [touched1, setTouched1] = useState<{ name?: boolean; slug?: boolean; email?: boolean }>({});
+
+  const tenantNameErr = textLengthError(tenantName, 3, 100, "Nome do tenant");
+  const tenantSlugErr = slugError(tenantSlug);
+  const adminEmailErr = emailError(adminEmail);
+  const step1HasErrors = !!tenantNameErr || !!tenantSlugErr || !!adminEmailErr;
+
+  const handleTenantNameChange = (v: string) => {
+    setTenantName(v);
+    if (!touchedTenantSlug) setTenantSlug(slugify(v));
+  };
 
   // Step 2 fields
   const [productName, setProductName] = useState("Novo Produto");
   const [productSlug, setProductSlug] = useState("novo-produto");
+  const [touchedProductSlug, setTouchedProductSlug] = useState(false);
+  const [touched2, setTouched2] = useState<{ name?: boolean; slug?: boolean }>({});
+
+  const productNameErr = textLengthError(productName, 3, 100, "Nome do produto");
+  const productSlugErr = slugError(productSlug);
+  const step2HasErrors = !!productNameErr || !!productSlugErr;
+
+  const handleProductNameChange = (v: string) => {
+    setProductName(v);
+    if (!touchedProductSlug) setProductSlug(slugify(v));
+  };
 
   // Step 3 fields
   const { data: existingUsers } = useAsyncData(() => usersService.listUsers(), []);
@@ -50,9 +75,14 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
   const [selectedEmail, setSelectedEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [touched3, setTouched3] = useState<{ inviteEmail?: boolean }>({});
   const [role, setRole] = useState("Editor");
 
+  const inviteEmailErr = assignMode === "invite" ? emailError(inviteEmail) : undefined;
+
   const handleCreateTenant = async () => {
+    setTouched1({ name: true, slug: true, email: true });
+    if (step1HasErrors) return;
     setSaving(true);
     try {
       const created = await tenantsService.create({ name: tenantName, slug: tenantSlug, plan: "Starter", initialAdminEmail: adminEmail });
@@ -64,6 +94,8 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
   };
 
   const handleCreateProduct = async () => {
+    setTouched2({ name: true, slug: true });
+    if (step2HasErrors) return;
     if (!tenant) return;
     setSaving(true);
     try {
@@ -80,6 +112,10 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
   };
 
   const handleAssignUser = async () => {
+    if (assignMode === "invite") {
+      setTouched3({ inviteEmail: true });
+      if (inviteEmailErr) return;
+    }
     if (!tenant || !product?.id) return;
     setSaving(true);
     try {
@@ -98,7 +134,7 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
     }
   };
 
-  const canSubmitAssign = assignMode === "existing" ? !!selectedEmail : !!inviteEmail.trim() && !!inviteName.trim();
+  const canSubmitAssign = assignMode === "existing" ? !!selectedEmail : !!inviteEmail.trim() && !!inviteName.trim() && !inviteEmailErr;
 
   return (
     <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={step < 4 ? onClose : undefined}>
@@ -113,17 +149,17 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
 
         {step === 1 && (
           <div className="space-y-3">
-            <Field label="Nome do tenant" value={tenantName} onChange={setTenantName} />
-            <Field label="Slug / identificador único" value={tenantSlug} onChange={setTenantSlug} />
-            <Field label="E-mail do Tenant Admin inicial" value={adminEmail} onChange={setAdminEmail} />
+            <Field label="Nome do tenant" value={tenantName} onChange={handleTenantNameChange} onBlur={() => setTouched1((t) => ({ ...t, name: true }))} error={touched1.name ? tenantNameErr : undefined} />
+            <Field label="Slug / identificador único" value={tenantSlug} onChange={(v) => { setTouchedTenantSlug(true); setTenantSlug(slugify(v)); }} onBlur={() => setTouched1((t) => ({ ...t, slug: true }))} error={touched1.slug ? tenantSlugErr : undefined} />
+            <Field label="E-mail do Tenant Admin inicial" value={adminEmail} onChange={setAdminEmail} onBlur={() => setTouched1((t) => ({ ...t, email: true }))} error={touched1.email ? adminEmailErr : undefined} />
           </div>
         )}
 
         {step === 2 && (
           <div className="space-y-3">
             <div className="rounded-lg bg-muted p-2.5 text-xs text-muted-foreground">Tenant: <b className="text-foreground">{tenant?.name}</b></div>
-            <Field label="Nome do produto" value={productName} onChange={setProductName} />
-            <Field label="Slug" value={productSlug} onChange={setProductSlug} />
+            <Field label="Nome do produto" value={productName} onChange={handleProductNameChange} onBlur={() => setTouched2((t) => ({ ...t, name: true }))} error={touched2.name ? productNameErr : undefined} />
+            <Field label="Slug" value={productSlug} onChange={(v) => { setTouchedProductSlug(true); setProductSlug(slugify(v)); }} onBlur={() => setTouched2((t) => ({ ...t, slug: true }))} error={touched2.slug ? productSlugErr : undefined} />
           </div>
         )}
 
@@ -137,7 +173,7 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
             {assignMode === "invite" ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Nome" value={inviteName} onChange={setInviteName} />
-                <Field label="Email" value={inviteEmail} onChange={setInviteEmail} />
+                <Field label="Email" value={inviteEmail} onChange={setInviteEmail} onBlur={() => setTouched3({ inviteEmail: true })} error={touched3.inviteEmail ? inviteEmailErr : undefined} />
               </div>
             ) : (
               <div className="max-h-40 space-y-1.5 overflow-y-auto">
@@ -168,8 +204,8 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
           {step > 1 && step < 4 ? (
             <Button onClick={() => setStep((s) => (s - 1) as Step)}><ArrowLeft size={14} />Voltar</Button>
           ) : <span />}
-          {step === 1 && <Button primary onClick={handleCreateTenant} disabled={saving || !tenantName.trim() || !tenantSlug.trim() || !adminEmail.trim()}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Criando..." : "Criar tenant"}</Button>}
-          {step === 2 && <Button primary onClick={handleCreateProduct} disabled={saving || !productName.trim() || !productSlug.trim()}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Criando..." : "Criar produto"}</Button>}
+          {step === 1 && <Button primary onClick={handleCreateTenant} disabled={saving || step1HasErrors}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Criando..." : "Criar tenant"}</Button>}
+          {step === 2 && <Button primary onClick={handleCreateProduct} disabled={saving || step2HasErrors}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Criando..." : "Criar produto"}</Button>}
           {step === 3 && <Button primary onClick={handleAssignUser} disabled={saving || !canSubmitAssign}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Atribuindo..." : "Concluir"}</Button>}
           {step === 4 && (
             <div className="flex gap-2">

@@ -12,6 +12,8 @@ import { PRODUCT_PAGE_SKELETONS } from "../../../core/products/productTemplates"
 import { useModuleSelection } from "../hooks/useModuleSelection";
 import { ModuleCheckboxList } from "../components/ModuleCheckboxList";
 import { StorageStrategyStep } from "../components/StorageStrategyStep";
+import { slugify } from "../../../shared/utils/slugify";
+import { slugError, textLengthError } from "../../../shared/utils/validation";
 import type { AssetStorageStrategy } from "../contracts/requests";
 
 function PageSkeletonPreview({ type }: { type: string }) {
@@ -57,8 +59,21 @@ export function CreateProductForm() {
   const [assetStorageStrategy, setAssetStorageStrategy] = useState<AssetStorageStrategy>("local");
   const [s3Bucket, setS3Bucket] = useState("");
   const [s3Region, setS3Region] = useState("");
+  const [touchedSlug, setTouchedSlug] = useState(false);
+  const [touched, setTouched] = useState<{ name?: boolean; slug?: boolean }>({});
+
+  const nameErr = textLengthError(name, 3, 100, "Nome do produto");
+  const slugErr = slugError(slug);
+  const hasErrors = !!nameErr || !!slugErr;
+
+  const handleNameChange = (v: string) => {
+    setName(v);
+    if (!touchedSlug) setSlug(slugify(v));
+  };
 
   const handleCreate = async () => {
+    setTouched({ name: true, slug: true });
+    if (hasErrors) return;
     setSaving(true);
     try {
       const product = await productsService.create({
@@ -78,15 +93,15 @@ export function CreateProductForm() {
       {tenantId && <BackLink to="/admin/tenants" label="Voltar para Gestão de Tenants" />}
       <PageHeader title="Novo Produto" desc={tenantId ? "Passo 2 de 3: criar o primeiro produto do tenant. O próximo passo é atribuí-lo a um usuário." : "Crie um produto digital com módulos iniciais e identidade operacional."}>
         <Button onClick={() => navigate(tenantId ? "/admin/tenants" : "/products")}>Cancelar</Button>
-        <Button primary onClick={handleCreate} disabled={saving}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Criando..." : "Criar produto"}</Button>
+        <Button primary onClick={handleCreate} disabled={saving || hasErrors}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Criando..." : "Criar produto"}</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <Card>
           <div className="grid gap-4 md:grid-cols-2">
             {/* fixo por enquanto: tenant/idioma do wizard são fixos no MVP — ADR/Sprint 09 */}
             {tenantId && <SelectLike label="Tenant" value={tenant?.name ?? "Carregando..."} locked />}
-            <Field label="Nome do produto" value={name} onChange={setName} />
-            <Field label="Slug" value={slug} onChange={setSlug} />
+            <Field label="Nome do produto" value={name} onChange={handleNameChange} onBlur={() => setTouched((t) => ({ ...t, name: true }))} error={touched.name ? nameErr : undefined} />
+            <Field label="Slug" value={slug} onChange={(v) => { setTouchedSlug(true); setSlug(slugify(v)); }} onBlur={() => setTouched((t) => ({ ...t, slug: true }))} error={touched.slug ? slugErr : undefined} />
             <SelectLike label="Tipo" value={type} options={PRODUCT_TYPES} onChange={setType} />
             <SelectLike label="Idioma padrão" value="Português (Brasil)" locked />
             <div className="md:col-span-2"><Field label="Descrição" value={description} onChange={setDescription} textarea /></div>

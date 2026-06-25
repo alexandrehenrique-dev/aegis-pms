@@ -8,8 +8,6 @@ import br.com.byop.aegis.identity.auth.dto.AuthTokenResponse;
 import br.com.byop.aegis.identity.auth.dto.AuthTokenResponseMapper;
 import org.springframework.stereotype.Service;
 
-import java.util.Objects;
-
 @Service
 public class AuthService {
 

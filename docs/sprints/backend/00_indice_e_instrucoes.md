@@ -59,6 +59,7 @@ A Sprint 02 é a exceção: ela cobre a fundação inteira do backend (Docker, P
 | `04_backend_base_e_persistencia.md` | 008, 009 | Spring Boot base + conexão com PostgreSQL + Flyway |
 | `05_security_resource_server_e_me.md` | 010, 011 | Resource Server com Keycloak + endpoint `/api/v1/me` |
 | `06_auth_proxy_smtp_e_convite.md` | — | **[INSERIDA]** Auth proxy BFF (login/logout/refresh via backend), SMTP + MailHog dev, templates de e-mail FreeMarker Aegis, fluxo ponta a ponta de convite de usuário |
+| `06.1_hotfix_templates_email_produto.md` | ADR-0020 | **[HOTFIX]** `productAssignment.ftl` + `productAccessRevoked.ftl` — templates FreeMarker de e-mail informativo criados após execução da 06, necessários pelas etapas 10 e 15. Apenas arquivos `.ftl`, sem Java. |
 | `07_modelo_core_tenant_product_modulos.md` | 012, 013 | Tenant, Membership, Product, catálogo de módulos |
 | `08_knowledge_graph_mvp.md` | 014, 015 | Knowledge Graph MVP (modelo + regras de consistência) |
 | `09_health_status.md` | 016 | Health, info, readiness |

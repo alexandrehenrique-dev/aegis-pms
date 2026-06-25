@@ -4,6 +4,7 @@ import { Button, Card, Field, PageHeader, SelectLike } from "../../../shared/com
 import { toast } from "../../../core/notifications/toast";
 import { usersService } from "../services/usersService";
 import { PermissionImpactSummary } from "../components/PermissionImpactSummary";
+import { emailError, textLengthError } from "../../../shared/utils/validation";
 
 const ROLES = ["Editor", "Viewer", "Product Manager", "Tenant Admin"];
 const PRODUCTS = ["Maestro Beton", "Conecta Talentos", "Todos os produtos"];
@@ -17,8 +18,15 @@ export function InviteUserDrawer() {
   const [role, setRole] = useState(ROLES[0]);
   const [allowedProducts, setAllowedProducts] = useState(PRODUCTS[0]);
   const [allowedModules, setAllowedModules] = useState(MODULES[0]);
+  const [touched, setTouched] = useState<{ name?: boolean; email?: boolean }>({});
+
+  const nameErr = textLengthError(name, 2, 100, "Nome");
+  const emailErr = emailError(email);
+  const hasErrors = !!nameErr || !!emailErr;
 
   const handleSend = async () => {
+    setTouched({ name: true, email: true });
+    if (hasErrors) return;
     setSending(true);
     try {
       await usersService.invite({ name, email, role, allowedProducts });
@@ -33,13 +41,13 @@ export function InviteUserDrawer() {
     <>
       <PageHeader title="Convidar Usuário" desc="Convide com papéis, produtos permitidos e resumo de risco." badge="Convite">
         <Button>Cancelar</Button>
-        <Button primary onClick={handleSend} disabled={sending || sent}>{sending && <Loader2 size={15} className="animate-spin" />}{sent ? <><CheckCircle2 size={15} />Enviado</> : sending ? "Enviando..." : "Enviar convite"}</Button>
+        <Button primary onClick={handleSend} disabled={sending || sent || hasErrors}>{sending && <Loader2 size={15} className="animate-spin" />}{sent ? <><CheckCircle2 size={15} />Enviado</> : sending ? "Enviando..." : "Enviar convite"}</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>
           <div className="grid gap-3 md:grid-cols-2">
-            <Field label="Nome" value={name} onChange={setName} />
-            <Field label="Email" value={email} onChange={setEmail} />
+            <Field label="Nome" value={name} onChange={setName} onBlur={() => setTouched((t) => ({ ...t, name: true }))} error={touched.name ? nameErr : undefined} />
+            <Field label="Email" value={email} onChange={setEmail} onBlur={() => setTouched((t) => ({ ...t, email: true }))} error={touched.email ? emailErr : undefined} />
             <SelectLike label="Papel" value={role} options={ROLES} onChange={setRole} />
             <SelectLike label="Produtos permitidos" value={allowedProducts} options={PRODUCTS} onChange={setAllowedProducts} />
             <SelectLike label="Módulos permitidos" value={allowedModules} options={MODULES} onChange={setAllowedModules} />

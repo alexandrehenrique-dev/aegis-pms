@@ -143,16 +143,17 @@ export function PageHeader({ title, desc, badge = "BYOP", titleBadge, children }
   );
 }
 
-export function Field({ label, value, onChange, textarea = false, locked = false, type = "text" }: { label: string; value: string; onChange?: (v: string) => void; textarea?: boolean; locked?: boolean; type?: "text" | "date" | "datetime-local" }) {
-  const className = `w-full rounded-lg border border-border bg-card p-3 text-sm outline-primary ${textarea ? "min-h-28" : ""} ${locked ? "cursor-not-allowed opacity-60" : ""}`;
+export function Field({ label, value, onChange, onBlur, textarea = false, locked = false, type = "text", error }: { label: string; value: string; onChange?: (v: string) => void; onBlur?: () => void; textarea?: boolean; locked?: boolean; type?: "text" | "date" | "datetime-local"; error?: string }) {
+  const className = `w-full rounded-lg border bg-card p-3 text-sm outline-primary ${error ? "border-destructive" : "border-border"} ${textarea ? "min-h-28" : ""} ${locked ? "cursor-not-allowed opacity-60" : ""}`;
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-medium">{label}</span>
       {textarea ? (
-        <textarea className={className} value={value} onChange={(e) => onChange?.(e.target.value)} disabled={locked} />
+        <textarea className={className} value={value} onChange={(e) => onChange?.(e.target.value)} onBlur={onBlur} disabled={locked} />
       ) : (
-        <input type={type} className={className} value={value} onChange={(e) => onChange?.(e.target.value)} disabled={locked} />
+        <input type={type} className={className} value={value} onChange={(e) => onChange?.(e.target.value)} onBlur={onBlur} disabled={locked} />
       )}
+      {error && <span className="mt-1 block text-xs text-destructive">{error}</span>}
     </label>
   );
 }

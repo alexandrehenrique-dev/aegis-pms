@@ -54,11 +54,49 @@ POST /api/v1/products/{productId}/modules/{moduleKey}/disable
 
 ### D. Regras de negócio
 
-- Usuário que cria um tenant vira `TENANT_ADMIN` (cria a membership automaticamente).
+- Usuário que cria um tenant vira `TENANT_ADMIN` (cria a `TenantMembership` automaticamente).
 - Produto pertence a exatamente um tenant.
-- Listagem de produtos retorna só produtos de tenants onde o usuário tem membership ativa.
+- **Produto criado gera `ProductAssignment` automático para o criador** (ADR-0018): ao persistir um produto, criar imediatamente um `ProductAssignment` com `role: "product_manager"` e `status: "atribuido"` para o `userSubject` do token. Isso vale para qualquer papel que crie o produto (SUPER_ADMIN, TENANT_ADMIN). Sem esse registro, o criador não teria acesso ao conteúdo do produto via `ProductAccessResolver`.
 - Produto de outro tenant retorna 404 (nunca 403 — não revelar existência).
 - `product.key` único por tenant; `tenant.key` único globalmente.
+
+**Regras de visibilidade de `GET /api/v1/products` por papel (ADR-0019)** — a listagem não usa o mesmo filtro para todos os papéis:
+
+| Papel | Filtro aplicado no `ProductService` |
+|---|---|
+| `SUPER_ADMIN` | Todos os produtos de todos os tenants (sem filtro) |
+| `TENANT_ADMIN` | `findAllByTenantId(caller.tenantId)` via `TenantMembership` |
+| `PRODUCT_MANAGER`, `EDITOR`, `VIEWER` | `findAllByUserSubject(caller.subject)` via `ProductAssignment` |
+
+O critério de filtro é determinado internamente pelo `ProductService` com base no papel do `AuthenticatedUser` — nunca recebido como parâmetro do cliente.
+
+**`ProductAccessResolver`** — helper implementado **nesta etapa**, reutilizado por todas as etapas de domínio de produto (08-22 para content, pages, assets, forms, analytics, knowledge graph):
+
+```java
+/**
+ * Resolve se o usuário autenticado tem acesso ao conteúdo de um produto.
+ * Implementa as regras de ADR-0018 e ADR-0019.
+ * Deve ser chamado por todos os Services de domínio antes de qualquer operação de conteúdo.
+ */
+public class ProductAccessResolver {
+  /**
+   * Valida acesso de conteúdo ao produto.
+   *
+   * @param caller  usuário autenticado (papel + subject)
+   * @param productId produto que se quer acessar
+   * @throws ProductContentAccessDeniedException (403) se SUPER_ADMIN sem ProductAssignment
+   * @throws ProductNotFoundException (404) se produto não existe ou não pertence ao escopo do caller
+   */
+  public void assertContentAccess(AuthenticatedUser caller, UUID productId) { ... }
+}
+```
+
+Lógica interna do `assertContentAccess`:
+1. `SUPER_ADMIN` com `ProductAssignment` ativo para este `productId` → **passa** (usa papel do assignment internamente)
+2. `SUPER_ADMIN` sem `ProductAssignment` → lança `ProductContentAccessDeniedException` → `403 PRODUCT_CONTENT_ACCESS_DENIED`
+3. `TENANT_ADMIN` com `TenantMembership` ativa no tenant do produto → **passa**
+4. `PRODUCT_MANAGER | EDITOR | VIEWER` com `ProductAssignment` ativo → **passa**
+5. Qualquer outro caso (produto de outro tenant, sem membership) → lança `ProductNotFoundException` → **404**
 
 > Nota para esta sprint: o front-end (Sprint 03, fora do GPT) vai consumir exatamente esses endpoints para a tela de criação de tenant e de produto — não altere os nomes/formatos sem necessidade.
 
@@ -81,17 +119,20 @@ As etapas 07/17 (`KNOWLEDGE_GRAPH`), 10 (`CONTENT`), 11 (`ASSETS`), 12 (`FORMS`)
 
 - **Java 25**. Javadoc obrigatório na interface e em todo método de `TenantRepository`, `TenantMembershipRepository`, `ProductRepository`, `ProductModuleRepository`. Mappers via MapStruct. 100% de cobertura nas classes funcionais (DTOs de transporte — `CreateTenantRequest`, `ProductSummary`, etc. — ficam fora da régua). `mvn clean verify` deve falhar se a cobertura cair.
 - Entregar em rodadas, nesta ordem:
-  1. `Tenant`, `TenantMembership`, `Product`, `ProductModule` (entities) + `TenantRepository`, `TenantMembershipRepository`, `ProductRepository`, `ProductModuleRepository` + testes `@DataJpaTest` de cada repository.
+  1. `Tenant`, `TenantMembership`, `Product`, `ProductModule` (entities) + `TenantRepository`, `TenantMembershipRepository`, `ProductRepository`, `ProductModuleRepository`, `ProductAssignmentRepository` (se ainda não existir — pré-criado aqui para o `ProductAccessResolver`) + testes `@DataJpaTest` de cada repository.
   2. `TenantMapper`, `ProductMapper`, `ProductModuleMapper` (MapStruct) + testes de mapper.
-  3. `TenantService`, `ProductService`, `ProductModuleService` (regras da Seção D) + testes com mocks de repository/mapper.
-  4. `TenantController`, `ProductController` (endpoints da Seção C) + testes `@WebMvcTest` + validação manual via `curl` (Seção "Validação" abaixo).
-  5. `@RequireModule` + `ModuleAccessAspect` + `ModuleDisabledException`/`@ControllerAdvice` (Seção E) + teste de integração (`@SpringBootTest`, um controller de exemplo anotado) confirmando 403 com módulo desabilitado e passagem normal com módulo habilitado.
+  3. `TenantService`, `ProductService` (incluindo `ProductAssignment` automático ao criar produto + filtro de listagem por papel), `ProductModuleService` + `ProductAccessResolver` — testes com mocks cobrindo: SUPER_ADMIN sem assignment → 403; SUPER_ADMIN com assignment → passa; TENANT_ADMIN → passa; EDITOR sem assignment → 404.
+  4. `TenantController`, `ProductController` + testes `@WebMvcTest` + validação via `curl`.
+  5. `@RequireModule` + `ModuleAccessAspect` + `ModuleDisabledException`/`@ControllerAdvice` (Seção E) + teste de integração confirmando 403 com módulo desabilitado e passagem normal com módulo habilitado.
 
 ## Critérios de aceite
 
-- [ ] Criar tenant via API funciona e cria a membership de `TENANT_ADMIN` automaticamente.
-- [ ] Criar produto vinculado a um tenant funciona.
-- [ ] Listagem de produtos respeita membership do usuário autenticado.
+- [ ] Criar tenant via API funciona e cria a `TenantMembership` de `TENANT_ADMIN` automaticamente.
+- [ ] Criar produto funciona e cria `ProductAssignment` automático para o criador com `role: "product_manager"`.
+- [ ] `GET /products` com token de `PRODUCT_MANAGER` retorna apenas os produtos com `ProductAssignment` para seu subject — não todos os do tenant.
+- [ ] `GET /products` com token de `TENANT_ADMIN` retorna todos os produtos do tenant.
+- [ ] `GET /products` com token de `SUPER_ADMIN` retorna todos os produtos de todos os tenants.
+- [ ] `ProductAccessResolver.assertContentAccess`: SUPER_ADMIN sem `ProductAssignment` → 403 `PRODUCT_CONTENT_ACCESS_DENIED`; SUPER_ADMIN com `ProductAssignment` → passa; TENANT_ADMIN → passa; EDITOR sem assignment → 404.
 - [ ] Habilitar/desabilitar módulo em produto funciona e rejeita `moduleKey` desconhecido.
 - [ ] Habilitar `KNOWLEDGE_GRAPH` sem `CONTENT` habilitado é rejeitado com 400 `MODULE_DEPENDENCY_MISSING`; habilitando `CONTENT` primeiro, `KNOWLEDGE_GRAPH` passa a ser aceito.
 - [ ] Desabilitar `CONTENT` com `KNOWLEDGE_GRAPH` ainda habilitado é rejeitado com 400.
