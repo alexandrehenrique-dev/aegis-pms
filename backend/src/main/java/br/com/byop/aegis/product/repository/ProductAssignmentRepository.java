@@ -26,6 +26,14 @@ public interface ProductAssignmentRepository extends JpaRepository<ProductAssign
     Optional<ProductAssignment> findByProductIdAndUserSubject(UUID productId, String userSubject);
 
     /**
+     * Lista atribuicoes vinculadas a um produto.
+     *
+     * @param productId identificador do produto
+     * @return atribuicoes do produto informado
+     */
+    List<ProductAssignment> findAllByProductId(UUID productId);
+
+    /**
      * Lista atribuicoes de produto para um usuario e status.
      *
      * @param userSubject subject do usuario no Keycloak

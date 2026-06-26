@@ -76,7 +76,7 @@ class ProductServiceTest {
         Tenant tenant = tenant(tenantId, "byop");
         Product savedProduct = product(tenant, "maestro-beton");
         ProductSummary summary = productSummary(tenantId, savedProductId(), "maestro-beton");
-        when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId));
+        when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "maestro-beton")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
         when(productMapper.toSummary(savedProduct)).thenReturn(summary);
@@ -114,7 +114,7 @@ class ProductServiceTest {
         Tenant tenant = tenant(tenantId, "explicit-storage");
         Product savedProduct = product(tenant, "explicit-storage-product");
         ProductSummary summary = productSummary(tenantId, savedProductId(), "explicit-storage-product");
-        when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId));
+        when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "explicit-storage-product")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
         when(productMapper.toSummary(savedProduct)).thenReturn(summary);
@@ -148,7 +148,7 @@ class ProductServiceTest {
     @Test
     void shouldRejectDuplicateProductKeyByTenant() {
         UUID tenantId = UUID.fromString("33333333-3333-3333-3333-333333333333");
-        when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId));
+        when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "duplicate")).thenReturn(true);
         AuthenticatedUser caller = user("creator-subject", "ROLE_TENANT_ADMIN");
         CreateProductCommand command = createCommand(tenantId, "duplicate", ProductTypeKey.CUSTOM.name());
@@ -161,7 +161,7 @@ class ProductServiceTest {
     @Test
     void shouldRejectInvalidProductType() {
         UUID tenantId = UUID.fromString("44444444-4444-4444-4444-444444444444");
-        when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId));
+        when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         AuthenticatedUser caller = user("creator-subject", "ROLE_TENANT_ADMIN");
         CreateProductCommand command = createCommand(tenantId, "invalid", "Unknown");
 

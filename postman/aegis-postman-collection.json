@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "6b39b2b0-0e1d-4f1b-a746-df9447765655",
-    "name": "Aegis PMS - Backend Cumulative Collection",
-    "description": "Collection cumulativa de validação do backend Aegis PMS, incluindo Health/Status da Sprint 09.",
+    "name": "Aegis PMS - Backend API Collection",
+    "description": "Collection oficial e cumulativa da API backend do Aegis PMS. Reune os fluxos de autenticacao, tenants, produtos, modulos, Knowledge Graph, health/status e operacoes de atribuicao de usuarios a produtos.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -15,7 +15,10 @@
           "if (!pm.collectionVariables.get('username')) { pm.collectionVariables.set('username', 'loki'); }",
           "if (!pm.collectionVariables.get('password')) { pm.collectionVariables.set('password', '123456'); }",
           "if (!pm.collectionVariables.get('tenantKey')) { pm.collectionVariables.set('tenantKey', 'byop-' + Date.now()); }",
-          "if (!pm.collectionVariables.get('productKey')) { pm.collectionVariables.set('productKey', 'maestro-beton-' + Date.now()); }"
+          "if (!pm.collectionVariables.get('productKey')) { pm.collectionVariables.set('productKey', 'maestro-beton-' + Date.now()); }",
+          "if (!pm.collectionVariables.get('userId')) { pm.collectionVariables.set('userId', ''); }",
+          "if (!pm.collectionVariables.get('inviteEmail')) { pm.collectionVariables.set('inviteEmail', 'guest-' + Date.now() + '@example.com'); }",
+          "if (!pm.collectionVariables.get('tenantName')) { pm.collectionVariables.set('tenantName', 'BYOP'); }"
         ]
       }
     }
@@ -89,6 +92,21 @@
     {
       "key": "graphEdgeId",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "inviteEmail",
+      "value": "guest@example.com",
+      "type": "string"
+    },
+    {
+      "key": "tenantName",
+      "value": "BYOP",
       "type": "string"
     }
   ],
@@ -718,6 +736,416 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 - Tenant e Product Assignments",
+      "description": "Requests oficiais da etapa 10: editar/excluir tenant e listar/atribuir/remover usuarios de produto.",
+      "item": [
+        {
+          "name": "Editar tenant",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenantId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{tenantName}} Atualizado\",\n  \"plan\": \"PRO\",\n  \"status\": \"ativo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('tenant atualizado', () => pm.expect(json.id).to.eql(pm.collectionVariables.get('tenantId')));",
+                  "pm.test('plan presente', () => pm.expect(json.plan).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Excluir tenant - confirmationText errado",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenantId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmationText\": \"texto incorreto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const json = pm.response.json();",
+                  "pm.test('erro de confirmacao', () => pm.expect(json.error).to.eql('INVALID_TENANT_CONFIRMATION'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar usuarios do produto",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "users"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('resposta lista', () => pm.expect(json).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Atribuir produto a usuario existente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "users"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"tenantId\": \"{{tenantId}}\",\n  \"userId\": \"{{userId}}\",\n  \"role\": \"EDITOR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('usuario atribuido', () => pm.expect(json.userSubject).to.eql(pm.collectionVariables.get('userId')));",
+                  "pm.test('status contrato', () => pm.expect(json.status).to.eql('atribuido'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Atribuir produto convidando novo usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "users"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"tenantId\": \"{{tenantId}}\",\n  \"inviteEmail\": \"{{inviteEmail}}\",\n  \"role\": \"VIEWER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('email do convite', () => pm.expect(json.userEmail).to.eql(pm.collectionVariables.get('inviteEmail')));",
+                  "pm.test('status contrato', () => pm.expect(json.status).to.eql('convidado'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Atribuir produto - userId e inviteEmail rejeitado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "users"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"tenantId\": \"{{tenantId}}\",\n  \"userId\": \"{{userId}}\",\n  \"inviteEmail\": \"{{inviteEmail}}\",\n  \"role\": \"EDITOR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const json = pm.response.json();",
+                  "pm.test('erro de atribuicao', () => pm.expect(json.error).to.eql('INVALID_PRODUCT_ASSIGNMENT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Atribuir produto - sem usuario nem convite rejeitado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "users"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"tenantId\": \"{{tenantId}}\",\n  \"role\": \"EDITOR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const json = pm.response.json();",
+                  "pm.test('erro de atribuicao', () => pm.expect(json.error).to.eql('INVALID_PRODUCT_ASSIGNMENT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remover atribuicao do produto",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 204', () => pm.response.to.have.status(204));"
                 ]
               }
             }

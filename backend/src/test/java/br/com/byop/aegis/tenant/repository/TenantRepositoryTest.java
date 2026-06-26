@@ -23,9 +23,20 @@ class TenantRepositoryTest extends RepositoryTestSupport {
         assertThat(saved.getKey()).isEqualTo("tenant-save");
         assertThat(saved.getName()).isEqualTo("Tenant save");
         assertThat(saved.getStatus()).isEqualTo(TenantStatus.ACTIVE);
+        assertThat(saved.getPlan()).isEqualTo("FREE");
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNotNull();
         assertThat(tenantRepository.existsByKey("tenant-save")).isTrue();
+    }
+
+    @Test
+    void shouldUpdateTenantPlan() {
+        Tenant saved = tenantRepository.saveAndFlush(tenant("plan"));
+
+        saved.changePlan("PRO");
+        Tenant updated = tenantRepository.saveAndFlush(saved);
+
+        assertThat(updated.getPlan()).isEqualTo("PRO");
     }
 
     @Test

@@ -27,7 +27,7 @@ public class TenantAccessService {
     @Transactional(readOnly = true)
     public TenantReference getRequiredReference(UUID tenantId) {
         return tenantRepository.findById(tenantId)
-                .map(tenant -> new TenantReference(tenant.getId()))
+                .map(tenant -> new TenantReference(tenant.getId(), tenant.getName()))
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
     }
 

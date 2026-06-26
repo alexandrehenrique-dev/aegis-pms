@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/tenants/{{tenantId}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "confirmationText": "texto incorreto"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 400', () => pm.response.to.have.status(400));
+      const json = pm.response.json();
+      pm.test('erro de confirmacao', () => pm.expect(json.error).to.eql('INVALID_TENANT_CONFIRMATION'));
+    language: text/javascript
+order: 2000

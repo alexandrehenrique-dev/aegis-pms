@@ -10,6 +10,7 @@ import org.springframework.web.client.RestClient;
 import java.util.List;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.junit.jupiter.api.Assertions.*;
 
 class KeycloakAdminClientTest {
@@ -98,6 +99,115 @@ class KeycloakAdminClientTest {
         assertDoesNotThrow(() -> client.sendResetPasswordEmail("missing@teste.com"));
 
         wireMockServer.verify(0, putRequestedFor(urlPathMatching("/execute-actions-email")));
+    }
+
+    @Test
+    void shouldInviteExistingUserByEmail() {
+        stubAdminToken();
+        stubUserLookup("""
+                [
+                  {
+                    "id": "user-id",
+                    "username": "guest",
+                    "email": "guest@byop.dev",
+                    "firstName": "Guest",
+                    "lastName": "User",
+                    "enabled": true
+                  }
+                ]
+                """);
+        stubExecuteActionsEmail();
+
+        UserResponse user = client.inviteUserByEmail("guest@byop.dev");
+
+        assertEquals("user-id", user.id());
+        assertEquals("guest@byop.dev", user.email());
+        wireMockServer.verify(0, postRequestedFor(urlEqualTo("/admin/realms/aegis/users")));
+        wireMockServer.verify(putRequestedFor(urlEqualTo(
+                "/admin/realms/aegis/users/user-id/execute-actions-email?client_id=aegis-web"
+        )).withRequestBody(equalToJson("[\"UPDATE_PASSWORD\"]")));
+    }
+
+    @Test
+    void shouldCreateUserAndInviteWhenEmailDoesNotExist() {
+        stubAdminToken();
+        wireMockServer.stubFor(get(urlPathEqualTo("/admin/realms/aegis/users"))
+                .withQueryParam("email", equalTo("guest@byop.dev"))
+                .withQueryParam("exact", equalTo("true"))
+                .inScenario("invite")
+                .whenScenarioStateIs(STARTED)
+                .willReturn(okJson("[]"))
+                .willSetStateTo("created"));
+        wireMockServer.stubFor(post(urlEqualTo("/admin/realms/aegis/users"))
+                .withHeader("Authorization", equalTo("Bearer admin-token"))
+                .withRequestBody(matchingJsonPath("$.username", equalTo("guest@byop.dev")))
+                .withRequestBody(matchingJsonPath("$.email", equalTo("guest@byop.dev")))
+                .withRequestBody(matchingJsonPath("$.enabled", equalTo("true")))
+                .withRequestBody(containing("UPDATE_PASSWORD"))
+                .willReturn(created()));
+        wireMockServer.stubFor(get(urlPathEqualTo("/admin/realms/aegis/users"))
+                .withQueryParam("email", equalTo("guest@byop.dev"))
+                .withQueryParam("exact", equalTo("true"))
+                .inScenario("invite")
+                .whenScenarioStateIs("created")
+                .willReturn(okJson("""
+                        [
+                          {
+                            "id": "created-user-id",
+                            "username": "guest@byop.dev",
+                            "email": "guest@byop.dev",
+                            "enabled": true
+                          }
+                        ]
+                        """)));
+        wireMockServer.stubFor(put(urlEqualTo(
+                "/admin/realms/aegis/users/created-user-id/execute-actions-email?client_id=aegis-web"
+        )).willReturn(noContent()));
+
+        UserResponse user = client.inviteUserByEmail("guest@byop.dev");
+
+        assertEquals("created-user-id", user.id());
+        assertEquals("guest@byop.dev", user.username());
+        wireMockServer.verify(postRequestedFor(urlEqualTo("/admin/realms/aegis/users"))
+                .withRequestBody(containing("UPDATE_PASSWORD")));
+        wireMockServer.verify(putRequestedFor(urlEqualTo(
+                "/admin/realms/aegis/users/created-user-id/execute-actions-email?client_id=aegis-web"
+        )));
+    }
+
+    @Test
+    void shouldThrowWhenCreatedUserCannotBeResolved() {
+        stubAdminToken();
+        stubUserLookup("[]");
+        wireMockServer.stubFor(post(urlEqualTo("/admin/realms/aegis/users")).willReturn(created()));
+
+        assertThrows(
+                KeycloakAuthenticationException.class,
+                () -> client.inviteUserByEmail("guest@byop.dev")
+        );
+    }
+
+    @Test
+    void shouldThrowWhenInviteExecuteActionsEmailFails() {
+        stubAdminToken();
+        stubUserLookup("""
+                [
+                  {
+                    "id": "user-id",
+                    "username": "guest",
+                    "email": "guest@byop.dev",
+                    "enabled": true
+                  }
+                ]
+                """);
+        wireMockServer.stubFor(put(urlEqualTo(
+                "/admin/realms/aegis/users/user-id/execute-actions-email?client_id=aegis-web"
+        )).willReturn(serverError()));
+
+        assertThrows(
+                KeycloakAuthenticationException.class,
+                () -> client.inviteUserByEmail("guest@byop.dev")
+        );
     }
 
     @Test

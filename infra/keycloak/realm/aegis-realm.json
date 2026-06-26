@@ -32,6 +32,7 @@
   "rememberMe" : false,
   "verifyEmail" : false,
   "loginWithEmailAllowed" : true,
+  "emailTheme" : "aegis",
   "duplicateEmailsAllowed" : false,
   "resetPasswordAllowed" : false,
   "editUsernameAllowed" : false,

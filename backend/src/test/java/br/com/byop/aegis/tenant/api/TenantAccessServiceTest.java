@@ -47,6 +47,7 @@ class TenantAccessServiceTest {
         TenantReference reference = service.getRequiredReference(TENANT_ID);
 
         assertThat(reference.tenantId()).isEqualTo(TENANT_ID);
+        assertThat(reference.name()).isEqualTo("Tenant byop");
     }
 
     @Test

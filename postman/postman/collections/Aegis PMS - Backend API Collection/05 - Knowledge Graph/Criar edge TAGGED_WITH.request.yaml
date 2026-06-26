@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/products/{{productId}}/graph/edges"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "sourceNodeId": "{{articleNodeId}}",
+      "targetNodeId": "{{topicNodeId}}",
+      "edgeType": "TAGGED_WITH",
+      "weight": 1.0,
+      "metadataJson": "{\"source\":\"postman\"}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 201', () => pm.response.to.have.status(201));
+      const json = pm.response.json();
+      pm.test('TAGGED_WITH preservado', () => pm.expect(json.edgeType).to.eql('TAGGED_WITH'));
+      pm.collectionVariables.set('graphEdgeId', json.id);
+    language: text/javascript
+order: 3000

@@ -60,4 +60,16 @@ public class ProductExceptionHandler {
     public CoreErrorResponse handleModuleProductIdMissing() {
         return new CoreErrorResponse("MODULE_PRODUCT_ID_MISSING");
     }
+
+    @ExceptionHandler(InvalidProductAssignmentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CoreErrorResponse handleInvalidProductAssignment() {
+        return new CoreErrorResponse("INVALID_PRODUCT_ASSIGNMENT");
+    }
+
+    @ExceptionHandler(ProductAssignmentNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public CoreErrorResponse handleProductAssignmentNotFound() {
+        return new CoreErrorResponse("PRODUCT_ASSIGNMENT_NOT_FOUND");
+    }
 }

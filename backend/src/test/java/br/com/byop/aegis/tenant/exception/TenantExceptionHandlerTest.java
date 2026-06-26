@@ -22,4 +22,18 @@ class TenantExceptionHandlerTest {
 
         assertThat(response.error()).isEqualTo("TENANT_NOT_FOUND");
     }
+
+    @Test
+    void shouldReturnInvalidTenantConfirmationError() {
+        CoreErrorResponse response = handler.handleInvalidTenantConfirmation();
+
+        assertThat(response.error()).isEqualTo("INVALID_TENANT_CONFIRMATION");
+    }
+
+    @Test
+    void shouldReturnInvalidTenantStatusError() {
+        CoreErrorResponse response = handler.handleInvalidTenantStatus();
+
+        assertThat(response.error()).isEqualTo("INVALID_TENANT_STATUS");
+    }
 }

@@ -35,6 +35,8 @@ class ProductEntityLifecycleTest {
     void shouldRunProductAssignmentJpaLifecycleCallbacks() {
         ProductAssignment assignment = new ProductAssignment();
 
+        assertThat(assignment.getProductId()).isNull();
+
         assignment.prePersist();
         assertThat(assignment.getCreatedAt()).isNotNull();
         assertThat(assignment.getUpdatedAt()).isNotNull();

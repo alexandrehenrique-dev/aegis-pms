@@ -1,0 +1,19 @@
+$kind: http-request
+description: Valida o status operacional de app, banco, Keycloak, Knowledge Graph, profiles e versao.
+url: "{{baseUrl}}/api/v1/system/status"
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const json = pm.response.json();
+      pm.test('applicationStatus presente', () => pm.expect(json.applicationStatus).to.be.a('string'));
+      pm.test('databaseStatus presente', () => pm.expect(json.databaseStatus).to.be.a('string'));
+      pm.test('keycloakIssuerConfigured presente', () => pm.expect(json.keycloakIssuerConfigured).to.be.a('boolean'));
+      pm.test('knowledgeGraphStatus presente', () => pm.expect(json.knowledgeGraphStatus).to.be.a('string'));
+      pm.test('activeProfiles presente', () => pm.expect(json.activeProfiles).to.be.an('array'));
+      pm.test('buildVersion presente', () => pm.expect(json.buildVersion).to.be.a('string'));
+    language: text/javascript
+order: 2000
