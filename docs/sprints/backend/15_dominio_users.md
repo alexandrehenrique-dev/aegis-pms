@@ -25,7 +25,7 @@ DELETE /api/v1/tenants/{tenantId}/users/{userId}   ← NOVO — soft delete (ADR
 POST   /api/v1/tenants/{tenantId}/users/{userId}/restore  ← NOVO — restauração (ADR-0020)
 ```
 
-**`resend-invite`**: só válido para usuário com `inviteStatus: "pendente"` (senão 400); dispara de novo `executeActionsEmail` no Keycloak.
+**`resend-invite`**: só válido para usuário com `inviteStatus: "pendente"` (senão 400); dispara de novo `executeActionsEmail` no Keycloak. **[Retrofit etapa 28]** Após a execução da etapa 28, substituir `executeActionsEmail` por criação de novo `AuthActionToken(INVITE)` + envio de e-mail com link Aegis.
 
 **`block`**: marca `TenantMembership.status = "bloqueado"` (reversível via `unblock` — que é `PUT /users/{userId}` com `status: "ativo"`). Não desabilita no Keycloak, não remove `ProductAssignment`s. Usuário bloqueado é impedido de autenticar via verificação de status da membership no `GET /me`. Sujeito à regra de "não se trancar para fora" (Seção C).
 
@@ -43,9 +43,9 @@ POST   /api/v1/tenants/{tenantId}/users/{userId}/restore  ← NOVO — restaura�
 1. Verifica que `TenantMembership.status` é `"removido"` ou `"bloqueado"` (senão 400)
 2. `TenantMembership.status = "ativo"`
 3. Se Keycloak estava `enabled: false`: reabilitar (`enabled: true`) via Admin API
-4. Dispara `executeActionsEmail` com `["UPDATE_PASSWORD"]` — força redefinição de senha na primeira entrada
+4. Dispara `executeActionsEmail` com `["UPDATE_PASSWORD"]` — força redefinição de senha na primeira entrada. **[Retrofit etapa 28]** Após a execução da etapa 28, substituir por criação de `AuthActionToken(INVITE)` + envio de `inviteActivation.ftl` com link `${AEGIS_APP_BASE_URL}/invite?token={tokenId}`.
 5. Registra evento de auditoria `USER_RESTORED_TO_TENANT`
-6. Envia e-mail: "Seu acesso ao tenant X foi restaurado. Defina uma nova senha para continuar." (mesmo template `executeActions.ftl` da etapa 06)
+6. Envia e-mail: "Seu acesso ao tenant X foi restaurado. Defina uma nova senha para continuar." (mesmo template `executeActions.ftl` da etapa 06) **[Retrofit etapa 28]** Substituir por `inviteActivation.ftl` com texto de restauração.
 7. **Não** restaura `ProductAssignment`s automaticamente — o admin precisa re-atribuir produtos manualmente
 8. Resposta: `200` com `UserSummary` atualizado
 

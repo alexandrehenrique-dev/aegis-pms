@@ -18,6 +18,8 @@ class ProductExceptionHandlerTest {
         assertThat(handler.handleInvalidModuleKey().error()).isEqualTo("INVALID_MODULE_KEY");
         assertThat(handler.handleProductContentAccessDenied().error()).isEqualTo("PRODUCT_CONTENT_ACCESS_DENIED");
         assertThat(handler.handleModuleProductIdMissing().error()).isEqualTo("MODULE_PRODUCT_ID_MISSING");
+        assertThat(handler.handleInvalidProductAssignment().error()).isEqualTo("INVALID_PRODUCT_ASSIGNMENT");
+        assertThat(handler.handleProductAssignmentNotFound().error()).isEqualTo("PRODUCT_ASSIGNMENT_NOT_FOUND");
     }
 
     @Test

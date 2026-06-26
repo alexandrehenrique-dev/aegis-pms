@@ -20,4 +20,16 @@ public class TenantExceptionHandler {
     public CoreErrorResponse handleTenantNotFound() {
         return new CoreErrorResponse("TENANT_NOT_FOUND");
     }
+
+    @ExceptionHandler(InvalidTenantConfirmationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CoreErrorResponse handleInvalidTenantConfirmation() {
+        return new CoreErrorResponse("INVALID_TENANT_CONFIRMATION");
+    }
+
+    @ExceptionHandler(InvalidTenantStatusException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CoreErrorResponse handleInvalidTenantStatus() {
+        return new CoreErrorResponse("INVALID_TENANT_STATUS");
+    }
 }

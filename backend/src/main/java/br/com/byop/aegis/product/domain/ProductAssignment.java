@@ -27,9 +27,15 @@ public class ProductAssignment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "tenant_id", nullable = false)
+    private UUID tenantId;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
+
+    @Column(name = "product_id", insertable = false, updatable = false)
+    private UUID productId;
 
     @Column(name = "user_subject", nullable = false, length = 160)
     private String userSubject;
@@ -53,6 +59,7 @@ public class ProductAssignment {
 
     public ProductAssignment(Product product, String userSubject, ProductAssignmentRole role) {
         this.product = Objects.requireNonNull(product, "product is required");
+        this.tenantId = Objects.requireNonNull(product.getTenantId(), "product tenantId is required");
         this.userSubject = Objects.requireNonNull(userSubject, "userSubject is required");
         this.role = Objects.requireNonNull(role, "role is required");
         this.status = ProductAssignmentStatus.ASSIGNED;
@@ -63,7 +70,7 @@ public class ProductAssignment {
     }
 
     public void revoke() {
-        this.status = ProductAssignmentStatus.REVOKED;
+        this.status = ProductAssignmentStatus.INVITED;
     }
 
     public void assign() {
@@ -86,8 +93,19 @@ public class ProductAssignment {
         return id;
     }
 
+    public UUID getTenantId() {
+        return tenantId;
+    }
+
     public Product getProduct() {
         return product;
+    }
+
+    public UUID getProductId() {
+        if (productId != null) {
+            return productId;
+        }
+        return product == null ? null : product.getId();
     }
 
     public String getUserSubject() {

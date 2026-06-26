@@ -34,6 +34,9 @@ public class Tenant {
     @Column(nullable = false, length = 40)
     private TenantStatus status;
 
+    @Column(nullable = false, length = 80)
+    private String plan;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -47,6 +50,7 @@ public class Tenant {
         this.key = Objects.requireNonNull(key, "key is required");
         this.name = Objects.requireNonNull(name, "name is required");
         this.status = TenantStatus.ACTIVE;
+        this.plan = "FREE";
     }
 
     public void rename(String name) {
@@ -63,6 +67,10 @@ public class Tenant {
 
     public void archive() {
         this.status = TenantStatus.ARCHIVED;
+    }
+
+    public void changePlan(String plan) {
+        this.plan = Objects.requireNonNull(plan, "plan is required");
     }
 
     @PrePersist
@@ -91,6 +99,10 @@ public class Tenant {
 
     public TenantStatus getStatus() {
         return status;
+    }
+
+    public String getPlan() {
+        return plan;
     }
 
     public OffsetDateTime getCreatedAt() {

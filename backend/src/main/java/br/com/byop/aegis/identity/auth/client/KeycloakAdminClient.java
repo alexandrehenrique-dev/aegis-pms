@@ -5,6 +5,7 @@ import br.com.byop.aegis.identity.auth.exception.KeycloakAuthenticationException
 import br.com.byop.aegis.identity.user.dto.UserResponse;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -40,7 +41,8 @@ public class KeycloakAdminClient {
         try {
             String accessToken = adminAccessToken();
 
-            findUserIdByEmail(email, accessToken)
+            findUserByEmail(email, accessToken)
+                    .map(KeycloakUserResponse::id)
                     .ifPresent(userId -> executeResetPasswordEmail(userId, accessToken));
 
         } catch (RestClientException exception) {
@@ -48,6 +50,21 @@ public class KeycloakAdminClient {
                     ADMIN_API_ERROR + ": " + exception.getMessage(),
                     exception
             );
+        }
+    }
+
+    public UserResponse inviteUserByEmail(String email) {
+        try {
+            String accessToken = adminAccessToken();
+            KeycloakUserResponse user = findUserByEmail(email, accessToken)
+                    .orElseGet(() -> createUserForInvitation(email, accessToken));
+
+            executeResetPasswordEmail(user.id(), accessToken);
+
+            return toUserResponse(user);
+
+        } catch (RestClientException exception) {
+            throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
         }
     }
 
@@ -131,7 +148,7 @@ public class KeycloakAdminClient {
         return requireAdminAccessToken(requireAdminResponse(response));
     }
 
-    private Optional<String> findUserIdByEmail(String email, String accessToken) {
+    private Optional<KeycloakUserResponse> findUserByEmail(String email, String accessToken) {
         KeycloakUserResponse[] users = restClient.get()
                 .uri(usersEndpoint(email))
                 .headers(headers -> headers.setBearerAuth(accessToken))
@@ -144,8 +161,23 @@ public class KeycloakAdminClient {
 
         return Arrays.stream(users)
                 .filter(Objects::nonNull)
-                .findFirst()
-                .map(KeycloakUserResponse::id);
+                .findFirst();
+    }
+
+    private KeycloakUserResponse createUserForInvitation(String email, String accessToken) {
+        ResponseEntity<Void> response = restClient.post()
+                .uri(usersEndpoint())
+                .headers(headers -> headers.setBearerAuth(accessToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new KeycloakCreateUserRequest(email, email, true, List.of("UPDATE_PASSWORD")))
+                .retrieve()
+                .toBodilessEntity();
+
+        return findUserByEmail(email, accessToken)
+                .orElseThrow(() -> new KeycloakAuthenticationException(
+                        "Created Keycloak user was not returned by lookup: " + email
+                                + " (" + response.getStatusCode() + ")"
+                ));
     }
 
     private void executeResetPasswordEmail(String userId, String accessToken) {
@@ -215,6 +247,14 @@ public class KeycloakAdminClient {
             String firstName,
             String lastName,
             boolean enabled
+    ) {
+    }
+
+    private record KeycloakCreateUserRequest(
+            String username,
+            String email,
+            boolean enabled,
+            List<String> requiredActions
     ) {
     }
 }

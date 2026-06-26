@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/products"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tenantId": "{{tenantId}}",
+      "key": "{{productKey}}",
+      "name": "Maestro Beton Duplicado",
+      "type": "Site Institucional",
+      "defaultLocale": "pt-BR"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test('status 409', () => pm.response.to.have.status(409));
+    language: text/javascript
+order: 5000

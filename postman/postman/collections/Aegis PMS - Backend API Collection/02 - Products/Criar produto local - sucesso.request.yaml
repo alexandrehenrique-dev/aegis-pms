@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/products"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tenantId": "{{tenantId}}",
+      "key": "{{productKey}}",
+      "name": "Maestro Beton",
+      "type": "Site Institucional",
+      "defaultLocale": "pt-BR"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 201', () => pm.response.to.have.status(201));
+      const json = pm.response.json();
+      pm.test('product id presente', () => pm.expect(json.id).to.be.a('string').and.not.empty);
+      pm.test('tenantId preservado', () => pm.expect(json.tenantId).to.eql(pm.collectionVariables.get('tenantId')));
+      pm.collectionVariables.set('productId', json.id);
+    language: text/javascript
+order: 1000

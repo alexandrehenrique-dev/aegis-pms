@@ -91,11 +91,14 @@ class CoreEntityBehaviorTest {
     void shouldChangeProductAssignmentStateAndRole() {
         ProductAssignment assignment = new ProductAssignment(product(), "subject", ProductAssignmentRole.VIEWER);
 
+        assertThat(assignment.getTenantId()).isEqualTo(UUID.fromString("22222222-2222-2222-2222-222222222222"));
+        assertThat(assignment.getProductId()).isNull();
+
         assignment.changeRole(ProductAssignmentRole.EDITOR);
         assertThat(assignment.getRole()).isEqualTo(ProductAssignmentRole.EDITOR);
 
         assignment.revoke();
-        assertThat(assignment.getStatus()).isEqualTo(ProductAssignmentStatus.REVOKED);
+        assertThat(assignment.getStatus()).isEqualTo(ProductAssignmentStatus.INVITED);
 
         assignment.assign();
         assertThat(assignment.getStatus()).isEqualTo(ProductAssignmentStatus.ASSIGNED);

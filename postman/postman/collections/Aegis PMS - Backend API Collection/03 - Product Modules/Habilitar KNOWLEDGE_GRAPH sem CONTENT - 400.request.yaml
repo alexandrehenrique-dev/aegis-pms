@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/products/{{productId}}/modules/KNOWLEDGE_GRAPH/enable"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 400', () => pm.response.to.have.status(400));
+      const json = pm.response.json();
+      pm.test('MODULE_DEPENDENCY_MISSING', () => pm.expect(json.error).to.eql('MODULE_DEPENDENCY_MISSING'));
+      pm.test('requires CONTENT', () => pm.expect(json.requires).to.eql('CONTENT'));
+    language: text/javascript
+order: 1000

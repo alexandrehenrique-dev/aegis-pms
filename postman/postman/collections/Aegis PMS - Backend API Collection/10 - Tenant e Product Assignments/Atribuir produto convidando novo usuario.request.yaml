@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/products/{{productId}}/users"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "productId": "{{productId}}",
+      "tenantId": "{{tenantId}}",
+      "inviteEmail": "{{inviteEmail}}",
+      "role": "VIEWER"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 201', () => pm.response.to.have.status(201));
+      const json = pm.response.json();
+      pm.test('email do convite', () => pm.expect(json.userEmail).to.eql(pm.collectionVariables.get('inviteEmail')));
+      pm.test('status contrato', () => pm.expect(json.status).to.eql('convidado'));
+    language: text/javascript
+order: 5000

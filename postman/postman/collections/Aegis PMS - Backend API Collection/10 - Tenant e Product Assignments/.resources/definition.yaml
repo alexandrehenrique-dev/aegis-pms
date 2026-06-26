@@ -1,0 +1,3 @@
+$kind: collection
+description: "Requests oficiais da etapa 10: editar/excluir tenant e listar/atribuir/remover usuarios de produto."
+order: 4000
