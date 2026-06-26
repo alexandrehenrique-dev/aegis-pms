@@ -1,0 +1,4 @@
+$kind: collection
+name: 04 - Manual / Optional checks
+description: Cenários que podem exigir preparação externa de token/usuário/papel, ou endpoint de domínio futuro anotado com @RequireModule.
+order: 5000

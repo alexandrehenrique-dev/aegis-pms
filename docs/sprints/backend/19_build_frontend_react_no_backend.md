@@ -1,4 +1,4 @@
-# Etapa 18 — Build do frontend React servido pelo Spring Boot (SPA same-origin)
+# Etapa 19 — Build do frontend React servido pelo Spring Boot (SPA same-origin)
 
 > Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapa 05 concluída (Resource Server funcionando). Pode ser feita em paralelo com as etapas 06-17 (não depende dos domínios de produto) — só precisa do Resource Server no ar.
 
@@ -81,7 +81,7 @@ Esperado: as duas primeiras retornam HTML (o `index.html`); a terceira retorna 4
 
 ## Artefato de continuidade — `SPRINT-RESULTADO.md`
 
-> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
+> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/backend/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
 
 ## Commit sugerido
 

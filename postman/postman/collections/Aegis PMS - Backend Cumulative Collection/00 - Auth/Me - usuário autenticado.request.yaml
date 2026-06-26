@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/me"
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const json = pm.response.json();
+      pm.test('subject presente', () => pm.expect(json.subject).to.be.a('string').and.not.empty);
+      pm.test('role presente', () => pm.expect(json.role).to.be.a('string').and.not.empty);
+    language: text/javascript
+order: 2000

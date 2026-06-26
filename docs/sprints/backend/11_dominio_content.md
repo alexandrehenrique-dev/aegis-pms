@@ -1,4 +1,4 @@
-# Etapa 10 — Domínio `content` (editorial, workflow, versões, publicação)
+# Etapa 11 — Domínio `content` (editorial, workflow, versões, publicação)
 
 > Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapa 06 concluída (Product já existe). Usa o package `content` já previsto na etapa 04.
 
@@ -116,7 +116,7 @@ curl -X POST http://localhost:8080/api/v1/products/<productId>/content/<contentI
 
 ## Artefato de continuidade — `SPRINT-RESULTADO.md`
 
-> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
+> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/backend/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
 
 ## Commit sugerido
 

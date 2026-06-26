@@ -1,4 +1,4 @@
-# SPRINT_04_RESULTADO.md
+# Sprint 04 — Backend Spring Boot base e conexão com PostgreSQL/Flyway
 
 # Sprint 04 — Conteúdos
 

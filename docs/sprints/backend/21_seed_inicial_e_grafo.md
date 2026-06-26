@@ -1,6 +1,6 @@
-# Etapa 20 — Seed inicial (tenants/produtos/usuários) e seed do Knowledge Graph
+# Etapa 21 — Seed inicial (tenants/produtos/usuários) e seed do Knowledge Graph
 
-> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 06, 07, 09 e 17 concluídas (Tenant/Product/Modules, Knowledge Graph, CRUD de tenant + `ProductAssignment`, e os campos extras de grafo).
+> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 06, 07, 08, 10 e 18 concluídas (Auth/SMTP, Tenant/Product/Modules, Knowledge Graph, CRUD de tenant + `ProductAssignment`, e os campos extras de grafo).
 
 ## Contexto fixo
 
@@ -39,7 +39,7 @@ Usuários e papéis, espelhando `frontend/src/core/auth/mocks/users.ts` (mesma s
 - `editor@byop.io` — `EDITOR` em `BYOP`, `ProductAssignment` em `maestro-beton`.
 - `viewer@byop.io` — `VIEWER` em `BYOP`, `ProductAssignment` em `maestro-beton`.
 
-> **(Adicionado pela etapa 23, se já estiver implementada — senão, retrofit a fazer depois)** A notificação `ONBOARDING` (etapa 23) é dado técnico, criada via migration Flyway (não `CommandLineRunner`), com fan-out (`UserNotificationStatus`, `autoShown=false`) para os 5 usuários acima.
+> **(Adicionado pela etapa 24, se já estiver implementada — senão, retrofit a fazer depois)** A notificação `ONBOARDING` (etapa 24) é dado técnico, criada via migration Flyway (não `CommandLineRunner`), com fan-out (`UserNotificationStatus`, `autoShown=false`) para os 5 usuários acima.
 
 ### B. Seed do Knowledge Graph
 
@@ -77,7 +77,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ## Artefato de continuidade — `SPRINT-RESULTADO.md`
 
-> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
+> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/backend/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
 
 ## Commit sugerido
 

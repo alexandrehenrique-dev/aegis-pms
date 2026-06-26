@@ -1,4 +1,4 @@
-# SPRINT-RESULTADO.md
+# Sprint 03 — Keycloak persistente, realm/client/roles e export
 
 ## Etapa Em Execução
 
@@ -37,7 +37,7 @@ Keycloak:
 
 Documentação:
 
-* `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md`
+* `docs/sprints/backend/SPRINT-RESULTADO.md`
 
 ---
 

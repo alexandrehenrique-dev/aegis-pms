@@ -1,12 +1,12 @@
-# Padrão de qualidade, arquitetura e entrega — vale para TODAS as etapas (01-25)
+# Padrão de qualidade, arquitetura e entrega — vale para TODAS as etapas (01-26)
 
-> Este arquivo é a fonte da verdade do padrão. Cada etapa de domínio (06, 07, 09-17, 21) já traz um resumo deste padrão na própria etapa, porque cada arquivo precisa ser colável isoladamente numa conversa nova do GPT, sem depender de ter colado este arquivo antes. Se houver qualquer divergência entre o resumo numa etapa e este arquivo, **este arquivo prevalece** — ele é mais detalhado de propósito.
+> Este arquivo é a fonte da verdade do padrão. Cada etapa de domínio (07, 08, 10-18, 22, 24-26) já traz um resumo deste padrão na própria etapa, porque cada arquivo precisa ser colável isoladamente numa conversa nova do GPT, sem depender de ter colado este arquivo antes. Se houver qualquer divergência entre o resumo numa etapa e este arquivo, **este arquivo prevalece** — ele é mais detalhado de propósito.
 >
 > Motivo de existir: o backend é gerado aos poucos, em conversas separadas do GPT, por etapa. Sem um padrão explícito e repetido, cada conversa nova do GPT tende a inventar uma convenção um pouco diferente da anterior (nome de método, forma de injeção, estilo de teste). Este documento existe para que **toda classe gerada, em qualquer etapa, em qualquer conversa nova do GPT, saia igual** — mesma forma, mesmo nome de método por camada, mesmo padrão de teste.
 
 ## 1. Stack (não negociável)
 
-**Java 25**, Maven, **Spring Boot 4.1.x** (linha estável atual — Spring Framework 7, Jakarta EE 11, Hibernate 7.1, Spring Security 7, Jackson 3). Não aceitar sugestão do GPT de usar uma versão de Java diferente (nem "21+", nem "a LTS mais recente disponível na imagem Docker" — é Java 25, ponto) nem de Spring Boot diferente (nem "3.x para estabilidade" — é a linha 4.1.x, que é a estável atual, não a 3.x antiga). Se a imagem base do `Dockerfile` (etapa 19) não tiver Java 25 disponível, atualizar a imagem, nunca rebaixar a versão do projeto.
+**Java 25**, Maven, **Spring Boot 4.1.x** (linha estável atual — Spring Framework 7, Jakarta EE 11, Hibernate 7.1, Spring Security 7, Jackson 3). Não aceitar sugestão do GPT de usar uma versão de Java diferente (nem "21+", nem "a LTS mais recente disponível na imagem Docker" — é Java 25, ponto) nem de Spring Boot diferente (nem "3.x para estabilidade" — é a linha 4.1.x, que é a estável atual, não a 3.x antiga). Se a imagem base do `Dockerfile` (etapa 20) não tiver Java 25 disponível, atualizar a imagem, nunca rebaixar a versão do projeto.
 
 **Riscos de migração 3.x → 4.x que o GPT pode errar por hábito** (treinado majoritariamente em exemplos de 3.x):
 - **Segurança**: Spring Security 7 não tem mais default "bom o suficiente" — toda etapa que toca segurança (05 em diante) declara `SecurityFilterChain` explícito, nunca depende de auto-configuração implícita.
@@ -27,7 +27,7 @@ Todo domínio (`tenant`, `product`, `content`, `asset`, `form`, etc.) segue exat
 | Mapper | `XxxMapper` | Conversão `Entity ↔ DTO`, sempre via **MapStruct**, nunca conversão manual (`new XxxResponse(x.getId(), ...)` espalhado pelo service) | `@Mapper(componentModel = "spring")` |
 | Service | `XxxService` | Regra de negócio, orquestra repository + mapper, nunca acessa `HttpServletRequest`/anotação web | injeção via **construtor** (nunca `@Autowired` em campo) |
 | Controller | `XxxController` | Camada REST — recebe `Request`, chama `Service`, devolve `Response` via `Mapper`; nunca tem regra de negócio dentro do método do controller | `@RestController`, `@RequestMapping` |
-| Policy/Validator (quando a etapa tiver) | `XxxPolicy`/`XxxValidator` | Regra de validação/consistência isolada (ex.: `GraphConsistencyPolicy`, já citado na etapa 07) | classe simples, sem anotação Spring obrigatória se for stateless |
+| Policy/Validator (quando a etapa tiver) | `XxxPolicy`/`XxxValidator` | Regra de validação/consistência isolada (ex.: `GraphConsistencyPolicy`, já citado na etapa 08) | classe simples, sem anotação Spring obrigatória se for stateless |
 
 Convenção de método por camada (sempre os mesmos nomes, em qualquer domínio):
 
@@ -162,7 +162,7 @@ Cada etapa que cria entidades/camadas segue esta sequência, uma rodada por vez,
 3. **Rodada 3 — Service (regras de negócio) + testes de service.**
 4. **Rodada 4 — Controller/REST + testes de controller + validação manual via `curl` (seção "Validação" da etapa).**
 
-Se a etapa tiver `Policy`/`Validator` próprio (ex.: `GraphConsistencyPolicy` na etapa 07), ele entra na Rodada 3, junto do Service, porque é regra de negócio. Pedir ao GPT explicitamente "rodada N desta etapa" em cada conversa — nunca pedir "implemente a etapa inteira" de uma vez.
+Se a etapa tiver `Policy`/`Validator` próprio (ex.: `GraphConsistencyPolicy` na etapa 08), ele entra na Rodada 3, junto do Service, porque é regra de negócio. Pedir ao GPT explicitamente "rodada N desta etapa" em cada conversa — nunca pedir "implemente a etapa inteira" de uma vez.
 
 ## 8. Consistência entre rodadas e entre etapas
 
@@ -185,9 +185,9 @@ Os 5 papéis, sempre nesta ordem de prioridade quando uma resolução precisar e
 
 ### 9.2 Módulos como portão de acesso (ADR-0015)
 
-`ProductModule.enabled` (etapa 06) não é só um dado consultável pela UI — é um **portão real** que os próprios endpoints de domínio verificam antes de processar qualquer requisição. Mecanismo: anotação `@RequireModule(ModuleKey.X)` no método do controller + `ModuleAccessAspect` (Spring AOP, implementado na etapa 06) que verifica `ProductModule.enabled=true` para o `productId` do path; se desabilitado, `403` com corpo `{"error": "MODULE_DISABLED", "moduleKey": "X"}` — vale até para `SUPER_ADMIN`.
+`ProductModule.enabled` (etapa 07) não é só um dado consultável pela UI — é um **portão real** que os próprios endpoints de domínio verificam antes de processar qualquer requisição. Mecanismo: anotação `@RequireModule(ModuleKey.X)` no método do controller + `ModuleAccessAspect` (Spring AOP, implementado na etapa 07) que verifica `ProductModule.enabled=true` para o `productId` do path; se desabilitado, `403` com corpo `{"error": "MODULE_DISABLED", "moduleKey": "X"}` — vale até para `SUPER_ADMIN`.
 
-Domínios gateados por módulo (etapa → `@RequireModule`): `07`/`17` → `KNOWLEDGE_GRAPH`; `10` → `CONTENT`; `11` → `ASSETS`; `12` → `FORMS`; `13` → `ANALYTICS`; `21` → `PAGES`. Domínios **não** gateados (fundação, sempre disponíveis): `09` (tenants/ProductAssignment), `14` (users), `15` (audit), `16` (settings/dashboard), `23` (notification), `25` (feedback — reportar problema não depende de nenhum módulo do produto).
+Domínios gateados por módulo (etapa → `@RequireModule`): `08`/`18` → `KNOWLEDGE_GRAPH`; `11` → `CONTENT`; `12` → `ASSETS`; `13` → `FORMS`; `14` → `ANALYTICS`; `22` → `PAGES`. Domínios **não** gateados (fundação, sempre disponíveis): `09` (health/status), `10` (tenants/ProductAssignment), `15` (users), `16` (audit), `17` (settings/dashboard), `24` (notification), `26` (feedback — reportar problema não depende de nenhum módulo do produto).
 
 Toda etapa de domínio gateada por módulo adiciona, nos próprios critérios de aceite, o cenário "módulo desabilitado para o produto → 403 `MODULE_DISABLED`" como teste obrigatório de Rodada 4 (controller).
 
@@ -198,7 +198,7 @@ Toda etapa traz, na própria seção "Validação", um bloco de `curl` — isso 
 ### 11.1 Estrutura da collection (criada na etapa 03, estendida a partir daí)
 
 - **Variáveis de collection** (`variable`, na raiz do JSON): `baseUrl` (`http://localhost:8080/api/v1`), `keycloakIssuer` (`http://localhost:8282/realms/aegis`), `clientId` (`aegis-web`), e `token` (vazio até a primeira autenticação — preenchido automaticamente, ver 11.2). Toda URL de request usa `{{baseUrl}}/...`, nunca o host hardcoded.
-- **Pasta "Auth" (criada na etapa 03, junto do Keycloak)**: um request `POST {{keycloakIssuer}}/protocol/openid-connect/token` por usuário de teste (`super-admin`, `admin`, `pm`, `editor`, `viewer` — mesmos 5 da etapa 20) — body `x-www-form-urlencoded` com `grant_type=password`, `client_id={{clientId}}`, `username=<usuário>`, `password=senha123` (mesma senha de teste da etapa 20). Rodar qualquer um desses requests troca o "usuário atual" da sessão de teste.
+- **Pasta "Auth" (criada na etapa 03, junto do Keycloak)**: um request `POST {{keycloakIssuer}}/protocol/openid-connect/token` por usuário de teste (`super-admin`, `admin`, `pm`, `editor`, `viewer` — mesmos 5 da etapa 21) — body `x-www-form-urlencoded` com `grant_type=password`, `client_id={{clientId}}`, `username=<usuário>`, `password=senha123` (mesma senha de teste da etapa 21). Rodar qualquer um desses requests troca o "usuário atual" da sessão de teste.
 - **Script de captura automática do token** (aba "Scripts" → "Post-response" de cada request da pasta "Auth", Postman moderno — ou `event: ["test"]` no JSON exportado):
   ```js
   const body = pm.response.json();
@@ -206,7 +206,7 @@ Toda etapa traz, na própria seção "Validação", um bloco de `curl` — isso 
   ```
   Isso elimina copiar/colar token manualmente — rodar um request de "Auth" já deixa `{{token}}` pronto para todo o resto da collection.
 - **Authorization no nível da collection** (não em cada request individual): `Bearer Token`, valor `{{token}}`, com cada request/pasta nova herdando ("Inherit auth from parent") — assim nenhum request precisa configurar autenticação própria, só os da pasta "Auth" (que não exigem token, são o próprio login).
-- **Uma pasta por etapa de domínio** (`03 - Keycloak`, `05 - Me`, `06 - Core`, `07 - Knowledge Graph`, `09 - Tenants e ProductAssignment`, ..., até `24 - Templates de produto`), cada uma com um request por `curl` documentado na etapa correspondente — mesmo método, path, body; descrição do request (campo `description` do Postman) cita a regra de negócio que aquele request valida, para a collection servir como documentação executável, não só uma lista de chamadas soltas.
+- **Uma pasta por etapa de domínio** (`03 - Keycloak`, `05 - Me`, `07 - Core`, `08 - Knowledge Graph`, `10 - Tenants e ProductAssignment`, ..., até `25 - Templates de produto`), cada uma com um request por `curl` documentado na etapa correspondente — mesmo método, path, body; descrição do request (campo `description` do Postman) cita a regra de negócio que aquele request valida, para a collection servir como documentação executável, não só uma lista de chamadas soltas.
 
 ### 11.2 O que o GPT entrega ao final de cada etapa
 
@@ -216,29 +216,29 @@ A pasta "Auth" da etapa 03 nunca precisa ser refeita nas etapas seguintes — s�
 
 ## 10. Isolamento entre tenants e produtos — obrigatório em todo domínio, não só nos que já mencionam
 
-As etapas 06, 07, 09, 11 e 16 já aplicam a regra "recurso de outro tenant/produto retorna 404, nunca 403 (não revelar existência)" explicitamente. Uma auditoria de consistência encontrou que essa regra **não estava repetida** nas etapas 10 (content), 12 (forms), 13 (analytics), 14 (users), 15 (audit), 17 (Knowledge Graph extras), 21 (pages) e 23 (notification) — o que não significa que a regra não vale para elas; significa que ela precisa ser explícita em **toda** etapa, não só nas que já a mencionavam por acaso.
+As etapas 07, 08, 10, 12 e 17 já aplicam a regra "recurso de outro tenant/produto retorna 404, nunca 403 (não revelar existência)" explicitamente. Uma auditoria de consistência encontrou que essa regra **não estava repetida** nas etapas 11 (content), 13 (forms), 14 (analytics), 15 (users), 16 (audit), 18 (Knowledge Graph extras), 22 (pages) e 24 (notification) — o que não significa que a regra não vale para elas; significa que ela precisa ser explícita em **toda** etapa, não só nas que já a mencionavam por acaso.
 
 **Regra, válida para toda entidade que pertence a um tenant ou produto (direta ou transitivamente, ex.: uma seção pertence a uma página que pertence a um produto):**
 
 1. Toda consulta por ID (`GET/PUT/PATCH/DELETE /.../{id}`) verifica, no `Service` (nunca só no `Controller`, nunca confiando em o frontend mandar o `tenantId`/`productId` certo), que o recurso pertence ao tenant/produto que o usuário autenticado tem permissão de acessar — usando a membership/atribuição do token (`AuthenticatedUser`), nunca um parâmetro que o client poderia manipular.
 2. Se o recurso existe mas pertence a outro tenant/produto: **404**, nunca 403 — não revelar que o recurso existe para quem não tem acesso a ele.
-3. Toda etapa de domínio (10, 12, 13, 14, 15, 17, 21, 23 incluídas, sem exceção) adiciona um cenário de teste explícito desta regra na Rodada 3 (Service, com mocks) e repete como critério de aceite — não é opcional só porque a etapa não cita a palavra "tenant" no nome.
+3. Toda etapa de domínio (11, 13, 14, 15, 16, 18, 22, 24 incluídas, sem exceção) adiciona um cenário de teste explícito desta regra na Rodada 3 (Service, com mocks) e repete como critério de aceite — não é opcional só porque a etapa não cita a palavra "tenant" no nome.
 4. Esta regra é independente do module-gating (Seção 9.2): module-gating bloqueia porque o **produto** não tem o módulo ligado; isolamento bloqueia porque o recurso **não pertence** ao escopo do usuário. Um endpoint pode (e geralmente vai) precisar das duas checagens, nesta ordem: módulo habilitado → depois, recurso pertence ao escopo do usuário.
 
 **Regra adicional — conteúdo de produto para SUPER_ADMIN (ADR-0018):**
 
-5. Para domínios de **conteúdo de produto** (content, pages, assets, forms, analytics, knowledge graph — etapas 08, 11, 12, 13, 17, 21), a verificação de acesso usa o `ProductAccessResolver` implementado na etapa 07 **antes** do module-gating:
+5. Para domínios de **conteúdo de produto** (content, pages, assets, forms, analytics, knowledge graph — etapas 08, 11, 12, 13, 14, 18 e 22), a verificação de acesso usa o `ProductAccessResolver` implementado na etapa 07 **antes** do module-gating:
    - `SUPER_ADMIN` com `ProductAssignment` ativo para o produto → passa (usa papel do assignment)
    - `SUPER_ADMIN` sem `ProductAssignment` → **403** `PRODUCT_CONTENT_ACCESS_DENIED` — diferente do 404 cross-tenant, porque o SUPER_ADMIN sabe que o produto existe
    - `TENANT_ADMIN` com `TenantMembership` no tenant do produto → passa
    - `PRODUCT_MANAGER | EDITOR | VIEWER` com `ProductAssignment` → passa
    - Qualquer outro caso → 404
-6. Domínios de **infraestrutura** (tenants, users, settings, audit, notifications — etapas 09, 10, 15, 16, 24) **não** usam `ProductAccessResolver` — seguem apenas a regra geral dos itens 1-4 acima.
+6. Domínios de **infraestrutura** (health/status, tenants, users, settings, audit, notifications — etapas 09, 10, 15, 16, 17 e 24) **não** usam `ProductAccessResolver` — seguem apenas a regra geral dos itens 1-4 acima.
 7. `ProductAccessResolver` centraliza esta lógica. **Nunca duplicar** a lógica de acesso de conteúdo em cada Service — sempre delegar ao `ProductAccessResolver` e cobrir os 5 cenários (SUPER_ADMIN com/sem assignment, TENANT_ADMIN, PRODUCT_MANAGER, cross-tenant) nos testes da Rodada 3 da etapa de domínio correspondente.
 
 ## 12. Artefato de continuidade entre etapas: `SPRINT-RESULTADO.md`
 
-Cada etapa é colada numa conversa **nova** do GPT — sem memória do que foi decidido nas etapas anteriores. Isso já causou retrabalho: decisões que uma etapa explicitamente deixava "a cargo do GPT, documentar a escolha" (ex.: ordem de habilitação de módulos com dependência, formato exato do `id` legível do feedback, se o provisionamento de pasta é síncrono ou assíncrono) ficavam presas só naquela conversa, perdidas ao abrir a próxima. A partir desta revisão, todo esse conhecimento passa por um único arquivo cumulativo, versionado junto da pasta de etapas: `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md`.
+Cada etapa é colada numa conversa **nova** do GPT — sem memória do que foi decidido nas etapas anteriores. Isso já causou retrabalho: decisões que uma etapa explicitamente deixava "a cargo do GPT, documentar a escolha" (ex.: ordem de habilitação de módulos com dependência, formato exato do `id` legível do feedback, se o provisionamento de pasta é síncrono ou assíncrono) ficavam presas só naquela conversa, perdidas ao abrir a próxima. A partir desta revisão, todo esse conhecimento passa por um único arquivo cumulativo, versionado junto da pasta de etapas: `docs/sprints/backend/SPRINT-RESULTADO.md`.
 
 ### 12.1 Regra de uso (você, fora do GPT)
 

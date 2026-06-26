@@ -1,4 +1,4 @@
-# SPRINT-RESULTADO.md
+# Sprint 01 — Estrutura do repositório e variáveis de ambiente
 
 ## Etapa Concluída
 
@@ -58,7 +58,7 @@ aegis-pms/
 ### Documentação
 
 - docs/
-- docs/sprints/sprint-02-fundacao-backend-gpt/
+- docs/sprints/backend/
 
 ---
 

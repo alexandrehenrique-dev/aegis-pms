@@ -1,4 +1,4 @@
-# SPRINT_05_IDENTITY_AND_ACCESS_RESULTADO.md
+# Sprint 05 — Security Resource Server e /api/v1/me
 
 # Sprint 05 — Identity and Access
 
