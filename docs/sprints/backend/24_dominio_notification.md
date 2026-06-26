@@ -1,6 +1,6 @@
-# Etapa 23 — Domínio `notification` (onboarding + notificações direcionadas)
+# Etapa 24 — Domínio `notification` (onboarding + notificações direcionadas)
 
-> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 06 (Tenant/Product/Membership), 09 (ProductAssignment) e 14 (Users) concluídas — esta etapa precisa resolver "todos os usuários", "usuários de um tenant" e "usuários específicos" como destinatários. Etapa adicionada pela Sprint 14 do frontend (`docs/sprints/14_onboarding_real_e_sistema_de_notificacoes.md`), depois da fundação e dos domínios de produto já estarem todos especificados — por isso entra numerada depois da etapa 22 (checklist final), mesmo padrão já usado para a etapa 21 (`pages`, adicionada pela Sprint 11).
+> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 07 (Tenant/Product/Membership), 10 (ProductAssignment) e 15 (Users) concluídas — esta etapa precisa resolver "todos os usuários", "usuários de um tenant" e "usuários específicos" como destinatários. Etapa adicionada pela Sprint 14 do frontend (`docs/sprints/14_onboarding_real_e_sistema_de_notificacoes.md`), depois da fundação e dos domínios de produto já estarem todos especificados — por isso entra numerada depois da etapa 23 (checklist final), mesmo padrão já usado para a etapa 22 (`pages`, adicionada pela Sprint 11).
 
 ## Contexto fixo
 
@@ -14,7 +14,7 @@ CRUD de notificações pelo Super Admin, com fan-out para os destinatários corr
 
 ### A. Entidades
 
-**Notification**: `id`, `type` (`"ONBOARDING"|"FEATURE"|"WARNING"|"MAINTENANCE"|"GENERAL"`), `title`, `bodyMarkdown` (texto markdown — mesma convenção/regra de sanitização das etapas 10 e 21: allowlist `p, strong, em, ul, ol, li, blockquote, h2, h3, a, br, span (span só com atributo class, e só um dos 6 valores fixos de cor da Sprint 18 — nunca style nem qualquer outro atributo)`, bloquear `javascript:`/`data:`, nunca `<script>`/`<iframe>`), `presentationMode` (`"MODAL_ONCE"|"BELL_ONLY"`), `createdBySubject`, `createdAt`, `updatedAt`.
+**Notification**: `id`, `type` (`"ONBOARDING"|"FEATURE"|"WARNING"|"MAINTENANCE"|"GENERAL"`), `title`, `bodyMarkdown` (texto markdown — mesma convenção/regra de sanitização das etapas 11 e 22: allowlist `p, strong, em, ul, ol, li, blockquote, h2, h3, a, br, span (span só com atributo class, e só um dos 6 valores fixos de cor da Sprint 18 — nunca style nem qualquer outro atributo)`, bloquear `javascript:`/`data:`, nunca `<script>`/`<iframe>`), `presentationMode` (`"MODAL_ONCE"|"BELL_ONLY"`), `createdBySubject`, `createdAt`, `updatedAt`.
 
 **UserNotificationStatus**: `id`, `notificationId`, `userSubject`, `autoShown` (boolean, default `false`), `read` (boolean, default `false`), `readAt?`, `shownAt?`, `createdAt`. Constraint única em `(notificationId, userSubject)` — um destinatário nunca tem duas linhas de status para a mesma notificação.
 
@@ -64,17 +64,17 @@ type CreateNotificationRequest = {
 - `GET /notifications/mine/pending-modal` só considera notificações com `presentationMode: "MODAL_ONCE"` — uma notificação `"BELL_ONLY"` nunca aparece aqui, mesmo que `autoShown=false` (ela simplesmente nunca é "mostrada automaticamente", só existe para `GET /mine`).
 - `mark-shown` é idempotente (chamar duas vezes não dá erro, só garante `autoShown=true`); o mesmo vale para `mark-read`.
 - `mark-read` **não exige** que `autoShown` já seja `true` — o usuário pode marcar como lida uma notificação que nunca foi mostrada automaticamente (ex.: leu direto pelo sino antes do gate automático rodar, em alguma race condition de UI).
-- Onboarding (`type: "ONBOARDING"`) é criado **uma vez** (seed, etapa 24/20 — ver Seção E) e seu fan-out para um usuário novo acontece automaticamente no momento da criação do usuário (etapa 14, fluxo de convite) — não é o Super Admin que cria a notificação de onboarding manualmente a cada novo usuário.
+- Onboarding (`type: "ONBOARDING"`) é criado **uma vez** (seed, etapa 21 — ver Seção E) e seu fan-out para um usuário novo acontece automaticamente no momento da criação do usuário (etapa 15, fluxo de convite) — não é o Super Admin que cria a notificação de onboarding manualmente a cada novo usuário.
 - **Isolamento por usuário** (`00_padrao_qualidade_e_arquitetura.md`, Seção 10): `mark-shown`/`mark-read` e `GET /notifications/mine*` operam **sempre** sobre o `UserNotificationStatus` do próprio chamador (`userSubject` resolvido do token, nunca de um `userId` no body/path) — não existe forma de um usuário marcar como lida/vista a notificação de outro usuário. Se o `notificationId` informado não tiver `UserNotificationStatus` para o chamador, retorna 404 (recurso não existe **para ele**, mesmo que exista para outros destinatários).
 
 ### D. Sanitização de markdown
 
-Mesma regra das etapas 10 e 21 — `bodyMarkdown` passa pela mesma função de sanitização (reaproveitar a implementação já existente, não duplicar) antes de persistir, em `POST /notifications`.
+Mesma regra das etapas 11 e 22 — `bodyMarkdown` passa pela mesma função de sanitização (reaproveitar a implementação já existente, não duplicar) antes de persistir, em `POST /notifications`.
 
-### E. Integração com a etapa 14 (convite de usuário) e com o seed (etapa 20)
+### E. Integração com a etapa 15 (convite de usuário) e com o seed (etapa 21)
 
-1. Etapa 14 (`UserService`, fluxo de convite/criação de usuário): depois de criar a `TenantMembership` do novo usuário, chamar `NotificationService.assignOnboarding(userSubject)` — cria a `UserNotificationStatus` (`autoShown=false`, `read=false`) ligando o usuário novo à notificação `ONBOARDING` já existente (criada no seed/migration, não recriada a cada usuário).
-2. Etapa 20 (seed): garantir que a notificação `ONBOARDING` exista (via migration Flyway, não `CommandLineRunner` — é dado técnico/fixo, não dado de demonstração) com um `bodyMarkdown` inicial razoável (pode ser o mesmo texto-guia já escrito no mock do frontend pela Sprint 14) e fazer o fan-out para os 5 usuários de teste já seedados.
+1. Etapa 15 (`UserService`, fluxo de convite/criação de usuário): depois de criar a `TenantMembership` do novo usuário, chamar `NotificationService.assignOnboarding(userSubject)` — cria a `UserNotificationStatus` (`autoShown=false`, `read=false`) ligando o usuário novo à notificação `ONBOARDING` já existente (criada no seed/migration, não recriada a cada usuário).
+2. Etapa 21 (seed): garantir que a notificação `ONBOARDING` exista (via migration Flyway, não `CommandLineRunner` — é dado técnico/fixo, não dado de demonstração) com um `bodyMarkdown` inicial razoável (pode ser o mesmo texto-guia já escrito no mock do frontend pela Sprint 14) e fazer o fan-out para os 5 usuários de teste já seedados.
 
 ## Critérios de aceite
 
@@ -84,8 +84,8 @@ Mesma regra das etapas 10 e 21 — `bodyMarkdown` passa pela mesma função de s
 - [ ] `mark-shown`/`mark-read` são idempotentes.
 - [ ] Notificação `BELL_ONLY` nunca aparece em `pending-modal`.
 - [ ] Usuário não `SUPER_ADMIN` tentando `POST`/`GET /notifications` (admin) recebe 403.
-- [ ] Usuário novo criado via convite (etapa 14) já nasce com `UserNotificationStatus` de onboarding pendente.
-- [ ] `bodyMarkdown` passa pela mesma sanitização das etapas 10/21 (tag fora da allowlist é removida, `javascript:` é bloqueado).
+- [ ] Usuário novo criado via convite (etapa 15) já nasce com `UserNotificationStatus` de onboarding pendente.
+- [ ] `bodyMarkdown` passa pela mesma sanitização das etapas 11/22 (tag fora da allowlist é removida, `javascript:` é bloqueado).
 - [ ] `mark-shown`/`mark-read` de um `notificationId` sem `UserNotificationStatus` para o chamador retorna 404 — usuário não consegue marcar notificação de outro usuário.
 
 ## Validação
@@ -123,12 +123,12 @@ curl -i -X POST http://localhost:8080/api/v1/notifications \
 - Entregar em rodadas:
   1. `Notification`, `UserNotificationStatus` (entities) + `NotificationRepository`, `UserNotificationStatusRepository` (com a constraint única e as queries de filtro) + testes `@DataJpaTest`.
   2. `NotificationMapper` (MapStruct) + testes de mapper.
-  3. `NotificationService` (criação + fan-out por tipo de `target`, `pending-modal`, `mark-shown`/`mark-read`, integração com a etapa 14) + testes com mocks — cada tipo de `target` (`ALL`/`TENANT`/`USERS`) com teste próprio, incluindo o caso de `userId` inexistente.
+  3. `NotificationService` (criação + fan-out por tipo de `target`, `pending-modal`, `mark-shown`/`mark-read`, integração com a etapa 15) + testes com mocks — cada tipo de `target` (`ALL`/`TENANT`/`USERS`) com teste próprio, incluindo o caso de `userId` inexistente.
   4. `NotificationController` (endpoints da Seção B) + testes `@WebMvcTest` (incluindo o 403 para papel não autorizado) + validação via `curl`.
 
 ## Artefato de continuidade — `SPRINT-RESULTADO.md`
 
-> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
+> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/backend/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
 
 ## Commit sugerido
 

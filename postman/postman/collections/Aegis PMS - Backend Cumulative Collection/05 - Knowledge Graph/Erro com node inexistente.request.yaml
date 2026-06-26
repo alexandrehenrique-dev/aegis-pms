@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/api/v1/products/{{productId}}/graph/nodes/00000000-0000-0000-0000-000000000000"
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 404', () => pm.response.to.have.status(404));
+      const json = pm.response.json();
+      pm.test('erro claro', () => pm.expect(json.error).to.eql('GRAPH_NODE_NOT_FOUND'));
+    language: text/javascript
+order: 9000

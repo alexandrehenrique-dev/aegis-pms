@@ -1,0 +1,26 @@
+$kind: collection
+description: Collection cumulativa de validação do backend Aegis PMS, incluindo Health/Status da Sprint 09.
+variables:
+  baseUrl: http://localhost:8080
+  username: loki
+  password: "123456"
+  token: ""
+  refreshToken: ""
+  tenantKey: ""
+  tenantId: ""
+  productKey: ""
+  productId: ""
+  s3ProductKey: ""
+  s3ProductId: ""
+  articleNodeId: ""
+  topicNodeId: ""
+  graphEdgeId: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      if (!pm.collectionVariables.get('baseUrl')) { pm.collectionVariables.set('baseUrl', 'http://localhost:8080'); }
+      if (!pm.collectionVariables.get('username')) { pm.collectionVariables.set('username', 'loki'); }
+      if (!pm.collectionVariables.get('password')) { pm.collectionVariables.set('password', '123456'); }
+      if (!pm.collectionVariables.get('tenantKey')) { pm.collectionVariables.set('tenantKey', 'byop-' + Date.now()); }
+      if (!pm.collectionVariables.get('productKey')) { pm.collectionVariables.set('productKey', 'maestro-beton-' + Date.now()); }
+    language: text/javascript

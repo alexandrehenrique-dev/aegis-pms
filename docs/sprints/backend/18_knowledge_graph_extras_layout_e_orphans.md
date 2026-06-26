@@ -1,4 +1,4 @@
-# Etapa 17 — Knowledge Graph: layout persistente, props ricas e nós órfãos
+# Etapa 18 — Knowledge Graph: layout persistente, props ricas e nós órfãos
 
 > Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapa 07 concluída (Knowledge Graph MVP).
 
@@ -97,7 +97,7 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/products/<pr
 
 ## Artefato de continuidade — `SPRINT-RESULTADO.md`
 
-> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
+> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/backend/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
 
 ## Commit sugerido
 

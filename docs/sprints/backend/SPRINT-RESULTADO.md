@@ -111,3 +111,15 @@
 **Retrofits pendentes para etapas futuras:** integração com Content/refs inline, OpenAPI e eventuais extras do Knowledge Graph (layout, órfãos, preview leve) permanecem fora deste recorte. A collection Postman cumulativa já inclui os cenários manuais da Sprint 08.
 
 **Cobertura de testes:** `mvn clean verify` com `BUILD SUCCESS`, 257 testes, 0 falhas, 0 erros, 0 ignorados e JaCoCo aprovado (`All coverage checks have been met`). Auditoria Spring Modulith e homologação manual via Postman aprovadas. Evidências detalhadas da sprint: `results/sprint-8.md`.
+
+## Etapa 09 — Health, info e readiness (concluída em 2026-06-26)
+
+**Classes criadas/alteradas:** `SystemStatusController`, `SystemStatusResponse`, `SystemStatusService`, `SystemStatusControllerTest`, `SystemStatusServiceTest`, `ModulithArchitectureTest`; `SecurityConfigTest` foi atualizado para cobrir a exposição pública de `/actuator/health` e `/actuator/info` no recorte de segurança.
+
+**Endpoints confirmados:** `GET /actuator/health`; `GET /actuator/info`; `GET /api/v1/system/status`.
+
+**Decisões de implementação registradas pelo GPT:** status de banco implementado via `JdbcTemplate` com `select 1`; status do Knowledge Graph obtido por presença do bean `knowledgeGraphService`, sem importar service/repository interno do módulo; `BuildProperties` usado quando disponível e fallback `0.0.1-SNAPSHOT` quando ausente; falhas de banco são serializadas em `databaseMessage` com mensagem legível, sem stack trace bruto.
+
+**Retrofits pendentes para etapas futuras:** nenhum retrofit obrigatório identificado. SonarQube for IDE não foi executado via CLI nesta etapa; sem alertas bloqueantes registrados pelo humano responsável na validação de integração.
+
+**Cobertura de testes:** `mvn clean verify` com `BUILD SUCCESS`, 268 testes, 0 falhas, 0 erros, 0 ignorados e JaCoCo aprovado (`All coverage checks have been met`). Auditoria Spring Modulith aprovada via `ModulithArchitectureTest`. Validação de integração/manual confirmada pelo humano responsável antes do commit. Evidências detalhadas da sprint: `results/sprint-9.md`.

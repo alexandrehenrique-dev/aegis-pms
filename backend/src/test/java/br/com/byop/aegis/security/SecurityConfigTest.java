@@ -52,6 +52,20 @@ class SecurityConfigTest {
                                     """))
                     .andExpect(status().isOk());
         }
+
+        @Test
+        void shouldAllowActuatorHealthWithoutBearerToken() throws Exception {
+
+            mockMvc.perform(get("/actuator/health"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void shouldAllowActuatorInfoWithoutBearerToken() throws Exception {
+
+            mockMvc.perform(get("/actuator/info"))
+                    .andExpect(status().isNotFound());
+        }
     }
 
     @Nested

@@ -1,10 +1,10 @@
-# Etapa 22 — OpenAPI/Swagger, testes mínimos e checklist final do servidor
+# Etapa 23 — OpenAPI/Swagger, testes mínimos e checklist final do servidor
 
-> Cole este arquivo inteiro numa conversa nova do GPT. Última etapa — pré-requisito: todas as etapas 01-21 concluídas.
+> Cole este arquivo inteiro numa conversa nova do GPT. Última etapa — pré-requisito: todas as etapas 01-22 concluídas.
 
 ## Contexto fixo
 
-Última etapa da Sprint 02: documentar a API completa (fundação + todos os domínios de produto), garantir uma cobertura mínima de testes nas regras críticas, e validar com um checklist único que tudo está de fato funcionando de ponta a ponta — inclusive os domínios adicionados nas etapas 09-17 e 21 (`content`, `assets`, `forms`, `analytics`, `users`, `audit`, `settings`, `dashboard`, `ProductAssignment`, `pages`).
+Última etapa da Sprint 02: documentar a API completa (fundação + todos os domínios de produto), garantir uma cobertura mínima de testes nas regras críticas, e validar com um checklist único que tudo está de fato funcionando de ponta a ponta — inclusive os domínios adicionados nas etapas 10-18 e 22 (`content`, `assets`, `forms`, `analytics`, `users`, `audit`, `settings`, `dashboard`, `ProductAssignment`, `pages`).
 
 ## Objetivo
 
@@ -23,7 +23,7 @@ Swagger funcionando em dev, suíte de testes mínima passando, e checklist final
 
 Classes (fundação): `TenantServiceTest`, `ProductServiceTest`, `ProductModuleServiceTest`, `KnowledgeGraphServiceTest`, `GraphConsistencyPolicyTest`, `AuthenticatedUserProviderTest`, e um smoke test de security.
 
-Classes (domínios, etapas 09-17 e 21): `ProductAssignmentServiceTest`, `ContentServiceTest` + `ContentWorkflowPolicyTest`, `AssetServiceTest`, `FormServiceTest` + `SubmissionServiceTest` + `FormDeliveryValidationTest`, `AnalyticsServiceTest`, `UserServiceTest`, `AuditServiceTest`, `SettingsServiceTest`, `PageServiceTest` + `SectionContentValidationTest` + `ProductGlobalsServiceTest`.
+Classes (domínios, etapas 10-18 e 22): `ProductAssignmentServiceTest`, `ContentServiceTest` + `ContentWorkflowPolicyTest`, `AssetServiceTest`, `FormServiceTest` + `SubmissionServiceTest` + `FormDeliveryValidationTest`, `AnalyticsServiceTest`, `UserServiceTest`, `AuditServiceTest`, `SettingsServiceTest`, `PageServiceTest` + `SectionContentValidationTest` + `ProductGlobalsServiceTest`.
 
 Cenários obrigatórios (fundação): criar tenant; criar produto (com `assetStorageStrategy` local e s3, confirmando que só `local` provisiona pasta); bloquear produto de tenant alheio; habilitar módulo válido; rejeitar módulo inválido; criar node; criar edge válida; rejeitar edge com node inexistente; rejeitar edge cross-tenant; listar neighbors; `/api/v1/me` sem token retorna 401; subir o backend com `AEGIS_STORAGE_LOCAL_PATH` inexistente e confirmar criação automática da pasta.
 
@@ -31,27 +31,27 @@ Cenários obrigatórios (domínios): editar/excluir tenant; `super_admin` lista 
 
 ### C. Checklist final do servidor funcional
 
-Confirmar, nesta ordem, tudo o que foi construído nas etapas 01-21:
+Confirmar, nesta ordem, tudo o que foi construído nas etapas 01-22:
 
-**Infra**: `docker compose up -d` sobe tudo · `aegis-postgres` healthy · `keycloak-postgres-aegis` healthy (nome do container; serviço `keycloak-postgres`) · `keycloak` acessível · `backend` acessível · volumes existem (`aegis_postgres_data`, `keycloak_aegis_postgres_data`, `aegis_assets_data` da etapa 19) · portas corretas (`aegis-postgres` em `5434`, `keycloak-postgres-aegis` em `5435`, ambas só no host — internamente os containers continuam na porta `5432` do Postgres) · dados persistem após restart · pasta de storage local existe automaticamente tanto containerizado quanto via `mvn spring-boot:run` direto (etapa 04), em qualquer SO.
+**Infra**: `docker compose up -d` sobe tudo · `aegis-postgres` healthy · `keycloak-postgres-aegis` healthy (nome do container; serviço `keycloak-postgres`) · `keycloak` acessível · `backend` acessível · volumes existem (`aegis_postgres_data`, `keycloak_aegis_postgres_data`, `aegis_assets_data` da etapa 20) · portas corretas (`aegis-postgres` em `5434`, `keycloak-postgres-aegis` em `5435`, ambas só no host — internamente os containers continuam na porta `5432` do Postgres) · dados persistem após restart · pasta de storage local existe automaticamente tanto containerizado quanto via `mvn spring-boot:run` direto (etapa 04), em qualquer SO.
 
 **Keycloak**: realm `aegis` existe · client `aegis-web` existe · as 5 roles globais existem, todas com prefixo `AEGIS_` (`AEGIS_SUPER_ADMIN`, `AEGIS_TENANT_ADMIN`, `AEGIS_PRODUCT_MANAGER`, `AEGIS_EDITOR`, `AEGIS_VIEWER` — ADR-0014, nunca "CONTENT_EDITOR" ou variante) · os 5 usuários de teste existem e persistem após restart · token pode ser emitido para cada um · OpenID config acessível.
 
 **Backend**: `/actuator/health` UP · `/api/v1/me` sem token = 401, com token = 200, e devolve `role` singular minúsculo (`"super_admin"`, nunca array/maiúsculo — ADR-0014) · Flyway criou as tabelas · Swagger abre em local · API usa `/api/v1`.
 
-**Autorização — papéis e módulos (ADR-0014/ADR-0015)**: `JwtRoleConverter` produz `ROLE_<NOME>` a partir de `AEGIS_<NOME>` do token · todo controller de domínio gateável por módulo (`07`/`17` Knowledge Graph, `10` content, `11` assets, `12` forms, `13` analytics, `21` pages) está anotado com `@RequireModule` e retorna 403 `MODULE_DISABLED` quando o módulo correspondente está desabilitado no produto, mesmo para `SUPER_ADMIN` · todo domínio com entidade escopada por tenant/produto (`09` a `17`, `21`, `23`) retorna 404 — nunca 403 — para recurso fora do escopo do usuário autenticado.
+**Autorização — papéis e módulos (ADR-0014/ADR-0015)**: `JwtRoleConverter` produz `ROLE_<NOME>` a partir de `AEGIS_<NOME>` do token · todo controller de domínio gateável por módulo (`08`/`18` Knowledge Graph, `11` content, `12` assets, `13` forms, `14` analytics, `22` pages) está anotado com `@RequireModule` e retorna 403 `MODULE_DISABLED` quando o módulo correspondente está desabilitado no produto, mesmo para `SUPER_ADMIN` · todo domínio com entidade escopada por tenant/produto (`10` a `18`, `22`) retorna 404 — nunca 403 — para recurso fora do escopo do usuário autenticado.
 
 **Core**: tenant pode ser criado/editado/excluído · `super_admin` vê todos os tenants · produto pode ser criado · produto pode habilitar módulo · listagem respeita membership · produto alheio não é acessível.
 
 **Fluxo Super Admin**: criar tenant → criar produto → atribuir produto a um usuário (existente e por convite) funciona de ponta a ponta via API, espelhando o wizard de 3 passos do frontend (`CreateTenantWizardModal.tsx`).
 
-**Domínios de produto**: `content`, `assets`, `forms`/`submissions`, `analytics`, `users`, `audit`, `settings`, `dashboard` — cada um responde aos endpoints da etapa correspondente (09-16) com os payloads exatos descritos em `docs/trace/00_endpoints_esperados.md`.
+**Domínios de produto**: `content`, `assets`, `forms`/`submissions`, `analytics`, `users`, `audit`, `settings`, `dashboard` — cada um responde aos endpoints da etapa correspondente (11-17) com os payloads exatos descritos em `docs/trace/00_endpoints_esperados.md`.
 
-**Pages (etapa 21)**: página pode ser criada com seções; seção fora do catálogo de `BlockType` é rejeitada; `hero` sem `title` ou imagem sem `alt` é rejeitado; reordenar seções persiste a nova ordem; excluir página remove seções em cascata; bloco `video` aceita upload (`category: "video"`) e YouTube, rejeitando URL fora do regex; `video-gallery` respeita o limite de 50 itens.
+**Pages (etapa 22)**: página pode ser criada com seções; seção fora do catálogo de `BlockType` é rejeitada; `hero` sem `title` ou imagem sem `alt` é rejeitado; reordenar seções persiste a nova ordem; excluir página remove seções em cascata; bloco `video` aceita upload (`category: "video"`) e YouTube, rejeitando URL fora do regex; `video-gallery` respeita o limite de 50 itens.
 
-**Knowledge Graph**: node pode ser criado · edge pode ser criada · neighbor pode ser consultado · edge inválida é bloqueada · cross-tenant é bloqueado · `x`/`y`/`props` persistem (etapa 17) · `/graph/orphans` retorna nós sem edge · `/graph/nodes/{nodeId}/preview` retorna o shape leve (`summary`/`difficulty` vindo do `Content` quando aplicável) · seed inicial funciona.
+**Knowledge Graph**: node pode ser criado · edge pode ser criada · neighbor pode ser consultado · edge inválida é bloqueada · cross-tenant é bloqueado · `x`/`y`/`props` persistem (etapa 18) · `/graph/orphans` retorna nós sem edge · `/graph/nodes/{nodeId}/preview` retorna o shape leve (`summary`/`difficulty` vindo do `Content` quando aplicável) · seed inicial funciona.
 
-**Frontend (React, via etapa 18)**: build gera `dist/` · backend serve a SPA · refresh de rota SPA funciona · API não cai no fallback da SPA.
+**Frontend (React, via etapa 19)**: build gera `dist/` · backend serve a SPA · refresh de rota SPA funciona · API não cai no fallback da SPA.
 
 **Padrão de qualidade e arquitetura (`00_padrao_qualidade_e_arquitetura.md`)**: `java -version` confirma **Java 25** · `pom.xml` declara **Spring Boot 4.1.x** (não 3.x) · `mvn clean verify` passa **e** o `jacoco:check` confirma 100% de cobertura (LINE e BRANCH) em todas as classes funcionais de todas as etapas (entities com comportamento, repositories, mappers, services, controllers, policies/validators — DTOs de transporte puro fora da régua) · todo `Repository` do projeto (`TenantRepository`, `ProductRepository`, `GraphNodeRepository`, `ContentRepository`, `AssetRepository`, `FormDefinitionRepository`, `AuditEventRepository`, `PageRepository`, etc.) tem Javadoc na interface e em todo método declarado · todo mapper é MapStruct (`grep -r "class.*MapperImpl" backend/src/main` não deve aparecer escrito manualmente fora do `target/generated-sources`) · nenhum teste usa `@MockBean`/`@SpyBean` (removidos no Spring Boot 4 — só `@MockitoBean`/`@MockitoSpyBean`).
 
@@ -63,8 +63,8 @@ Confirmar, nesta ordem, tudo o que foi construído nas etapas 01-21:
 - [ ] `mvn clean verify` (não só `test`) passa em todo o projeto, com o `jacoco:check` confirmando 100% de cobertura nas classes elegíveis de **todas** as etapas — não só a etapa que acabou de ser feita, o projeto inteiro.
 - [ ] Nenhum `Repository` do projeto está sem Javadoc na interface ou em algum método.
 - [ ] Nenhum uso de `@MockBean`/`@SpyBean` em nenhum teste do projeto.
-- [ ] `aegis-postman-collection.json` tem uma pasta por etapa (03 a 22), a pasta "Auth" autentica e captura `{{token}}` automaticamente para os 5 usuários de teste, e importar a collection no Postman permite rodar todo o fluxo (login → CRUD de cada domínio) sem editar nenhum request manualmente.
-- [ ] `SPRINT-RESULTADO.md` tem uma entrada por etapa concluída (01 a 22, sem nenhuma faltando), cada uma com classes criadas, endpoints confirmados e as decisões que a etapa deixou a critério do GPT já registradas (não vazias/genéricas).
+- [ ] `aegis-postman-collection.json` tem uma pasta por etapa (03 a 23), a pasta "Auth" autentica e captura `{{token}}` automaticamente para os 5 usuários de teste, e importar a collection no Postman permite rodar todo o fluxo (login → CRUD de cada domínio) sem editar nenhum request manualmente.
+- [ ] `SPRINT-RESULTADO.md` tem uma entrada por etapa concluída (01 a 23, sem nenhuma faltando), cada uma com classes criadas, endpoints confirmados e as decisões que a etapa deixou a critério do GPT já registradas (não vazias/genéricas).
 
 ## Validação
 
@@ -87,7 +87,7 @@ Percorrer o checklist da seção C item a item.
 
 ## Artefato de continuidade — `SPRINT-RESULTADO.md`
 
-> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/sprint-02-fundacao-backend-gpt/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
+> Ver `00_padrao_qualidade_e_arquitetura.md`, Seção 12. Antes do commit, gere/atualize `docs/sprints/backend/SPRINT-RESULTADO.md` (arquivo inteiro, nunca um diff) com a entrada desta etapa (template fixo da Seção 12.2): classes criadas, endpoints confirmados, qualquer decisão que esta etapa deixou a seu critério (registre a escolha real), e retrofits pendentes para etapas futuras. É o que a próxima conversa do GPT vai receber em vez da memória que ela não tem.
 
 ## Commit sugerido
 
@@ -98,4 +98,4 @@ git commit -m "feat(backend): swagger, testes minimos, 100% cobertura jacoco e c
 
 ## Ao terminar esta etapa
 
-Volte para `00_indice_e_instrucoes.md` e siga os passos finais de `git push`/merge da branch `sprint/02-fundacao-backend` em `develop`. A partir daqui, a Sprint 09 em diante volta a ser executada com Claude/Cowork (ver `docs/sprints/README.md` para a ordem recomendada).
+Volte para `00_indice_e_instrucoes.md` e siga os passos finais de `git push`/merge da branch `sprint/02-fundacao-backend` em `develop`. A partir daqui, a Sprint 24 em diante volta a ser executada com Claude/Cowork (ver `docs/sprints/README.md` para a ordem recomendada).
