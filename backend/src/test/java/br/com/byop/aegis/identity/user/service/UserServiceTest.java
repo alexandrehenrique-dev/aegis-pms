@@ -6,8 +6,11 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 class UserServiceTest {
 
@@ -16,35 +19,22 @@ class UserServiceTest {
 
     @Test
     void shouldFindUsers() {
-        List<UserResponse> users = List.of(
-                new UserResponse("user-id", "loki", "loki@teste.com", "loki", "de asgard", true)
-        );
-
+        List<UserResponse> users = List.of(new UserResponse("user-id", "loki", "loki@teste.com", "loki", "de asgard", true));
         when(keycloakAdminClient.findUsers()).thenReturn(users);
 
-        List<UserResponse> response = service.findUsers();
+        assertThat(service.findUsers()).isEqualTo(users);
 
-        assertEquals(users, response);
         verify(keycloakAdminClient).findUsers();
         verifyNoMoreInteractions(keycloakAdminClient);
     }
 
     @Test
     void shouldFindUserById() {
-        UserResponse user = new UserResponse(
-                "user-id",
-                "loki",
-                "loki@teste.com",
-                "loki",
-                "de asgard",
-                true
-        );
-
+        UserResponse user = new UserResponse("user-id", "loki", "loki@teste.com", "loki", "de asgard", true);
         when(keycloakAdminClient.findUserById("user-id")).thenReturn(user);
 
-        UserResponse response = service.findUserById("user-id");
+        assertThat(service.findUserById("user-id")).isEqualTo(user);
 
-        assertEquals(user, response);
         verify(keycloakAdminClient).findUserById("user-id");
         verifyNoMoreInteractions(keycloakAdminClient);
     }

@@ -1,0 +1,24 @@
+meta {
+  name: Restaurar usuario removido
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/users/{{tenantUserId}}/restore
+  body: none
+}
+
+docs {
+Objetivo: restaurar acesso de usuario removido, reabilitando Keycloak e exigindo UPDATE_PASSWORD, sem restaurar ProductAssignments automaticamente.
+Resultado esperado: 200, status ativo.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("usuario restaurado ativo", function() {
+    expect(res.body.status).to.equal("ativo");
+  });
+}

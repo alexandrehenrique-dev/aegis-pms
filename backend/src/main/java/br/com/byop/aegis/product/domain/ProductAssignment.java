@@ -73,6 +73,10 @@ public class ProductAssignment {
         this.status = ProductAssignmentStatus.INVITED;
     }
 
+    public void remove() {
+        this.status = ProductAssignmentStatus.REMOVED;
+    }
+
     public void assign() {
         this.status = ProductAssignmentStatus.ASSIGNED;
     }

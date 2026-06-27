@@ -42,4 +42,40 @@ public interface TenantMembershipRepository extends JpaRepository<TenantMembersh
      * @return {@code true} quando existe membership com o status informado
      */
     boolean existsByTenantIdAndUserSubjectAndStatus(UUID tenantId, String userSubject, TenantMembershipStatus status);
+
+    /**
+     * Lista memberships vinculadas a um tenant.
+     *
+     * @param tenantId identificador do tenant
+     * @return memberships do tenant informado
+     */
+    List<TenantMembership> findAllByTenantId(UUID tenantId);
+
+    /**
+     * Busca memberships por subject e status.
+     *
+     * @param userSubject subject do usuario no Keycloak
+     * @param status status esperado da membership
+     * @return memberships do usuario com o status informado
+     */
+    List<TenantMembership> findAllByUserSubjectAndStatus(String userSubject, TenantMembershipStatus status);
+
+    /**
+     * Conta memberships de um tenant por papeis e status.
+     *
+     * @param tenantId identificador do tenant
+     * @param roles papeis considerados administrativos
+     * @param status status esperado da membership
+     * @return quantidade de memberships encontradas
+     */
+    long countByTenantIdAndRoleInAndStatus(UUID tenantId, List<String> roles, TenantMembershipStatus status);
+
+    /**
+     * Verifica se existe membership com o mesmo tenant e e-mail normalizado no subject.
+     *
+     * @param tenantId identificador do tenant
+     * @param userSubject subject do usuario no Keycloak
+     * @return {@code true} quando ja existe membership para o usuario no tenant
+     */
+    boolean existsByTenantIdAndUserSubject(UUID tenantId, String userSubject);
 }

@@ -14,7 +14,11 @@ public class IdentityInvitationService {
     }
 
     public IdentityUser inviteByEmail(String email) {
-        UserResponse user = keycloakAdminClient.inviteUserByEmail(email);
+        return inviteByEmail(email, email);
+    }
+
+    public IdentityUser inviteByEmail(String email, String name) {
+        UserResponse user = keycloakAdminClient.inviteUser(email, name);
         return new IdentityUser(
                 user.id(),
                 user.username(),

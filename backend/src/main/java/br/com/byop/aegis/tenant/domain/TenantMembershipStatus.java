@@ -5,6 +5,8 @@ package br.com.byop.aegis.tenant.domain;
  */
 public enum TenantMembershipStatus {
     ACTIVE,
+    INVITED,
     SUSPENDED,
-    REVOKED
+    REVOKED,
+    REMOVED
 }

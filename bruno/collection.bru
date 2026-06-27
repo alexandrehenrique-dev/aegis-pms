@@ -9,6 +9,7 @@ script:pre-request {
   if (!bru.getVar('productKey')) { bru.setVar('productKey', 'maestro-beton-' + Date.now()); }
   if (!bru.getVar('userId')) { bru.setVar('userId', ''); }
   if (!bru.getVar('inviteEmail')) { bru.setVar('inviteEmail', 'guest-' + Date.now() + '@example.com'); }
+  if (!bru.getVar('tenantUserInviteEmail')) { bru.setVar('tenantUserInviteEmail', 'tenant-user-' + Date.now() + '@example.com'); }
   if (!bru.getVar('tenantName')) { bru.setVar('tenantName', 'BYOP'); }
   if (!bru.getVar('assetTagName')) { bru.setVar('assetTagName', 'institucional-' + Date.now()); }
   if (!bru.getVar('graphRefSeed')) { bru.setVar('graphRefSeed', String(Date.now())); }

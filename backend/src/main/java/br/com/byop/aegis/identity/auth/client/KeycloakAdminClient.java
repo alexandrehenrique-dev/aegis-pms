@@ -54,15 +54,52 @@ public class KeycloakAdminClient {
     }
 
     public UserResponse inviteUserByEmail(String email) {
+        return inviteUser(email, email);
+    }
+
+    public UserResponse inviteUser(String email, String name) {
         try {
             String accessToken = adminAccessToken();
             KeycloakUserResponse user = findUserByEmail(email, accessToken)
-                    .orElseGet(() -> createUserForInvitation(email, accessToken));
+                    .orElseGet(() -> createUserForInvitation(email, name, accessToken));
 
             executeResetPasswordEmail(user.id(), accessToken);
 
             return toUserResponse(user);
 
+        } catch (RestClientException exception) {
+            throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
+        }
+    }
+
+    public Optional<UserResponse> findUserByEmail(String email) {
+        try {
+            String accessToken = adminAccessToken();
+            return findUserByEmail(email, accessToken).map(KeycloakAdminClient::toUserResponse);
+        } catch (RestClientException exception) {
+            throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
+        }
+    }
+
+    public void executeActionsEmail(String userId, List<String> requiredActions) {
+        try {
+            String accessToken = adminAccessToken();
+            executeActionsEmail(userId, requiredActions, accessToken);
+        } catch (RestClientException exception) {
+            throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
+        }
+    }
+
+    public void setUserEnabled(String userId, boolean enabled) {
+        try {
+            String accessToken = adminAccessToken();
+            restClient.put()
+                    .uri(userByIdEndpoint(userId))
+                    .headers(headers -> headers.setBearerAuth(accessToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"enabled\":" + enabled + "}")
+                    .retrieve()
+                    .toBodilessEntity();
         } catch (RestClientException exception) {
             throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
         }
@@ -164,12 +201,19 @@ public class KeycloakAdminClient {
                 .findFirst();
     }
 
-    private KeycloakUserResponse createUserForInvitation(String email, String accessToken) {
+    private KeycloakUserResponse createUserForInvitation(String email, String name, String accessToken) {
         ResponseEntity<Void> response = restClient.post()
                 .uri(usersEndpoint())
                 .headers(headers -> headers.setBearerAuth(accessToken))
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new KeycloakCreateUserRequest(email, email, true, List.of("UPDATE_PASSWORD")))
+                .body(new KeycloakCreateUserRequest(
+                        email,
+                        email,
+                        firstName(name),
+                        lastName(name),
+                        true,
+                        List.of("UPDATE_PASSWORD")
+                ))
                 .retrieve()
                 .toBodilessEntity();
 
@@ -181,11 +225,15 @@ public class KeycloakAdminClient {
     }
 
     private void executeResetPasswordEmail(String userId, String accessToken) {
+        executeActionsEmail(userId, List.of("UPDATE_PASSWORD"), accessToken);
+    }
+
+    private void executeActionsEmail(String userId, List<String> requiredActions, String accessToken) {
         restClient.put()
                 .uri(executeActionsEmailEndpoint(userId))
                 .headers(headers -> headers.setBearerAuth(accessToken))
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(List.of("UPDATE_PASSWORD"))
+                .body(actionsJson(requiredActions))
                 .retrieve()
                 .toBodilessEntity();
     }
@@ -234,6 +282,32 @@ public class KeycloakAdminClient {
         return response.accessToken();
     }
 
+    private static String actionsJson(List<String> requiredActions) {
+        return requiredActions.stream()
+                .map(action -> "\"" + action + "\"")
+                .reduce((left, right) -> left + "," + right)
+                .map(actions -> "[" + actions + "]")
+                .orElse("[]");
+    }
+
+    private static String firstName(String name) {
+        String normalized = Objects.toString(name, "").trim();
+        if (normalized.isBlank()) {
+            return null;
+        }
+        int separator = normalized.indexOf(' ');
+        return separator < 0 ? normalized : normalized.substring(0, separator);
+    }
+
+    private static String lastName(String name) {
+        String normalized = Objects.toString(name, "").trim();
+        int separator = normalized.indexOf(' ');
+        if (separator < 0) {
+            return null;
+        }
+        return normalized.substring(separator + 1).trim();
+    }
+
     private record KeycloakAdminTokenResponse(
             @com.fasterxml.jackson.annotation.JsonProperty(ACCESS_TOKEN)
             String accessToken
@@ -253,6 +327,8 @@ public class KeycloakAdminClient {
     private record KeycloakCreateUserRequest(
             String username,
             String email,
+            String firstName,
+            String lastName,
             boolean enabled,
             List<String> requiredActions
     ) {

@@ -1,0 +1,25 @@
+meta {
+  name: Detalhar usuario do tenant
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/users/{{tenantUserId}}
+  body: none
+}
+
+docs {
+Objetivo: buscar detalhe do usuario convidado no tenant.
+Resultado esperado: 200 com shape TenantUserSummary.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("shape TenantUserSummary", function() {
+    expect(res.body).to.have.all.keys("userId", "name", "email", "role", "products", "status", "lastAccess", "inviteStatus");
+    expect(res.body.userId).to.equal(bru.getVar('tenantUserId'));
+  });
+}

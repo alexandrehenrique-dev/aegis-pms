@@ -1,0 +1,21 @@
+meta {
+  name: Remover usuario soft delete
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/users/{{tenantUserId}}
+  body: none
+}
+
+docs {
+Objetivo: remover usuario do tenant via soft delete, removendo ProductAssignments do tenant e auditando o evento.
+Resultado esperado: 204.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

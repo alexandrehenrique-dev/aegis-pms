@@ -22,7 +22,7 @@ class IdentityInvitationServiceTest {
 
     @Test
     void shouldInviteByEmailAndReturnIdentityUser() {
-        when(keycloakAdminClient.inviteUserByEmail("guest@byop.dev"))
+        when(keycloakAdminClient.inviteUser("guest@byop.dev", "guest@byop.dev"))
                 .thenReturn(new UserResponse("user-1", "guest", "guest@byop.dev", "Guest", "User", true));
 
         IdentityUser user = service.inviteByEmail("guest@byop.dev");
@@ -30,6 +30,16 @@ class IdentityInvitationServiceTest {
         assertThat(user.id()).isEqualTo("user-1");
         assertThat(user.username()).isEqualTo("guest");
         assertThat(user.email()).isEqualTo("guest@byop.dev");
+        assertThat(user.displayName()).isEqualTo("Guest User");
+    }
+
+    @Test
+    void shouldInviteByEmailAndName() {
+        when(keycloakAdminClient.inviteUser("guest@byop.dev", "Guest User"))
+                .thenReturn(new UserResponse("user-1", "guest", "guest@byop.dev", "Guest", "User", true));
+
+        IdentityUser user = service.inviteByEmail("guest@byop.dev", "Guest User");
+
         assertThat(user.displayName()).isEqualTo("Guest User");
     }
 }
