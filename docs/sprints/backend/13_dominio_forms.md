@@ -24,6 +24,7 @@ CRUD de definição de formulário (campos, ordem, obrigatoriedade) e de submiss
 
 ```txt
 GET  /api/v1/products/{productId}/forms
+POST /api/v1/products/{productId}/forms
 GET  /api/v1/products/{productId}/forms/{formId}
 PUT  /api/v1/products/{productId}/forms/{formId}
 GET  /api/v1/products/{productId}/forms/field-types
@@ -34,6 +35,8 @@ POST /api/v1/products/{productId}/forms/{formId}/publish
 ```
 
 Payloads:
+
+> **Decisão registrada na execução da Sprint 13:** o endpoint `POST /api/v1/products/{productId}/forms` é obrigatório para o fluxo real do produto, embora a lista inicial de endpoints trouxesse apenas `GET`/`PUT`. Sem ele, o frontend não teria como iniciar um formulário novo sem seed manual. O contrato usa o mesmo shape editável do builder (`name`, `type`, `fields`) e cria a definição em `Draft`.
 
 ```ts
 type FormSummary = {
@@ -109,6 +112,7 @@ Persistido em `FormDefinition.deliveryChannelsJson`. **Disparar de fato** a entr
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/products/<productId>/forms
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"name":"Candidatura","type":"application","fields":[{"label":"Email","type":"Email","required":true}]}' http://localhost:8080/api/v1/products/<productId>/forms
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/products/<productId>/forms/field-types
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/products/<productId>/forms/submissions
 ```

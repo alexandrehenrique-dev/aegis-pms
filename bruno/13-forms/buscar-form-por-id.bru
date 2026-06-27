@@ -1,0 +1,25 @@
+meta {
+  name: Buscar form por id
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms/{{formId}}
+  body: none
+}
+
+docs {
+Objetivo: carregar a definicao completa no FormBuilder.
+Resultado esperado: 200, fields preservado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("fields retornado", function() {
+    expect(res.body.fields).to.be.an('array');
+    expect(res.body.fields[0].label).to.equal("Email");
+  });
+}

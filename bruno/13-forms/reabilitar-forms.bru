@@ -1,0 +1,24 @@
+meta {
+  name: Reabilitar FORMS
+  type: http
+  seq: 17
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/FORMS/enable
+  body: none
+}
+
+docs {
+Objetivo: deixar o produto coerente para pastas futuras da collection Bruno.
+Resultado esperado: 200, enabled true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("FORMS reabilitado", function() {
+    expect(res.body.enabled).to.equal(true);
+  });
+}

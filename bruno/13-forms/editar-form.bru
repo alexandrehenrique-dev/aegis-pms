@@ -1,0 +1,49 @@
+meta {
+  name: Editar form
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms/{{formId}}
+  body: json
+}
+
+body:json {
+  {
+    "name": "Candidatura Conecta Talentos - Atualizada",
+    "type": "application",
+    "fields": [
+      {
+        "label": "Nome",
+        "type": "Texto",
+        "required": true
+      },
+      {
+        "label": "Email",
+        "type": "Email",
+        "required": true
+      },
+      {
+        "label": "Curriculo",
+        "type": "Upload",
+        "required": false,
+        "acceptedFileTypes": ["application/pdf"]
+      }
+    ]
+  }
+}
+
+docs {
+Objetivo: salvar definicao editada do FormBuilder, incluindo Upload com acceptedFileTypes.
+Resultado esperado: 200, nome atualizado e campos persistidos.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("nome atualizado", function() {
+    expect(res.body.name).to.include("Atualizada");
+  });
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Publicar form
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms/{{formId}}/publish
+  body: none
+}
+
+docs {
+Objetivo: publicar formulario valido, com ao menos um campo obrigatorio e labels unicos.
+Resultado esperado: 200, status Published.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("form publicado", function() {
+    expect(res.body.status).to.equal("Published");
+    expect(res.body.publication).to.not.equal("—");
+  });
+}

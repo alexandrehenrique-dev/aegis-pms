@@ -1,0 +1,24 @@
+meta {
+  name: Detalhe submission inexistente - 404
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms/{{formId}}/submissions/00000000-0000-0000-0000-000000000013
+  body: none
+}
+
+docs {
+Objetivo: cobrir o endpoint de detalhe de submission pela collection Bruno. Como a Sprint 13 nao expoe endpoint publico de criacao de submission, o cenario manual validavel pela collection e o 404 controlado.
+Resultado esperado: 404 SUBMISSION_NOT_FOUND.
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+  test("erro de submission ausente", function() {
+    expect(res.body.error).to.equal("SUBMISSION_NOT_FOUND");
+  });
+}

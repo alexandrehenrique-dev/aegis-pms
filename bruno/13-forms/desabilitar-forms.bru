@@ -1,0 +1,24 @@
+meta {
+  name: Desabilitar FORMS
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/FORMS/disable
+  body: none
+}
+
+docs {
+Objetivo: preparar o cenario de module-gating da Sprint 13.
+Resultado esperado: 200, enabled false.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("FORMS desabilitado", function() {
+    expect(res.body.enabled).to.equal(false);
+  });
+}

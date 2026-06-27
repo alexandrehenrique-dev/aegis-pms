@@ -1,0 +1,24 @@
+meta {
+  name: Listar submissions do produto
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms/submissions
+  body: none
+}
+
+docs {
+Objetivo: listar submissions agregadas dos forms do produto.
+Resultado esperado: 200, lista retornada.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("lista retornada", function() {
+    expect(res.body).to.be.an('array');
+  });
+}
