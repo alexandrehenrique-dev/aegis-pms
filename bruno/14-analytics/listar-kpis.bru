@@ -1,0 +1,25 @@
+meta {
+  name: Listar KPIs de analytics
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/analytics/kpis
+  body: none
+}
+
+docs {
+Objetivo: listar KPIs agregados de analytics por produto, derivados de content, submissions e assets.
+Resultado esperado: 200, lista com shape AnalyticsKpi.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("shape AnalyticsKpi", function() {
+    expect(res.body).to.be.an("array");
+    expect(res.body[0]).to.have.all.keys("label", "value", "comparison", "note", "tone");
+  });
+}

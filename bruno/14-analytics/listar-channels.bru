@@ -1,0 +1,26 @@
+meta {
+  name: Listar channels simulados
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/analytics/channels
+  body: none
+}
+
+docs {
+Objetivo: listar canais de analytics. Nesta sprint os dados sao simulados porque ainda nao existe instrumentacao real de trafego.
+Resultado esperado: 200, lista com shape ChannelRow e trend simulado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("shape ChannelRow simulado", function() {
+    expect(res.body).to.be.an("array");
+    expect(res.body[0]).to.have.all.keys("name", "visits", "conversion", "trend");
+    expect(res.body[0].trend).to.equal("simulado");
+  });
+}

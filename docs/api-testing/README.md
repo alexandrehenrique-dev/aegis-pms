@@ -29,7 +29,7 @@ cd bruno
 npx @usebruno/cli run --env local
 ```
 
-Roda a collection **inteira**, todas as pastas em sequência única, na ordem numérica. Isso é obrigatório (não rodar uma pasta isolada) porque variáveis capturadas em tempo de execução (token, IDs criados) só persistem dentro de uma mesma invocação do CLI — pastas posteriores dependem de IDs gerados pelas anteriores (ex.: `productId` criado em `02-products` é usado em `03-product-modules`, `05-knowledge-graph`, `11-content` e `12-assets`).
+Roda a collection **inteira**, todas as pastas em sequência única, na ordem numérica. Isso é obrigatório (não rodar uma pasta isolada) porque variáveis capturadas em tempo de execução (token, IDs criados) só persistem dentro de uma mesma invocação do CLI — pastas posteriores dependem de IDs gerados pelas anteriores (ex.: `productId` criado em `02-products` é usado em `03-product-modules`, `05-knowledge-graph`, `11-content`, `12-assets`, `13-forms` e `14-analytics`).
 
 Para rodar contra outro ambiente: `npx @usebruno/cli run --env dev` (ou `homolog`/`prod`, quando os respectivos `baseUrl` estiverem preenchidos).
 
@@ -62,7 +62,8 @@ bruno/
 ├── 10-product-assignments/
 ├── 11-content/
 ├── 12-assets/
-└── 13-forms/
+├── 13-forms/
+└── 14-analytics/
 ```
 
 Os números das pastas seguem a numeração das etapas do backend em `docs/sprints/backend/` (não há pastas `07`, `08`, `09` porque essas etapas não introduziram contratos REST novos cobertos nesta collection).

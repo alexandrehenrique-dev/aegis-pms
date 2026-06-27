@@ -14,15 +14,15 @@ Seed reprodutível de tenants + produtos + módulos habilitados + usuários/memb
 
 ### A. Seed de tenants e produtos
 
-Tenants: `BYOP` (plano Pro), `Aegis Labs` (plano Enterprise), `Cliente Norte` (plano Starter, status `suspenso`) — mesmos três tenants já usados no mock do frontend (`mockTenantsByUser`), para o login de `super-admin@byop.io` mostrar os mesmos dados em modo mock e em modo real.
+Tenants: `CLIENTES BETA` (plano Pro), `Aegis Labs` (plano Enterprise), `Cliente Norte` (plano Starter, status `suspenso`) — mesmos três tenants já usados no mock do frontend (`mockTenantsByUser`), para o login de `super-admin@byop.io` mostrar os mesmos dados em modo mock e em modo real.
 
-Produtos e módulos habilitados (tenant `BYOP`, salvo indicação contrária):
+Produtos e módulos habilitados (tenant `CLIENTES BETA`, salvo indicação contrária):
 
 - `maestro-beton`: CONTENT, PAGES, ASSETS, FORMS, SEO, ANALYTICS, MUSIC — **sem** KNOWLEDGE_GRAPH (Site Institucional, ver Sprint 11 Tarefa A.2/A.3: nenhum dos contratos pede cross-referência de conteúdo)
 - `conecta-talentos`: CONTENT, PAGES, FORMS, SUBMISSIONS, JOBS, SEO, ANALYTICS, INTEGRATIONS — **sem** KNOWLEDGE_GRAPH (Portal, desligado por padrão)
 - `alexandre-dev`: PORTFOLIO, CONTENT, PAGES, ASSETS, SEO, ANALYTICS — **sem** KNOWLEDGE_GRAPH (Portfolio, desligado por padrão, ligável manualmente)
 - `cmss`: CONTENT, PAGES, ASSETS, FORMS, SEO, ANALYTICS — **sem** KNOWLEDGE_GRAPH (Site Institucional, desligado por padrão)
-- `loki`: LIBRARY, BOOKS, MUSIC, CONTENT, SEO, ANALYTICS, KNOWLEDGE_GRAPH — **com** KNOWLEDGE_GRAPH ligado (módulo central do relacionamento obra↔música)
+- `loki`: PAGES, LIBRARY, BOOKS, MUSIC, CONTENT, SEO, ANALYTICS, KNOWLEDGE_GRAPH — **com** KNOWLEDGE_GRAPH ligado (módulo central do relacionamento obra↔música)
 - `wikidev`: KNOWLEDGE_BASE, CONTENT, COMMENTS, CONTRIBUTORS, FORMS, ANALYTICS, KNOWLEDGE_GRAPH — **com** KNOWLEDGE_GRAPH ligado (módulo central do produto)
 - tenant `Aegis Labs`: `aegis-core` (Produto SaaS), `aegis-docs` (Knowledge Base) — CONTENT, ANALYTICS, KNOWLEDGE_GRAPH em ambos.
 - tenant `Cliente Norte`: `portal-norte` (Portal) — CONTENT, PAGES, ANALYTICS.

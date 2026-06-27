@@ -1,0 +1,25 @@
+meta {
+  name: Listar health de analytics
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/analytics/health
+  body: none
+}
+
+docs {
+Objetivo: listar sinais de saude do produto calculados a partir dos dominios agregados.
+Resultado esperado: 200, lista com shape HealthSignal.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("shape HealthSignal", function() {
+    expect(res.body).to.be.an("array");
+    expect(res.body[0]).to.have.all.keys("label", "status", "score", "tone");
+  });
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Habilitar ANALYTICS no produto
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/ANALYTICS/enable
+  body: none
+}
+
+docs {
+Objetivo: habilitar o modulo ANALYTICS para validar os endpoints da Sprint 14 na execucao sequencial da collection.
+Resultado esperado: 200, enabled true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("ANALYTICS habilitado", function() {
+    expect(res.body.moduleKey).to.equal("ANALYTICS");
+    expect(res.body.enabled).to.equal(true);
+  });
+}

@@ -141,7 +141,25 @@ type ChannelRow = { name: string; visits: string; conversion: string; trend: str
 ```
 Motivo: `ChannelBreakdown.tsx`.
 
-**`GET /api/v1/products/{productId}/analytics/trends`**, **`GET .../analytics/reports`** — Motivo: `TrendCards.tsx`, `ReportGrid.tsx` (ainda sem contrato formal no frontend — telas hoje 100% estáticas, sem nem mock estruturado; precisarão de levantamento próprio antes de virar endpoint real).
+**`GET /api/v1/products/{productId}/analytics/trends`** —
+```ts
+type TrendCard = {
+  type: string; text: string; metric: string;
+  severity: string; reviewed: boolean;
+};
+// Response: TrendCard[]
+```
+Motivo: `TrendCards.tsx` renderiza cards de insight com tipo, texto, métrica, severidade e estado de revisão. A ação recomendada e a rota de navegação são derivadas no próprio componente a partir de `severity`.
+
+**`GET /api/v1/products/{productId}/analytics/reports`** —
+```ts
+type AnalyticsReport = {
+  name: string; description: string; period: string;
+  format: string; status: string; lastGenerated: string;
+};
+// Response: AnalyticsReport[]
+```
+Motivo: `ReportGrid.tsx` exibe cards de relatório; o frontend original usava arrays posicionais, formalizados aqui como campos nomeados para contrato JSON estável.
 
 ### B.5 `users`
 

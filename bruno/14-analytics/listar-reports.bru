@@ -1,0 +1,25 @@
+meta {
+  name: Listar reports
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/analytics/reports
+  body: none
+}
+
+docs {
+Objetivo: listar reports no shape definido a partir de ReportGrid.tsx.
+Resultado esperado: 200, lista com shape AnalyticsReport.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("shape AnalyticsReport", function() {
+    expect(res.body).to.be.an("array");
+    expect(res.body[0]).to.have.all.keys("name", "description", "period", "format", "status", "lastGenerated");
+  });
+}

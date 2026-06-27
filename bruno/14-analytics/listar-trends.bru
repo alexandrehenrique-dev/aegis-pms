@@ -1,0 +1,25 @@
+meta {
+  name: Listar trends
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/analytics/trends
+  body: none
+}
+
+docs {
+Objetivo: listar trend cards no shape definido a partir de TrendCards.tsx.
+Resultado esperado: 200, lista com shape TrendCard.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("shape TrendCard", function() {
+    expect(res.body).to.be.an("array");
+    expect(res.body[0]).to.have.all.keys("type", "text", "metric", "severity", "reviewed");
+  });
+}

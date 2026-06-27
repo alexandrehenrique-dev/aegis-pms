@@ -1,0 +1,25 @@
+meta {
+  name: Reabilitar ANALYTICS
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/ANALYTICS/enable
+  body: none
+}
+
+docs {
+Objetivo: restaurar o modulo ANALYTICS para nao deixar estado quebrado para pastas futuras da collection.
+Resultado esperado: 200, enabled true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("ANALYTICS reabilitado", function() {
+    expect(res.body.moduleKey).to.equal("ANALYTICS");
+    expect(res.body.enabled).to.equal(true);
+  });
+}
