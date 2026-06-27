@@ -1,5 +1,7 @@
 package br.com.byop.aegis.product.user.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.identity.api.IdentityUserLifecycleService;
 import br.com.byop.aegis.product.api.ProductUserAccess;
@@ -15,12 +17,12 @@ import br.com.byop.aegis.product.user.mapper.TenantUserMapper;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantMembershipReference;
 import br.com.byop.aegis.tenant.api.TenantUserAccessService;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -39,23 +41,24 @@ public class TenantUserService {
     private static final String STATUS_INVITED_ALIAS = "invited";
     private static final String STATUS_REMOVED_ALIAS = "removed";
     private static final String STATUS_BLOCKED_ALIAS = "suspended";
+    private static final String DIFF_KEY_STATUS = "status";
 
     private final IdentityUserLifecycleService identityUserLifecycleService;
     private final TenantUserAccessService tenantUserAccessService;
     private final ProductUserAccessService productUserAccessService;
     private final TenantUserMapper userMapper;
-    private final JdbcTemplate jdbcTemplate;
+    private final AuditService auditService;
 
     public TenantUserService(IdentityUserLifecycleService identityUserLifecycleService,
                              TenantUserAccessService tenantUserAccessService,
                              ProductUserAccessService productUserAccessService,
                              TenantUserMapper userMapper,
-                             JdbcTemplate jdbcTemplate) {
+                             AuditService auditService) {
         this.identityUserLifecycleService = identityUserLifecycleService;
         this.tenantUserAccessService = tenantUserAccessService;
         this.productUserAccessService = productUserAccessService;
         this.userMapper = userMapper;
-        this.jdbcTemplate = jdbcTemplate;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -84,7 +87,10 @@ public class TenantUserService {
             throw new TenantUserAlreadyExistsException();
         }
 
-        TenantMembershipReference membership = tenantUserAccessService.invite(tenantId, user.id(), parseRole(request.role()));
+        String role = parseRole(request.role());
+        TenantMembershipReference membership = tenantUserAccessService.invite(tenantId, user.id(), role);
+        recordAudit(tenantId, caller.subject(), "USER_INVITED_TO_TENANT", user.id(), user.displayName(),
+                null, Map.of("role", role, DIFF_KEY_STATUS, STATUS_INVITED));
         return toSummary(membership, user);
     }
 
@@ -117,7 +123,10 @@ public class TenantUserService {
     public TenantUserSummary blockUser(AuthenticatedUser caller, UUID tenantId, String userId) {
         TenantMembershipReference current = getVisibleMembership(caller, tenantId, userId);
         assertNotLastActiveAdmin(tenantId, current.userSubject(), current.role(), STATUS_BLOCKED);
-        return toSummary(tenantUserAccessService.block(tenantId, userId));
+        TenantUserSummary summary = toSummary(tenantUserAccessService.block(tenantId, userId));
+        recordAudit(tenantId, caller.subject(), "USER_BLOCKED", userId, null,
+                Map.of(DIFF_KEY_STATUS, current.status()), Map.of(DIFF_KEY_STATUS, STATUS_BLOCKED));
+        return summary;
     }
 
     @Transactional
@@ -129,7 +138,8 @@ public class TenantUserService {
         if (!tenantUserAccessService.hasOtherActiveMembership(userId, tenantId)) {
             identityUserLifecycleService.setUserEnabled(userId, false);
         }
-        recordAudit(tenantId, caller.subject(), "USER_REMOVED_FROM_TENANT", userId);
+        recordAudit(tenantId, caller.subject(), "USER_REMOVED_FROM_TENANT", userId, null,
+                Map.of(DIFF_KEY_STATUS, current.status()), Map.of(DIFF_KEY_STATUS, STATUS_REMOVED));
     }
 
     @Transactional
@@ -141,7 +151,8 @@ public class TenantUserService {
         TenantMembershipReference restored = tenantUserAccessService.restore(tenantId, userId);
         identityUserLifecycleService.setUserEnabled(userId, true);
         identityUserLifecycleService.executeActionsEmail(userId, List.of("UPDATE_PASSWORD"));
-        recordAudit(tenantId, caller.subject(), "USER_RESTORED_TO_TENANT", userId);
+        recordAudit(tenantId, caller.subject(), "USER_RESTORED_TO_TENANT", userId, null,
+                Map.of(DIFF_KEY_STATUS, current.status()), Map.of(DIFF_KEY_STATUS, STATUS_ACTIVE));
         return toSummary(restored);
     }
 
@@ -235,18 +246,10 @@ public class TenantUserService {
         };
     }
 
-    private void recordAudit(UUID tenantId, String actorSubject, String eventType, String targetSubject) {
-        jdbcTemplate.update("""
-                        INSERT INTO audit_events (
-                            id, tenant_id, product_id, actor_user_id, event_type, entity_type, entity_id, payload, occurred_at
-                        )
-                        VALUES (?, ?, NULL, NULL, ?, ?, NULL, ?::jsonb, CURRENT_TIMESTAMP)
-                        """,
-                UUID.randomUUID(),
-                tenantId,
-                eventType,
-                "User",
-                "{\"actorSubject\":\"" + actorSubject + "\",\"targetSubject\":\"" + targetSubject + "\"}"
-        );
+    private void recordAudit(UUID tenantId, String actorSubject, String action, String targetSubject,
+                             String targetLabel, Map<String, Object> before, Map<String, Object> after) {
+        auditService.recordEvent(new AuditRecordCommand(
+                tenantId, null, actorSubject, action, "User", targetSubject, targetLabel, null, before, after
+        ));
     }
 }

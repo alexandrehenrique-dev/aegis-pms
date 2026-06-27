@@ -1,0 +1,36 @@
+meta {
+  name: Listar audit-events do tenant excluido - risco alto
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{auditTenantId}}/audit-events
+  body: none
+}
+
+docs {
+Objetivo: especificacao exata da secao "Validacao" da etapa 16 — excluir um
+tenant e depois verificar que gerou evento de auditoria de risco alto,
+consultavel mesmo apos a exclusao (SUPER_ADMIN tem acesso forense; a trilha
+de auditoria nao tem FK para tenants/products, ver migration V8).
+Resultado esperado: 200, array contendo TENANT_DELETED com risk "alto".
+Variaveis produzidas: auditTenantDeletedEventId.
+}
+
+script:post-response {
+  var deleted = res.body.find(function(event) { return event.action === 'TENANT_DELETED'; });
+  if (deleted) { bru.setVar('auditTenantDeletedEventId', deleted.id); }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("contem evento TENANT_DELETED de risco alto", function() {
+    var deleted = res.body.find(function(event) { return event.action === 'TENANT_DELETED'; });
+    expect(deleted).to.not.equal(undefined);
+    expect(deleted.risk).to.equal('alto');
+    expect(deleted.target).to.equal('Audit Throwaway Tenant');
+  });
+}

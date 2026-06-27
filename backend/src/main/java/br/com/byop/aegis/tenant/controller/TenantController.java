@@ -48,8 +48,10 @@ public class TenantController {
 
     @PutMapping("/api/v1/tenants/{tenantId}")
     public TenantSummary updateTenant(@PathVariable("tenantId") UUID tenantId,
-                                      @Valid @RequestBody UpdateTenantRequest request) {
-        return tenantService.updateTenant(tenantId, request);
+                                      @Valid @RequestBody UpdateTenantRequest request,
+                                      Authentication authentication) {
+        AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
+        return tenantService.updateTenant(caller, tenantId, request);
     }
 
     @DeleteMapping("/api/v1/tenants/{tenantId}")

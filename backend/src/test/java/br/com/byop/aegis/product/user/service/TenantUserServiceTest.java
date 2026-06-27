@@ -1,5 +1,6 @@
 package br.com.byop.aegis.product.user.service;
 
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.identity.api.IdentityUserLifecycleService;
 import br.com.byop.aegis.product.api.ProductUserAccessService;
@@ -20,7 +21,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -54,7 +54,7 @@ class TenantUserServiceTest {
     private TenantUserMapper userMapper;
 
     @Mock
-    private JdbcTemplate jdbcTemplate;
+    private AuditService auditService;
 
     @InjectMocks
     private TenantUserService service;
@@ -115,6 +115,12 @@ class TenantUserServiceTest {
         when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
 
         assertThat(service.inviteUser(caller, TENANT_ID, request).status()).isEqualTo("convidado");
+        org.mockito.ArgumentCaptor<br.com.byop.aegis.audit.api.AuditRecordCommand> auditCaptor =
+                org.mockito.ArgumentCaptor.forClass(br.com.byop.aegis.audit.api.AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().action()).isEqualTo("USER_INVITED_TO_TENANT");
+        assertThat(auditCaptor.getValue().tenantId()).isEqualTo(TENANT_ID);
+        assertThat(auditCaptor.getValue().targetId()).isEqualTo("user-1");
     }
 
     @Test
@@ -353,7 +359,7 @@ class TenantUserServiceTest {
         verify(identityUserLifecycleService).setUserEnabled("user-1", false);
         verify(identityUserLifecycleService).setUserEnabled("user-1", true);
         verify(identityUserLifecycleService).executeActionsEmail("user-1", List.of("UPDATE_PASSWORD"));
-        verify(jdbcTemplate, times(2)).update(any(String.class), any(), any(), any(), any(), any());
+        verify(auditService, times(3)).recordEvent(any());
     }
 
     @Test

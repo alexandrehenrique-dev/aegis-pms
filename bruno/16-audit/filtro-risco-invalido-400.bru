@@ -1,0 +1,29 @@
+meta {
+  name: Filtro de risco invalido - 400
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/audit-events?risk=inexistente
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  tenantId: 9f8513ab-a1e4-48a9-a84d-2bcdf637fc11
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro INVALID_AUDIT_RISK_FILTER", function() {
+    expect(res.body.error).to.equal('INVALID_AUDIT_RISK_FILTER');
+  });
+}
+
+docs {
+  Objetivo: valor de risk fora do enum (baixo|medio|alto) deve ser rejeitado.
+  Resultado esperado: 400 INVALID_AUDIT_RISK_FILTER.
+}

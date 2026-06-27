@@ -1,5 +1,7 @@
 package br.com.byop.aegis.tenant.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.tenant.command.CreateTenantCommand;
 import br.com.byop.aegis.tenant.contract.DeleteTenantRequest;
 import br.com.byop.aegis.tenant.contract.UpdateTenantRequest;
@@ -16,12 +18,12 @@ import br.com.byop.aegis.tenant.mapper.TenantMapper;
 import br.com.byop.aegis.tenant.repository.TenantMembershipRepository;
 import br.com.byop.aegis.tenant.repository.TenantRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -29,18 +31,19 @@ public class TenantService {
 
     private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
     private static final String TENANT_ADMIN = "TENANT_ADMIN";
+    private static final String TARGET_TYPE_TENANT = "Tenant";
 
     private final TenantRepository tenantRepository;
     private final TenantMembershipRepository membershipRepository;
     private final TenantMapper tenantMapper;
-    private final JdbcTemplate jdbcTemplate;
+    private final AuditService auditService;
 
     public TenantService(TenantRepository tenantRepository, TenantMembershipRepository membershipRepository,
-                         TenantMapper tenantMapper, JdbcTemplate jdbcTemplate) {
+                         TenantMapper tenantMapper, AuditService auditService) {
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
         this.tenantMapper = tenantMapper;
-        this.jdbcTemplate = jdbcTemplate;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -55,6 +58,7 @@ public class TenantService {
         }
         Tenant savedTenant = tenantRepository.save(tenant);
         membershipRepository.save(new TenantMembership(savedTenant, caller.subject(), TENANT_ADMIN));
+        recordTenantCreationAudit(caller, savedTenant);
 
         return tenantMapper.toSummary(savedTenant);
     }
@@ -78,15 +82,18 @@ public class TenantService {
     }
 
     @Transactional
-    public TenantSummary updateTenant(UUID tenantId, UpdateTenantRequest request) {
+    public TenantSummary updateTenant(AuthenticatedUser caller, UUID tenantId, UpdateTenantRequest request) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
+        Map<String, Object> before = tenantSnapshot(tenant);
 
         tenant.rename(request.name());
         tenant.changePlan(request.plan());
         applyStatus(tenant, parseStatus(request.status()));
+        Tenant savedTenant = tenantRepository.save(tenant);
+        recordTenantUpdateAudit(caller, savedTenant, before);
 
-        return tenantMapper.toSummary(tenantRepository.save(tenant));
+        return tenantMapper.toSummary(savedTenant);
     }
 
     @Transactional
@@ -100,6 +107,24 @@ public class TenantService {
 
         recordTenantDeletionAudit(caller, tenant);
         tenantRepository.delete(tenant);
+    }
+
+    private void recordTenantCreationAudit(AuthenticatedUser caller, Tenant tenant) {
+        auditService.recordEvent(new AuditRecordCommand(
+                tenant.getId(), null, caller.subject(), "TENANT_CREATED", TARGET_TYPE_TENANT,
+                tenant.getId().toString(), tenant.getName(), null, null, tenantSnapshot(tenant)
+        ));
+    }
+
+    private void recordTenantUpdateAudit(AuthenticatedUser caller, Tenant tenant, Map<String, Object> before) {
+        auditService.recordEvent(new AuditRecordCommand(
+                tenant.getId(), null, caller.subject(), "TENANT_UPDATED", TARGET_TYPE_TENANT,
+                tenant.getId().toString(), tenant.getName(), null, before, tenantSnapshot(tenant)
+        ));
+    }
+
+    private Map<String, Object> tenantSnapshot(Tenant tenant) {
+        return Map.of("name", tenant.getName(), "plan", tenant.getPlan(), "status", tenant.getStatus().name());
     }
 
     @Transactional(readOnly = true)
@@ -128,18 +153,9 @@ public class TenantService {
     }
 
     private void recordTenantDeletionAudit(AuthenticatedUser caller, Tenant tenant) {
-        jdbcTemplate.update("""
-                        INSERT INTO audit_events (
-                            id, tenant_id, product_id, actor_user_id, event_type, entity_type, entity_id, payload, occurred_at
-                        )
-                        VALUES (?, NULL, NULL, NULL, ?, ?, ?, ?::jsonb, CURRENT_TIMESTAMP)
-                        """,
-                UUID.randomUUID(),
-                "TENANT_DELETED",
-                "Tenant",
-                tenant.getId(),
-                "{\"tenantKey\":\"" + tenant.getKey() + "\",\"tenantName\":\"" + tenant.getName()
-                        + "\",\"actorSubject\":\"" + caller.subject() + "\"}"
-        );
+        auditService.recordEvent(new AuditRecordCommand(
+                tenant.getId(), null, caller.subject(), "TENANT_DELETED", TARGET_TYPE_TENANT,
+                tenant.getId().toString(), tenant.getName(), null, tenantSnapshot(tenant), null
+        ));
     }
 }

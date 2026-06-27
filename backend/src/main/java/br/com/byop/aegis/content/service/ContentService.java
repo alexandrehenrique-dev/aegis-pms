@@ -1,5 +1,7 @@
 package br.com.byop.aegis.content.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.content.contract.ContentTransitionRequest;
 import br.com.byop.aegis.content.contract.CreateContentRequest;
 import br.com.byop.aegis.content.contract.PublishContentRequest;
@@ -43,6 +45,9 @@ import java.util.regex.Pattern;
 public class ContentService {
 
     private static final Pattern KG_REF_PATTERN = Pattern.compile("\\{\\{kg-ref:([\\w-]+):([^}]+)\\}\\}");
+    private static final String TARGET_TYPE_CONTENT = "Content";
+    private static final String MODULE_CONTENT = "CONTENT";
+    private static final String DIFF_KEY_STATUS = "status";
 
     private final ContentRepository contentRepository;
     private final ContentVersionRepository versionRepository;
@@ -54,12 +59,14 @@ public class ContentService {
     private final KnowledgeGraphPort knowledgeGraphPort;
     private final ProductReferenceService productReferenceService;
     private final ObjectMapper objectMapper;
+    private final AuditService auditService;
 
     public ContentService(ContentRepository contentRepository, ContentVersionRepository versionRepository,
                           ContentMapper contentMapper, ContentVersionMapper versionMapper,
                           ContentWorkflowPolicy workflowPolicy, MarkdownSanitizer markdownSanitizer,
                           IdentityUserDirectory identityUserDirectory, KnowledgeGraphPort knowledgeGraphPort,
-                          ProductReferenceService productReferenceService, ObjectMapper objectMapper) {
+                          ProductReferenceService productReferenceService, ObjectMapper objectMapper,
+                          AuditService auditService) {
         this.contentRepository = contentRepository;
         this.versionRepository = versionRepository;
         this.contentMapper = contentMapper;
@@ -70,6 +77,7 @@ public class ContentService {
         this.knowledgeGraphPort = knowledgeGraphPort;
         this.productReferenceService = productReferenceService;
         this.objectMapper = objectMapper;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -86,6 +94,7 @@ public class ContentService {
         content.applyEdit(new Content.Edit(request.title(), request.type(), request.lang(), sanitizedBody,
                 request.summary(), difficultyLevel, request.category(), request.topic(), metadataJson));
         contentRepository.save(content);
+        recordContentCreationAudit(product.tenantId(), productId, caller.subject(), content);
 
         syncKnowledgeGraph(productId, content, referencedNodeIds);
 
@@ -188,6 +197,9 @@ public class ContentService {
         }
         contentRepository.save(content);
         recordVersion(content, from, to, request.comment(), caller.subject());
+        if (to == ContentStatus.PUBLISHED) {
+            recordContentPublicationAudit(productId, caller.subject(), content, from);
+        }
 
         return toSummary(content);
     }
@@ -222,6 +234,24 @@ public class ContentService {
 
     private String publicationTimestamp() {
         return OffsetDateTime.now(ZoneOffset.UTC).toString();
+    }
+
+    private void recordContentCreationAudit(UUID tenantId, UUID productId, String actorSubject, Content content) {
+        auditService.recordEvent(new AuditRecordCommand(
+                tenantId, productId, actorSubject, "CONTENT_CREATED", TARGET_TYPE_CONTENT,
+                content.getId().toString(), content.getTitle(), MODULE_CONTENT, null,
+                Map.of("title", content.getTitle(), "type", content.getType(), DIFF_KEY_STATUS, content.getStatus().contractValue())
+        ));
+    }
+
+    private void recordContentPublicationAudit(UUID productId, String actorSubject, Content content, ContentStatus from) {
+        ProductReference product = productReferenceService.getRequiredReference(productId);
+        auditService.recordEvent(new AuditRecordCommand(
+                product.tenantId(), productId, actorSubject, "CONTENT_PUBLISHED", TARGET_TYPE_CONTENT,
+                content.getId().toString(), content.getTitle(), MODULE_CONTENT,
+                Map.of(DIFF_KEY_STATUS, from.contractValue()),
+                Map.of(DIFF_KEY_STATUS, ContentStatus.PUBLISHED.contractValue())
+        ));
     }
 
     private void recordVersion(Content content, ContentStatus from, ContentStatus to, String comment, String createdBySubject) {

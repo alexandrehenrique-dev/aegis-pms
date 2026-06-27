@@ -1,5 +1,7 @@
 package br.com.byop.aegis.product.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.identity.api.IdentityUserDirectory;
 import br.com.byop.aegis.product.contract.AssignProductUserRequest;
@@ -13,6 +15,7 @@ import br.com.byop.aegis.product.exception.ProductNotFoundException;
 import br.com.byop.aegis.product.mapper.ProductAssignmentMapper;
 import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
+import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
 import br.com.byop.aegis.tenant.api.TenantReference;
 import org.springframework.stereotype.Service;
@@ -21,10 +24,13 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class ProductAssignmentService {
+
+    private static final String TARGET_TYPE_PRODUCT_ASSIGNMENT = "ProductAssignment";
 
     private final ProductRepository productRepository;
     private final ProductAssignmentRepository assignmentRepository;
@@ -34,6 +40,7 @@ public class ProductAssignmentService {
     private final ProductAssignmentEmailPort emailPort;
     private final ProductAssignmentNotificationPort notificationPort;
     private final ProductAssignmentMapper assignmentMapper;
+    private final AuditService auditService;
 
     public ProductAssignmentService(ProductRepository productRepository,
                                     ProductAssignmentRepository assignmentRepository,
@@ -42,7 +49,8 @@ public class ProductAssignmentService {
                                     ProductAssignmentInvitePort invitePort,
                                     ProductAssignmentEmailPort emailPort,
                                     ProductAssignmentNotificationPort notificationPort,
-                                    ProductAssignmentMapper assignmentMapper) {
+                                    ProductAssignmentMapper assignmentMapper,
+                                    AuditService auditService) {
         this.productRepository = productRepository;
         this.assignmentRepository = assignmentRepository;
         this.tenantAccessService = tenantAccessService;
@@ -51,6 +59,7 @@ public class ProductAssignmentService {
         this.emailPort = emailPort;
         this.notificationPort = notificationPort;
         this.assignmentMapper = assignmentMapper;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -63,7 +72,8 @@ public class ProductAssignmentService {
     }
 
     @Transactional
-    public ProductAssignmentSummary assignUser(UUID pathProductId, AssignProductUserRequest request) {
+    public ProductAssignmentSummary assignUser(AuthenticatedUser caller, UUID pathProductId,
+                                               AssignProductUserRequest request) {
         validateProductPath(pathProductId, request.productId());
         validateUserXor(request.userId(), request.inviteEmail());
 
@@ -74,13 +84,13 @@ public class ProductAssignmentService {
 
         ProductAssignmentRole role = parseRole(request.role());
         if (hasText(request.userId())) {
-            return assignExistingUser(product, request.userId(), role);
+            return assignExistingUser(caller, product, request.userId(), role);
         }
-        return inviteUser(product, request.inviteEmail(), role);
+        return inviteUser(caller, product, request.inviteEmail(), role);
     }
 
     @Transactional
-    public void removeAssignment(UUID productId, String userSubject) {
+    public void removeAssignment(AuthenticatedUser caller, UUID productId, String userSubject) {
         Product product = getRequiredProduct(productId);
         ProductAssignment assignment = assignmentRepository.findByProductIdAndUserSubject(product.getId(), userSubject)
                 .orElseThrow(() -> new ProductAssignmentNotFoundException(productId, userSubject));
@@ -89,9 +99,12 @@ public class ProductAssignmentService {
         emailPort.notifyRevocation(emailCommand(product, user));
         notificationPort.notifyRevocation(product.getTenantId(), product.getId(), user.id());
         assignmentRepository.delete(assignment);
+        recordAssignmentAudit(caller, product, user, "PRODUCT_ASSIGNMENT_REMOVED",
+                assignment.getRole().name(), null);
     }
 
-    private ProductAssignmentSummary assignExistingUser(Product product, String userId, ProductAssignmentRole role) {
+    private ProductAssignmentSummary assignExistingUser(AuthenticatedUser caller, Product product, String userId,
+                                                         ProductAssignmentRole role) {
         if (!tenantAccessService.hasActiveMembership(product.getTenantId(), userId)) {
             throw new InvalidProductAssignmentException("User does not have active membership in product tenant");
         }
@@ -100,18 +113,31 @@ public class ProductAssignmentService {
         ProductAssignment assignment = assignmentRepository.save(new ProductAssignment(product, user.id(), role));
         emailPort.notifyAssignment(emailCommand(product, user));
         notificationPort.notifyAssignment(product.getTenantId(), product.getId(), user.id());
+        recordAssignmentAudit(caller, product, user, "PRODUCT_ASSIGNMENT_CREATED", null, role.name());
 
         return assignmentMapper.toSummary(assignment, user.displayName(), user.email());
     }
 
-    private ProductAssignmentSummary inviteUser(Product product, String inviteEmail, ProductAssignmentRole role) {
+    private ProductAssignmentSummary inviteUser(AuthenticatedUser caller, Product product, String inviteEmail,
+                                                ProductAssignmentRole role) {
         IdentityUser invitedUser = invitePort.invite(product.getTenantId(), product.getId(), inviteEmail);
         ProductAssignment assignment = new ProductAssignment(product, invitedUser.id(), role);
         assignment.revoke();
         ProductAssignment saved = assignmentRepository.save(assignment);
         notificationPort.notifyAssignment(product.getTenantId(), product.getId(), invitedUser.id());
+        recordAssignmentAudit(caller, product, invitedUser, "PRODUCT_ASSIGNMENT_CREATED", null, role.name());
 
         return assignmentMapper.toSummary(saved, invitedUser.displayName(), invitedUser.email());
+    }
+
+    private void recordAssignmentAudit(AuthenticatedUser caller, Product product, IdentityUser user, String action,
+                                       String beforeRole, String afterRole) {
+        auditService.recordEvent(new AuditRecordCommand(
+                product.getTenantId(), product.getId(), caller.subject(), action, TARGET_TYPE_PRODUCT_ASSIGNMENT,
+                user.id(), user.displayName(), null,
+                beforeRole == null ? null : Map.of("role", beforeRole),
+                afterRole == null ? null : Map.of("role", afterRole)
+        ));
     }
 
     private ProductAssignmentEmailCommand emailCommand(Product product, IdentityUser user) {

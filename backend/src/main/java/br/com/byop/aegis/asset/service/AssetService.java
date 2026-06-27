@@ -1,5 +1,7 @@
 package br.com.byop.aegis.asset.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.asset.contract.UpdateAssetMetadataRequest;
 import br.com.byop.aegis.asset.domain.Asset;
 import br.com.byop.aegis.asset.domain.AssetCategory;
@@ -47,6 +49,9 @@ import java.util.stream.Collectors;
 @Service
 public class AssetService {
 
+    private static final String TARGET_TYPE_ASSET = "Asset";
+    private static final String MODULE_ASSETS = "ASSETS";
+
     private final AssetRepository assetRepository;
     private final AssetTagRepository assetTagRepository;
     private final AssetTagAssignmentRepository assignmentRepository;
@@ -57,12 +62,14 @@ public class AssetService {
     private final LocalStorageProvider localStorageProvider;
     private final ProductReferenceService productReferenceService;
     private final ProductAccessPort productAccessPort;
+    private final AuditService auditService;
 
     public AssetService(AssetRepository assetRepository, AssetTagRepository assetTagRepository,
                         AssetTagAssignmentRepository assignmentRepository, AssetUsageRepository usageRepository,
                         AssetMapper assetMapper, AssetUploadValidator uploadValidator,
                         AssetStorageProvisioningService storageProvisioningService, LocalStorageProvider localStorageProvider,
-                        ProductReferenceService productReferenceService, ProductAccessPort productAccessPort) {
+                        ProductReferenceService productReferenceService, ProductAccessPort productAccessPort,
+                        AuditService auditService) {
         this.assetRepository = assetRepository;
         this.assetTagRepository = assetTagRepository;
         this.assignmentRepository = assignmentRepository;
@@ -73,6 +80,7 @@ public class AssetService {
         this.localStorageProvider = localStorageProvider;
         this.productReferenceService = productReferenceService;
         this.productAccessPort = productAccessPort;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -121,13 +129,22 @@ public class AssetService {
     }
 
     @Transactional
-    public void deleteAsset(UUID productId, UUID assetId, boolean force) {
+    public void deleteAsset(AuthenticatedUser caller, UUID productId, UUID assetId, boolean force) {
         Asset asset = findAssetInProduct(productId, assetId);
         if (!force && usageRepository.existsByAssetId(assetId)) {
             throw new AssetInUseException(assetId);
         }
         storageProvisioningService.resolveProvider(asset.getStorageProvider()).delete(asset.getStorageKey());
         assetRepository.delete(asset);
+        recordAssetDeletionAudit(caller, asset);
+    }
+
+    private void recordAssetDeletionAudit(AuthenticatedUser caller, Asset asset) {
+        auditService.recordEvent(new AuditRecordCommand(
+                asset.getTenantId(), asset.getProductId(), caller.subject(), "ASSET_DELETED", TARGET_TYPE_ASSET,
+                asset.getId().toString(), asset.getName(), MODULE_ASSETS,
+                Map.of("name", asset.getName(), "mimeType", asset.getMimeType()), null
+        ));
     }
 
     @Transactional(readOnly = true)

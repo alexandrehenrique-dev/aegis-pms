@@ -75,13 +75,26 @@ Estas regras vêm de decisões já tomadas (ADRs) e não devem ser revisadas por
 - **A tela de login atual (UI/UX) não muda** quando o Keycloak real for integrado — ver `docs/sprints/06_keycloak_login_ui_custom.md`. Não expor a tela nativa do Keycloak ao usuário final.
 - **Organização modular é obrigatória** — antes de criar qualquer nova classe, o agente deve analisar a estrutura do módulo correspondente e posicionar a classe no pacote de responsabilidade adequado. É proibido criar classes diretamente no pacote raiz do módulo ou mover classes entre módulos sem autorização explícita. Toda integração entre módulos deve ocorrer exclusivamente por APIs públicas expostas (`NamedInterface`), nunca por entidades, repositories ou services internos.
 
-## 4. Onde registrar observações
+## 4. Padrões a evitar — apontamentos recorrentes do SonarQube for IDE
 
-Toda observação de comportamento de agente, lição aprendida durante uma sprint, ou ajuste de processo descoberto na prática deve ser adicionada à **Seção 5** abaixo, com data — não criar arquivos paralelos de "notas" soltos pelo repositório.
+Antes de escrever Java neste repositório, evite os padrões abaixo. Cada um já gerou um apontamento real do SonarQube for IDE em sprints anteriores (ver Sprint 16 — domínio `audit`) e a correção sempre foi reescrever o código, nunca suprimir a regra.
 
-## 5. Observações registradas
+- **Nunca usar `record`, `var`, `yield`, `sealed` ou `permits` como nome de método/campo/variável** (`java:S6213`, restricted identifiers). Mesmo sendo sintaticamente válido em Java, escolha outro nome (ex.: `recordEvent` em vez de `record`).
+- **Lambda passada para `assertThrows`/`assertThatThrownBy` deve conter exatamente UMA chamada que possa lançar exceção** (`java:S5778`). Se a expressão dentro da lambda tem mais de uma invocação de método (ex.: `() -> service().metodo(parametro())`), extraia cada chamada auxiliar (`service()`, `parametro()`, `objeto.getId()`, etc.) para uma variável local **antes** do `assertThatThrownBy`, deixando só a chamada que de fato deve lançar a exceção dentro da lambda.
+- **Nunca retornar `null` de um método cujo tipo de retorno é `Map`/`List`/`Set`/coleção** (`java:S1168`). Retorne a coleção vazia equivalente (`Map.of()`, `List.of()`, `Set.of()`) — avalie o impacto no contrato/payload antes de aplicar, já que isso pode mudar `null` para `{}`/`[]` na resposta JSON.
+- **Nunca deixar a palavra "TODO" (ou variações que o regex do Sonar capture, como "Todo" no início de frase em português) dentro de um comentário/Javadoc sem implementar a tarefa** (`java:S1135`). Se for uma limitação deliberada e documentada (ex.: um campo que fica `null` nesta sprint por decisão arquitetural), escreva a justificativa como Javadoc normal, nunca com o marcador `TODO`, e evite a palavra "Todo" como primeira palavra de frase em comentários (o scanner não distingue "Todo" pronome de "TODO" marcador).
+- **Nunca repetir o mesmo literal de string 3+ vezes no mesmo arquivo** (`java:S1192`), inclusive chaves de `Map.of(...)` (ex.: `"status"` repetido em vários `Map.of("status", ...)`). Extraia para uma constante `private static final String` com nome semântico (ex.: `DIFF_KEY_STATUS`), mesmo quando os valores associados à chave variam.
+- **Nunca usar `@SuppressWarnings`, `//NOSONAR` ou desabilitar regra para resolver um apontamento real.** A correção é sempre reescrever o código (renomear, extrair constante/variável, mudar `null` por coleção vazia, etc.) — suprimir só é aceitável para falso positivo comprovado, e mesmo assim exige justificativa explícita do humano responsável antes de aplicar.
+- **Ao corrigir qualquer apontamento do Sonar, rode `mvn clean verify` completo depois** — alterações de assinatura de método (ex.: renomear `record` → `recordEvent`) ou de valor de retorno (`null` → coleção vazia) tendem a quebrar testes existentes que ainda esperam o comportamento antigo; corrija os testes na mesma tacada, nunca deixe `mvn verify` vermelho "para depois".
+
+## 5. Onde registrar observações
+
+Toda observação de comportamento de agente, lição aprendida durante uma sprint, ou ajuste de processo descoberto na prática deve ser adicionada à **Seção 6** abaixo, com data — não criar arquivos paralelos de "notas" soltos pelo repositório.
+
+## 6. Observações registradas
 
 - **2026-06-19** — Sessão inicial de alinhamento: consolidação de documentos mestres, resolução da contradição RH no ARTIGO V, regeneração de `WORKTREE.md`, criação de `docs/sprints/`, `AGENTS.md`, `CONTRIBUTING.md`, `.gitignore` e ADR-0011 (React vs Angular). Descoberto que `.git/refs/codex/turn-diffs/checkpoints/` já existe — Codex já foi usado neste repositório antes deste protocolo existir; ver `CONTRIBUTING.md` para uso conjunto Claude + Codex.
+- **2026-06-27** — Sprint 16 (domínio `audit`): rodada de correção de SonarQube for IDE revelou os 6 padrões agora documentados na Seção 4 (S6213, S5778, S1168, S1135, S1192, proibição de `@SuppressWarnings`). Nenhum foi corrigido com supressão; todos via reescrita + ajuste dos testes afetados, confirmado com `mvn clean verify` (BUILD SUCCESS, JaCoCo e Modulith aprovados).
 
 ---
 

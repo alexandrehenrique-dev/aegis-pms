@@ -1,5 +1,7 @@
 package br.com.byop.aegis.product.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.identity.api.IdentityUserDirectory;
 import br.com.byop.aegis.product.contract.AssignProductUserRequest;
@@ -16,11 +18,13 @@ import br.com.byop.aegis.product.exception.ProductNotFoundException;
 import br.com.byop.aegis.product.mapper.ProductAssignmentMapper;
 import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
+import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
 import br.com.byop.aegis.tenant.api.TenantReference;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,6 +68,9 @@ class ProductAssignmentServiceTest {
     @Mock
     private ProductAssignmentMapper assignmentMapper;
 
+    @Mock
+    private AuditService auditService;
+
     @InjectMocks
     private ProductAssignmentService service;
 
@@ -96,6 +103,7 @@ class ProductAssignmentServiceTest {
         when(assignmentMapper.toSummary(saved, "Editor User", "editor@byop.dev")).thenReturn(summary);
 
         ProductAssignmentSummary result = service.assignUser(
+                caller(),
                 product.getId(),
                 request(product, "user-1", null)
         );
@@ -115,6 +123,12 @@ class ProductAssignmentServiceTest {
         assertThat(emailCaptor.getValue().recipientEmail()).isEqualTo("editor@byop.dev");
         assertThat(emailCaptor.getValue().recipientName()).isEqualTo("Editor User");
         verify(notificationPort).notifyAssignment(product.getTenantId(), product.getId(), "user-1");
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().action()).isEqualTo("PRODUCT_ASSIGNMENT_CREATED");
+        assertThat(auditCaptor.getValue().tenantId()).isEqualTo(product.getTenantId());
+        assertThat(auditCaptor.getValue().productId()).isEqualTo(product.getId());
+        assertThat(auditCaptor.getValue().targetId()).isEqualTo("user-1");
     }
 
     @Test
@@ -131,6 +145,7 @@ class ProductAssignmentServiceTest {
         when(assignmentMapper.toSummary(saved, "guest@byop.dev", "guest@byop.dev")).thenReturn(summary);
 
         ProductAssignmentSummary result = service.assignUser(
+                caller(),
                 product.getId(),
                 request(product, null, "guest@byop.dev")
         );
@@ -149,8 +164,9 @@ class ProductAssignmentServiceTest {
         Product product = product();
         UUID productId = product.getId();
         AssignProductUserRequest request = request(product, "user-1", "guest@byop.dev");
+        AuthenticatedUser caller = caller();
 
-        assertThatThrownBy(() -> service.assignUser(productId, request))
+        assertThatThrownBy(() -> service.assignUser(caller, productId, request))
                 .isInstanceOf(InvalidProductAssignmentException.class)
                 .hasMessage("Exactly one of userId or inviteEmail is required");
 
@@ -162,8 +178,9 @@ class ProductAssignmentServiceTest {
         Product product = product();
         UUID productId = product.getId();
         AssignProductUserRequest request = request(product, null, null);
+        AuthenticatedUser caller = caller();
 
-        assertThatThrownBy(() -> service.assignUser(productId, request))
+        assertThatThrownBy(() -> service.assignUser(caller, productId, request))
                 .isInstanceOf(InvalidProductAssignmentException.class)
                 .hasMessage("Exactly one of userId or inviteEmail is required");
 
@@ -175,8 +192,9 @@ class ProductAssignmentServiceTest {
         Product product = product();
         UUID pathProductId = UUID.fromString("99999999-9999-9999-9999-999999999999");
         AssignProductUserRequest request = request(product, "user-1", null);
+        AuthenticatedUser caller = caller();
 
-        assertThatThrownBy(() -> service.assignUser(pathProductId, request))
+        assertThatThrownBy(() -> service.assignUser(caller, pathProductId, request))
                 .isInstanceOf(InvalidProductAssignmentException.class)
                 .hasMessage("Path productId does not match request productId");
     }
@@ -194,8 +212,9 @@ class ProductAssignmentServiceTest {
                 null
         );
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        AuthenticatedUser caller = caller();
 
-        assertThatThrownBy(() -> service.assignUser(productId, request))
+        assertThatThrownBy(() -> service.assignUser(caller, productId, request))
                 .isInstanceOf(InvalidProductAssignmentException.class)
                 .hasMessage("Request tenantId does not match product tenantId");
     }
@@ -207,8 +226,9 @@ class ProductAssignmentServiceTest {
         AssignProductUserRequest request = request(product, "user-1", null);
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(tenantAccessService.hasActiveMembership(product.getTenantId(), "user-1")).thenReturn(false);
+        AuthenticatedUser caller = caller();
 
-        assertThatThrownBy(() -> service.assignUser(productId, request))
+        assertThatThrownBy(() -> service.assignUser(caller, productId, request))
                 .isInstanceOf(InvalidProductAssignmentException.class)
                 .hasMessage("User does not have active membership in product tenant");
 
@@ -228,8 +248,9 @@ class ProductAssignmentServiceTest {
                 null
         );
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        AuthenticatedUser caller = caller();
 
-        assertThatThrownBy(() -> service.assignUser(productId, request))
+        assertThatThrownBy(() -> service.assignUser(caller, productId, request))
                 .isInstanceOf(InvalidProductAssignmentException.class)
                 .hasMessage("Invalid product assignment role: invalid");
 
@@ -242,8 +263,9 @@ class ProductAssignmentServiceTest {
         UUID productId = product.getId();
         AssignProductUserRequest request = request(product, "user-1", null);
         when(productRepository.findById(productId)).thenReturn(Optional.empty());
+        AuthenticatedUser caller = caller();
 
-        assertThatThrownBy(() -> service.assignUser(productId, request))
+        assertThatThrownBy(() -> service.assignUser(caller, productId, request))
                 .isInstanceOf(ProductNotFoundException.class)
                 .hasMessage("Product not found: " + productId);
     }
@@ -270,7 +292,7 @@ class ProductAssignmentServiceTest {
         when(tenantAccessService.getRequiredReference(product.getTenantId()))
                 .thenReturn(new TenantReference(product.getTenantId(), "Tenant Aegis"));
 
-        service.removeAssignment(product.getId(), "user-1");
+        service.removeAssignment(caller(), product.getId(), "user-1");
 
         ArgumentCaptor<ProductAssignmentEmailCommand> emailCaptor =
                 ArgumentCaptor.forClass(ProductAssignmentEmailCommand.class);
@@ -280,6 +302,9 @@ class ProductAssignmentServiceTest {
         verify(notificationPort).notifyRevocation(product.getTenantId(), product.getId(), "user-1");
         verify(assignmentRepository).delete(assignment);
         verifyNoTenantMembershipRemovalDependency();
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().action()).isEqualTo("PRODUCT_ASSIGNMENT_REMOVED");
     }
 
     @Test
@@ -289,12 +314,17 @@ class ProductAssignmentServiceTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(assignmentRepository.findByProductIdAndUserSubject(productId, "user-1"))
                 .thenReturn(Optional.empty());
+        AuthenticatedUser caller = caller();
 
-        assertThatThrownBy(() -> service.removeAssignment(productId, "user-1"))
+        assertThatThrownBy(() -> service.removeAssignment(caller, productId, "user-1"))
                 .isInstanceOf(ProductAssignmentNotFoundException.class)
                 .hasMessage("Product assignment not found for product " + productId + " and user user-1");
 
         verify(assignmentRepository, never()).delete(any(ProductAssignment.class));
+    }
+
+    private AuthenticatedUser caller() {
+        return new AuthenticatedUser("admin-subject", "admin@byop.dev", "admin", "Admin", Set.of("ROLE_SUPER_ADMIN"));
     }
 
     private void verifyNoTenantMembershipRemovalDependency() {

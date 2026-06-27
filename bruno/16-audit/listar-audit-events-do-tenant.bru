@@ -1,0 +1,49 @@
+meta {
+  name: Listar audit-events do tenant compartilhado
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/audit-events
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  tenantId: 9f8513ab-a1e4-48a9-a84d-2bcdf637fc11
+}
+
+script:post-response {
+  if (res.body.length > 0) { bru.setVar('auditEventId', res.body[0].id); }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("lista nao vazia com shape completo", function() {
+    expect(res.body).to.be.an('array');
+    expect(res.body.length).to.be.greaterThan(0);
+    var first = res.body[0];
+    expect(first).to.have.property('id');
+    expect(first).to.have.property('actor');
+    expect(first).to.have.property('action');
+    expect(first).to.have.property('target');
+    expect(first).to.have.property('tenant');
+    expect(first).to.have.property('module');
+    expect(first).to.have.property('time');
+    expect(first).to.have.property('risk');
+  });
+}
+
+docs {
+  Objetivo: tenant usado pelo resto da collection ja acumulou eventos reais de
+  varios dominios (TENANT_UPDATED em 10-product-assignments, USER_* em
+  15-users, CONTENT_* em 11-content, ASSET_DELETED em 12-assets, quando
+  aplicavel) — confirma que AuditService.recordEvent centralizou a gravacao
+  em todos eles.
+  Resultado esperado: 200, array nao vazio, cada item com os 7 campos do
+  contrato (actor, action, target, tenant, module, time, risk).
+  Variaveis produzidas: auditEventId (primeiro evento da lista).
+}
