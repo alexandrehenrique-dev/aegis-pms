@@ -96,6 +96,8 @@ type FormSummary = {
 };
 // Response: FormSummary[]
 ```
+**`POST /api/v1/products/{productId}/forms`** — cria uma definição nova em `Draft`. Motivo: `FormBuilder.tsx`/fluxo "novo formulário" precisa iniciar um form real sem seed manual; decisão registrada na execução da Sprint 13 porque a lista inicial só trazia `GET`/`PUT`.
+
 **`GET /api/v1/products/{productId}/forms/{formId}`**, **`PUT .../forms/{formId}`** — Motivo: `FormBuilder.tsx` carrega/salva a definição do formulário (campos, ordem, obrigatoriedade).
 
 **`GET /api/v1/products/{productId}/forms/field-types`** — response `string[]` (ex.: "Texto", "Email", "Upload", "Consentimento LGPD"...). Motivo: paleta de campos disponíveis em `FormBuilder.tsx` — provavelmente um catálogo fixo do sistema, não por tenant, mas exposto via API para evitar hardcode no frontend.

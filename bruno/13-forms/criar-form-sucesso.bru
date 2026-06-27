@@ -1,0 +1,50 @@
+meta {
+  name: Criar form - sucesso
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms
+  body: json
+}
+
+body:json {
+  {
+    "name": "Candidatura Conecta Talentos",
+    "type": "application",
+    "fields": [
+      {
+        "label": "Email",
+        "type": "Email",
+        "required": true
+      },
+      {
+        "label": "Curriculo",
+        "type": "Upload",
+        "required": false,
+        "acceptedFileTypes": ["application/pdf"]
+      }
+    ]
+  }
+}
+
+docs {
+Objetivo: criar uma definicao de formulario utilizavel pelo frontend. Este POST foi registrado como decisao da Sprint 13 porque sem criacao a UI nao conseguiria iniciar um form novo.
+Resultado esperado: 201, id presente, status Draft.
+Variaveis produzidas: formId.
+}
+
+script:post-response {
+bru.setVar('formId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("id presente e status Draft", function() {
+    expect(res.body.id).to.be.a('string');
+    expect(res.body.status).to.equal("Draft");
+  });
+}

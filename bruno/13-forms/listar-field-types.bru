@@ -1,0 +1,25 @@
+meta {
+  name: Listar field-types
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms/field-types
+  body: none
+}
+
+docs {
+Objetivo: consultar o catalogo fixo de tipos de campo para o builder de formularios.
+Resultado esperado: 200, lista contendo Upload e Consentimento LGPD.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("catalogo fixo contem tipos esperados", function() {
+    expect(res.body).to.include("Upload");
+    expect(res.body).to.include("Consentimento LGPD");
+  });
+}

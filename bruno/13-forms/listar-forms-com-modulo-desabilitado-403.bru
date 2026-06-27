@@ -1,0 +1,25 @@
+meta {
+  name: Listar forms com modulo desabilitado - 403
+  type: http
+  seq: 16
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms
+  body: none
+}
+
+docs {
+Objetivo: confirmar module-gating com @RequireModule(ModuleKey.FORMS).
+Resultado esperado: 403 MODULE_DISABLED.
+}
+
+tests {
+  test("status 403", function() {
+    expect(res.status).to.equal(403);
+  });
+  test("erro MODULE_DISABLED", function() {
+    expect(res.body.error).to.equal("MODULE_DISABLED");
+    expect(res.body.moduleKey).to.equal("FORMS");
+  });
+}

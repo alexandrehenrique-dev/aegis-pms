@@ -1,0 +1,60 @@
+meta {
+  name: Configurar delivery - sucesso
+  type: http
+  seq: 11
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms/{{formId}}/delivery
+  body: json
+}
+
+body:json {
+  {
+    "channels": [
+      {
+        "type": "email",
+        "enabled": true,
+        "config": {
+          "to": "ops@example.com"
+        }
+      },
+      {
+        "type": "whatsapp",
+        "enabled": true,
+        "config": {
+          "number": "+5511999999999"
+        }
+      },
+      {
+        "type": "telegram",
+        "enabled": true,
+        "config": {
+          "chatId": "123456",
+          "botToken": "token-de-teste"
+        }
+      },
+      {
+        "type": "webhook",
+        "enabled": true,
+        "config": {
+          "url": "https://example.com/forms"
+        }
+      }
+    ]
+  }
+}
+
+docs {
+Objetivo: persistir configuracao de entrega multicanal sem disparar email, WhatsApp, Telegram ou webhook real.
+Resultado esperado: 200, quatro canais persistidos.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("quatro canais persistidos", function() {
+    expect(res.body.deliveryChannels.length).to.equal(4);
+  });
+}

@@ -1,0 +1,38 @@
+meta {
+  name: Configurar delivery webhook invalido - 400
+  type: http
+  seq: 10
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms/{{formId}}/delivery
+  body: json
+}
+
+body:json {
+  {
+    "channels": [
+      {
+        "type": "webhook",
+        "enabled": true,
+        "config": {
+          "url": "not-a-url"
+        }
+      }
+    ]
+  }
+}
+
+docs {
+Objetivo: confirmar validacao de webhook sem URL HTTP(S) absoluta.
+Resultado esperado: 400 INVALID_FORM_DELIVERY.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro de delivery", function() {
+    expect(res.body.error).to.equal("INVALID_FORM_DELIVERY");
+  });
+}

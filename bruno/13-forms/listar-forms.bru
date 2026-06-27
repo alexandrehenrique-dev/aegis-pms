@@ -1,0 +1,24 @@
+meta {
+  name: Listar forms
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms
+  body: none
+}
+
+docs {
+Objetivo: listar formularios do produto para FormsList/FormsDashboard.
+Resultado esperado: 200, lista contendo ao menos o form criado nesta pasta.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("lista contem forms", function() {
+    expect(res.body.length).to.be.greaterThan(0);
+  });
+}

@@ -1,0 +1,43 @@
+meta {
+  name: Criar form sem campo obrigatorio
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms
+  body: json
+}
+
+body:json {
+  {
+    "name": "Newsletter sem obrigatorio",
+    "type": "lead",
+    "fields": [
+      {
+        "label": "Email",
+        "type": "Email",
+        "required": false
+      }
+    ]
+  }
+}
+
+docs {
+Objetivo: criar uma definicao em Draft para validar a regra de publicacao que exige ao menos um campo obrigatorio.
+Resultado esperado: 201, status Draft.
+Variaveis produzidas: invalidFormId.
+}
+
+script:post-response {
+bru.setVar('invalidFormId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("form em Draft", function() {
+    expect(res.body.status).to.equal("Draft");
+  });
+}
