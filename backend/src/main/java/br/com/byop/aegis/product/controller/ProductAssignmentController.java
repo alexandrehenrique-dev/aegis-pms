@@ -3,8 +3,11 @@ package br.com.byop.aegis.product.controller;
 import br.com.byop.aegis.product.contract.AssignProductUserRequest;
 import br.com.byop.aegis.product.dto.ProductAssignmentSummary;
 import br.com.byop.aegis.product.service.ProductAssignmentService;
+import br.com.byop.aegis.security.AuthenticatedUser;
+import br.com.byop.aegis.security.AuthenticatedUserProvider;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,9 +23,12 @@ import java.util.UUID;
 public class ProductAssignmentController {
 
     private final ProductAssignmentService productAssignmentService;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
-    public ProductAssignmentController(ProductAssignmentService productAssignmentService) {
+    public ProductAssignmentController(ProductAssignmentService productAssignmentService,
+                                       AuthenticatedUserProvider authenticatedUserProvider) {
         this.productAssignmentService = productAssignmentService;
+        this.authenticatedUserProvider = authenticatedUserProvider;
     }
 
     @GetMapping("/api/v1/products/{productId}/users")
@@ -33,14 +39,18 @@ public class ProductAssignmentController {
     @PostMapping("/api/v1/products/{productId}/users")
     @ResponseStatus(HttpStatus.CREATED)
     public ProductAssignmentSummary assignProductUser(@PathVariable("productId") UUID productId,
-                                                      @Valid @RequestBody AssignProductUserRequest request) {
-        return productAssignmentService.assignUser(productId, request);
+                                                      @Valid @RequestBody AssignProductUserRequest request,
+                                                      Authentication authentication) {
+        AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
+        return productAssignmentService.assignUser(caller, productId, request);
     }
 
     @DeleteMapping("/api/v1/products/{productId}/users/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeProductUser(@PathVariable("productId") UUID productId,
-                                  @PathVariable("userId") String userId) {
-        productAssignmentService.removeAssignment(productId, userId);
+                                  @PathVariable("userId") String userId,
+                                  Authentication authentication) {
+        AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
+        productAssignmentService.removeAssignment(caller, productId, userId);
     }
 }

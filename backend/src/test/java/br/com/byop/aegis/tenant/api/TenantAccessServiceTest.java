@@ -86,6 +86,21 @@ class TenantAccessServiceTest {
         assertThat(service.hasActiveMembership(TENANT_ID, "subject")).isTrue();
     }
 
+    @Test
+    void shouldFindTenantName() {
+        Tenant tenant = tenant(TENANT_ID, "byop");
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));
+
+        assertThat(service.findTenantName(TENANT_ID)).isEqualTo("Tenant byop");
+    }
+
+    @Test
+    void shouldReturnNullTenantNameWhenTenantDoesNotExist() {
+        when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.empty());
+
+        assertThat(service.findTenantName(TENANT_ID)).isNull();
+    }
+
     private Tenant tenant(UUID tenantId, String key) {
         Tenant tenant = new Tenant(key, "Tenant " + key);
         ReflectionTestUtils.setField(tenant, "id", tenantId);

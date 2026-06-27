@@ -205,7 +205,7 @@ class AssetControllerTest {
         mockMvc.perform(delete("/api/v1/products/{productId}/assets/{assetId}", PRODUCT_ID, ASSET_ID).with(jwt()))
                 .andExpect(status().isNoContent());
 
-        verify(assetService).deleteAsset(PRODUCT_ID, ASSET_ID, false);
+        verify(assetService).deleteAsset(any(AuthenticatedUser.class), eq(PRODUCT_ID), eq(ASSET_ID), eq(false));
     }
 
     @Test
@@ -220,7 +220,7 @@ class AssetControllerTest {
                                 """))
                 .andExpect(status().isNoContent());
 
-        verify(assetService).deleteAsset(PRODUCT_ID, ASSET_ID, true);
+        verify(assetService).deleteAsset(any(AuthenticatedUser.class), eq(PRODUCT_ID), eq(ASSET_ID), eq(true));
     }
 
     @Test
@@ -235,13 +235,14 @@ class AssetControllerTest {
                                 """))
                 .andExpect(status().isNoContent());
 
-        verify(assetService).deleteAsset(PRODUCT_ID, ASSET_ID, false);
+        verify(assetService).deleteAsset(any(AuthenticatedUser.class), eq(PRODUCT_ID), eq(ASSET_ID), eq(false));
     }
 
     @Test
     void shouldRejectDeleteWhenAssetInUseWithout409() throws Exception {
         when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(user());
-        doThrow(new AssetInUseException(ASSET_ID)).when(assetService).deleteAsset(eq(PRODUCT_ID), eq(ASSET_ID), anyBoolean());
+        doThrow(new AssetInUseException(ASSET_ID)).when(assetService)
+                .deleteAsset(any(AuthenticatedUser.class), eq(PRODUCT_ID), eq(ASSET_ID), anyBoolean());
 
         mockMvc.perform(delete("/api/v1/products/{productId}/assets/{assetId}", PRODUCT_ID, ASSET_ID).with(jwt()))
                 .andExpect(status().isConflict())

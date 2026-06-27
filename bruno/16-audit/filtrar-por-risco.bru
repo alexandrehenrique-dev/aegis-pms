@@ -1,0 +1,33 @@
+meta {
+  name: Filtrar audit-events por risco
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/audit-events?risk=medio
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  tenantId: 9f8513ab-a1e4-48a9-a84d-2bcdf637fc11
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("todos os itens tem risco medio", function() {
+    expect(res.body.length).to.be.greaterThan(0);
+    res.body.forEach(function(event) {
+      expect(event.risk).to.equal('medio');
+    });
+  });
+}
+
+docs {
+  Objetivo: filtro por risk=medio — TENANT_UPDATED (gerado em
+  10-product-assignments/editar-tenant.bru) garante ao menos um resultado.
+  Resultado esperado: 200, todos os itens com risk "medio".
+}

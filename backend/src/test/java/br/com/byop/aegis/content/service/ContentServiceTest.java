@@ -1,5 +1,7 @@
 package br.com.byop.aegis.content.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.content.contract.ContentTransitionRequest;
 import br.com.byop.aegis.content.contract.CreateContentRequest;
 import br.com.byop.aegis.content.contract.PublishContentRequest;
@@ -82,6 +84,9 @@ class ContentServiceTest {
     @Mock
     private ProductReferenceService productReferenceService;
 
+    @Mock
+    private AuditService auditService;
+
     private ContentService service;
 
     @BeforeEach
@@ -96,7 +101,8 @@ class ContentServiceTest {
                 identityUserDirectory,
                 knowledgeGraphPort,
                 productReferenceService,
-                new ObjectMapper()
+                new ObjectMapper(),
+                auditService
         );
     }
 
@@ -108,6 +114,13 @@ class ContentServiceTest {
         when(identityUserDirectory.getRequiredUser("subject-1")).thenReturn(user());
         ContentSummary summary = mock(ContentSummary.class);
         when(contentMapper.toSummary(any(), eq("Alexandre Silva"), any())).thenReturn(summary);
+        when(contentRepository.save(any(Content.class))).thenAnswer(invocation -> {
+            Content saved = invocation.getArgument(0);
+            if (saved.getId() == null) {
+                ReflectionTestUtils.setField(saved, "id", UUID.randomUUID());
+            }
+            return saved;
+        });
         CreateContentRequest request = new CreateContentRequest(
                 "Artigo novo", "article", "pt-BR", "<p>corpo</p><script>alert(1)</script>",
                 "resumo", "beginner", "categoria", "topico", Map.of("k", "v")
@@ -127,6 +140,11 @@ class ContentServiceTest {
         assertThat(created.getBodyMarkdown()).isEqualTo("<p>corpo</p>");
         assertThat(created.getStatus()).isEqualTo(ContentStatus.DRAFT);
         assertThat(created.getCurrentVersion()).isEqualTo(1);
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().action()).isEqualTo("CONTENT_CREATED");
+        assertThat(auditCaptor.getValue().tenantId()).isEqualTo(tenantId);
+        assertThat(auditCaptor.getValue().productId()).isEqualTo(productId);
     }
 
     @Test
@@ -440,6 +458,8 @@ class ContentServiceTest {
         when(contentRepository.findByProductIdAndId(productId, content.getId())).thenReturn(Optional.of(content));
         when(identityUserDirectory.getRequiredUser("subject-1")).thenReturn(user());
         when(contentMapper.toSummary(any(), any(), any())).thenReturn(mock(ContentSummary.class));
+        when(productReferenceService.getRequiredReference(productId))
+                .thenReturn(new ProductReference(productId, UUID.randomUUID()));
         ContentTransitionRequest request = new ContentTransitionRequest("In Review", "Published", null);
         AuthenticatedUser caller = caller(Set.of(role));
         UUID contentId = content.getId();
@@ -448,6 +468,9 @@ class ContentServiceTest {
 
         assertThat(content.getStatus()).isEqualTo(ContentStatus.PUBLISHED);
         assertThat(content.getPublication()).isNotBlank();
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().action()).isEqualTo("CONTENT_PUBLISHED");
     }
 
     @Test
@@ -458,6 +481,8 @@ class ContentServiceTest {
         when(identityUserDirectory.getRequiredUser("subject-1")).thenReturn(user());
         ContentSummary summary = mock(ContentSummary.class);
         when(contentMapper.toSummary(any(), any(), any())).thenReturn(summary);
+        when(productReferenceService.getRequiredReference(productId))
+                .thenReturn(new ProductReference(productId, UUID.randomUUID()));
 
         ContentSummary result = service.publish(productId, content.getId(), new PublishContentRequest("foi pra ar"),
                 caller(Set.of("ROLE_TENANT_ADMIN")));
@@ -476,6 +501,8 @@ class ContentServiceTest {
         when(contentRepository.findByProductIdAndId(productId, content.getId())).thenReturn(Optional.of(content));
         when(identityUserDirectory.getRequiredUser("subject-1")).thenReturn(user());
         when(contentMapper.toSummary(any(), any(), any())).thenReturn(mock(ContentSummary.class));
+        when(productReferenceService.getRequiredReference(productId))
+                .thenReturn(new ProductReference(productId, UUID.randomUUID()));
 
         service.publish(productId, content.getId(), null, caller(Set.of("ROLE_SUPER_ADMIN")));
 
@@ -594,7 +621,7 @@ class ContentServiceTest {
         ContentService brokenService = new ContentService(
                 contentRepository, versionRepository, contentMapper, versionMapper,
                 new ContentWorkflowPolicy(), new MarkdownSanitizer(), identityUserDirectory,
-                knowledgeGraphPort, productReferenceService, brokenObjectMapper
+                knowledgeGraphPort, productReferenceService, brokenObjectMapper, auditService
         );
         UUID productId = UUID.randomUUID();
         Content content = content(productId, ContentStatus.DRAFT);
@@ -616,7 +643,7 @@ class ContentServiceTest {
         ContentService brokenService = new ContentService(
                 contentRepository, versionRepository, contentMapper, versionMapper,
                 new ContentWorkflowPolicy(), new MarkdownSanitizer(), identityUserDirectory,
-                knowledgeGraphPort, productReferenceService, brokenObjectMapper
+                knowledgeGraphPort, productReferenceService, brokenObjectMapper, auditService
         );
         UUID productId = UUID.randomUUID();
         Content content = content(productId, ContentStatus.DRAFT);
@@ -639,7 +666,7 @@ class ContentServiceTest {
         ContentService brokenService = new ContentService(
                 contentRepository, versionRepository, contentMapper, versionMapper,
                 new ContentWorkflowPolicy(), new MarkdownSanitizer(), identityUserDirectory,
-                knowledgeGraphPort, productReferenceService, brokenObjectMapper
+                knowledgeGraphPort, productReferenceService, brokenObjectMapper, auditService
         );
         UUID productId = UUID.randomUUID();
         Content content = content(productId, ContentStatus.DRAFT);

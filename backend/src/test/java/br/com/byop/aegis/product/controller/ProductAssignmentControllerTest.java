@@ -5,14 +5,18 @@ import br.com.byop.aegis.product.dto.ProductAssignmentSummary;
 import br.com.byop.aegis.product.exception.InvalidProductAssignmentException;
 import br.com.byop.aegis.product.exception.ProductExceptionHandler;
 import br.com.byop.aegis.product.service.ProductAssignmentService;
+import br.com.byop.aegis.security.AuthenticatedUser;
+import br.com.byop.aegis.security.AuthenticatedUserProvider;
 import br.com.byop.aegis.security.SecurityConfig;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -46,6 +50,9 @@ class ProductAssignmentControllerTest {
     @MockitoBean
     private ProductAssignmentService productAssignmentService;
 
+    @MockitoBean
+    private AuthenticatedUserProvider authenticatedUserProvider;
+
     @Test
     void shouldListProductUsers() throws Exception {
         ProductAssignmentSummary summary = assignmentSummary("user-1", "Editor User", "editor@byop.dev", "atribuido");
@@ -68,7 +75,8 @@ class ProductAssignmentControllerTest {
     @Test
     void shouldAssignExistingUser() throws Exception {
         ProductAssignmentSummary summary = assignmentSummary("user-1", "Editor User", "editor@byop.dev", "atribuido");
-        when(productAssignmentService.assignUser(eq(PRODUCT_ID), any())).thenReturn(summary);
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller());
+        when(productAssignmentService.assignUser(any(AuthenticatedUser.class), eq(PRODUCT_ID), any())).thenReturn(summary);
 
         mockMvc.perform(post("/api/v1/products/{productId}/users", PRODUCT_ID)
                         .with(jwt())
@@ -95,7 +103,8 @@ class ProductAssignmentControllerTest {
                 "guest@byop.dev",
                 "convidado"
         );
-        when(productAssignmentService.assignUser(eq(PRODUCT_ID), any())).thenReturn(summary);
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller());
+        when(productAssignmentService.assignUser(any(AuthenticatedUser.class), eq(PRODUCT_ID), any())).thenReturn(summary);
 
         mockMvc.perform(post("/api/v1/products/{productId}/users", PRODUCT_ID)
                         .with(jwt())
@@ -116,7 +125,8 @@ class ProductAssignmentControllerTest {
 
     @Test
     void shouldRejectUserIdAndInviteEmailTogether() throws Exception {
-        when(productAssignmentService.assignUser(eq(PRODUCT_ID), any()))
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller());
+        when(productAssignmentService.assignUser(any(AuthenticatedUser.class), eq(PRODUCT_ID), any()))
                 .thenThrow(new InvalidProductAssignmentException("Exactly one of userId or inviteEmail is required"));
 
         mockMvc.perform(post("/api/v1/products/{productId}/users", PRODUCT_ID)
@@ -137,7 +147,8 @@ class ProductAssignmentControllerTest {
 
     @Test
     void shouldRejectMissingUserIdAndInviteEmail() throws Exception {
-        when(productAssignmentService.assignUser(eq(PRODUCT_ID), any()))
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller());
+        when(productAssignmentService.assignUser(any(AuthenticatedUser.class), eq(PRODUCT_ID), any()))
                 .thenThrow(new InvalidProductAssignmentException("Exactly one of userId or inviteEmail is required"));
 
         mockMvc.perform(post("/api/v1/products/{productId}/users", PRODUCT_ID)
@@ -179,14 +190,19 @@ class ProductAssignmentControllerTest {
 
     @Test
     void shouldReturnBadRequestWhenServiceRejectsDelete() throws Exception {
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller());
         doThrow(new InvalidProductAssignmentException("Invalid product assignment"))
                 .when(productAssignmentService)
-                .removeAssignment(PRODUCT_ID, "user-1");
+                .removeAssignment(any(AuthenticatedUser.class), eq(PRODUCT_ID), eq("user-1"));
 
         mockMvc.perform(delete("/api/v1/products/{productId}/users/{userId}", PRODUCT_ID, "user-1")
                         .with(jwt()))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("INVALID_PRODUCT_ASSIGNMENT"));
+    }
+
+    private AuthenticatedUser caller() {
+        return new AuthenticatedUser("admin-subject", "admin@byop.dev", "admin", "Admin", Set.of("ROLE_SUPER_ADMIN"));
     }
 
     private ProductAssignmentSummary assignmentSummary(String userSubject, String userName, String userEmail,

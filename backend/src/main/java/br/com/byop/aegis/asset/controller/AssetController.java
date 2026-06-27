@@ -94,9 +94,9 @@ public class AssetController {
                             @PathVariable("assetId") UUID assetId,
                             @RequestBody(required = false) DeleteAssetRequest request,
                             Authentication authentication) {
-        assertProductAccess(authentication, productId);
+        AuthenticatedUser caller = assertProductAccess(authentication, productId);
         boolean force = request != null && request.force();
-        assetService.deleteAsset(productId, assetId, force);
+        assetService.deleteAsset(caller, productId, assetId, force);
     }
 
     @GetMapping("/api/v1/products/{productId}/assets/{assetId}/usage")

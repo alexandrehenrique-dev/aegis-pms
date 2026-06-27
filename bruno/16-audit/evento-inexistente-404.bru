@@ -1,0 +1,29 @@
+meta {
+  name: Evento inexistente - 404
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/audit-events/00000000-0000-0000-0000-000000000000
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  tenantId: 9f8513ab-a1e4-48a9-a84d-2bcdf637fc11
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+  test("erro AUDIT_EVENT_NOT_FOUND", function() {
+    expect(res.body.error).to.equal('AUDIT_EVENT_NOT_FOUND');
+  });
+}
+
+docs {
+  Objetivo: eventId com UUID valido mas inexistente no tenant.
+  Resultado esperado: 404 AUDIT_EVENT_NOT_FOUND.
+}

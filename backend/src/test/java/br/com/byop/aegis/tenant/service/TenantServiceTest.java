@@ -1,5 +1,7 @@
 package br.com.byop.aegis.tenant.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.command.CreateTenantCommand;
 import br.com.byop.aegis.tenant.contract.DeleteTenantRequest;
@@ -27,7 +29,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,7 +51,7 @@ class TenantServiceTest {
     private TenantMapper tenantMapper;
 
     @Mock
-    private JdbcTemplate jdbcTemplate;
+    private AuditService auditService;
 
     @InjectMocks
     private TenantService tenantService;
@@ -61,6 +62,7 @@ class TenantServiceTest {
         CreateTenantCommand command = new CreateTenantCommand("byop", "BYOP", "PRO", "admin@byop.dev");
         Tenant savedTenant = new Tenant("byop", "BYOP");
         savedTenant.changePlan("PRO");
+        ReflectionTestUtils.setField(savedTenant, "id", UUID.randomUUID());
         TenantSummary summary = tenantSummary("byop");
         when(tenantRepository.existsByKey("byop")).thenReturn(false);
         when(tenantRepository.save(any(Tenant.class))).thenReturn(savedTenant);
@@ -79,6 +81,13 @@ class TenantServiceTest {
         assertThat(membership.getUserSubject()).isEqualTo("creator-subject");
         assertThat(membership.getRole()).isEqualTo("TENANT_ADMIN");
         assertThat(membership.getStatus()).isEqualTo(TenantMembershipStatus.ACTIVE);
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        AuditRecordCommand audit = auditCaptor.getValue();
+        assertThat(audit.action()).isEqualTo("TENANT_CREATED");
+        assertThat(audit.actorSubject()).isEqualTo("creator-subject");
+        assertThat(audit.targetType()).isEqualTo("Tenant");
+        assertThat(audit.targetLabel()).isEqualTo("BYOP");
     }
 
     @Test
@@ -100,6 +109,7 @@ class TenantServiceTest {
         AuthenticatedUser caller = user("creator-subject", "ROLE_TENANT_ADMIN");
         CreateTenantCommand command = new CreateTenantCommand("blank-plan", "Blank Plan", " ", null);
         Tenant savedTenant = new Tenant("blank-plan", "Blank Plan");
+        ReflectionTestUtils.setField(savedTenant, "id", UUID.randomUUID());
         TenantSummary summary = tenantSummary("blank-plan");
         when(tenantRepository.existsByKey("blank-plan")).thenReturn(false);
         when(tenantRepository.save(any(Tenant.class))).thenReturn(savedTenant);
@@ -118,6 +128,7 @@ class TenantServiceTest {
         AuthenticatedUser caller = user("creator-subject", "ROLE_TENANT_ADMIN");
         CreateTenantCommand command = new CreateTenantCommand("null-plan", "Null Plan", null, null);
         Tenant savedTenant = new Tenant("null-plan", "Null Plan");
+        ReflectionTestUtils.setField(savedTenant, "id", UUID.randomUUID());
         TenantSummary summary = tenantSummary("null-plan");
         when(tenantRepository.existsByKey("null-plan")).thenReturn(false);
         when(tenantRepository.save(any(Tenant.class))).thenReturn(savedTenant);
@@ -167,6 +178,7 @@ class TenantServiceTest {
 
     @Test
     void shouldUpdateTenant() {
+        AuthenticatedUser caller = user("admin-subject", "ROLE_TENANT_ADMIN");
         UUID tenantId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         Tenant tenant = new Tenant("byop", "BYOP");
         ReflectionTestUtils.setField(tenant, "id", tenantId);
@@ -176,6 +188,7 @@ class TenantServiceTest {
         when(tenantMapper.toSummary(tenant)).thenReturn(summary);
 
         TenantSummary result = tenantService.updateTenant(
+                caller,
                 tenantId,
                 new UpdateTenantRequest("BYOP Updated", "PRO", "suspenso")
         );
@@ -184,10 +197,16 @@ class TenantServiceTest {
         assertThat(tenant.getName()).isEqualTo("BYOP Updated");
         assertThat(tenant.getPlan()).isEqualTo("PRO");
         assertThat(tenant.getStatus()).isEqualTo(TenantStatus.SUSPENDED);
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().action()).isEqualTo("TENANT_UPDATED");
+        assertThat(auditCaptor.getValue().before()).containsEntry("name", "BYOP");
+        assertThat(auditCaptor.getValue().after()).containsEntry("name", "BYOP Updated");
     }
 
     @Test
     void shouldUpdateTenantToActiveStatus() {
+        AuthenticatedUser caller = user("admin-subject", "ROLE_TENANT_ADMIN");
         UUID tenantId = UUID.fromString("abababab-abab-abab-abab-abababababab");
         Tenant tenant = new Tenant("byop", "BYOP");
         tenant.suspend();
@@ -198,6 +217,7 @@ class TenantServiceTest {
         when(tenantMapper.toSummary(tenant)).thenReturn(summary);
 
         TenantSummary result = tenantService.updateTenant(
+                caller,
                 tenantId,
                 new UpdateTenantRequest("BYOP", "FREE", "ACTIVE")
         );
@@ -208,6 +228,7 @@ class TenantServiceTest {
 
     @Test
     void shouldUpdateTenantToArchivedStatus() {
+        AuthenticatedUser caller = user("admin-subject", "ROLE_TENANT_ADMIN");
         UUID tenantId = UUID.fromString("acacacac-acac-acac-acac-acacacacacac");
         Tenant tenant = new Tenant("byop", "BYOP");
         ReflectionTestUtils.setField(tenant, "id", tenantId);
@@ -217,6 +238,7 @@ class TenantServiceTest {
         when(tenantMapper.toSummary(tenant)).thenReturn(summary);
 
         TenantSummary result = tenantService.updateTenant(
+                caller,
                 tenantId,
                 new UpdateTenantRequest("BYOP", "FREE", "arquivado")
         );
@@ -227,29 +249,33 @@ class TenantServiceTest {
 
     @Test
     void shouldRejectInvalidTenantStatus() {
+        AuthenticatedUser caller = user("admin-subject", "ROLE_TENANT_ADMIN");
         UUID tenantId = UUID.fromString("adadadad-adad-adad-adad-adadadadadad");
         Tenant tenant = new Tenant("byop", "BYOP");
         UpdateTenantRequest request = new UpdateTenantRequest("BYOP", "FREE", "bloqueado");
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
 
-        assertThatThrownBy(() -> tenantService.updateTenant(tenantId, request))
+        assertThatThrownBy(() -> tenantService.updateTenant(caller, tenantId, request))
                 .isInstanceOf(InvalidTenantStatusException.class)
                 .hasMessage("Invalid tenant status: bloqueado");
 
         verify(tenantRepository, never()).save(any(Tenant.class));
+        verify(auditService, never()).recordEvent(any());
     }
 
     @Test
     void shouldRejectUpdateWhenTenantDoesNotExist() {
+        AuthenticatedUser caller = user("admin-subject", "ROLE_TENANT_ADMIN");
         UUID tenantId = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         UpdateTenantRequest request = new UpdateTenantRequest("Missing", "FREE", "ativo");
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> tenantService.updateTenant(tenantId, request))
+        assertThatThrownBy(() -> tenantService.updateTenant(caller, tenantId, request))
                 .isInstanceOf(TenantNotFoundException.class)
                 .hasMessage("Tenant not found: " + tenantId);
 
         verify(tenantRepository, never()).save(any(Tenant.class));
+        verify(auditService, never()).recordEvent(any());
     }
 
     @Test
@@ -262,7 +288,10 @@ class TenantServiceTest {
 
         tenantService.deleteTenant(caller, tenantId, new DeleteTenantRequest("BYOP"));
 
-        verify(jdbcTemplate).update(any(String.class), any(), any(), any(), any(), any());
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().action()).isEqualTo("TENANT_DELETED");
+        assertThat(auditCaptor.getValue().tenantId()).isEqualTo(tenantId);
         verify(tenantRepository).delete(tenant);
     }
 
@@ -278,7 +307,7 @@ class TenantServiceTest {
                 .isInstanceOf(InvalidTenantConfirmationException.class)
                 .hasMessage("Tenant deletion confirmation text does not match tenant name");
 
-        verify(jdbcTemplate, never()).update(any(String.class), any(), any(), any(), any(), any());
+        verify(auditService, never()).recordEvent(any());
         verify(tenantRepository, never()).delete(any(Tenant.class));
     }
 
@@ -293,7 +322,7 @@ class TenantServiceTest {
                 .isInstanceOf(TenantNotFoundException.class)
                 .hasMessage("Tenant not found: " + tenantId);
 
-        verify(jdbcTemplate, never()).update(any(String.class), any(), any(), any(), any(), any());
+        verify(auditService, never()).recordEvent(any());
         verify(tenantRepository, never()).delete(any(Tenant.class));
     }
 

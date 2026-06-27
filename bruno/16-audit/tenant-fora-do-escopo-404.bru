@@ -1,0 +1,43 @@
+meta {
+  name: Tenant fora do escopo do caller - 404
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/audit-events
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{nonMemberToken}}
+}
+
+vars:pre-request {
+  tenantId: 9f8513ab-a1e4-48a9-a84d-2bcdf637fc11
+}
+
+tests {
+  test("sem nonMemberToken configurado: 401 | com nonMemberToken real: 404", function() {
+    if (bru.getVar('nonMemberToken')) {
+      expect(res.status).to.equal(404);
+      expect(res.body.error).to.equal('AUDIT_EVENT_NOT_FOUND');
+    } else {
+      expect(res.status).to.equal(401);
+    }
+  });
+}
+
+docs {
+  Objetivo: caller sem membership ativa no tenant (e sem SUPER_ADMIN) nunca
+  deve receber 403 — sempre 404, para nao revelar a existencia do tenant.
+  LIMITACAO HERDADA DO DESENHO ORIGINAL (mesmo padrao de 11-content/editor-tentando-publicar-403.bru):
+  esta suite nao tem fluxo de seed automatico de um segundo usuario sem
+  membership — defina manualmente a variavel de runtime 'nonMemberToken'
+  (bru.setVar) com um access_token real de um usuario sem vinculo com
+  {{tenantId}} antes de rodar esta request isoladamente, para validar o 404
+  de fato. Sem isso (execucao padrao da collection completa), nonMemberToken
+  fica vazio e o teste abaixo aceita o 401 resultante como comportamento
+  esperado dessa limitacao.
+}

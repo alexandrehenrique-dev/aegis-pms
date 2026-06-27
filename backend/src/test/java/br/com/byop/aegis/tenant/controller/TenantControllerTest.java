@@ -128,7 +128,8 @@ class TenantControllerTest {
     void shouldUpdateTenant() throws Exception {
         UUID tenantId = UUID.fromString("12121212-1212-1212-1212-121212121212");
         TenantSummary summary = tenantSummary();
-        when(tenantService.updateTenant(any(UUID.class), any())).thenReturn(summary);
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(user());
+        when(tenantService.updateTenant(any(AuthenticatedUser.class), any(UUID.class), any())).thenReturn(summary);
 
         mockMvc.perform(put("/api/v1/tenants/{tenantId}", tenantId)
                         .with(jwt())

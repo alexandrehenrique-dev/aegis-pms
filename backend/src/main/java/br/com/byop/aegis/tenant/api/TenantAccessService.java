@@ -1,5 +1,7 @@
 package br.com.byop.aegis.tenant.api;
 
+import br.com.byop.aegis.audit.api.TenantVisibilityPort;
+import br.com.byop.aegis.tenant.domain.Tenant;
 import br.com.byop.aegis.tenant.domain.TenantMembership;
 import br.com.byop.aegis.tenant.domain.TenantMembershipStatus;
 import br.com.byop.aegis.tenant.exception.TenantNotFoundException;
@@ -12,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-public class TenantAccessService {
+public class TenantAccessService implements TenantVisibilityPort {
 
     private static final String TENANT_ADMIN = "TENANT_ADMIN";
 
@@ -41,6 +43,7 @@ public class TenantAccessService {
                 .toList();
     }
 
+    @Override
     @Transactional(readOnly = true)
     public boolean hasActiveMembership(UUID tenantId, String userSubject) {
         return membershipRepository.existsByTenantIdAndUserSubjectAndStatus(
@@ -48,6 +51,12 @@ public class TenantAccessService {
                 userSubject,
                 TenantMembershipStatus.ACTIVE
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String findTenantName(UUID tenantId) {
+        return tenantRepository.findById(tenantId).map(Tenant::getName).orElse(null);
     }
 
     private boolean isActiveTenantAdminMembership(TenantMembership membership) {

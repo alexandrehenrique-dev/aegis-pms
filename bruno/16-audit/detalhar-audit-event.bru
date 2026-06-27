@@ -1,0 +1,28 @@
+meta {
+  name: Detalhar audit-event do tenant compartilhado
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/audit-events/{{auditEventId}}
+  body: none
+}
+
+docs {
+Objetivo: detalhe de um evento real (nao necessariamente de exclusao) — confirma
+que diffJson/traceId/ip/userAgent aparecem no shape mesmo quando vazios.
+Resultado esperado: 200, mesmos 7 campos da listagem mais diffJson/traceId/ip/userAgent.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("campos tecnicos presentes no shape", function() {
+    expect(res.body).to.have.property('diffJson');
+    expect(res.body).to.have.property('traceId');
+    expect(res.body).to.have.property('ip');
+    expect(res.body).to.have.property('userAgent');
+  });
+}

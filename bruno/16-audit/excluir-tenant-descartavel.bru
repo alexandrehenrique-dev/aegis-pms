@@ -1,0 +1,28 @@
+meta {
+  name: Excluir tenant descartavel
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/tenants/{{auditTenantId}}
+  body: json
+}
+
+body:json {
+  {
+    "confirmationText": "Audit Throwaway Tenant"
+  }
+}
+
+docs {
+Objetivo: excluir o tenant criado na request anterior, gerando o evento
+TENANT_DELETED que a request seguinte verifica.
+Resultado esperado: 204.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

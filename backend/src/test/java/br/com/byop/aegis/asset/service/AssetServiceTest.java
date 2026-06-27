@@ -1,5 +1,7 @@
 package br.com.byop.aegis.asset.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.asset.contract.UpdateAssetMetadataRequest;
 import br.com.byop.aegis.asset.domain.Asset;
 import br.com.byop.aegis.asset.domain.AssetCategory;
@@ -97,6 +99,9 @@ class AssetServiceTest {
     @Mock
     private StorageProvider storageProvider;
 
+    @Mock
+    private AuditService auditService;
+
     private AssetService assetService;
     private AuthenticatedUser caller;
 
@@ -104,7 +109,7 @@ class AssetServiceTest {
     void setUp() {
         assetService = new AssetService(assetRepository, assetTagRepository, assignmentRepository, usageRepository,
                 assetMapper, uploadValidator, storageProvisioningService, localStorageProvider,
-                productReferenceService, productAccessPort);
+                productReferenceService, productAccessPort, auditService);
         caller = new AuthenticatedUser("subject-1", "user@aegis.app", "user", "User", Set.of("ROLE_EDITOR"));
     }
 
@@ -550,9 +555,10 @@ class AssetServiceTest {
         when(assetRepository.findByProductIdAndId(PRODUCT_ID, ASSET_ID)).thenReturn(Optional.of(asset));
         when(usageRepository.existsByAssetId(ASSET_ID)).thenReturn(true);
 
-        assertThatThrownBy(() -> assetService.deleteAsset(PRODUCT_ID, ASSET_ID, false))
+        assertThatThrownBy(() -> assetService.deleteAsset(caller, PRODUCT_ID, ASSET_ID, false))
                 .isInstanceOf(AssetInUseException.class);
         verify(assetRepository, never()).delete(any());
+        verify(auditService, never()).recordEvent(any());
     }
 
     @Test
@@ -561,11 +567,17 @@ class AssetServiceTest {
         when(assetRepository.findByProductIdAndId(PRODUCT_ID, ASSET_ID)).thenReturn(Optional.of(asset));
         when(storageProvisioningService.resolveProvider(AssetStorageStrategy.LOCAL)).thenReturn(storageProvider);
 
-        assetService.deleteAsset(PRODUCT_ID, ASSET_ID, true);
+        assetService.deleteAsset(caller, PRODUCT_ID, ASSET_ID, true);
 
         verify(usageRepository, never()).existsByAssetId(any());
         verify(storageProvider).delete(asset.getStorageKey());
         verify(assetRepository).delete(asset);
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().action()).isEqualTo("ASSET_DELETED");
+        assertThat(auditCaptor.getValue().tenantId()).isEqualTo(TENANT_ID);
+        assertThat(auditCaptor.getValue().productId()).isEqualTo(PRODUCT_ID);
+        assertThat(auditCaptor.getValue().targetId()).isEqualTo(ASSET_ID.toString());
     }
 
     @Test
@@ -575,7 +587,7 @@ class AssetServiceTest {
         when(usageRepository.existsByAssetId(ASSET_ID)).thenReturn(false);
         when(storageProvisioningService.resolveProvider(AssetStorageStrategy.LOCAL)).thenReturn(storageProvider);
 
-        assetService.deleteAsset(PRODUCT_ID, ASSET_ID, false);
+        assetService.deleteAsset(caller, PRODUCT_ID, ASSET_ID, false);
 
         verify(assetRepository).delete(asset);
     }

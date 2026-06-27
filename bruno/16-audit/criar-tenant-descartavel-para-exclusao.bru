@@ -1,0 +1,40 @@
+meta {
+  name: Criar tenant descartavel para teste de exclusao
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants
+  body: json
+}
+
+body:json {
+  {
+    "key": "{{auditTenantKey}}",
+    "name": "Audit Throwaway Tenant",
+    "plan": "FREE",
+    "initialAdminEmail": "{{inviteEmail}}"
+  }
+}
+
+docs {
+Objetivo: criar um tenant proprio para o cenario de exclusao desta pasta, sem
+tocar no {{tenantId}} compartilhado pelo resto da collection (ele continua
+sendo usado pelas pastas seguintes).
+Resultado esperado: 201, id presente.
+Variaveis produzidas: auditTenantId.
+}
+
+script:post-response {
+  bru.setVar('auditTenantId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("tenant id presente", function() {
+    expect(res.body.id).to.be.a('string');
+  });
+}

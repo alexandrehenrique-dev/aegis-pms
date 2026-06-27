@@ -1,0 +1,34 @@
+meta {
+  name: Detalhar audit-event do tenant excluido
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{auditTenantId}}/audit-events/{{auditTenantDeletedEventId}}
+  body: none
+}
+
+docs {
+Objetivo: detalhe do evento TENANT_DELETED inclui os campos tecnicos
+(diffJson, traceId, ip, userAgent) previstos por AuditEventDetail.tsx.
+Resultado esperado: 200, mesmo shape da listagem acrescido de diffJson com
+snapshot "before" do tenant excluido.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("shape completo presente", function() {
+    expect(res.body.action).to.equal('TENANT_DELETED');
+    expect(res.body.risk).to.equal('alto');
+    expect(res.body).to.have.property('diffJson');
+    expect(res.body).to.have.property('traceId');
+    expect(res.body).to.have.property('ip');
+    expect(res.body).to.have.property('userAgent');
+  });
+  test("diffJson contem snapshot before do tenant", function() {
+    expect(res.body.diffJson.before.name).to.equal('Audit Throwaway Tenant');
+  });
+}
