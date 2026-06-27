@@ -25,6 +25,7 @@ docs/
 ├── implementation/                # Roteiros de implementação numerados (001–016) + specs de Figma Make
 ├── adr/                           # Architecture Decision Records (decisões formais)
 ├── api/                           # REST/OpenAPI e GraphQL futuro
+├── api-testing/                   # Guia da collection Bruno (validação manual cumulativa)
 ├── contracts/                     # Contratos JSON canônicos (fronteira frontend/backend)
 ├── database/                      # Schema, migrations (Flyway), modelagem
 ├── deploy/                        # Ambientes, build, entrega (SPA servida pelo Spring Boot)

@@ -1,6 +1,6 @@
 package br.com.byop.aegis.product.service;
 
-import br.com.byop.aegis.product.domain.AssetStorageStrategy;
+import br.com.byop.aegis.product.api.AssetStorageStrategy;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductAssignmentStatus;
 import br.com.byop.aegis.product.domain.ProductTypeKey;

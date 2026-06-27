@@ -1,0 +1,38 @@
+meta {
+  name: Atribuir produto convidando novo usuario
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/users
+  body: json
+}
+
+body:json {
+  {
+    "productId": "{{productId}}",
+    "tenantId": "{{tenantId}}",
+    "inviteEmail": "{{inviteEmail}}",
+    "role": "EDITOR"
+  }
+}
+
+docs {
+Objetivo: convidar um usuario novo (sem userId) por e-mail, criando-o no Keycloak.
+Resultado esperado: 201, status convidado.
+Variaveis produzidas: userId (userSubject do usuario criado).
+}
+
+script:post-response {
+bru.setVar('userId', res.body.userSubject);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("userSubject presente", function() {
+    expect(res.body.userSubject).to.be.a('string');
+  });
+}

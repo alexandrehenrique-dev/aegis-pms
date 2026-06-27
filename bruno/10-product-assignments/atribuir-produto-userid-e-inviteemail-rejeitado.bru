@@ -1,0 +1,31 @@
+meta {
+  name: Atribuir produto - userId e inviteEmail rejeitado
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/users
+  body: json
+}
+
+body:json {
+  {
+    "productId": "{{productId}}",
+    "tenantId": "{{tenantId}}",
+    "userId": "{{userId}}",
+    "inviteEmail": "{{inviteEmail}}",
+    "role": "EDITOR"
+  }
+}
+
+docs {
+Objetivo: informar os dois (userId E inviteEmail) e invalido — exatamente um dos dois.
+Resultado esperado: 400.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+}

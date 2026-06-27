@@ -43,7 +43,7 @@ Negativas / trade-offs:
 ## Alternativas Consideradas
 
 - **Checagem manual no início de cada método de service/controller**: rejeitado — é exatamente o padrão que já existia (nenhuma etapa fazia isso) e que motivou o gap; duplicar a checagem por domínio aumenta a chance de alguém esquecer.
-- **Checagem no frontend apenas**: rejeitado — contraria diretamente a regra já formalizada na Sprint 05 ("UI nunca decide permissão. Permissões vêm do Core"); um cliente que chama a API direto (Postman, integração externa) ignoraria completamente o toggle.
+- **Checagem no frontend apenas**: rejeitado — contraria diretamente a regra já formalizada na Sprint 05 ("UI nunca decide permissão. Permissões vêm do Core"); um cliente que chama a API direto (Bruno, integração externa) ignoraria completamente o toggle.
 - **Retornar 404 em vez de 403 quando módulo desabilitado**: rejeitado — o produto e o recurso existem; 404 sugeriria erro de URL/recurso inexistente, confundindo depuração. 403 com corpo explícito (`MODULE_DISABLED`) é inequívoco.
 
 ## Impactos

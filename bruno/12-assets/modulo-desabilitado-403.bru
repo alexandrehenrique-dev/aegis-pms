@@ -1,0 +1,24 @@
+meta {
+  name: Modulo ASSETS desabilitado - 403
+  type: http
+  seq: 22
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/ASSETS/disable
+  body: none
+}
+
+docs {
+Passo 1 de 2 do teste de module-gating desta pasta (ver tambem a pasta 04, que consome este mesmo modulo antes de ser reabilitado aqui).
+Resultado esperado: 200, enabled false.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("ASSETS desabilitado", function() {
+    expect(res.body.enabled).to.equal(false);
+  });
+}

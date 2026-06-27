@@ -1,0 +1,24 @@
+meta {
+  name: Desabilitar CONTENT com KNOWLEDGE_GRAPH habilitado - 400
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/CONTENT/disable
+  body: none
+}
+
+docs {
+Objetivo: nao deixar desabilitar um modulo cujo dependente ainda esta ativo.
+Resultado esperado: 400 MODULE_DEPENDENCY_MISSING.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro MODULE_DEPENDENCY_MISSING", function() {
+    expect(res.body.error).to.equal("MODULE_DEPENDENCY_MISSING");
+  });
+}

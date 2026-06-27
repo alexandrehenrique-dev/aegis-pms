@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Aegis PMS - Backend API Collection",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

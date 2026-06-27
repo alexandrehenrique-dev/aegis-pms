@@ -1,0 +1,28 @@
+meta {
+  name: Criar asset-tag - nome invalido (400)
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/asset-tags
+  body: text
+}
+
+body:text {
+  isto-nao-e-um-json-string-literal
+}
+
+docs {
+Objetivo: corpo que nao e um JSON string valido (sem aspas) deve ser rejeitado na decodificacao. Usa body:text com Content-Type text/plain (default do modo text no Bruno) — o controller chama decodeJsonStringBody independente do Content-Type recebido, entao o teste exercita o parser Jackson com texto bruto, sem aspas. Content-Type application/json foi evitado de proposito: tanto o modo body:json quanto body:text com esse Content-Type fazem o runtime do Bruno normalizar/aspas o conteudo antes do envio quando o texto nao e um JSON parseavel, o que mascararia este cenario de erro.
+Resultado esperado: 400 INVALID_ASSET_TAG_NAME.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro INVALID_ASSET_TAG_NAME", function() {
+    expect(res.body.error).to.equal("INVALID_ASSET_TAG_NAME");
+  });
+}

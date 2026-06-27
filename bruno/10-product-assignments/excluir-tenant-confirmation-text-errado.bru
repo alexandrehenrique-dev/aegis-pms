@@ -1,0 +1,27 @@
+meta {
+  name: Excluir tenant - confirmationText errado
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}
+  body: json
+}
+
+body:json {
+  {
+    "confirmationText": "nome-errado-de-proposito"
+  }
+}
+
+docs {
+Objetivo: confirmationText que nao bate com o nome real do tenant deve ser rejeitado (acao destrutiva e irreversivel).
+Resultado esperado: 400.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+}

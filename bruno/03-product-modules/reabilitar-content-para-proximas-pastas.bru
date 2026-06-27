@@ -1,0 +1,23 @@
+meta {
+  name: Reabilitar CONTENT para as proximas pastas - sucesso
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/CONTENT/enable
+  body: none
+}
+
+docs {
+Decisao de reconstrucao: a pasta 11 (Content) reaproveita {{productId}} e precisa do modulo CONTENT habilitado. O cenario de desabilitar (passo 6) ja foi validado; este passo deixa o estado limpo para as pastas seguintes, sem perder nenhuma cobertura.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("CONTENT habilitado novamente", function() {
+    expect(res.body.enabled).to.equal(true);
+  });
+}

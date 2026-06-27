@@ -23,4 +23,20 @@ public class ProductReferenceService {
                 .orElseThrow(() -> new ProductNotFoundException(productId));
         return new ProductReference(product.getId(), product.getTenantId());
     }
+
+    /**
+     * Estrategia de storage de assets configurada para o produto no momento
+     * da chamada — usada apenas no momento do upload (etapa 12, dominio
+     * {@code asset}); um asset ja existente preserva o {@code storageProvider}
+     * gravado no momento do proprio upload, mesmo que esta configuracao mude depois.
+     *
+     * @param productId identificador do produto
+     * @return estrategia de storage atual do produto
+     */
+    @Transactional(readOnly = true)
+    public AssetStorageStrategy getRequiredAssetStorageStrategy(UUID productId) {
+        return productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException(productId))
+                .getAssetStorageStrategy();
+    }
 }

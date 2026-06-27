@@ -80,11 +80,11 @@ Se a etapa 23 já estiver implementada: ao criar um `Feedback` com `priority: "c
   1. `Feedback` (entity) + `FeedbackRepository` + testes `@DataJpaTest`.
   2. `FeedbackMapper` (MapStruct) + testes de mapper.
   3. `FeedbackService` (regras da Seção D, geração do `id` legível, validação de `attachmentAssetId` cross-tenant) + testes com mocks.
-  4. `FeedbackController` (endpoints da Seção C) + testes `@WebMvcTest` (incluindo 403 para papel sem permissão de listagem) + validação via collection Postman (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11).
+  4. `FeedbackController` (endpoints da Seção C) + testes `@WebMvcTest` (incluindo 403 para papel sem permissão de listagem) + validação via collection Bruno (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11).
 
 ## Validação
 
-> **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11).
+> **Entrega via collection Bruno, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11).
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/products/<productId>/assets \

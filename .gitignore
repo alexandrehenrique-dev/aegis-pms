@@ -97,6 +97,11 @@ postgres-data/
 keycloak-data/
 *.mv.db
 
+# ---------- Backend: storage local de assets (etapa 12, AEGIS_STORAGE_LOCAL_PATH) ----------
+# Pasta criada automaticamente em runtime (LocalStorageBootstrap/LocalStorageProvider) —
+# arquivos de asset enviados localmente nunca versionam.
+backend/data/
+
 # ---------- Keycloak (artefatos locais; exports versionados ficam fora deste padrão) ----------
 keycloak/themes/*/cache/
 keycloak/providers/*.jar

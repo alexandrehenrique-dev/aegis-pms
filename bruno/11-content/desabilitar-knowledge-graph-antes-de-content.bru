@@ -1,0 +1,21 @@
+meta {
+  name: Desabilitar KNOWLEDGE_GRAPH antes de CONTENT
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/KNOWLEDGE_GRAPH/disable
+  body: none
+}
+
+docs {
+Decisao de reconstrucao: a pasta 05 (Knowledge Graph) deixa KNOWLEDGE_GRAPH habilitado em {{productId}}, e CONTENT nao pode ser desabilitado enquanto seu dependente estiver ativo (mesma regra MODULE_DEPENDENCY_MISSING validada na pasta 03). Este passo libera o teste de module-gating de CONTENT abaixo sem perder nenhuma cobertura.
+Resultado esperado: 200, enabled false.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

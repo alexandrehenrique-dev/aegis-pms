@@ -1,0 +1,23 @@
+meta {
+  name: Listar asset-tags
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/asset-tags
+  body: none
+}
+
+docs {
+Resultado esperado: 200, array contendo a tag criada.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("contem a tag criada", function() {
+    expect(res.body).to.include(bru.getVar('assetTagName'));
+  });
+}

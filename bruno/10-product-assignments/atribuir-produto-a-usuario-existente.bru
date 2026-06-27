@@ -1,0 +1,33 @@
+meta {
+  name: Atribuir produto a usuario existente
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{s3ProductId}}/users
+  body: json
+}
+
+body:json {
+  {
+    "productId": "{{s3ProductId}}",
+    "tenantId": "{{tenantId}}",
+    "userId": "{{callerSubject}}",
+    "role": "EDITOR"
+  }
+}
+
+docs {
+Objetivo: atribuir um usuario ja existente (userId, sem inviteEmail) — agora que a atribuicao automatica foi removida, callerSubject pode ser re-atribuido sem violar a unique constraint. callerSubject e usado porque e o unico usuario desta suite com TenantMembership ACTIVE no tenant (criou o tenant na pasta 01) — assignExistingUser exige essa membership.
+Resultado esperado: 201, status atribuido, role EDITOR.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("userSubject confere", function() {
+    expect(res.body.userSubject).to.equal(bru.getVar('callerSubject'));
+  });
+}

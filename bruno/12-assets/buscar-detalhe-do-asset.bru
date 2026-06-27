@@ -1,0 +1,26 @@
+meta {
+  name: Buscar detalhe do asset
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/assets/{{assetId}}
+  body: none
+}
+
+docs {
+Resultado esperado: 200, id confere, category image.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("id confere", function() {
+    expect(res.body.id).to.equal(bru.getVar('assetId'));
+  });
+  test("category image", function() {
+    expect(res.body.category).to.equal("image");
+  });
+}

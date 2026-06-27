@@ -16,7 +16,7 @@ import java.util.UUID;
 public interface ContentRepository extends JpaRepository<Content, UUID> {
 
     /**
-     * Lista tod o o conteudo de um produto.
+     * Lista o conteudo de um produto.
      *
      * @param productId identificador do produto proprietario
      * @return conteudos pertencentes ao produto informado

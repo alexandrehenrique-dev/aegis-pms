@@ -1,0 +1,31 @@
+meta {
+  name: Editar tenant
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}
+  body: json
+}
+
+body:json {
+  {
+    "name": "{{tenantName}} Atualizado",
+    "plan": "PRO",
+    "status": "ativo"
+  }
+}
+
+docs {
+Resultado esperado: 200, name atualizado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("name atualizado", function() {
+    expect(res.body.name).to.equal(bru.getVar('tenantName') + ' Atualizado');
+  });
+}

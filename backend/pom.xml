@@ -17,6 +17,7 @@
         <maven.compiler.release>25</maven.compiler.release>
         <mockito.version>5.23.0</mockito.version>
         <spring-modulith.version>2.0.1</spring-modulith.version>
+        <awssdk.version>2.29.52</awssdk.version>
     </properties>
 
     <dependencyManagement>
@@ -32,6 +33,13 @@
                 <groupId>org.springframework.modulith</groupId>
                 <artifactId>spring-modulith-bom</artifactId>
                 <version>${spring-modulith.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${awssdk.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -144,6 +152,12 @@
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
             <version>1.18.1</version>
+        </dependency>
+
+        <!-- Storage S3 (dominio asset, Sprint 12) — S3Presigner ja vem embutido no artefato s3 -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
         </dependency>
 
         <!-- Tests -->

@@ -1,8 +1,9 @@
 package br.com.byop.aegis.product.service;
 
 import br.com.byop.aegis.product.api.ModuleKey;
+import br.com.byop.aegis.product.api.ProductCreatedEvent;
 import br.com.byop.aegis.product.command.CreateProductCommand;
-import br.com.byop.aegis.product.domain.AssetStorageStrategy;
+import br.com.byop.aegis.product.api.AssetStorageStrategy;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductAssignment;
 import br.com.byop.aegis.product.domain.ProductAssignmentRole;
@@ -26,6 +27,7 @@ import br.com.byop.aegis.tenant.api.TenantAccessService;
 import br.com.byop.aegis.tenant.api.TenantReference;
 import br.com.byop.aegis.tenant.domain.Tenant;
 import br.com.byop.aegis.tenant.exception.TenantNotFoundException;
+import org.springframework.context.ApplicationEventPublisher;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -67,6 +69,9 @@ class ProductServiceTest {
     @Mock
     private ProductMapper productMapper;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private ProductService productService;
 
@@ -106,6 +111,12 @@ class ProductServiceTest {
         assertThat(assignment.getUserSubject()).isEqualTo("creator-subject");
         assertThat(assignment.getRole()).isEqualTo(ProductAssignmentRole.PRODUCT_MANAGER);
         assertThat(assignment.getStatus()).isEqualTo(ProductAssignmentStatus.ASSIGNED);
+
+        ArgumentCaptor<ProductCreatedEvent> eventCaptor = ArgumentCaptor.forClass(ProductCreatedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().tenantId()).isEqualTo(savedProduct.getTenantId());
+        assertThat(eventCaptor.getValue().productId()).isEqualTo(savedProduct.getId());
+        assertThat(eventCaptor.getValue().assetStorageStrategy()).isEqualTo(AssetStorageStrategy.LOCAL);
     }
 
     @Test

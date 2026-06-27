@@ -1,5 +1,6 @@
 package br.com.byop.aegis.product.domain;
 
+import br.com.byop.aegis.product.api.AssetStorageStrategy;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

@@ -63,12 +63,12 @@ Confirmar, nesta ordem, tudo o que foi construído nas etapas 01-22:
 - [ ] `mvn clean verify` (não só `test`) passa em todo o projeto, com o `jacoco:check` confirmando 100% de cobertura nas classes elegíveis de **todas** as etapas — não só a etapa que acabou de ser feita, o projeto inteiro.
 - [ ] Nenhum `Repository` do projeto está sem Javadoc na interface ou em algum método.
 - [ ] Nenhum uso de `@MockBean`/`@SpyBean` em nenhum teste do projeto.
-- [ ] `aegis-postman-collection.json` tem uma pasta por etapa (03 a 23), a pasta "Auth" autentica e captura `{{token}}` automaticamente para os 5 usuários de teste, e importar a collection no Postman permite rodar todo o fluxo (login → CRUD de cada domínio) sem editar nenhum request manualmente.
+- [ ] `bruno/` tem uma pasta numerada por etapa (03 a 23), a pasta `00-auth` autentica e captura `{{token}}` automaticamente para os 5 usuários de teste, e `npx @usebruno/cli run --env local`, a partir de `bruno/`, roda todo o fluxo (login → CRUD de cada domínio) sem editar nenhum request manualmente.
 - [ ] `SPRINT-RESULTADO.md` tem uma entrada por etapa concluída (01 a 23, sem nenhuma faltando), cada uma com classes criadas, endpoints confirmados e as decisões que a etapa deixou a critério do GPT já registradas (não vazias/genéricas).
 
 ## Validação
 
-> **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os à pasta desta etapa em `aegis-postman-collection.json` (collection cumulativa, autenticação via `{{token}}` herdado da pasta "Auth") e devolva o JSON completo atualizado para download.
+> **Entrega via collection Bruno, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os como requests `.bru` na pasta numerada desta etapa em `bruno/` (collection cumulativa, autenticação herdada via header `Authorization: Bearer {{token}}` definido em `collection.bru`) e valide a collection inteira via `npx @usebruno/cli run --env local`.
 
 ```bash
 cd backend

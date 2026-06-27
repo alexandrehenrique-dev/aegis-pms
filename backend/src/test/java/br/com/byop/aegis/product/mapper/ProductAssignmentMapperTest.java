@@ -1,6 +1,6 @@
 package br.com.byop.aegis.product.mapper;
 
-import br.com.byop.aegis.product.domain.AssetStorageStrategy;
+import br.com.byop.aegis.product.api.AssetStorageStrategy;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductAssignment;
 import br.com.byop.aegis.product.domain.ProductAssignmentRole;

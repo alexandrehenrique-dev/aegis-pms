@@ -1,0 +1,27 @@
+meta {
+  name: Buscar produto por id
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}
+  body: none
+}
+
+docs {
+Objetivo: detalhe de um produto, incluindo modulos.
+Resultado esperado: 200, id confere, modules e array.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("id confere", function() {
+    expect(res.body.id).to.equal(bru.getVar('productId'));
+  });
+  test("modules existe", function() {
+    expect(res.body.modules).to.be.an('array');
+  });
+}

@@ -1,0 +1,24 @@
+meta {
+  name: Desabilitar KNOWLEDGE_GRAPH - sucesso
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/KNOWLEDGE_GRAPH/disable
+  body: none
+}
+
+docs {
+Objetivo: remover o dependente antes de desabilitar CONTENT.
+Resultado esperado: 200, enabled false.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("KNOWLEDGE_GRAPH desabilitado", function() {
+    expect(res.body.enabled).to.equal(false);
+  });
+}

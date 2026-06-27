@@ -191,28 +191,31 @@ Domínios gateados por módulo (etapa → `@RequireModule`): `08`/`18` → `KNOW
 
 Toda etapa de domínio gateada por módulo adiciona, nos próprios critérios de aceite, o cenário "módulo desabilitado para o produto → 403 `MODULE_DISABLED`" como teste obrigatório de Rodada 4 (controller).
 
-## 11. Entrega de validação: collection Postman cumulativa, não só curl
+## 11. Entrega de validação: collection Bruno cumulativa, não só curl
 
-Toda etapa traz, na própria seção "Validação", um bloco de `curl` — isso continua existindo e continua sendo a **especificação exata** de cada request (método, path, headers, body), não muda. O que muda é a forma de **entregar** a validação: em vez de só rodar os `curl`s manualmente uma vez e descartar, cada etapa adiciona os mesmos requests a uma **collection Postman cumulativa única**, `aegis-postman-collection.json` (Postman Collection Format v2.1), que cresce uma pasta por etapa e é devolvida (o JSON completo, para download) ao final de cada etapa.
+> **Migração Postman → Bruno**: até a Sprint 11 (inclusive), a validação manual era entregue como um único arquivo `postman/aegis-postman-collection.json` (Postman Collection Format v2.1). A partir da Sprint Técnica de migração (ver `SPRINT-RESULTADO.md`), a collection cumulativa passou a ser **Bruno** (`bruno/`, formato `.bru` nativo, um arquivo por request, 100% git-versionado, sem dependência de aplicativo desktop nem de `pm.*`/`postman.*`). A pasta `postman/` e o arquivo `aegis-postman-collection.json` foram removidos do repositório; toda referência a eles nas etapas abaixo é histórica — qualquer trabalho novo usa exclusivamente Bruno.
 
-### 11.1 Estrutura da collection (criada na etapa 03, estendida a partir daí)
+Toda etapa traz, na própria seção "Validação", um bloco de `curl` — isso continua existindo e continua sendo a **especificação exata** de cada request (método, path, headers, body), não muda. O que muda é a forma de **entregar** a validação: em vez de só rodar os `curl`s manualmente uma vez e descartar, cada etapa adiciona os mesmos requests a uma **collection Bruno cumulativa única**, em `bruno/` (um arquivo `.bru` por request, versionado no git como qualquer arquivo de código), que cresce uma pasta numerada por etapa e é validada via `npx @usebruno/cli run --env local` ao final de cada etapa.
 
-- **Variáveis de collection** (`variable`, na raiz do JSON): `baseUrl` (`http://localhost:8080/api/v1`), `keycloakIssuer` (`http://localhost:8282/realms/aegis`), `clientId` (`aegis-web`), e `token` (vazio até a primeira autenticação — preenchido automaticamente, ver 11.2). Toda URL de request usa `{{baseUrl}}/...`, nunca o host hardcoded.
-- **Pasta "Auth" (criada na etapa 03, junto do Keycloak)**: um request `POST {{keycloakIssuer}}/protocol/openid-connect/token` por usuário de teste (`super-admin`, `admin`, `pm`, `editor`, `viewer` — mesmos 5 da etapa 21) — body `x-www-form-urlencoded` com `grant_type=password`, `client_id={{clientId}}`, `username=<usuário>`, `password=senha123` (mesma senha de teste da etapa 21). Rodar qualquer um desses requests troca o "usuário atual" da sessão de teste.
-- **Script de captura automática do token** (aba "Scripts" → "Post-response" de cada request da pasta "Auth", Postman moderno — ou `event: ["test"]` no JSON exportado):
+### 11.1 Estrutura da collection (criada na Sprint Técnica de migração, estendida a partir daí)
+
+- **`bruno/bruno.json`**: manifesto da collection (`name`, `type: collection`).
+- **`bruno/environments/{local,dev,homolog,prod}.bru`**: uma variável `baseUrl` por ambiente (`local` aponta para `http://localhost:8080`; `dev`/`homolog`/`prod` ficam com o valor vazio até o ambiente existir). Toda URL de request usa `{{baseUrl}}/...`, nunca o host hardcoded.
+- **`bruno/collection.bru`**: variáveis compartilhadas (`username`, `password`, `tenantKey`, `productKey`, `inviteEmail`, etc., inicializadas em `script:pre-request` só se ainda não tiverem valor) e o header `Authorization: Bearer {{token}}`, herdado por toda request da collection (usar `headers`, não o bloco `auth:bearer`, que tem um bug conhecido de não repropagar variáveis definidas em runtime entre requests no modo `inherit` do Bruno CLI).
+- **Pasta `00-auth` (criada na Sprint Técnica de migração)**: um request `POST {{keycloakIssuer}}/protocol/openid-connect/token` por usuário de teste necessário — body `form-urlencoded` com `grant_type=password`, `client_id=aegis-web`, `username=<usuário>`, `password=<senha de teste>`. Rodar qualquer um desses requests troca o "usuário atual" da sessão de teste.
+- **Script de captura automática do token** (`script:post-response` do request de login):
   ```js
-  const body = pm.response.json();
-  pm.collectionVariables.set("token", body.access_token);
+  bru.setVar('token', res.body.access_token);
+  bru.setVar('refreshToken', res.body.refresh_token);
   ```
-  Isso elimina copiar/colar token manualmente — rodar um request de "Auth" já deixa `{{token}}` pronto para todo o resto da collection.
-- **Authorization no nível da collection** (não em cada request individual): `Bearer Token`, valor `{{token}}`, com cada request/pasta nova herdando ("Inherit auth from parent") — assim nenhum request precisa configurar autenticação própria, só os da pasta "Auth" (que não exigem token, são o próprio login).
-- **Uma pasta por etapa de domínio** (`03 - Keycloak`, `05 - Me`, `07 - Core`, `08 - Knowledge Graph`, `10 - Tenants e ProductAssignment`, ..., até `25 - Templates de produto`), cada uma com um request por `curl` documentado na etapa correspondente — mesmo método, path, body; descrição do request (campo `description` do Postman) cita a regra de negócio que aquele request valida, para a collection servir como documentação executável, não só uma lista de chamadas soltas.
+  Isso elimina copiar/colar token manualmente — rodar o request de `00-auth` já deixa `{{token}}` pronto para todo o resto da collection.
+- **Uma pasta numerada por etapa de domínio** (`00-auth`, `01-tenants`, `02-products`, `03-product-modules`, `05-knowledge-graph`, ..., `12-assets`), cada uma com um request por `curl` documentado na etapa correspondente — mesmo método, path, body; o bloco `docs` do request (objetivo, payload, resultado esperado, variáveis usadas/produzidas) cita a regra de negócio que aquele request valida, para a collection servir como documentação executável, não só uma lista de chamadas soltas.
 
 ### 11.2 O que o GPT entrega ao final de cada etapa
 
-Além do código da etapa, o GPT entrega o JSON **completo e atualizado** de `aegis-postman-collection.json` (a collection inteira, não um diff) — pronto para download e importação direta no Postman. Etapas que gateiam por módulo ou têm regra de isolamento por tenant (Seções 9 e 10 deste padrão) incluem, na mesma pasta, ao menos um request que prova o caminho de **rejeição** (403 `MODULE_DISABLED`, 404 cross-tenant) — não só o caminho feliz, mesmo princípio já exigido dos testes automatizados (Seção 5).
+Além do código da etapa, o GPT entrega os arquivos `.bru` **novos/alterados** da pasta da etapa (Bruno é git-nativo — cada request é um arquivo próprio, então a entrega é o diff desses arquivos, nunca um JSON único reenviado por completo) e confirma que `npx @usebruno/cli run --env local`, executado a partir de `bruno/`, passa 100% (todas as pastas, na mesma execução, já que variáveis de runtime como tokens e IDs capturados só persistem dentro de uma única invocação do CLI). Etapas que gateiam por módulo ou têm regra de isolamento por tenant (Seções 9 e 10 deste padrão) incluem, na mesma pasta, ao menos um request que prova o caminho de **rejeição** (403 `MODULE_DISABLED`, 404 cross-tenant) — não só o caminho feliz, mesmo princípio já exigido dos testes automatizados (Seção 5).
 
-A pasta "Auth" da etapa 03 nunca precisa ser refeita nas etapas seguintes — só as pastas de domínio são adicionadas incrementalmente, sempre por cima do mesmo arquivo (a collection de uma etapa nunca substitui a estrutura já validada nas etapas anteriores, só soma).
+A pasta `00-auth` nunca precisa ser refeita nas etapas seguintes — só as pastas de domínio são adicionadas incrementalmente, sempre por cima da mesma collection (a collection de uma etapa nunca substitui a estrutura já validada nas etapas anteriores, só soma). Ver `docs/api-testing/README.md` para o guia completo de uso, estrutura de pastas e padrão obrigatório ao adicionar requests em sprints futuras.
 
 ## 10. Isolamento entre tenants e produtos — obrigatório em todo domínio, não só nos que já mencionam
 

@@ -1,0 +1,28 @@
+meta {
+  name: Upload mime invalido - 400
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/assets
+  body: multipartForm
+}
+
+body:multipart-form {
+  file: @file(fixtures/virus.exe)
+}
+
+docs {
+Objetivo: mime type fora do catalogo configurado em aegis.assets.limits deve ser rejeitado antes de chegar ao storage.
+Resultado esperado: 400 INVALID_ASSET_MIME_TYPE.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro INVALID_ASSET_MIME_TYPE", function() {
+    expect(res.body.error).to.equal("INVALID_ASSET_MIME_TYPE");
+  });
+}

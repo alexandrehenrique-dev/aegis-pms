@@ -1,0 +1,30 @@
+meta {
+  name: Criar tenant duplicado - 409
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants
+  body: json
+}
+
+body:json {
+  {
+    "key": "{{tenantKey}}",
+    "name": "{{tenantName}}",
+    "plan": "FREE",
+    "initialAdminEmail": "{{inviteEmail}}"
+  }
+}
+
+docs {
+Objetivo: mesma key de tenant ja existente deve ser rejeitada.
+Resultado esperado: 409.
+}
+
+tests {
+  test("status 409", function() {
+    expect(res.status).to.equal(409);
+  });
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Desabilitar ECOMMERCE - sucesso
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/ECOMMERCE/disable
+  body: none
+}
+
+docs {
+Resultado esperado: 200, enabled false.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("ECOMMERCE desabilitado", function() {
+    expect(res.body.enabled).to.equal(false);
+  });
+}

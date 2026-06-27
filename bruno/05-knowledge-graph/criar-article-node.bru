@@ -1,0 +1,39 @@
+meta {
+  name: Criar ARTICLE node
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/nodes
+  body: json
+}
+
+body:json {
+  {
+    "nodeType": "ARTICLE",
+    "refType": "CONTENT",
+    "refId": "article-{{graphRefSeed}}",
+    "label": "Artigo de Teste",
+    "slug": "artigo-teste-{{graphRefSeed}}"
+  }
+}
+
+docs {
+Objetivo: criar um node ARTICLE.
+Resultado esperado: 201.
+Variaveis produzidas: articleNodeId.
+}
+
+script:post-response {
+bru.setVar('articleNodeId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("node id presente", function() {
+    expect(res.body.id).to.be.a('string');
+  });
+}

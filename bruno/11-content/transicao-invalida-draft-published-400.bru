@@ -1,0 +1,31 @@
+meta {
+  name: Transicao invalida Draft -> Published (400)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}/transition
+  body: json
+}
+
+body:json {
+  {
+    "from": "Draft",
+    "to": "Published"
+  }
+}
+
+docs {
+Objetivo: Draft -> Published direto nao e uma transicao permitida (e o status atual real ja e In Review, nao Draft, reforcando a rejeicao).
+Resultado esperado: 400 INVALID_CONTENT_TRANSITION.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro INVALID_CONTENT_TRANSITION", function() {
+    expect(res.body.error).to.equal("INVALID_CONTENT_TRANSITION");
+  });
+}

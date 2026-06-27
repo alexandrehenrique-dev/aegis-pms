@@ -1,0 +1,30 @@
+meta {
+  name: Transicao Draft -> In Review
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}/transition
+  body: json
+}
+
+body:json {
+  {
+    "from": "Draft",
+    "to": "In Review"
+  }
+}
+
+docs {
+Resultado esperado: 200, status In Review.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("status In Review", function() {
+    expect(res.body.status).to.equal("In Review");
+  });
+}

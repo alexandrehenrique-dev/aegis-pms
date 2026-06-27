@@ -1,0 +1,24 @@
+meta {
+  name: Habilitar modulo desconhecido - 400
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/NAO_EXISTE/enable
+  body: none
+}
+
+docs {
+Objetivo: moduleKey fora do catalogo fechado ModuleKey.
+Resultado esperado: 400 INVALID_MODULE_KEY.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro INVALID_MODULE_KEY", function() {
+    expect(res.body.error).to.equal("INVALID_MODULE_KEY");
+  });
+}

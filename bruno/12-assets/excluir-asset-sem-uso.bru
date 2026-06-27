@@ -1,0 +1,21 @@
+meta {
+  name: Excluir asset sem uso
+  type: http
+  seq: 21
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/assets/{{pdfAssetId}}
+  body: none
+}
+
+docs {
+Objetivo: asset sem nenhum AssetUsage pode ser excluido sem force.
+Resultado esperado: 204.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

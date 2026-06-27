@@ -1,0 +1,35 @@
+meta {
+  name: Upload PNG - sucesso
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/assets
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(/Users/alexandresilva/Downloads/4.png) @contentType(image/png)
+  friendlyName: byop
+}
+
+script:post-response {
+  bru.setVar('assetId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("asset id presente", function() {
+    expect(res.body.id).to.be.a('string');
+  });
+}
+
+docs {
+  Objetivo: upload de imagem PNG dentro do limite de 5MB da categoria image.
+  Resultado esperado: 201, category image.
+  Variaveis produzidas: assetId.
+}

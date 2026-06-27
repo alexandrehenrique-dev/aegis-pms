@@ -1,0 +1,21 @@
+meta {
+  name: Reabilitar modulo CONTENT
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/CONTENT/enable
+  body: none
+}
+
+docs {
+Passo 3 de 4 — deixa o modulo ligado de novo para nao quebrar reexecucoes futuras.
+Resultado esperado: 200.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

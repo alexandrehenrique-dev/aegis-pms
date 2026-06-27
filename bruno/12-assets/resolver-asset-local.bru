@@ -1,0 +1,25 @@
+meta {
+  name: Resolver asset local
+  type: http
+  seq: 18
+}
+
+get {
+  url: {{baseUrl}}/api/v1/assets/{{assetId}}/resolve
+  body: none
+}
+
+docs {
+Objetivo: endpoint publico (fora de /products/{productId}) que resolve a URL de acesso ao arquivo, local ou presigned S3.
+Resultado esperado: 200, url presente, contentType image/png.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("url e contentType presentes", function() {
+    expect(res.body.url).to.be.a('string');
+    expect(res.body.contentType).to.equal("image/png");
+  });
+}

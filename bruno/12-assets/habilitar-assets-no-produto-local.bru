@@ -1,0 +1,23 @@
+meta {
+  name: Habilitar ASSETS no produto local
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/ASSETS/enable
+  body: none
+}
+
+docs {
+Resultado esperado: 200, enabled true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("ASSETS habilitado", function() {
+    expect(res.body.enabled).to.equal(true);
+  });
+}

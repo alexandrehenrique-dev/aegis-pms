@@ -1,0 +1,42 @@
+meta {
+  name: Criar produto local - sucesso
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+}
+
+body:json {
+  {
+    "tenantId": "{{tenantId}}",
+    "key": "{{productKey}}",
+    "name": "Maestro Beton",
+    "type": "Site Institucional",
+    "defaultLocale": "pt-BR"
+  }
+}
+
+docs {
+Objetivo: criar produto sem informar assetStorageStrategy (default local).
+Resultado esperado: 201, assetStorageStrategy LOCAL.
+Variaveis produzidas: productId.
+}
+
+script:post-response {
+bru.setVar('productId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("product id presente", function() {
+    expect(res.body.id).to.be.a('string');
+  });
+  test("tenantId preservado", function() {
+    expect(res.body.tenantId).to.equal(bru.getVar('tenantId'));
+  });
+}

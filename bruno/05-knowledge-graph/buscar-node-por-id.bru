@@ -1,0 +1,23 @@
+meta {
+  name: Buscar node por id
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/nodes/{{articleNodeId}}
+  body: none
+}
+
+docs {
+Resultado esperado: 200, id confere.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("id confere", function() {
+    expect(res.body.id).to.equal(bru.getVar('articleNodeId'));
+  });
+}

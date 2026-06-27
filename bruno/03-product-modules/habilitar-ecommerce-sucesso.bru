@@ -1,0 +1,25 @@
+meta {
+  name: Habilitar ECOMMERCE - registrado sem regra propria
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/ECOMMERCE/enable
+  body: none
+}
+
+docs {
+Objetivo: ECOMMERCE existe no catalogo de ModuleKey mas nao tem regra de dependencia/negocio propria ainda.
+Resultado esperado: 200.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("ECOMMERCE habilitado", function() {
+    expect(res.body.moduleKey).to.equal("ECOMMERCE");
+    expect(res.body.enabled).to.equal(true);
+  });
+}

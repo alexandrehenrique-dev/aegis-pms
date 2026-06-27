@@ -1,0 +1,23 @@
+meta {
+  name: Buscar detalhe do conteudo
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}
+  body: none
+}
+
+docs {
+Resultado esperado: 200, id confere.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("id confere", function() {
+    expect(res.body.id).to.equal(bru.getVar('contentId'));
+  });
+}

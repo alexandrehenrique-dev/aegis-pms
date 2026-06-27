@@ -1,0 +1,35 @@
+meta {
+  name: Editar conteudo (sanitiza markdown)
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}
+  body: json
+}
+
+body:json {
+  {
+    "title": "Artigo de Teste Editado",
+    "type": "article",
+    "lang": "pt-BR",
+    "body": "Corpo editado. <script>alert(2)</script> Continua legitimo."
+  }
+}
+
+docs {
+Resultado esperado: 200, titulo atualizado, <script> removido.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("titulo atualizado", function() {
+    expect(res.body.title).to.equal("Artigo de Teste Editado");
+  });
+  test("script removido do body", function() {
+    expect(res.body.body).to.not.include("<script>");
+  });
+}

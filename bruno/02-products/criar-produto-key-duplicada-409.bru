@@ -1,0 +1,31 @@
+meta {
+  name: Criar produto key duplicada no mesmo tenant - 409
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+}
+
+body:json {
+  {
+    "tenantId": "{{tenantId}}",
+    "key": "{{productKey}}",
+    "name": "Maestro Beton Duplicado",
+    "type": "Site Institucional",
+    "defaultLocale": "pt-BR"
+  }
+}
+
+docs {
+Objetivo: mesma key de produto no mesmo tenant deve ser rejeitada.
+Resultado esperado: 409.
+}
+
+tests {
+  test("status 409", function() {
+    expect(res.status).to.equal(409);
+  });
+}
