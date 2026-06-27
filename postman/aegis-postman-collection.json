@@ -108,6 +108,14 @@
       "key": "tenantName",
       "value": "BYOP",
       "type": "string"
+    },
+    {
+      "key": "contentId",
+      "value": ""
+    },
+    {
+      "key": "editorToken",
+      "value": ""
     }
   ],
   "item": [
@@ -2124,6 +2132,674 @@
                   "pm.test('knowledgeGraphStatus presente', () => pm.expect(json.knowledgeGraphStatus).to.be.a('string'));",
                   "pm.test('activeProfiles presente', () => pm.expect(json.activeProfiles).to.be.an('array'));",
                   "pm.test('buildVersion presente', () => pm.expect(json.buildVersion).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11 - Content Editorial Workflow",
+      "description": "Endpoints da Sprint 11 — dominio content: CRUD editorial, workflow (maquina de estados), versionamento e publicacao, escopados por produto. 'Criar conteudo' captura {{contentId}} automaticamente para os demais requests desta pasta.",
+      "item": [
+        {
+          "name": "Criar conteudo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content"
+              ]
+            },
+            "description": "Cria um novo Content (Draft, v1), escopado por produto. Endpoint adicionado apos a entrega inicial da Sprint 11 a pedido do responsavel pelo repositorio, para permitir o fluxo completo de teste manual (criar -> editar -> transicionar -> publicar) sem precisar seedar dados via SQL diretamente no banco.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Artigo criado via Postman\",\n  \"type\": \"article\",\n  \"lang\": \"pt-BR\",\n  \"body\": \"<p>Corpo inicial</p>\",\n  \"summary\": \"Resumo inicial via Postman\",\n  \"difficultyLevel\": \"beginner\",\n  \"category\": \"categoria-postman\",\n  \"topic\": \"topico-postman\",\n  \"metadata\": {\n    \"origin\": \"postman\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('status inicial Draft', () => pm.expect(json.status).to.eql('Draft'));",
+                  "pm.collectionVariables.set('contentId', json.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar conteudo do produto",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content"
+              ]
+            },
+            "description": "Lista todo o conteudo de um produto (Sprint 11). Captura o id do primeiro item em {{contentId}} para os requests seguintes desta pasta, caso ainda nao tenha sido definido manualmente."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('lista de conteudo', () => pm.expect(json).to.be.an('array'));",
+                  "if (json.length > 0) { pm.collectionVariables.set('contentId', json[0].id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar detalhe do conteudo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content",
+                "{{contentId}}"
+              ]
+            },
+            "description": "Detalhe de um conteudo especifico, escopado por produto."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('id confere', () => pm.expect(json.id).to.eql(pm.collectionVariables.get('contentId')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar conteudo (sanitiza markdown)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content",
+                "{{contentId}}"
+              ]
+            },
+            "description": "Edita titulo/corpo/metadados. O corpo inclui <script> propositalmente para provar que o backend sanitiza markdown antes de persistir (Sprint 11, MarkdownSanitizer) — a resposta nunca deve conter a tag <script>.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Artigo Editado via Postman\",\n  \"type\": \"article\",\n  \"lang\": \"pt-BR\",\n  \"body\": \"<p>Corpo seguro</p><script>alert(1)</script>\",\n  \"summary\": \"Resumo via Postman\",\n  \"difficultyLevel\": \"intermediate\",\n  \"category\": \"categoria-postman\",\n  \"topic\": \"topico-postman\",\n  \"metadata\": {\n    \"origin\": \"postman\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('script removido pela sanitizacao', () => pm.expect(json.body).to.not.include('<script>'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transicao Draft -> In Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}/transition",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content",
+                "{{contentId}}",
+                "transition"
+              ]
+            },
+            "description": "Transicao permitida pela maquina de estados editorial (Draft -> In Review). Toda transicao grava uma nova ContentVersion.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"Draft\",\n  \"to\": \"In Review\",\n  \"comment\": \"pronto para revisao via Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('status atualizado', () => pm.expect(json.status).to.eql('In Review'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transicao invalida Draft -> Published (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}/transition",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content",
+                "{{contentId}}",
+                "transition"
+              ]
+            },
+            "description": "Transicao fora da maquina de estados (Draft -> Published direto, sem passar por In Review) deve ser rejeitada com 400 INVALID_CONTENT_TRANSITION, independente do status atual real do conteudo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"Draft\",\n  \"to\": \"Published\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "const json = pm.response.json();",
+                  "pm.test('erro de transicao invalida', () => pm.expect(json.error).to.eql('INVALID_CONTENT_TRANSITION'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publicar conteudo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content",
+                "{{contentId}}",
+                "publish"
+              ]
+            },
+            "description": "Atalho para transicao com destino Published — atualiza tambem o campo publication. Requer papel SUPER_ADMIN, TENANT_ADMIN ou PRODUCT_MANAGER no token {{token}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"publicado via Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('status Published', () => pm.expect(json.status).to.eql('Published'));",
+                  "pm.test('publication preenchido', () => pm.expect(json.publication).to.not.eql('—'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "EDITOR tentando publicar (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{editorToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content",
+                "{{contentId}}",
+                "publish"
+              ]
+            },
+            "description": "EDITOR pode mover conteudo até In Review, nunca publicar. Este request usa {{editorToken}} (token de um usuario com papel AEGIS_EDITOR e ProductAssignment EDITOR ativo no produto) em vez do {{token}} herdado da colecao — defina {{editorToken}} manualmente antes de rodar este request. Espera 403 CONTENT_PUBLISH_FORBIDDEN.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"tentativa indevida via Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "const json = pm.response.json();",
+                  "pm.test('erro de publicacao proibida', () => pm.expect(json.error).to.eql('CONTENT_PUBLISH_FORBIDDEN'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar versoes (ordem cronologica)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}/versions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content",
+                "{{contentId}}",
+                "versions"
+              ]
+            },
+            "description": "Lista as ContentVersion do conteudo em ordem cronologica ascendente — cada transicao/publicacao gera uma versao nova."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('lista de versoes', () => pm.expect(json).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar workflow-items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content/workflow-items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content",
+                "workflow-items"
+              ]
+            },
+            "description": "Estado inicial do quadro Kanban (WorkflowBoard) — um item por conteudo do produto, com status/versao atuais."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('lista de workflow items', () => pm.expect(json).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar edit-events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content/edit-events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content",
+                "edit-events"
+              ]
+            },
+            "description": "Timeline de atividade editorial (texto livre), derivada das ContentVersion de todos os conteudos do produto."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('lista de eventos', () => pm.expect(json).to.be.an('array'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Desabilitar modulo CONTENT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/modules/CONTENT/disable",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "modules",
+                "CONTENT",
+                "disable"
+              ]
+            },
+            "description": "Desabilita o modulo CONTENT do produto, para o proximo request provar o module-gating (403 MODULE_DISABLED)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar conteudo com modulo desabilitado (403 MODULE_DISABLED)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/content",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "content"
+              ]
+            },
+            "description": "Com o modulo CONTENT desabilitado no produto, qualquer endpoint deste dominio retorna 403 MODULE_DISABLED — mesmo para SUPER_ADMIN (ADR-0015)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "const json = pm.response.json();",
+                  "pm.test('modulo desabilitado', () => pm.expect(json.error).to.eql('MODULE_DISABLED'));",
+                  "pm.test('moduleKey CONTENT', () => pm.expect(json.moduleKey).to.eql('CONTENT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reabilitar modulo CONTENT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/modules/CONTENT/enable",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "modules",
+                "CONTENT",
+                "enable"
+              ]
+            },
+            "description": "Reabilita o modulo CONTENT, deixando o produto pronto para os demais requests da colecao."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
             }

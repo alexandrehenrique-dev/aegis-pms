@@ -1,3 +1,0 @@
-$kind: collection
-description: Validação do backend como OAuth2 Resource Server e endpoint /api/v1/me.
-order: 3000

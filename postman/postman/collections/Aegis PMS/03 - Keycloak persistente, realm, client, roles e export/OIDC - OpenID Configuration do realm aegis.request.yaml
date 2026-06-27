@@ -1,5 +1,0 @@
-$kind: http-request
-description: "Equivalente a: curl http://localhost:8282/realms/aegis/.well-known/openid-configuration. Deve retornar JSON com issuer = http://localhost:8282/realms/aegis."
-url: "{{keycloakIssuer}}/.well-known/openid-configuration"
-method: GET
-order: 1000

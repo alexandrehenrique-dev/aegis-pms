@@ -1,0 +1,15 @@
+$kind: http-request
+description: Com o modulo CONTENT desabilitado no produto, qualquer endpoint deste dominio retorna 403 MODULE_DISABLED — mesmo para SUPER_ADMIN (ADR-0015).
+url: "{{baseUrl}}/api/v1/products/{{productId}}/content"
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 403', () => pm.response.to.have.status(403));
+      const json = pm.response.json();
+      pm.test('modulo desabilitado', () => pm.expect(json.error).to.eql('MODULE_DISABLED'));
+      pm.test('moduleKey CONTENT', () => pm.expect(json.moduleKey).to.eql('CONTENT'));
+    language: text/javascript
+order: 13000

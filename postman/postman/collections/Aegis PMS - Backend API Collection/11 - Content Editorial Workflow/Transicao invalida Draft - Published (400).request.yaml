@@ -1,0 +1,23 @@
+$kind: http-request
+name: Transicao invalida Draft -> Published (400)
+description: Transicao fora da maquina de estados (Draft -> Published direto, sem passar por In Review) deve ser rejeitada com 400 INVALID_CONTENT_TRANSITION, independente do status atual real do conteudo.
+url: "{{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}/transition"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "from": "Draft",
+      "to": "Published"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 400', () => pm.response.to.have.status(400));
+      const json = pm.response.json();
+      pm.test('erro de transicao invalida', () => pm.expect(json.error).to.eql('INVALID_CONTENT_TRANSITION'));
+    language: text/javascript
+order: 6000
