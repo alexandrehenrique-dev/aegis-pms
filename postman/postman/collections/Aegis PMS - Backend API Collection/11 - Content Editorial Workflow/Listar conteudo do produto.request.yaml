@@ -1,0 +1,15 @@
+$kind: http-request
+description: Lista todo o conteudo de um produto (Sprint 11). Captura o id do primeiro item em {{contentId}} para os requests seguintes desta pasta, caso ainda nao tenha sido definido manualmente.
+url: "{{baseUrl}}/api/v1/products/{{productId}}/content"
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const json = pm.response.json();
+      pm.test('lista de conteudo', () => pm.expect(json).to.be.an('array'));
+      if (json.length > 0) { pm.collectionVariables.set('contentId', json[0].id); }
+    language: text/javascript
+order: 2000

@@ -18,6 +18,8 @@ variables:
   userId: ""
   inviteEmail: guest@example.com
   tenantName: BYOP
+  contentId: ""
+  editorToken: ""
 scripts:
   - type: http:beforeRequest
     code: |-

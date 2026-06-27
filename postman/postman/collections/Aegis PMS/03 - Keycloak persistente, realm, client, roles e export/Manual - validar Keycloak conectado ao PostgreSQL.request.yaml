@@ -1,5 +1,0 @@
-$kind: http-request
-description: 'Executar no terminal: docker exec -it {{keycloakDbContainer}} psql -U {{keycloakDbUser}} -d {{keycloakDbName}} -c "SELECT count(*) FROM realm;". Esperado: count >= 1.'
-url: "{{baseUrl}}/__manual__/keycloak-postgres-realm-count"
-method: GET
-order: 2000

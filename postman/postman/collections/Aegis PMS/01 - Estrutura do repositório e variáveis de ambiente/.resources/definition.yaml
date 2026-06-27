@@ -1,3 +1,0 @@
-$kind: collection
-description: Validação manual da Etapa 01. Esta etapa não define endpoints HTTP; os itens documentam os comandos de validação exigidos pelo artefato da sprint.
-order: 1000

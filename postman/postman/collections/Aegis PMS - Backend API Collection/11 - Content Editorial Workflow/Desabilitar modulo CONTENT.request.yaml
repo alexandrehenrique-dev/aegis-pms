@@ -1,0 +1,11 @@
+$kind: http-request
+description: Desabilita o modulo CONTENT do produto, para o proximo request provar o module-gating (403 MODULE_DISABLED).
+url: "{{baseUrl}}/api/v1/products/{{productId}}/modules/CONTENT/disable"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+scripts:
+  - type: afterResponse
+    code: pm.test('status 200', () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 12000

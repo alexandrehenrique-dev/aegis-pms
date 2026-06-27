@@ -1,0 +1,32 @@
+$kind: http-request
+description: Cria um novo Content (Draft, v1), escopado por produto. Endpoint adicionado apos a entrega inicial da Sprint 11 a pedido do responsavel pelo repositorio, para permitir o fluxo completo de teste manual (criar -> editar -> transicionar -> publicar) sem precisar seedar dados via SQL diretamente no banco.
+url: "{{baseUrl}}/api/v1/products/{{productId}}/content"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Artigo criado via Postman",
+      "type": "article",
+      "lang": "pt-BR",
+      "body": "<p>Corpo inicial</p>",
+      "summary": "Resumo inicial via Postman",
+      "difficultyLevel": "beginner",
+      "category": "categoria-postman",
+      "topic": "topico-postman",
+      "metadata": {
+        "origin": "postman"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('status 201', () => pm.response.to.have.status(201));
+      const json = pm.response.json();
+      pm.test('status inicial Draft', () => pm.expect(json.status).to.eql('Draft'));
+      pm.collectionVariables.set('contentId', json.id);
+    language: text/javascript
+order: 1000
