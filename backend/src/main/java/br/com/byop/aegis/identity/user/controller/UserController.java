@@ -2,12 +2,13 @@ package br.com.byop.aegis.identity.user.controller;
 
 import br.com.byop.aegis.identity.user.dto.UserResponse;
 import br.com.byop.aegis.identity.user.service.UserService;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/users")
 public class UserController {
 
     private final UserService userService;
@@ -16,12 +17,12 @@ public class UserController {
         this.userService = userService;
     }
 
-    @GetMapping
+    @GetMapping("/api/v1/users")
     public List<UserResponse> findUsers() {
         return userService.findUsers();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/api/v1/users/{id}")
     public UserResponse findUserById(@PathVariable("id") String id) {
         return userService.findUserById(id);
     }

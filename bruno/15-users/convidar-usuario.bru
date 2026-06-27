@@ -1,0 +1,41 @@
+meta {
+  name: Convidar usuario do tenant
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/users/invite
+  body: json
+}
+
+body:json {
+  {
+    "name": "Tenant User Bruno",
+    "email": "{{tenantUserInviteEmail}}",
+    "role": "EDITOR",
+    "allowedProducts": "Aegis",
+    "message": "Convite gerado pela suite Bruno"
+  }
+}
+
+docs {
+Objetivo: convidar um usuario novo para o tenant via fluxo real Keycloak + TenantMembership.
+Resultado esperado: 201, status convidado.
+Variaveis produzidas: tenantUserId.
+}
+
+script:post-response {
+bru.setVar('tenantUserId', res.body.userId);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("usuario convidado", function() {
+    expect(res.body.email).to.equal(bru.getVar('tenantUserInviteEmail'));
+    expect(res.body.status).to.equal("convidado");
+    expect(res.body.userId).to.be.a("string");
+  });
+}

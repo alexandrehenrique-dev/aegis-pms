@@ -1,0 +1,33 @@
+meta {
+  name: Editar usuario do tenant
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/users/{{tenantUserId}}
+  body: json
+}
+
+body:json {
+  {
+    "role": "VIEWER",
+    "allowedProducts": "Aegis",
+    "status": "convidado"
+  }
+}
+
+docs {
+Objetivo: editar papel/status do usuario sem sair do estado convidado, para permitir o teste seguinte de reenvio.
+Resultado esperado: 200, role viewer e status convidado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("usuario editado", function() {
+    expect(res.body.role).to.equal("viewer");
+    expect(res.body.status).to.equal("convidado");
+  });
+}

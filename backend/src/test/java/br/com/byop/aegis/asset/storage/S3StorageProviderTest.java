@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -67,6 +68,17 @@ class S3StorageProviderTest {
 
         assertThat(key).isEqualTo("aegis/pms/%s/%s/pdf/curriculo.pdf".formatted(TENANT_ID, PRODUCT_ID));
         PutObjectRequest built = capturedPutObjectRequest();
+        assertThat(built.bucket()).isEqualTo("aegis-bucket");
+        assertThat(built.key()).isEqualTo(key);
+    }
+
+    @Test
+    void shouldUseConfiguredBucketAndCandidateKeyWhenCheckingCollision() {
+        when(s3Client.headObject(any(Consumer.class))).thenThrow(NoSuchKeyException.builder().message("not found").build());
+
+        String key = provider().store(TENANT_ID, PRODUCT_ID, AssetCategory.PDF, "curriculo.pdf", "conteudo".getBytes());
+
+        HeadObjectRequest built = capturedHeadObjectRequest();
         assertThat(built.bucket()).isEqualTo("aegis-bucket");
         assertThat(built.key()).isEqualTo(key);
     }
@@ -165,6 +177,14 @@ class S3StorageProviderTest {
         ArgumentCaptor<Consumer<DeleteObjectRequest.Builder>> captor = ArgumentCaptor.captor();
         verify(s3Client).deleteObject(captor.capture());
         DeleteObjectRequest.Builder builder = DeleteObjectRequest.builder();
+        captor.getValue().accept(builder);
+        return builder.build();
+    }
+
+    private HeadObjectRequest capturedHeadObjectRequest() {
+        ArgumentCaptor<Consumer<HeadObjectRequest.Builder>> captor = ArgumentCaptor.captor();
+        verify(s3Client).headObject(captor.capture());
+        HeadObjectRequest.Builder builder = HeadObjectRequest.builder();
         captor.getValue().accept(builder);
         return builder.build();
     }

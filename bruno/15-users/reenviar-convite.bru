@@ -1,0 +1,24 @@
+meta {
+  name: Reenviar convite
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/users/{{tenantUserId}}/resend-invite
+  body: none
+}
+
+docs {
+Objetivo: reenviar execute-actions-email para usuario ainda convidado.
+Resultado esperado: 200, usuario permanece convidado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("continua convidado", function() {
+    expect(res.body.status).to.equal("convidado");
+  });
+}

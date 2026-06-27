@@ -11,7 +11,8 @@ import java.util.Arrays;
  */
 public enum ProductAssignmentStatus {
     ASSIGNED("atribuido"),
-    INVITED("convidado");
+    INVITED("convidado"),
+    REMOVED("removido");
 
     private final String contractValue;
 

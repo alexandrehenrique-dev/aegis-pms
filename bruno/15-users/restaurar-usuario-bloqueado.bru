@@ -1,0 +1,24 @@
+meta {
+  name: Restaurar usuario bloqueado
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/users/{{tenantUserId}}/restore
+  body: none
+}
+
+docs {
+Objetivo: restaurar acesso de usuario bloqueado.
+Resultado esperado: 200, status ativo.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("usuario ativo", function() {
+    expect(res.body.status).to.equal("ativo");
+  });
+}

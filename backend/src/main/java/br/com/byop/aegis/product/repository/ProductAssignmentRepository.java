@@ -51,4 +51,36 @@ public interface ProductAssignmentRepository extends JpaRepository<ProductAssign
      * @return {@code true} quando a atribuicao existe com o status informado
      */
     boolean existsByProductIdAndUserSubjectAndStatus(UUID productId, String userSubject, ProductAssignmentStatus status);
+
+    /**
+     * Lista atribuicoes de um usuario dentro de um tenant.
+     *
+     * @param tenantId identificador do tenant
+     * @param userSubject subject do usuario no Keycloak
+     * @return atribuicoes do usuario no tenant informado
+     */
+    List<ProductAssignment> findAllByTenantIdAndUserSubject(UUID tenantId, String userSubject);
+
+    /**
+     * Lista atribuicoes de um usuario dentro de um tenant por status.
+     *
+     * @param tenantId identificador do tenant
+     * @param userSubject subject do usuario no Keycloak
+     * @param status status esperado da atribuicao
+     * @return atribuicoes do usuario no tenant com o status informado
+     */
+    List<ProductAssignment> findAllByTenantIdAndUserSubjectAndStatus(
+            UUID tenantId,
+            String userSubject,
+            ProductAssignmentStatus status
+    );
+
+    /**
+     * Lista atribuicoes de um tenant por status.
+     *
+     * @param tenantId identificador do tenant
+     * @param status status esperado da atribuicao
+     * @return atribuicoes do tenant com o status informado
+     */
+    List<ProductAssignment> findAllByTenantIdAndStatus(UUID tenantId, ProductAssignmentStatus status);
 }

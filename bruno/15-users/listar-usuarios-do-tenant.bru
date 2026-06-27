@@ -1,0 +1,27 @@
+meta {
+  name: Listar usuarios do tenant
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/users
+  body: none
+}
+
+docs {
+Objetivo: listar usuarios visiveis no tenant para o caller autenticado.
+Resultado esperado: 200, lista contendo o usuario convidado nesta pasta.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("lista contem usuario convidado", function() {
+    expect(res.body).to.be.an("array");
+    expect(res.body.some(function(user) {
+      return user.userId === bru.getVar('tenantUserId');
+    })).to.equal(true);
+  });
+}

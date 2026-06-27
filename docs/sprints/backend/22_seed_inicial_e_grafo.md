@@ -56,7 +56,7 @@ Usuários e papéis, espelhando `frontend/src/core/auth/mocks/users.ts` (mesma s
 
 ## Critérios de aceite
 
-- [ ] Os 3 tenants (`BYOP`, `Aegis Labs`, `Cliente Norte`) e os 8 produtos aparecem na API com os módulos corretos habilitados.
+- [ ] Os 3 tenants (`CLIENTES BETA`, `Aegis Labs`, `Cliente Norte`) e os 8 produtos aparecem na API com os módulos corretos habilitados.
 - [ ] Os 5 usuários de teste existem no Keycloak (etapa 03) e suas memberships/atribuições de produto existem no backend.
 - [ ] `super-admin@byop.io` autenticado vê os 3 tenants via `GET /api/v1/tenants`; os demais usuários veem só os seus.
 - [ ] Seed roda apenas em profile `local` (não em `prod`).

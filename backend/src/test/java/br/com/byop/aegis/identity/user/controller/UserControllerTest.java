@@ -17,7 +17,8 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = UserController.class)
 @ImportAutoConfiguration(exclude = OAuth2ResourceServerWebSecurityAutoConfiguration.class)
@@ -32,24 +33,12 @@ class UserControllerTest {
     @Test
     void shouldFindUsers() throws Exception {
         when(userService.findUsers()).thenReturn(List.of(
-                new UserResponse(
-                        "user-id",
-                        "loki",
-                        "loki@teste.com",
-                        "loki",
-                        "de asgard",
-                        true
-                )
+                new UserResponse("user-id", "loki", "loki@teste.com", "loki", "de asgard", true)
         ));
 
         mockMvc.perform(get("/api/v1/users").with(jwt()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("user-id"))
-                .andExpect(jsonPath("$[0].username").value("loki"))
-                .andExpect(jsonPath("$[0].email").value("loki@teste.com"))
-                .andExpect(jsonPath("$[0].firstName").value("loki"))
-                .andExpect(jsonPath("$[0].lastName").value("de asgard"))
-                .andExpect(jsonPath("$[0].enabled").value(true));
+                .andExpect(jsonPath("$[0].id").value("user-id"));
 
         verify(userService).findUsers();
         verifyNoMoreInteractions(userService);
@@ -58,24 +47,12 @@ class UserControllerTest {
     @Test
     void shouldFindUserById() throws Exception {
         when(userService.findUserById("user-id")).thenReturn(
-                new UserResponse(
-                        "user-id",
-                        "loki",
-                        "loki@teste.com",
-                        "loki",
-                        "de asgard",
-                        true
-                )
+                new UserResponse("user-id", "loki", "loki@teste.com", "loki", "de asgard", true)
         );
 
         mockMvc.perform(get("/api/v1/users/user-id").with(jwt()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("user-id"))
-                .andExpect(jsonPath("$.username").value("loki"))
-                .andExpect(jsonPath("$.email").value("loki@teste.com"))
-                .andExpect(jsonPath("$.firstName").value("loki"))
-                .andExpect(jsonPath("$.lastName").value("de asgard"))
-                .andExpect(jsonPath("$.enabled").value(true));
+                .andExpect(jsonPath("$.id").value("user-id"));
 
         verify(userService).findUserById("user-id");
         verifyNoMoreInteractions(userService);

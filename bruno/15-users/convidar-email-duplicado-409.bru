@@ -1,0 +1,34 @@
+meta {
+  name: Convidar usuario duplicado 409
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/users/invite
+  body: json
+}
+
+body:json {
+  {
+    "name": "Tenant User Bruno",
+    "email": "{{tenantUserInviteEmail}}",
+    "role": "EDITOR",
+    "allowedProducts": "Aegis",
+    "message": "Tentativa duplicada"
+  }
+}
+
+docs {
+Objetivo: validar rejeicao de e-mail ja membro do mesmo tenant.
+Resultado esperado: 409 USER_ALREADY_EXISTS_IN_TENANT.
+}
+
+tests {
+  test("status 409", function() {
+    expect(res.status).to.equal(409);
+  });
+  test("erro de duplicidade", function() {
+    expect(res.body.error).to.equal("USER_ALREADY_EXISTS_IN_TENANT");
+  });
+}

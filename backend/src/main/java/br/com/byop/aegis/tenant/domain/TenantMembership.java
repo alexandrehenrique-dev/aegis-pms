@@ -61,8 +61,20 @@ public class TenantMembership {
         this.status = TenantMembershipStatus.SUSPENDED;
     }
 
+    public void invite() {
+        this.status = TenantMembershipStatus.INVITED;
+    }
+
     public void revoke() {
         this.status = TenantMembershipStatus.REVOKED;
+    }
+
+    public void remove() {
+        this.status = TenantMembershipStatus.REMOVED;
+    }
+
+    public void changeRole(String role) {
+        this.role = Objects.requireNonNull(role, "role is required");
     }
 
     public void activate() {
