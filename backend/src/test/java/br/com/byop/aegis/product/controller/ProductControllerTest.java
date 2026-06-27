@@ -2,7 +2,7 @@ package br.com.byop.aegis.product.controller;
 
 import br.com.byop.aegis.core.CoreExceptionHandler;
 import br.com.byop.aegis.product.api.ModuleKey;
-import br.com.byop.aegis.product.domain.AssetStorageStrategy;
+import br.com.byop.aegis.product.api.AssetStorageStrategy;
 import br.com.byop.aegis.product.domain.ProductStatus;
 import br.com.byop.aegis.product.domain.ProductTypeKey;
 import br.com.byop.aegis.product.dto.ProductDetail;

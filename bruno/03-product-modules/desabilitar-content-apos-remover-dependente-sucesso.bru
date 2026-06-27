@@ -1,0 +1,24 @@
+meta {
+  name: Desabilitar CONTENT apos remover dependente - sucesso
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/CONTENT/disable
+  body: none
+}
+
+docs {
+Objetivo: agora que KNOWLEDGE_GRAPH esta desabilitado, CONTENT pode ser desabilitado.
+Resultado esperado: 200, enabled false.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("CONTENT desabilitado", function() {
+    expect(res.body.enabled).to.equal(false);
+  });
+}

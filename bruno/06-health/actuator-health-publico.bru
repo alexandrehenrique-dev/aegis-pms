@@ -1,0 +1,25 @@
+meta {
+  name: Actuator Health publico
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/actuator/health
+  body: none
+  auth: none
+}
+
+docs {
+  Objetivo: confirmar que o endpoint publico de health nao exige autenticacao.
+  Resultado esperado: 200, status UP.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("status UP", function() {
+    expect(res.body.status).to.equal("UP");
+  });
+}

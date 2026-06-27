@@ -1,6 +1,5 @@
 package br.com.byop.aegis.product.api;
 
-import br.com.byop.aegis.product.domain.AssetStorageStrategy;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductTypeKey;
 import br.com.byop.aegis.product.exception.ProductNotFoundException;
@@ -50,6 +49,22 @@ class ProductReferenceServiceTest {
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getRequiredReference(PRODUCT_ID))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessage("Product not found: " + PRODUCT_ID);
+    }
+
+    @Test
+    void shouldReturnAssetStorageStrategy() {
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product()));
+
+        assertThat(service.getRequiredAssetStorageStrategy(PRODUCT_ID)).isEqualTo(AssetStorageStrategy.LOCAL);
+    }
+
+    @Test
+    void shouldRejectAssetStorageStrategyForMissingProduct() {
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getRequiredAssetStorageStrategy(PRODUCT_ID))
                 .isInstanceOf(ProductNotFoundException.class)
                 .hasMessage("Product not found: " + PRODUCT_ID);
     }

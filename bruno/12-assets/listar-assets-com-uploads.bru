@@ -1,0 +1,23 @@
+meta {
+  name: Listar assets - com uploads
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/assets
+  body: none
+}
+
+docs {
+Resultado esperado: 200, array com pelo menos 2 itens (PNG + PDF).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("array com uploads", function() {
+    expect(res.body.length).to.be.at.least(2);
+  });
+}

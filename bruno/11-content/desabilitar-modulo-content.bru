@@ -1,0 +1,21 @@
+meta {
+  name: Desabilitar modulo CONTENT
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/CONTENT/disable
+  body: none
+}
+
+docs {
+Passo 2 de 4 do teste de module-gating desta pasta.
+Resultado esperado: 200.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

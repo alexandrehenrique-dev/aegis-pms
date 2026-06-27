@@ -1,0 +1,33 @@
+meta {
+  name: Restaurar acesso do criador ao produto s3
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{s3ProductId}}/users
+  body: json
+}
+
+body:json {
+  {
+    "productId": "{{s3ProductId}}",
+    "tenantId": "{{tenantId}}",
+    "userId": "{{callerSubject}}",
+    "role": "PRODUCT_MANAGER"
+  }
+}
+
+docs {
+Decisao de reconstrucao: callerSubject (quem criou o tenant e, por consequencia, o proprio produto s3ProductId) e o unico usuario com TenantMembership ACTIVE neste tenant nesta suite — por isso foi usado no teste 'Atribuir produto a usuario existente' acima. A request seguinte ('Remover atribuicao') removeu essa mesma atribuicao para validar o DELETE, o que tambem removeria o acesso do criador (SUPER_ADMIN so acessa produtos onde possui ProductAssignment ACTIVE) a s3ProductId para as pastas seguintes (12 - Assets). Esta request restaura esse acesso, sem perder nenhuma cobertura dos cenarios acima.
+Resultado esperado: 201.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("acesso restaurado", function() {
+    expect(res.body.userSubject).to.equal(bru.getVar('callerSubject'));
+  });
+}

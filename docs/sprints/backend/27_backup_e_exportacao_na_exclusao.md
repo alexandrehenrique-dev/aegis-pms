@@ -427,7 +427,7 @@ Variáveis disponíveis: `${userName}`, `${productName}`, `${tenantName}`, `${do
 
 ## J. Validação
 
-> **Entrega via collection Postman** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11).
+> **Entrega via collection Bruno** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11).
 
 ```bash
 # Excluir produto (retorna 202, dispara job assíncrono)

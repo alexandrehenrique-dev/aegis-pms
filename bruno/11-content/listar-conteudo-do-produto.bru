@@ -1,0 +1,23 @@
+meta {
+  name: Listar conteudo do produto
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/content
+  body: none
+}
+
+docs {
+Resultado esperado: 200, array nao vazio.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("contem o conteudo criado", function() {
+    expect(res.body).to.be.an('array').that.is.not.empty;
+  });
+}

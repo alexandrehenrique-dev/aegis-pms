@@ -1,0 +1,24 @@
+meta {
+  name: Listar related
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/nodes/{{articleNodeId}}/related
+  body: none
+}
+
+docs {
+Objetivo: entidades relacionadas (N hops).
+Resultado esperado: 200, array.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("body e array", function() {
+    expect(res.body).to.be.an('array');
+  });
+}

@@ -1,6 +1,6 @@
 package br.com.byop.aegis.product.command;
 
-import br.com.byop.aegis.product.domain.AssetStorageStrategy;
+import br.com.byop.aegis.product.api.AssetStorageStrategy;
 
 import java.util.UUID;
 

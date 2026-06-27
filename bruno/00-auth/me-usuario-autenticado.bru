@@ -1,0 +1,29 @@
+meta {
+  name: Me - usuario autenticado
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me
+  body: none
+}
+
+docs {
+  Objetivo: confirmar que o Bearer token capturado no Login funciona contra o backend (herdado de collection.bru, nao declarado aqui).
+  Resultado esperado: 200, role super_admin.
+  Variaveis produzidas: callerSubject (subject do usuario autenticado no Keycloak — quem cria um tenant se torna automaticamente TENANT_ADMIN com membership ACTIVE nesse tenant, util para os testes de atribuicao de produto da pasta 10).
+}
+
+script:post-response {
+  bru.setVar('callerSubject', res.body.subject);
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("role super_admin", function() {
+    expect(res.body.role).to.equal("super_admin");
+  });
+}

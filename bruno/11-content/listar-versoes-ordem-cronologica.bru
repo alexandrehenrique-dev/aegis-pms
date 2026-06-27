@@ -1,0 +1,23 @@
+meta {
+  name: Listar versoes (ordem cronologica)
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}/versions
+  body: none
+}
+
+docs {
+Resultado esperado: 200, array nao vazio (uma versao por transicao/publicacao).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("versoes presentes", function() {
+    expect(res.body).to.be.an('array').that.is.not.empty;
+  });
+}

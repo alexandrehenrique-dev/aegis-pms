@@ -1,0 +1,23 @@
+meta {
+  name: Remover asset-tag
+  type: http
+  seq: 15
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/asset-tags/{{assetTagName}}
+  body: none
+}
+
+docs {
+Resultado esperado: 200, array sem a tag removida.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("tag removida", function() {
+    expect(res.body).to.not.include(bru.getVar('assetTagName'));
+  });
+}

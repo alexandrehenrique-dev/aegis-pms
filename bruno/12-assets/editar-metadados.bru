@@ -1,0 +1,37 @@
+meta {
+  name: Editar metadados do asset
+  type: http
+  seq: 16
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/assets/{{assetId}}/metadata
+  body: json
+}
+
+body:json {
+  {
+    "friendlyName": "Imagem institucional editada",
+    "altText": "Logo da empresa",
+    "caption": "Legenda de teste",
+    "credit": "Equipe de design",
+    "tags": "institucional,editada"
+  }
+}
+
+docs {
+Objetivo: friendlyName, altText, caption, credit e tags (CSV) sao reconciliados — tags inexistentes sao criadas automaticamente.
+Resultado esperado: 200, friendlyName atualizado, tags contem institucional e editada.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("friendlyName atualizado", function() {
+    expect(res.body.friendlyName).to.equal("Imagem institucional editada");
+  });
+  test("tags reconciliadas", function() {
+    expect(res.body.tags).to.include.members(["institucional", "editada"]);
+  });
+}

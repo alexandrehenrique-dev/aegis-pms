@@ -1,7 +1,7 @@
 package br.com.byop.aegis.product.contract;
 
 import br.com.byop.aegis.product.command.CreateProductCommand;
-import br.com.byop.aegis.product.domain.AssetStorageStrategy;
+import br.com.byop.aegis.product.api.AssetStorageStrategy;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 

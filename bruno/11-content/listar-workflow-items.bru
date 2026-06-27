@@ -1,0 +1,23 @@
+meta {
+  name: Listar workflow-items
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/content/workflow-items
+  body: none
+}
+
+docs {
+Resultado esperado: 200, array.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("body e array", function() {
+    expect(res.body).to.be.an('array');
+  });
+}

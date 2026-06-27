@@ -1,0 +1,31 @@
+meta {
+  name: Publicar conteudo
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}/publish
+  body: json
+}
+
+body:json {
+  {
+    "comment": "Publicacao via Bruno"
+  }
+}
+
+docs {
+Objetivo: In Review -> Published via atalho /publish.
+Resultado esperado: 200, status Published, publication preenchido.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("status Published", function() {
+    expect(res.body.status).to.equal("Published");
+    expect(res.body.publication).to.not.equal("\u2014");
+  });
+}

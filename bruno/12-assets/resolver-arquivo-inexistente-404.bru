@@ -1,0 +1,23 @@
+meta {
+  name: Resolver arquivo inexistente - 404
+  type: http
+  seq: 19
+}
+
+get {
+  url: {{baseUrl}}/api/v1/assets/00000000-0000-0000-0000-000000000000/resolve
+  body: none
+}
+
+docs {
+Resultado esperado: 404 ASSET_NOT_FOUND.
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+  test("erro ASSET_NOT_FOUND", function() {
+    expect(res.body.error).to.equal("ASSET_NOT_FOUND");
+  });
+}

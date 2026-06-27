@@ -1,0 +1,28 @@
+meta {
+  name: Duplicar asset-tag - 409
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/asset-tags
+  body: json
+}
+
+body:json {
+  "{{assetTagName}}"
+}
+
+docs {
+Objetivo: criar a mesma tag novamente no mesmo produto.
+Resultado esperado: 409 ASSET_TAG_ALREADY_EXISTS.
+}
+
+tests {
+  test("status 409", function() {
+    expect(res.status).to.equal(409);
+  });
+  test("erro ASSET_TAG_ALREADY_EXISTS", function() {
+    expect(res.body.error).to.equal("ASSET_TAG_ALREADY_EXISTS");
+  });
+}

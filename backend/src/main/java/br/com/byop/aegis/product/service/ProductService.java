@@ -1,7 +1,8 @@
 package br.com.byop.aegis.product.service;
 
 import br.com.byop.aegis.product.command.CreateProductCommand;
-import br.com.byop.aegis.product.domain.AssetStorageStrategy;
+import br.com.byop.aegis.product.api.AssetStorageStrategy;
+import br.com.byop.aegis.product.api.ProductCreatedEvent;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductAssignment;
 import br.com.byop.aegis.product.domain.ProductAssignmentRole;
@@ -20,6 +21,7 @@ import br.com.byop.aegis.product.repository.ProductModuleRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,16 +48,19 @@ public class ProductService {
     private final ProductModuleRepository moduleRepository;
     private final ProductModuleMapper moduleMapper;
     private final ProductMapper productMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ProductService(ProductRepository productRepository, TenantAccessService tenantAccessService,
                           ProductAssignmentRepository assignmentRepository, ProductModuleRepository moduleRepository,
-                          ProductModuleMapper moduleMapper, ProductMapper productMapper) {
+                          ProductModuleMapper moduleMapper, ProductMapper productMapper,
+                          ApplicationEventPublisher eventPublisher) {
         this.productRepository = productRepository;
         this.tenantAccessService = tenantAccessService;
         this.assignmentRepository = assignmentRepository;
         this.moduleRepository = moduleRepository;
         this.moduleMapper = moduleMapper;
         this.productMapper = productMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -83,6 +88,7 @@ public class ProductService {
                 caller.subject(),
                 ProductAssignmentRole.PRODUCT_MANAGER
         ));
+        eventPublisher.publishEvent(new ProductCreatedEvent(product.getTenantId(), product.getId(), storageStrategy));
 
         return productMapper.toSummary(product);
     }

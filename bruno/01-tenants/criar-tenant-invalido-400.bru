@@ -1,0 +1,27 @@
+meta {
+  name: Criar tenant invalido - 400
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants
+  body: json
+}
+
+body:json {
+  {
+    "plan": "FREE"
+  }
+}
+
+docs {
+Objetivo: faltando campos obrigatorios (key, name) deve ser rejeitado.
+Resultado esperado: 400 REQUEST_VALIDATION_FAILED.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+}

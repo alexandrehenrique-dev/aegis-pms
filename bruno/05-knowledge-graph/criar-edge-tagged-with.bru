@@ -1,0 +1,37 @@
+meta {
+  name: Criar edge TAGGED_WITH
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/edges
+  body: json
+}
+
+body:json {
+  {
+    "sourceNodeId": "{{articleNodeId}}",
+    "targetNodeId": "{{topicNodeId}}",
+    "edgeType": "TAGGED_WITH"
+  }
+}
+
+docs {
+Objetivo: relacionar ARTICLE -> TOPIC.
+Resultado esperado: 201.
+Variaveis produzidas: graphEdgeId.
+}
+
+script:post-response {
+bru.setVar('graphEdgeId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("edge id presente", function() {
+    expect(res.body.id).to.be.a('string');
+  });
+}

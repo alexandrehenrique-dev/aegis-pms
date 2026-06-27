@@ -1,0 +1,29 @@
+meta {
+  name: Atribuir produto - sem usuario nem convite rejeitado
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/users
+  body: json
+}
+
+body:json {
+  {
+    "productId": "{{productId}}",
+    "tenantId": "{{tenantId}}",
+    "role": "EDITOR"
+  }
+}
+
+docs {
+Objetivo: nem userId nem inviteEmail informados — invalido.
+Resultado esperado: 400.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+}

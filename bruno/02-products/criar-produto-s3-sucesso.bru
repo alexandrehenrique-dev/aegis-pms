@@ -1,0 +1,40 @@
+meta {
+  name: Criar produto s3 - sucesso sem storage local
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+}
+
+body:json {
+  {
+    "tenantId": "{{tenantId}}",
+    "key": "s3-{{productKey}}",
+    "name": "Produto S3",
+    "type": "Portal",
+    "defaultLocale": "pt-BR",
+    "assetStorageStrategy": "S3"
+  }
+}
+
+docs {
+Objetivo: criar produto com assetStorageStrategy explicito S3 (sem provisionar pasta local).
+Resultado esperado: 201, assetStorageStrategy S3.
+Variaveis produzidas: s3ProductId.
+}
+
+script:post-response {
+bru.setVar('s3ProductId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("assetStorageStrategy s3", function() {
+    expect(String(res.body.assetStorageStrategy).toLowerCase()).to.equal('s3');
+  });
+}

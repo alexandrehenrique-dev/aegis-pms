@@ -1,0 +1,21 @@
+meta {
+  name: Reabilitar KNOWLEDGE_GRAPH apos CONTENT
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/KNOWLEDGE_GRAPH/enable
+  body: none
+}
+
+docs {
+Passo 4 de 4 — restaura o estado deixado pela pasta 05, ja que CONTENT esta habilitado de novo.
+Resultado esperado: 200, enabled true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

@@ -1,7 +1,7 @@
 package br.com.byop.aegis.product.mapper;
 
 import br.com.byop.aegis.product.api.ModuleKey;
-import br.com.byop.aegis.product.domain.AssetStorageStrategy;
+import br.com.byop.aegis.product.api.AssetStorageStrategy;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductModule;
 import br.com.byop.aegis.product.domain.ProductTypeKey;

@@ -1,0 +1,24 @@
+meta {
+  name: Buscar nodes com q
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/nodes?q=Artigo
+  body: none
+}
+
+docs {
+Objetivo: busca textual por label.
+Resultado esperado: 200, array.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("body e array", function() {
+    expect(res.body).to.be.an('array');
+  });
+}

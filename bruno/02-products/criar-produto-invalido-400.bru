@@ -1,0 +1,27 @@
+meta {
+  name: Criar produto invalido - 400
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+}
+
+body:json {
+  {
+    "tenantId": "{{tenantId}}"
+  }
+}
+
+docs {
+Objetivo: faltando campos obrigatorios (key, name, type, defaultLocale).
+Resultado esperado: 400 REQUEST_VALIDATION_FAILED.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+}

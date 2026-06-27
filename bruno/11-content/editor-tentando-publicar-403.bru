@@ -1,0 +1,37 @@
+meta {
+  name: EDITOR tentando publicar (403)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/content/{{contentId}}/publish
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{editorToken}}
+}
+
+body:json {
+  {
+    "comment": "Tentativa de publicacao por EDITOR"
+  }
+}
+
+docs {
+Objetivo: EDITOR nao pode publicar (apenas SUPER_ADMIN/TENANT_ADMIN/PRODUCT_MANAGER).
+Resultado esperado: 403 CONTENT_PUBLISH_FORBIDDEN.
+LIMITACAO HERDADA DO DESENHO ORIGINAL: esta suite nao tem fluxo de seed automatico de usuario EDITOR — defina manualmente a variavel de runtime 'editorToken' (bru.setVar) com um access_token real de um usuario com papel EDITOR e ProductAssignment ativo neste produto antes de rodar esta request isoladamente, para validar o 403 CONTENT_PUBLISH_FORBIDDEN de fato. Sem isso (execucao padrao da collection completa), editorToken fica vazio e o teste abaixo aceita o 401 resultante como comportamento esperado dessa limitacao, mesma documentada na sprint 11 original.
+}
+
+tests {
+  test("sem editorToken configurado: 401 | com editorToken real: 403 CONTENT_PUBLISH_FORBIDDEN", function() {
+    if (bru.getVar('editorToken')) {
+      expect(res.status).to.equal(403);
+      expect(res.body.error).to.equal("CONTENT_PUBLISH_FORBIDDEN");
+    } else {
+      expect(res.status).to.equal(401);
+    }
+  });
+}

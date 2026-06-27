@@ -1,0 +1,25 @@
+meta {
+  name: Upload acima do limite - 413
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/assets
+  body: multipartForm
+}
+
+body:multipart-form {
+  file: @file(fixtures/imagem-acima-do-limite.png)
+}
+
+docs {
+Objetivo: imagem PNG valida porem maior que o limite de 5MB (max-size-bytes da categoria image).
+Resultado esperado: 413 ASSET_SIZE_LIMIT_EXCEEDED.
+}
+
+tests {
+  test("status 413", function() {
+    expect(res.status).to.equal(413);
+  });
+}

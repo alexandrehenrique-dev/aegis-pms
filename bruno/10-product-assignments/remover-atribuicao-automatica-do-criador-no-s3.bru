@@ -1,0 +1,21 @@
+meta {
+  name: Remover atribuicao automatica do criador no produto s3
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/products/{{s3ProductId}}/users/{{callerSubject}}
+  body: none
+}
+
+docs {
+Decisao de reconstrucao: ao criar um produto, o criador (callerSubject, neste caso 'loki') recebe automaticamente uma ProductAssignment PRODUCT_MANAGER (uq_product_assignment_user_subject e UNIQUE por product_id+user_subject). Para exercitar o caminho 'atribuir usuario JA EXISTENTE' abaixo sem violar essa constraint (nenhum outro usuario desta suite possui TenantMembership ACTIVE no tenant, unico requisito de assignExistingUser, alem do proprio criador), esta request remove primeiro a atribuicao automatica.
+Resultado esperado: 204.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

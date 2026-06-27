@@ -1,0 +1,29 @@
+meta {
+  name: Upload S3 sem bucket configurado - 502
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{s3ProductId}}/assets
+  body: multipartForm
+}
+
+body:multipart-form {
+  file: @file(fixtures/teste.png)
+}
+
+docs {
+Objetivo: produto com assetStorageStrategy S3 mas sem AEGIS_STORAGE_S3_BUCKET configurado no ambiente — o SDK da AWS retorna erro de comunicacao, que deve ser traduzido para 502 e nunca vazar como 403 (bug real corrigido na Sprint 12: AnonymousCredentialsProvider + SdkException handler).
+Resultado esperado: 502 ASSET_STORAGE_UNAVAILABLE.
+PRE-REQUISITO DE AMBIENTE: requer que AEGIS_STORAGE_S3_BUCKET esteja vazio/nao configurado no backend em execucao — se um bucket real e valido estiver configurado, este request pode retornar 201.
+}
+
+tests {
+  test("status 502", function() {
+    expect(res.status).to.equal(502);
+  });
+  test("erro ASSET_STORAGE_UNAVAILABLE", function() {
+    expect(res.body.error).to.equal("ASSET_STORAGE_UNAVAILABLE");
+  });
+}

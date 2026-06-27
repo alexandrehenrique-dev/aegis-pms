@@ -1,0 +1,24 @@
+meta {
+  name: Listar produtos
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products
+  body: none
+}
+
+docs {
+Objetivo: listar produtos visiveis ao usuario autenticado.
+Resultado esperado: 200, array.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("body e array", function() {
+    expect(res.body).to.be.an('array');
+  });
+}

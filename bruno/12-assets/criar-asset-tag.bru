@@ -1,0 +1,28 @@
+meta {
+  name: Criar asset-tag
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/asset-tags
+  body: json
+}
+
+body:json {
+  "{{assetTagName}}"
+}
+
+docs {
+Objetivo: o corpo e um JSON string literal (nao um objeto).
+Resultado esperado: 200, array de tags contendo a nova tag.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("contem a tag criada", function() {
+    expect(res.body).to.include(bru.getVar('assetTagName'));
+  });
+}

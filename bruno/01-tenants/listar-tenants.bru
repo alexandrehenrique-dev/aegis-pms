@@ -1,0 +1,24 @@
+meta {
+  name: Listar tenants
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants
+  body: none
+}
+
+docs {
+Objetivo: SUPER_ADMIN ve todos os tenants da plataforma.
+Resultado esperado: 200, array.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("body e array", function() {
+    expect(res.body).to.be.an('array');
+  });
+}

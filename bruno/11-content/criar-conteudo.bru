@@ -1,0 +1,42 @@
+meta {
+  name: Criar conteudo
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/content
+  body: json
+}
+
+body:json {
+  {
+    "title": "Artigo de Teste",
+    "type": "article",
+    "lang": "pt-BR",
+    "body": "Corpo do artigo. <script>alert(1)</script> Texto legitimo depois do script."
+  }
+}
+
+docs {
+Objetivo: criar conteudo (status inicial Draft) e confirmar sanitizacao de markdown na propria criacao.
+Resultado esperado: 201, status Draft, version v1, <script> removido do body.
+Variaveis produzidas: contentId.
+}
+
+script:post-response {
+bru.setVar('contentId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("status Draft e version v1", function() {
+    expect(res.body.status).to.equal("Draft");
+    expect(res.body.version).to.equal("v1");
+  });
+  test("script removido do body", function() {
+    expect(res.body.body).to.not.include("<script>");
+  });
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Habilitar KNOWLEDGE_GRAPH com CONTENT - sucesso
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/KNOWLEDGE_GRAPH/enable
+  body: none
+}
+
+docs {
+Objetivo: com CONTENT habilitado, a dependencia e satisfeita.
+Resultado esperado: 200.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("KNOWLEDGE_GRAPH habilitado", function() {
+    expect(res.body.moduleKey).to.equal("KNOWLEDGE_GRAPH");
+    expect(res.body.enabled).to.equal(true);
+  });
+}

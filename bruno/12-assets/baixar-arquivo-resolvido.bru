@@ -1,0 +1,24 @@
+meta {
+  name: Baixar arquivo resolvido
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/api/v1/assets/{{assetId}}/file
+  body: none
+}
+
+docs {
+Objetivo: download direto dos bytes do arquivo (usado pelo provider local; equivalente funcional da URL presigned do S3).
+Resultado esperado: 200, Content-Type image/png.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("content-type image/png", function() {
+    expect(res.getHeader('content-type')).to.include('image/png');
+  });
+}

@@ -4,7 +4,7 @@
 
 ## Contexto fixo
 
-Até a etapa 05, o backend valida tokens JWT emitidos pelo Keycloak mas não tem endpoints de autenticação próprios. A validação da etapa 05 ainda usa `grant_type=password` diretamente contra o Keycloak para obter o token de teste — isso funciona em `curl`/Postman, mas **o frontend nunca deve chamar o Keycloak diretamente**: URLs e segredos do Keycloak ficariam expostos no código do SPA, violando o princípio de que o frontend só conhece a URL do backend Aegis.
+Até a etapa 05, o backend valida tokens JWT emitidos pelo Keycloak mas não tem endpoints de autenticação próprios. A validação da etapa 05 ainda usa `grant_type=password` diretamente contra o Keycloak para obter o token de teste — isso funciona em `curl`/Bruno, mas **o frontend nunca deve chamar o Keycloak diretamente**: URLs e segredos do Keycloak ficariam expostos no código do SPA, violando o princípio de que o frontend só conhece a URL do backend Aegis.
 
 Esta etapa resolve três lacunas de forma integrada:
 
@@ -542,7 +542,7 @@ KEYCLOAK_INTERNAL_BASE_URL=http://keycloak:8080
 
 ## Validação
 
-> **Entrega via collection Postman, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os à pasta desta etapa em `aegis-postman-collection.json` (collection cumulativa, autenticação via `{{token}}` herdado da pasta "Auth") e devolva o JSON completo atualizado para download.
+> **Entrega via collection Bruno, não só curl** (ver `00_padrao_qualidade_e_arquitetura.md`, Seção 11). Os `curl` abaixo são a especificação exata de cada request — adicione-os como requests `.bru` na pasta numerada desta etapa em `bruno/` (collection cumulativa, autenticação herdada via header `Authorization: Bearer {{token}}` definido em `collection.bru`) e valide a collection inteira via `npx @usebruno/cli run --env local`.
 
 ```bash
 # Login via backend (não mais direto ao Keycloak)
@@ -585,7 +585,7 @@ curl -s -X POST http://localhost:8080/api/v1/auth/forgot-password \
 # 2. Verificar recebimento em http://localhost:8025
 ```
 
-> **Nota para a collection Postman**: a pasta "Auth" da collection deve ter um post-response script em `POST /auth/login` que captura o `accessToken` em `pm.environment.set("token", pm.response.json().accessToken)` e o `refreshToken` em `pm.environment.set("refreshToken", pm.response.json().refreshToken)` — assim todos os requests autenticados subsequentes herdam o token automaticamente.
+> **Nota para a collection Bruno**: a pasta `00-auth` da collection deve ter um `script:post-response` no request `POST /auth/login` que captura o `accessToken` em `bru.setVar('token', res.body.accessToken)` e o `refreshToken` em `bru.setVar('refreshToken', res.body.refreshToken)` — assim todos os requests autenticados subsequentes herdam o token automaticamente (header `Authorization: Bearer {{token}}` definido em `collection.bru`).
 
 ## Artefato de continuidade — `SPRINT-RESULTADO.md`
 

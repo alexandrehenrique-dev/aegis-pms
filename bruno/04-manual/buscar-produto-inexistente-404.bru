@@ -1,0 +1,21 @@
+meta {
+  name: Buscar produto inexistente - 404
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/00000000-0000-0000-0000-000000000000
+  body: none
+}
+
+docs {
+Objetivo: produto com UUID valido mas inexistente.
+Resultado esperado: 404.
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+}

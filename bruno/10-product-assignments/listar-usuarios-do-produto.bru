@@ -1,0 +1,23 @@
+meta {
+  name: Listar usuarios do produto
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/users
+  body: none
+}
+
+docs {
+Resultado esperado: 200, array (inclui o PRODUCT_MANAGER automatico da criacao do produto).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("body e array", function() {
+    expect(res.body).to.be.an('array');
+  });
+}

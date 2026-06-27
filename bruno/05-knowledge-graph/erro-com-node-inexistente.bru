@@ -1,0 +1,20 @@
+meta {
+  name: Erro com node inexistente
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/nodes/00000000-0000-0000-0000-000000000000
+  body: none
+}
+
+docs {
+Resultado esperado: 404.
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Listar usage do asset - vazio
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/assets/{{assetId}}/usage
+  body: none
+}
+
+docs {
+Resultado esperado: 200, array vazio (asset ainda nao foi referenciado em nenhum conteudo).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("array vazio", function() {
+    expect(res.body).to.be.an('array').that.is.empty;
+  });
+}

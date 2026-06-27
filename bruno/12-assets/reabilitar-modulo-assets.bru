@@ -1,0 +1,24 @@
+meta {
+  name: Reabilitar modulo ASSETS
+  type: http
+  seq: 23
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/ASSETS/enable
+  body: none
+}
+
+docs {
+Passo 2 de 2 — deixa o modulo ligado de novo para nao quebrar reexecucoes futuras da collection.
+Resultado esperado: 200, enabled true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("ASSETS habilitado novamente", function() {
+    expect(res.body.enabled).to.equal(true);
+  });
+}
