@@ -1,10 +1,10 @@
-# Sprint 21 — Tutorial interativo de onboarding
+# Sprint 22 — Tutorial interativo de onboarding
 
 > **Sprint final do ciclo de produto.** Cobre o guia interativo completo que um novo usuário vê na primeira vez que acessa o Aegis — e **nunca mais**.
 >
 > **Pré-requisitos:** Sprint 14 (sistema de notificações e onboarding real), etapa 24 do backend (notificações direcionadas), etapa 28 do backend (ativação real de conta).
 >
-> **Branch:** `sprint/21-tutorial-onboarding`
+> **Branch:** `sprint/22-tutorial-onboarding`
 
 ## A. Biblioteca — react-joyride
 

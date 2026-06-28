@@ -1,10 +1,10 @@
-# Sprint 20 — Ativação de convite e reset de senha reais (conectar ao backend da etapa 28)
+# Sprint 21 — Ativação de convite e reset de senha reais (conectar ao backend da etapa 28)
 
 > **Pré-requisito:** etapa 28 do backend (`28_tokens_de_ativacao_e_reset_de_senha.md`) concluída e endpoints disponíveis em `http://localhost:8080`.
 >
 > **Motivação:** `InviteScreen.tsx`, `ResetPasswordScreen.tsx` e `ForgotPasswordScreen.tsx` foram implementados na Sprint 10 (UI completa, incluindo estados de token inválido/expirado/já usado). Estão 100% mock — nenhum chama o backend. Esta sprint troca os mocks por chamadas reais aos endpoints da etapa 28, sem modificar a UX existente.
 >
-> **Branch:** `sprint/20-ativacao-e-reset-real`
+> **Branch:** `sprint/21-ativacao-e-reset-real`
 
 ## A. O que já existe (não tocar)
 
