@@ -4,6 +4,7 @@ import { Button, Card, PageHeader } from "../../../shared/components/Primitives"
 import { OperationalTimeline } from "../../../shared/components/OperationalTimeline";
 import { ModuleCatalog } from "../components/ModuleCatalog";
 import { toast } from "../../../core/notifications/toast";
+import { useAuth } from "../../../core/auth/AuthContext";
 
 const TABS = ["Visão Geral", "Módulos", "Conteúdo", "Assets", "Forms", "Analytics", "Graph", "Configurações"] as const;
 const TAB_ROUTES: Record<string, string> = { "Conteúdo": "/content", "Assets": "/assets", "Forms": "/forms", "Analytics": "/analytics", "Graph": "/knowledge/graph", "Configurações": "/settings/product" };
@@ -36,6 +37,7 @@ function DomainShortcutPanel({ tab }: { tab: string }) {
 export function ProductDetail() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<string>(TABS[0]);
+  const { effectiveProduct } = useAuth();
 
   const handleSaveView = () => {
     localStorage.setItem("products:lastView", tab);
@@ -54,7 +56,7 @@ export function ProductDetail() {
         ))}
       </div>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-        {tab === "Visão Geral" ? <GeneralPanel /> : tab === "Módulos" ? <ModuleCatalog compact /> : <DomainShortcutPanel tab={tab} />}
+        {tab === "Visão Geral" ? <GeneralPanel /> : tab === "Módulos" ? <ModuleCatalog compact productId={effectiveProduct?.id} /> : <DomainShortcutPanel tab={tab} />}
         <Card><h2 className="mb-3 text-lg font-semibold">Auditoria recente</h2><OperationalTimeline /></Card>
       </div>
     </>

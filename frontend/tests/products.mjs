@@ -46,6 +46,21 @@ async function main() {
     await page.waitForTimeout(800);
     ok = report("Pagina de modulos do produto carrega", page.url().includes("/modules")) && ok;
 
+    // Bug fix Sprint 20 (Tarefa C) — habilitar um modulo "desabilitado" que
+    // Maestro Beton ainda nao tem (Integracoes, ver products.mocks.ts) deve
+    // propagar pro modulesList do produto e refletir na contagem do card.
+    await page.locator("div.rounded-2xl", { hasText: "Integrações" }).getByRole("button", { name: "Habilitar" }).click();
+    await page.waitForTimeout(800);
+    ok = report("Modulo 'Integrações' mostra toast de habilitado", await page.getByText("Módulo habilitado!").isVisible()) && ok;
+
+    await page.goBack();
+    await page.waitForTimeout(800);
+    await page.goBack();
+    await page.waitForTimeout(800);
+    await page.locator('input[placeholder*="Buscar"]').fill("Maestro");
+    await page.waitForTimeout(300);
+    ok = report("Contagem de modulos do card propagou (6 -> 7)", await page.getByText("7 módulos").isVisible()) && ok;
+
     ok = report("Nenhum erro de console/runtime durante o fluxo", errors.length === 0, errors.join(" | ")) && ok;
   } finally {
     await browser.close();

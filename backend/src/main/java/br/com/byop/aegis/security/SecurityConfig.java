@@ -49,6 +49,33 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/**").authenticated()
+                        // ADR-0009: a SPA é servida pelo próprio Spring Boot na mesma origem —
+                        // o shell estático (index.html + bundles) precisa ser público porque a
+                        // autenticação real acontece client-side e nas chamadas a /api/v1/**.
+                        // Lista espelha SpaFallbackController (br.com.byop.aegis.system.controller).
+                        .requestMatchers(
+                                "/",
+                                "/login",
+                                "/forgot-password",
+                                "/forgot-password/sent",
+                                "/reset-password",
+                                "/invite",
+                                "/select-tenant",
+                                "/select-product",
+                                "/dashboard/**",
+                                "/products/**",
+                                "/content/**",
+                                "/pages/**",
+                                "/forms/**",
+                                "/analytics/**",
+                                "/knowledge/**",
+                                "/settings/**",
+                                "/help",
+                                "/users/**",
+                                "/audit/**",
+                                "/assets/**",
+                                "/favicon.svg"
+                        ).permitAll()
                         .anyRequest().denyAll()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

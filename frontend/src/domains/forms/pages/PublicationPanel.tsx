@@ -38,7 +38,7 @@ export function PublicationPanel() {
   const handlePublish = async () => {
     setPublishing(true);
     try {
-      await formsService.publish();
+      await formsService.publish(FORM_ID);
       toast.success("Alterações publicadas!");
     } finally {
       setPublishing(false);

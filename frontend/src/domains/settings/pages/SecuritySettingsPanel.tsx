@@ -4,6 +4,7 @@ import { Badge, Button, Card, PageHeader } from "../../../shared/components/Prim
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../../shared/components/ui/dialog";
 import { toast } from "../../../core/notifications/toast";
 import { settingsService } from "../services/settingsService";
+import { useAuth } from "../../../core/auth/AuthContext";
 
 const SESSIONS = [
   { device: "Chrome · macOS", location: "São Paulo, BR", lastActive: "agora" },
@@ -22,6 +23,7 @@ function IntegrationCard({ i, onConfigure }: { i: string[]; onConfigure: () => v
 }
 
 export function SecuritySettingsPanel() {
+  const { effectiveProduct } = useAuth();
   const ints = [
     ["Webhooks", "conectado", "produção", "há 20 min"],
     ["Analytics Provider", "requer atenção", "produção", "ontem"],
@@ -35,9 +37,10 @@ export function SecuritySettingsPanel() {
   const [saving, setSaving] = useState(false);
 
   const handleSaveSecurity = async () => {
+    if (!effectiveProduct) return;
     setSaving(true);
     try {
-      await settingsService.saveSecurity();
+      await settingsService.saveSecurity(effectiveProduct.id);
       toast.success("Configurações de segurança salvas!");
     } finally {
       setSaving(false);

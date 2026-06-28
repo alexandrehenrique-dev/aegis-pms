@@ -67,6 +67,9 @@ dist-ssr/
 .vite/
 .turbo/
 .eslintcache
+
+# build:backend (Sprint 20) deposita o build do Vite direto aqui — artefato gerado, nunca commitado
+backend/src/main/resources/static/
 *.tsbuildinfo
 vendor/
 

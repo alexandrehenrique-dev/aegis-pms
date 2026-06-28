@@ -1,5 +1,7 @@
 import { globalsByProduct } from "../mocks/globals.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
+import { IS_API_MODE } from "../../../infra/apiMode";
+import { apiClient } from "../../../shared/services/apiClient";
 import type { ProductGlobals, UpdateGlobalsRequest } from "../contracts/globals";
 
 function emptyGlobals(): ProductGlobals {
@@ -14,11 +16,13 @@ function emptyGlobals(): ProductGlobals {
  */
 export const globalsService = {
   async getGlobals(productSlug: string): Promise<ProductGlobals> {
+    if (IS_API_MODE) return apiClient.get<ProductGlobals>(`/products/${productSlug}/globals`);
     if (!globalsByProduct[productSlug]) globalsByProduct[productSlug] = emptyGlobals();
     return globalsByProduct[productSlug];
   },
 
   async updateGlobals(productSlug: string, req: UpdateGlobalsRequest): Promise<ProductGlobals> {
+    if (IS_API_MODE) return apiClient.put<ProductGlobals>(`/products/${productSlug}/globals`, req);
     const current = globalsByProduct[productSlug] ?? emptyGlobals();
     logApiCall("PUT", `/api/v1/products/${productSlug}/globals`, req);
     const next: ProductGlobals = { ...current, ...req };

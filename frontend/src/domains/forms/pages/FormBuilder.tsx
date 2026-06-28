@@ -141,7 +141,7 @@ export function FormBuilder() {
     setSaving(true);
     try {
       if (formId) await formsService.saveFormFields(formId, fields);
-      else await formsService.saveDraft();
+      await formsService.saveDraft(formId);
       toast.success("Rascunho salvo!");
     } finally {
       setSaving(false);
@@ -151,7 +151,7 @@ export function FormBuilder() {
   const handlePublish = async () => {
     setPublishing(true);
     try {
-      await formsService.publish();
+      await formsService.publish(formId);
       toast.success("Formulário publicado!");
     } finally {
       setPublishing(false);
