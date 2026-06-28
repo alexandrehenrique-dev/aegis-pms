@@ -7,11 +7,13 @@ import { OperationalTimeline } from "../../../shared/components/OperationalTimel
 import { QuickActions } from "../components/QuickActions";
 import { ModuleCatalog } from "../components/ModuleCatalog";
 import { ProductEmpty } from "./ProductEmpty";
+import { useAuth } from "../../../core/auth/AuthContext";
 
 export function ProductDashboard() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { viewAsRole } = useViewAsRole();
+  const { effectiveProduct } = useAuth();
   if (params.get("empty")) return <ProductEmpty />;
 
   const allPendencias: [string, string][] = [
@@ -43,7 +45,7 @@ export function ProductDashboard() {
             <KPIWidget label="Erro parcial" value="—" detail="" error onClick={() => navigate("/analytics/states")} />
           </div>
           <QuickActions viewAsRole={viewAsRole} />
-          <ModuleCatalog compact />
+          <ModuleCatalog compact productId={effectiveProduct?.id} />
         </div>
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Atividade recente</h2>

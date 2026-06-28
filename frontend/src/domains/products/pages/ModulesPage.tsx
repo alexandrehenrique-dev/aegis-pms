@@ -1,5 +1,7 @@
 import { ModuleCatalog } from "../components/ModuleCatalog";
+import { useAuth } from "../../../core/auth/AuthContext";
 
 export function ModulesPage() {
-  return <ModuleCatalog />;
+  const { effectiveProduct } = useAuth();
+  return <ModuleCatalog productId={effectiveProduct?.id} />;
 }

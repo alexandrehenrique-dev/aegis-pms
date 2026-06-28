@@ -1,5 +1,7 @@
 import { usersRows } from "../mocks/users.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
+import { IS_API_MODE } from "../../../infra/apiMode";
+import { apiClient } from "../../../shared/services/apiClient";
 import type { InviteUserRequest } from "../contracts/requests";
 import type { ListUsersResponse, UserStatus, UserSummary } from "../contracts/responses";
 
@@ -21,7 +23,8 @@ export const usersService = {
    * pré-filtrada por papel do caller; nenhum filtro adicional deve ser
    * introduzido aqui no frontend.
    */
-  async listUsers(): Promise<ListUsersResponse> {
+  async listUsers(tenantId?: string): Promise<ListUsersResponse> {
+    if (IS_API_MODE && tenantId) return apiClient.get<ListUsersResponse>(`/tenants/${tenantId}/users`);
     return usersStore;
   },
 
@@ -31,8 +34,9 @@ export const usersService = {
     return activeAdmins.length === 1 && activeAdmins[0].email === email;
   },
 
-  async invite(req: InviteUserRequest): Promise<UserSummary> {
-    logApiCall("POST", "/api/v1/admin/users/invite", req);
+  async invite(req: InviteUserRequest, tenantId?: string): Promise<UserSummary> {
+    if (IS_API_MODE && tenantId) return apiClient.post<UserSummary>(`/tenants/${tenantId}/users/invite`, req);
+    logApiCall("POST", `/api/v1/tenants/${tenantId ?? "{tenantId}"}/users/invite`, req);
     const created: UserSummary = {
       name: req.name, email: req.email, role: req.role, products: req.allowedProducts,
       status: "convidado", lastAccess: "nunca", inviteStatus: "pendente",
@@ -41,33 +45,37 @@ export const usersService = {
     return created;
   },
 
-  async resendInvite(email: string): Promise<void> {
+  async resendInvite(email: string, tenantId?: string): Promise<void> {
+    if (IS_API_MODE && tenantId) return apiClient.post(`/tenants/${tenantId}/users/${email}/resend-invite`);
     const u = usersStore.find((x) => x.email === email);
     if (!u) return;
-    logApiCall("POST", `/api/v1/admin/users/${email}/resend-invite`);
+    logApiCall("POST", `/api/v1/tenants/${tenantId ?? "{tenantId}"}/users/${email}/resend-invite`);
     u.inviteStatus = "pendente";
   },
 
-  async blockUser(email: string): Promise<void> {
+  async blockUser(email: string, tenantId?: string): Promise<void> {
+    if (IS_API_MODE && tenantId) return apiClient.post(`/tenants/${tenantId}/users/${email}/block`);
     const u = usersStore.find((x) => x.email === email);
     if (!u) return;
-    logApiCall("POST", `/api/v1/admin/users/${email}/block`);
+    logApiCall("POST", `/api/v1/tenants/${tenantId ?? "{tenantId}"}/users/${email}/block`);
     u.status = "bloqueado";
   },
 
   /** Soft delete — remove usuário do tenant (ADR-0020). Reversível via `restoreUser`. */
-  async removeUser(email: string): Promise<void> {
+  async removeUser(email: string, tenantId?: string): Promise<void> {
+    if (IS_API_MODE && tenantId) return apiClient.delete(`/tenants/${tenantId}/users/${email}`);
     const u = usersStore.find((x) => x.email === email);
     if (!u) return;
-    logApiCall("DELETE", `/api/v1/admin/users/${email}`);
+    logApiCall("DELETE", `/api/v1/tenants/${tenantId ?? "{tenantId}"}/users/${email}`);
     u.status = "removido";
   },
 
   /** Restaura acesso de um usuário removido ou bloqueado (ADR-0020). */
-  async restoreUser(email: string): Promise<UserSummary> {
+  async restoreUser(email: string, tenantId?: string): Promise<UserSummary> {
+    if (IS_API_MODE && tenantId) return apiClient.post<UserSummary>(`/tenants/${tenantId}/users/${email}/restore`);
     const u = usersStore.find((x) => x.email === email);
     if (!u) throw { status: 404, message: `Usuário ${email} não encontrado.` };
-    logApiCall("POST", `/api/v1/admin/users/${email}/restore`);
+    logApiCall("POST", `/api/v1/tenants/${tenantId ?? "{tenantId}"}/users/${email}/restore`);
     u.status = "ativo";
     return u;
   },

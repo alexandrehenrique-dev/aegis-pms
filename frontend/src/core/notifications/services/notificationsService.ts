@@ -1,6 +1,8 @@
 import { mockUsers, mockTenantsByUser } from "../../auth/mocks/users";
 import { logApiCall } from "../../../shared/services/devLog";
 import { seedNotifications, seedStatusByUser } from "../mocks/notifications.mocks";
+import { IS_API_MODE } from "../../../infra/apiMode";
+import { apiClient } from "../../../shared/services/apiClient";
 import type { Notification, NotificationWithStatus, UserNotificationStatus } from "../contracts/notification";
 import type { CreateNotificationRequest } from "../contracts/requests";
 
@@ -49,12 +51,14 @@ function userIdsForTenant(tenantId: string): string[] {
 
 export const notificationsService = {
   async listMine(): Promise<NotificationWithStatus[]> {
+    if (IS_API_MODE) return apiClient.get<NotificationWithStatus[]>("/notifications/me");
     if (!currentUserId) return [];
     return notificationsFor(currentUserId).sort(byCreatedAtDesc);
   },
 
   /** A mais antiga ainda não mostrada automaticamente — fila de "primeiro acesso", uma por vez (Sprint 14, Tarefa C). */
   async getPendingModal(): Promise<NotificationWithStatus | null> {
+    if (IS_API_MODE) return apiClient.get<NotificationWithStatus | null>("/notifications/me/pending-modal");
     if (!currentUserId) return null;
     const pending = notificationsFor(currentUserId)
       .filter((n) => n.presentationMode === "MODAL_ONCE" && !n.autoShown)
@@ -63,6 +67,7 @@ export const notificationsService = {
   },
 
   async markShown(notificationId: string): Promise<void> {
+    if (IS_API_MODE) return apiClient.post(`/notifications/${notificationId}/mark-shown`);
     if (!currentUserId) return;
     logApiCall("POST", `/api/v1/notifications/${notificationId}/mark-shown`);
     const list = statusStore[currentUserId] ?? (statusStore[currentUserId] = []);
@@ -72,6 +77,7 @@ export const notificationsService = {
   },
 
   async markRead(notificationId: string): Promise<void> {
+    if (IS_API_MODE) return apiClient.post(`/notifications/${notificationId}/mark-read`);
     if (!currentUserId) return;
     logApiCall("POST", `/api/v1/notifications/${notificationId}/mark-read`);
     const list = statusStore[currentUserId] ?? (statusStore[currentUserId] = []);
@@ -82,6 +88,7 @@ export const notificationsService = {
 
   /** Super Admin cria e o mock "espalha" — uma `UserNotificationStatus` por destinatário, exatamente como o backend fará via fan-out na criação (Seção F). */
   async create(req: CreateNotificationRequest): Promise<Notification> {
+    if (IS_API_MODE) return apiClient.post<Notification>("/notifications", req);
     logApiCall("POST", "/api/v1/notifications", req);
     const created: Notification = {
       id: `n-${Date.now()}`,
@@ -111,6 +118,7 @@ export const notificationsService = {
 
   /** Gestão/auditoria do Super Admin — todas as notificações já criadas, independente de destinatário. */
   async listAll(): Promise<Notification[]> {
+    if (IS_API_MODE) return apiClient.get<Notification[]>("/notifications");
     return [...notificationsStore].sort(byCreatedAtDesc);
   },
 };

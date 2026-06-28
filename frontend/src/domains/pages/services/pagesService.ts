@@ -1,5 +1,7 @@
 import { pagesByProduct } from "../mocks/pages.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
+import { IS_API_MODE } from "../../../infra/apiMode";
+import { apiClient } from "../../../shared/services/apiClient";
 import type { CreatePageRequest, CreateSectionRequest, ReorderSectionsRequest, UpdateSectionRequest } from "../contracts/requests";
 import { BLOCK_TYPES, type BlockType, type ListPagesResponse, type Page, type Section } from "../contracts/responses";
 
@@ -37,19 +39,23 @@ export const pagesService = {
    * outro refactor.
    */
   async listBlockTypes(): Promise<readonly BlockType[]> {
+    // Catálogo estático por enquanto em ambos os modos.
     return BLOCK_TYPES;
   },
 
   async listPages(productSlug: string): Promise<ListPagesResponse> {
+    if (IS_API_MODE) return apiClient.get<ListPagesResponse>(`/products/${productSlug}/pages`);
     return pagesStore.filter((p) => p.productSlug === productSlug).map(clonePage);
   },
 
   async getPage(productSlug: string, pageId: string): Promise<Page | undefined> {
+    if (IS_API_MODE) return apiClient.get<Page>(`/products/${productSlug}/pages/${pageId}`);
     const page = findStorePage(productSlug, pageId);
     return page ? clonePage(page) : undefined;
   },
 
   async getPageBySlug(productSlug: string, slug: string): Promise<Page | undefined> {
+    if (IS_API_MODE) return apiClient.get<Page>(`/products/${productSlug}/pages/by-slug/${slug}`);
     const page = pagesStore.find((p) => p.productSlug === productSlug && p.slug === slug);
     return page ? clonePage(page) : undefined;
   },
@@ -57,6 +63,7 @@ export const pagesService = {
   // Pontos de integração real (Sprint 11, Tarefa B.2 / docs/trace/00_endpoints_esperados.md, Seção D.1).
 
   async createPage(productSlug: string, req: CreatePageRequest): Promise<Page> {
+    if (IS_API_MODE) return apiClient.post<Page>(`/products/${productSlug}/pages`, req);
     logApiCall("POST", `/api/v1/products/${productSlug}/pages`, req);
     const created: Page = {
       id: `${productSlug}-${req.slug}`,
@@ -74,6 +81,7 @@ export const pagesService = {
   },
 
   async deletePage(productSlug: string, pageId: string): Promise<void> {
+    if (IS_API_MODE) return apiClient.delete(`/products/${productSlug}/pages/${pageId}`);
     const index = pagesStore.findIndex((p) => p.productSlug === productSlug && p.id === pageId);
     if (index < 0) return;
     logApiCall("DELETE", `/api/v1/products/${productSlug}/pages/${pageId}`);
@@ -81,6 +89,7 @@ export const pagesService = {
   },
 
   async updatePage(productSlug: string, pageId: string, patch: Partial<Pick<Page, "title" | "status" | "seo">>): Promise<Page> {
+    if (IS_API_MODE) return apiClient.put<Page>(`/products/${productSlug}/pages/${pageId}`, patch);
     const page = findStorePage(productSlug, pageId);
     if (!page) throw { status: 404, message: `Página ${pageId} não encontrada.` };
     logApiCall("PUT", `/api/v1/products/${productSlug}/pages/${pageId}`, patch);
@@ -90,6 +99,7 @@ export const pagesService = {
   },
 
   async createSection(productSlug: string, pageId: string, req: CreateSectionRequest): Promise<Section> {
+    if (IS_API_MODE) return apiClient.post<Section>(`/products/${productSlug}/pages/${pageId}/sections`, req);
     const page = findStorePage(productSlug, pageId);
     if (!page) throw { status: 404, message: `Página ${pageId} não encontrada.` };
     const section: Section = { id: nextSectionId(page), order: page.sections.length, ...req };
@@ -100,6 +110,7 @@ export const pagesService = {
   },
 
   async updateSection(productSlug: string, pageId: string, sectionId: string, req: UpdateSectionRequest): Promise<Section> {
+    if (IS_API_MODE) return apiClient.put<Section>(`/products/${productSlug}/pages/${pageId}/sections/${sectionId}`, req);
     const page = findStorePage(productSlug, pageId);
     const section = page?.sections.find((s) => s.id === sectionId);
     if (!page || !section) throw { status: 404, message: `Seção ${sectionId} não encontrada.` };
@@ -110,6 +121,7 @@ export const pagesService = {
   },
 
   async deleteSection(productSlug: string, pageId: string, sectionId: string): Promise<void> {
+    if (IS_API_MODE) return apiClient.delete(`/products/${productSlug}/pages/${pageId}/sections/${sectionId}`);
     const page = findStorePage(productSlug, pageId);
     if (!page) return;
     logApiCall("DELETE", `/api/v1/products/${productSlug}/pages/${pageId}/sections/${sectionId}`);
@@ -118,6 +130,7 @@ export const pagesService = {
   },
 
   async reorderSections(productSlug: string, pageId: string, req: ReorderSectionsRequest): Promise<Page> {
+    if (IS_API_MODE) return apiClient.put<Page>(`/products/${productSlug}/pages/${pageId}/sections/reorder`, req);
     const page = findStorePage(productSlug, pageId);
     if (!page) throw { status: 404, message: `Página ${pageId} não encontrada.` };
     const byId = new Map(page.sections.map((s) => [s.id, s]));

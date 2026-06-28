@@ -31,7 +31,7 @@ function ModuleCard({ Icon, name, desc, state, maturity, dep, impact, selected, 
   );
 }
 
-export function ModuleCatalog({ compact = false }: { compact?: boolean }) {
+export function ModuleCatalog({ compact = false, productId }: { compact?: boolean; productId?: string }) {
   const { data: loaded, loading, error } = useAsyncData(() => productsService.listModuleCatalog(), []);
   const [modules, setModules] = useState<ModuleCatalogItem[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -69,7 +69,7 @@ export function ModuleCatalog({ compact = false }: { compact?: boolean }) {
       toast.error(blocked);
       return;
     }
-    await productsService.enableModule(m.name);
+    await productsService.enableModule(m.name, productId);
     const refreshed = await productsService.listModuleCatalog();
     setModules(refreshed);
     toast.success("Módulo habilitado!", { description: m.name });
@@ -85,7 +85,7 @@ export function ModuleCatalog({ compact = false }: { compact?: boolean }) {
       toast.error(`Knowledge Graph exige o módulo ${KNOWLEDGE_GRAPH_DEPENDENCY} habilitado primeiro.`);
       return;
     }
-    await Promise.all(Array.from(selected).map((name) => productsService.enableModule(name)));
+    await Promise.all(Array.from(selected).map((name) => productsService.enableModule(name, productId)));
     const refreshed = await productsService.listModuleCatalog();
     setModules(refreshed);
     toast.success(`${selected.size} módulo(s) habilitado(s)!`);

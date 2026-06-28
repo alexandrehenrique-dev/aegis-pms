@@ -1,6 +1,8 @@
 import { allTenants } from "../mocks/tenants.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
 import { notificationsService } from "../../notifications/services/notificationsService";
+import { IS_API_MODE } from "../../../infra/apiMode";
+import { apiClient } from "../../../shared/services/apiClient";
 import type { TenantOption } from "../../../shared/types";
 import type { CreateTenantRequest, DeleteTenantRequest, UpdateTenantRequest } from "../contracts/requests";
 import type { ListTenantsResponse, TenantDetailResponse } from "../contracts/responses";
@@ -11,14 +13,17 @@ const tenantsStore: TenantOption[] = [...allTenants];
 
 export const tenantsService = {
   async listTenants(): Promise<ListTenantsResponse> {
+    if (IS_API_MODE) return apiClient.get<ListTenantsResponse>("/tenants");
     return tenantsStore;
   },
 
   async getTenant(id: string): Promise<TenantDetailResponse | undefined> {
+    if (IS_API_MODE) return apiClient.get<TenantDetailResponse>(`/tenants/${id}`);
     return tenantsStore.find((t) => t.id === id);
   },
 
   async create(req: CreateTenantRequest): Promise<TenantOption> {
+    if (IS_API_MODE) return apiClient.post<TenantOption>("/tenants", req);
     logApiCall("POST", "/api/v1/admin/tenants", req);
     const created: TenantOption = {
       id: req.slug,
@@ -33,6 +38,7 @@ export const tenantsService = {
   },
 
   async update(id: string, req: UpdateTenantRequest): Promise<TenantOption> {
+    if (IS_API_MODE) return apiClient.put<TenantOption>(`/tenants/${id}`, req);
     const tenant = tenantsStore.find((t) => t.id === id);
     if (!tenant) throw { status: 404, message: `Tenant ${id} não encontrado.` };
     const previousStatus = tenant.status;
@@ -59,6 +65,7 @@ export const tenantsService = {
 
   /** Destrutivo e irreversível no backend real: remove o tenant e cascateia para seus produtos/usuários. A UI deve sempre confirmar com um modal de severidade antes de chamar isto. */
   async remove(id: string, req: DeleteTenantRequest): Promise<void> {
+    if (IS_API_MODE) return apiClient.delete(`/tenants/${id}`);
     const index = tenantsStore.findIndex((t) => t.id === id);
     if (index < 0) return;
     logApiCall("DELETE", `/api/v1/admin/tenants/${id}`, req);

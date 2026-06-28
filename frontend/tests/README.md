@@ -75,11 +75,11 @@ Um script por domínio funcional (cobertura geral do app, fora do escopo origina
 |---|---|---|
 | `auth-flows.mjs` | Login com senha errada/conta bloqueada (mensagens certas); "Esqueci minha senha"; login válido → seleção de tenant → seleção de produto → dashboard; logout; `/invite` acessível sem sessão | `editor@byop.io` + `blocked@byop.io` |
 | `dashboard.mjs` | `ProductDashboard` (landing pós-login) e `DashboardGlobal` (`/dashboard`, via sidebar); KPI restrito a outros papéis fica oculto pra `editor`; KPI navega pro destino certo | `editor@byop.io` |
-| `products.mjs` | Lista de produtos, criar produto (preview do esqueleto de páginas por tipo), página de módulos do produto | `admin@byop.io` (tenant_admin — `editor` não vê "Criar produto") |
+| `products.mjs` | Lista de produtos, criar produto (preview do esqueleto de páginas por tipo), página de módulos do produto; habilitar módulo via `ModuleCatalog` propaga pro `modulesList` do produto e atualiza a contagem no card (Sprint 20, Tarefa C) | `admin@byop.io` (tenant_admin — `editor` não vê "Criar produto") |
 | `content.mjs` | Dashboard editorial, lista (DataGrid), abrir no editor, preview, histórico de versões, Workflow board (Kanban) | `editor@byop.io` |
 | `pages-crud.mjs` | Lista de páginas, criar página nova, remover bloco (com confirmação), tela de globais (navbar/footer/redes sociais) | `editor@byop.io` |
 | `assets.mjs` | Biblioteca, detalhe de asset, upload real de arquivo, criar tag | `editor@byop.io` |
-| `forms.mjs` | Dashboard, lista, builder, preview, submissions (tabela + detalhe), publicação, analytics | `editor@byop.io` |
+| `forms.mjs` | Dashboard, lista, builder, preview, submissions (tabela + detalhe), publicação, analytics; salvar rascunho/publicar no builder propaga "Rascunho"/"Publicado" na coluna Publicação da lista (Sprint 20, Tarefa D.1) | `editor@byop.io` |
 | `analytics.mjs` | Overview + as 6 sub-abas (Saúde, Conteúdo, Forms, Canais, Relatórios, Tendências) | `editor@byop.io` |
 | `knowledge-graph.mjs` | Overview, Graph Canvas, busca de entidade, Órfãos, Insights → abrir entidade | `admin@byop.io`, tenant **Aegis Labs**, produto **Aegis Docs** (módulo só vem habilitado por padrão em produtos tipo "Knowledge Base"; Maestro Beton não tem) |
 | `settings.mjs` | Visão geral, Produto, Tenant, Permissões (+ "Salvar permissões"), Segurança | `super-admin@byop.io` (tenant_admin é bloqueado em `/settings/security`) |

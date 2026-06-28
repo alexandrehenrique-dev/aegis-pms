@@ -22,6 +22,26 @@ async function main() {
     ok = report("Editar formulario abre o builder", page.url().match(/\/forms\/[^/]+$/) !== null) && ok;
     ok = report("Builder mostra preview do botao Enviar", await page.getByRole("button", { name: "Botão Enviar" }).isVisible()) && ok;
 
+    // Bug fix Sprint 20 (Tarefa D.1) — salvar rascunho/publicar deve mudar a
+    // coluna "Publicação" do formulário na lista, não só logar a chamada.
+    await page.getByRole("button", { name: "Salvar rascunho" }).click();
+    await page.waitForTimeout(800);
+    await goToNav(page, "Forms");
+    await page.getByRole("button", { name: "Ver formulários" }).click();
+    await page.waitForTimeout(800);
+    ok = report("Salvar rascunho propagou 'Rascunho' na coluna Publicação", await page.getByRole("row").filter({ hasText: "Contato Comercial" }).getByText("Rascunho").isVisible()) && ok;
+
+    await page.getByRole("button", { name: "Editar" }).first().click();
+    await page.waitForTimeout(800);
+    await page.getByRole("button", { name: "Publicar" }).click();
+    await page.waitForTimeout(800);
+    await goToNav(page, "Forms");
+    await page.getByRole("button", { name: "Ver formulários" }).click();
+    await page.waitForTimeout(800);
+    ok = report("Publicar propagou 'Publicado' de volta na coluna Publicação", await page.getByRole("row").filter({ hasText: "Contato Comercial" }).getByText("Publicado").isVisible()) && ok;
+
+    await page.getByRole("button", { name: "Editar" }).first().click();
+    await page.waitForTimeout(800);
     await page.getByRole("button", { name: "Preview", exact: true }).click();
     await page.waitForTimeout(800);
     ok = report("Preview do formulario abre", page.url().endsWith("/forms/preview")) && ok;
