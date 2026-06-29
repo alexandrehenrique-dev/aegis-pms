@@ -1,0 +1,35 @@
+meta {
+  name: Preview da matriz para um papel
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/permission-matrix/preview
+  body: json
+}
+
+body:json {
+  {
+    "role": "editor"
+  }
+}
+
+docs {
+Objetivo: AccessPreviewPanel.tsx — simulacao somente leitura de como a
+navegacao ficaria para um papel, sem persistir nada (nao confundir com
+PUT /roles, que de fato altera).
+Resultado esperado: 200, role normalizado para EDITOR, permissions presentes.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("role normalizado para EDITOR", function() {
+    expect(res.body.role).to.equal('EDITOR');
+  });
+  test("EDITOR nao acessa /settings", function() {
+    expect(res.body.permissions['/settings']).to.equal(false);
+  });
+}

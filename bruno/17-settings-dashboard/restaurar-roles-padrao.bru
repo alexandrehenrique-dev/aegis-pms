@@ -1,0 +1,30 @@
+meta {
+  name: Restaurar roles para o padrao de fabrica
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/roles/restore-defaults
+  body: none
+}
+
+docs {
+Objetivo: reverte a alteracao da request anterior (EDITOR./audit) para o
+catalogo padrao de fabrica — idempotente, escopado a este tenant.
+Resultado esperado: 200, EDITOR./audit volta a false (default de fabrica).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("EDITOR./audit volta ao padrao (false)", function() {
+    var editor = res.body.find(function (entry) { return entry.role === 'EDITOR'; });
+    expect(editor.permissions['/audit']).to.equal(false);
+  });
+  test("SUPER_ADMIN./content permanece false (LGPD, ADR-0018)", function() {
+    var superAdmin = res.body.find(function (entry) { return entry.role === 'SUPER_ADMIN'; });
+    expect(superAdmin.permissions['/content']).to.equal(false);
+  });
+}

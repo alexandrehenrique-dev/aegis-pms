@@ -69,6 +69,25 @@ class ProductReferenceServiceTest {
                 .hasMessage("Product not found: " + PRODUCT_ID);
     }
 
+    @Test
+    void shouldRenameProduct() {
+        Product product = product();
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+
+        service.renameProduct(PRODUCT_ID, "Novo Nome");
+
+        assertThat(product.getName()).isEqualTo("Novo Nome");
+    }
+
+    @Test
+    void shouldRejectRenameForMissingProduct() {
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.renameProduct(PRODUCT_ID, "Novo Nome"))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessage("Product not found: " + PRODUCT_ID);
+    }
+
     private Product product() {
         Product product = new Product(
                 TENANT_ID,

@@ -1,0 +1,32 @@
+meta {
+  name: Listar roles do tenant
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/roles
+  body: none
+}
+
+docs {
+Objetivo: RoleManagement.tsx — matriz role x permissao. As chaves de
+permissao reaproveitam exatamente as strings ja usadas pelo frontend em
+core/permissions/roles.ts (roleVisibleNav/roleBlockedRoutePrefixes), nunca
+uma nomenclatura nova.
+Resultado esperado: 200, 5 entradas (um por papel canonico da ADR-0014).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("5 papeis canonicos presentes", function() {
+    var roles = res.body.map(function (entry) { return entry.role; });
+    expect(roles).to.have.members(['SUPER_ADMIN', 'TENANT_ADMIN', 'PRODUCT_MANAGER', 'EDITOR', 'VIEWER']);
+  });
+  test("TENANT_ADMIN pode gerenciar roles por padrao", function() {
+    var tenantAdmin = res.body.find(function (entry) { return entry.role === 'TENANT_ADMIN'; });
+    expect(tenantAdmin.permissions['/settings/roles']).to.equal(true);
+  });
+}

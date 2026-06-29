@@ -1,0 +1,26 @@
+meta {
+  name: Restaurar permission-matrix para o padrao de fabrica
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/permission-matrix/restore-defaults
+  body: none
+}
+
+docs {
+Objetivo: mesma operacao de restaurar-roles-padrao.bru, exposta na tela
+PermissionMatrixView.tsx (mesmo dado, dois botoes de "restaurar padrao" nas
+duas telas, etapa 17) — idempotente.
+Resultado esperado: 200, matriz no estado de fabrica.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("matriz com os 5 papeis", function() {
+    expect(res.body).to.be.an('array').with.lengthOf(5);
+  });
+}

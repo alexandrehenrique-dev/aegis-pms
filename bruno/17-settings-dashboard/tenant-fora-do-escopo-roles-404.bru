@@ -1,0 +1,42 @@
+meta {
+  name: TENANT_ADMIN de outro tenant - 404
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/roles
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{nonMemberToken}}
+}
+
+docs {
+Objetivo: TENANT_ADMIN sem membership ativa neste tenant nunca deve receber
+403 — sempre 404, para nao revelar a existencia do tenant (Secao 10.2 do
+padrao de qualidade).
+LIMITACAO HERDADA DO DESENHO ORIGINAL (mesmo padrao de
+16-audit/tenant-fora-do-escopo-404.bru): esta suite nao tem fluxo de seed
+automatico de um segundo usuario — defina manualmente a variavel de runtime
+'nonMemberToken' (bru.setVar) com um access_token real de um usuario
+TENANT_ADMIN sem vinculo com {{tenantId}} antes de rodar esta request
+isoladamente (precisa ser TENANT_ADMIN, nao EDITOR/VIEWER/PRODUCT_MANAGER —
+esses recebem 403 por papel insuficiente antes mesmo da checagem de
+membership, ver editor-tentando-editar-roles-403.bru). Sem isso (execucao
+padrao da collection completa), nonMemberToken fica vazio e o teste abaixo
+aceita o 401 resultante como comportamento esperado dessa limitacao.
+}
+
+tests {
+  test("sem nonMemberToken configurado: 401 | com nonMemberToken (TENANT_ADMIN de outro tenant): 404", function() {
+    if (bru.getVar('nonMemberToken')) {
+      expect(res.status).to.equal(404);
+      expect(res.body.error).to.equal('SETTINGS_NOT_FOUND');
+    } else {
+      expect(res.status).to.equal(401);
+    }
+  });
+}

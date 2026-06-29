@@ -1,0 +1,36 @@
+meta {
+  name: Atualizar matriz de roles
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/roles
+  body: json
+}
+
+body:json {
+  [
+    {
+      "role": "EDITOR",
+      "permissions": { "/audit": true }
+    }
+  ]
+}
+
+docs {
+Objetivo: alteracao da matriz por SUPER_ADMIN/TENANT_ADMIN. O payload e um
+array de { role, permissions } — mesmo shape devolvido pelo GET, para a
+tela conseguir editar e reenviar sem traducao.
+Resultado esperado: 200, EDITOR./audit passa a true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("EDITOR./audit atualizado para true", function() {
+    var editor = res.body.find(function (entry) { return entry.role === 'EDITOR'; });
+    expect(editor.permissions['/audit']).to.equal(true);
+  });
+}

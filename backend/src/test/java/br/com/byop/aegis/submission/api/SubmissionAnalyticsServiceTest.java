@@ -62,6 +62,27 @@ class SubmissionAnalyticsServiceTest {
         assertThat(response.lastSubmittedAt()).isEqualTo(NOW.minusDays(1));
     }
 
+    @Test
+    void shouldReturnZeroCountTodayWhenProductHasNoForms() {
+        when(formReferenceService.listFormIds(PRODUCT_ID)).thenReturn(List.of());
+
+        assertThat(service.countToday(PRODUCT_ID)).isZero();
+        verifyNoInteractions(submissionRepository);
+    }
+
+    @Test
+    void shouldCountSubmissionsReceivedToday() {
+        Submission today = submission(NOW.minusHours(2));
+        Submission startOfToday = submission(NOW.truncatedTo(java.time.temporal.ChronoUnit.DAYS));
+        Submission yesterday = submission(NOW.minusDays(1));
+        Submission unknownDate = submission(null);
+        when(formReferenceService.listFormIds(PRODUCT_ID)).thenReturn(List.of(FORM_ID));
+        when(submissionRepository.findAllByFormIdInOrderByDateDesc(List.of(FORM_ID)))
+                .thenReturn(List.of(today, startOfToday, yesterday, unknownDate));
+
+        assertThat(service.countToday(PRODUCT_ID)).isEqualTo(2);
+    }
+
     private Submission submission(OffsetDateTime date) {
         Submission submission = mock(Submission.class);
         when(submission.getDate()).thenReturn(date);

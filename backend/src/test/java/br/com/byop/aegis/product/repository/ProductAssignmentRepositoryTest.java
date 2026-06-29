@@ -17,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -109,6 +111,27 @@ class ProductAssignmentRepositoryTest extends RepositoryTestSupport {
 
         assertThat(assignmentRepository.findAllByUserSubjectAndStatus("subject-list", ProductAssignmentStatus.ASSIGNED))
                 .containsExactlyInAnyOrder(firstAssignment, secondAssignment);
+    }
+
+    @Test
+    void shouldFindAllByProductIdInAndStatus() {
+        Product first = saveProduct("assignment-multi-a");
+        Product second = saveProduct("assignment-multi-b");
+        Product third = saveProduct("assignment-multi-c");
+        ProductAssignment matchingFirst = assignmentRepository.saveAndFlush(
+                new ProductAssignment(first, "subject-multi-1", ProductAssignmentRole.EDITOR)
+        );
+        ProductAssignment matchingSecond = assignmentRepository.saveAndFlush(
+                new ProductAssignment(second, "subject-multi-2", ProductAssignmentRole.PRODUCT_MANAGER)
+        );
+        ProductAssignment outOfScope = assignmentRepository.saveAndFlush(
+                new ProductAssignment(third, "subject-multi-3", ProductAssignmentRole.VIEWER)
+        );
+
+        assertThat(assignmentRepository.findAllByProductIdInAndStatus(
+                List.of(first.getId(), second.getId()), ProductAssignmentStatus.ASSIGNED
+        )).containsExactlyInAnyOrder(matchingFirst, matchingSecond);
+        assertThat(outOfScope.getStatus()).isEqualTo(ProductAssignmentStatus.ASSIGNED);
     }
 
     @Test

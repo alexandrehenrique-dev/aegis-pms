@@ -1,0 +1,47 @@
+meta {
+  name: EDITOR tentando editar roles (403)
+  type: http
+  seq: 11
+}
+
+put {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/roles
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{editorToken}}
+}
+
+body:json {
+  [
+    {
+      "role": "VIEWER",
+      "permissions": { "/settings": true }
+    }
+  ]
+}
+
+docs {
+Objetivo: somente SUPER_ADMIN/TENANT_ADMIN podem alterar roles/permission-matrix
+— qualquer outro papel recebe 403, mesmo com membership ativa no tenant.
+LIMITACAO HERDADA DO DESENHO ORIGINAL (mesmo padrao de
+11-content/editor-tentando-publicar-403.bru): esta suite nao tem fluxo de
+seed automatico de usuario EDITOR — defina manualmente a variavel de
+runtime 'editorToken' (bru.setVar) com um access_token real de um usuario
+com papel EDITOR antes de rodar esta request isoladamente, para validar o
+403 de fato. Sem isso (execucao padrao da collection completa), editorToken
+fica vazio e o teste abaixo aceita o 401 resultante como comportamento
+esperado dessa limitacao.
+}
+
+tests {
+  test("sem editorToken configurado: 401 | com editorToken real: 403 SETTINGS_FORBIDDEN", function() {
+    if (bru.getVar('editorToken')) {
+      expect(res.status).to.equal(403);
+      expect(res.body.error).to.equal('SETTINGS_FORBIDDEN');
+    } else {
+      expect(res.status).to.equal(401);
+    }
+  });
+}

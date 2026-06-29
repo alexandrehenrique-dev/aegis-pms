@@ -65,7 +65,8 @@ bruno/
 ├── 13-forms/
 ├── 14-analytics/
 ├── 15-users/
-└── 16-audit/
+├── 16-audit/
+└── 17-settings-dashboard/
 ```
 
 Os números das pastas seguem a numeração das etapas do backend em `docs/sprints/backend/` (não há pastas `07`, `08`, `09` porque essas etapas não introduziram contratos REST novos cobertos nesta collection).
@@ -78,7 +79,7 @@ A collection usa **exclusivamente** a API `bru.getVar`/`bru.setVar` do Bruno —
 - **Geradas em runtime, com default no `script:pre-request` de `collection.bru` se vazias**: `tenantKey`, `productKey`, `inviteEmail`, `assetTagName`, `graphRefSeed` (sufixo `Date.now()`, evita colisão de unique constraint em execuções repetidas).
 - **Capturadas durante a execução** (via `script:post-response` do request que as cria): `token`, `refreshToken` (login), `callerSubject` (`/me`), `tenantId` (criar tenant), `productId`/`s3ProductId` (criar produto), `userId` (convidar usuário), `assetId`/`pdfAssetId` (upload), `contentId` (criar conteúdo), `articleNodeId`/`topicNodeId`/`graphEdgeId` (Knowledge Graph), `formId`/`invalidFormId` (Sprint 13 Forms), `auditTenantId`/`auditTenantDeletedEventId`/`auditEventId` (Sprint 16 Audit).
 - **Geradas em runtime, com default no `script:pre-request` de `collection.bru`**: `auditTenantKey` (sufixo `Date.now()`, tenant descartável criado/excluído só dentro de `16-audit`, nunca o `{{tenantId}}` compartilhado).
-- **Sem default automático, preencher manualmente se necessário**: `editorToken` — usado só no cenário "EDITOR tentando publicar (403)" de `11-content`; `nonMemberToken` — usado só no cenário "Tenant fora do escopo do caller (404)" de `16-audit`. Em ambos, sem a variável preenchida, o teste aceita o 401 resultante (Bearer vazio/inválido) como comportamento esperado da limitação — não há fluxo de seed automático de um segundo usuário (EDITOR ou sem membership) nesta suíte.
+- **Sem default automático, preencher manualmente se necessário**: `editorToken` — usado no cenário "EDITOR tentando publicar (403)" de `11-content` e em "EDITOR tentando editar roles (403)" de `17-settings-dashboard`; `nonMemberToken` — usado no cenário "Tenant fora do escopo do caller (404)" de `16-audit` e em "TENANT_ADMIN de outro tenant (404)" de `17-settings-dashboard` (neste último precisa ser especificamente um TENANT_ADMIN sem membership no tenant, não EDITOR/VIEWER/PRODUCT_MANAGER, que recebem 403 por papel insuficiente antes da checagem de tenant). Em ambos, sem a variável preenchida, o teste aceita o 401 resultante (Bearer vazio/inválido) como comportamento esperado da limitação — não há fluxo de seed automático de um segundo usuário (EDITOR ou sem membership) nesta suíte.
 
 ## Autenticação
 
