@@ -21,8 +21,8 @@ vars:pre-request {
 }
 
 tests {
-  test("status 403 (real) com Allow: GET provando ausencia de handler de escrita", function() {
-    expect(res.status).to.equal(403);
+  test("status 405 com Allow: GET provando ausencia de handler de escrita", function() {
+    expect(res.status).to.equal(405);
     expect(res.headers['allow']).to.equal('GET');
   });
 }
@@ -30,15 +30,6 @@ tests {
 docs {
   Objetivo: criterio de aceite da etapa 16 — "nao existe endpoint de escrita
   direta de auditoria". POST no mesmo path da listagem nao tem handler.
-  Resultado esperado (aplicacao real): 403, com o header "Allow: GET" como
-  prova tecnica de que o Spring MVC so reconhece GET nesse path — o status
-  HTTP final e 403 (nao 405) porque o filtro de excecoes do Spring Security
-  intercepta a HttpRequestMethodNotSupportedException e a traduz para 403
-  "insufficient_scope" antes de chegar no handler de erro da aplicacao. Mesma
-  classe de quirk de plataforma ja documentada na Sprint 12 (NullPointerException
-  de credenciais S3 tambem virava 403 confuso pelo mesmo motivo). O teste
-  automatizado @WebMvcTest (AuditEventControllerTest, fatia isolada sem o
-  filtro OAuth2 real) continua validando 405 nesse mesmo cenario — a fatia de
-  teste e a aplicacao real divergem so nesse detalhe de status HTTP, nunca no
-  fato de que nao existe handler de escrita.
+  Resultado esperado (aplicacao real): 405, com o header "Allow: GET" como
+  prova tecnica de que o Spring MVC so reconhece GET nesse path.
 }

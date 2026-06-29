@@ -1,0 +1,25 @@
+meta {
+  name: SPA rota client-side retorna index
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/qualquer/rota/client-side
+  body: none
+  auth: none
+}
+
+docs {
+Objetivo: confirmar fallback de rota client-side arbitraria para o index.html.
+Resultado esperado: 200 com shell HTML da SPA, nunca 404.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("retorna html da spa", function() {
+    expect(String(res.body)).to.include('<div id="root">');
+  });
+}

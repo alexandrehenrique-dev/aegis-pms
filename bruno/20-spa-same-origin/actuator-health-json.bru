@@ -1,0 +1,28 @@
+meta {
+  name: Actuator health continua JSON
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/actuator/health
+  body: none
+  auth: none
+}
+
+docs {
+Objetivo: confirmar que /actuator/health nao cai no fallback da SPA.
+Resultado esperado: 200 JSON com status UP, nunca HTML.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("status UP", function() {
+    expect(res.body.status).to.equal("UP");
+  });
+  test("nao retorna html da spa", function() {
+    expect(String(res.body)).to.not.include('<div id="root">');
+  });
+}

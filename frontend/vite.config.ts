@@ -20,11 +20,10 @@ export default defineConfig({
 
   build: {
     /**
-     * Spring Boot serve arquivos estáticos de `src/main/resources/static`.
-     * `npm run build` dentro de `frontend/` deposita os artefatos lá
-     * diretamente — sem copiar arquivos manualmente.
+     * `npm run build` gera o build Vite localmente em `frontend/dist`.
+     * `npm run build:backend` copia esse resultado para o Spring Boot.
      */
-    outDir: '../backend/src/main/resources/static',
+    outDir: 'dist',
     emptyOutDir: true,
   },
 
