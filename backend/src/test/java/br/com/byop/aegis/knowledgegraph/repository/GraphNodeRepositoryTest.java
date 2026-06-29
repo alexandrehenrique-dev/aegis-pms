@@ -4,6 +4,8 @@ import br.com.byop.aegis.knowledgegraph.domain.GraphNode;
 import br.com.byop.aegis.knowledgegraph.domain.GraphNodeType;
 
 import br.com.byop.aegis.core.RepositoryTestSupport;
+import br.com.byop.aegis.knowledgegraph.domain.GraphEdge;
+import br.com.byop.aegis.knowledgegraph.domain.GraphEdgeType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,6 +26,9 @@ class GraphNodeRepositoryTest extends RepositoryTestSupport {
 
     @Autowired
     private GraphNodeRepository graphNodeRepository;
+
+    @Autowired
+    private GraphEdgeRepository graphEdgeRepository;
 
     @Test
     void shouldSaveGraphNode() {
@@ -76,6 +81,23 @@ class GraphNodeRepositoryTest extends RepositoryTestSupport {
                 "ARTICLE",
                 "article-query"
         )).isTrue();
+    }
+
+    @Test
+    void shouldFindOnlyNodesWithoutIncomingOrOutgoingEdges() {
+        ProductIds product = persistedProduct("node-orphans");
+        GraphNode source = graphNodeRepository.saveAndFlush(node(product, GraphNodeType.ARTICLE, "ARTICLE", "source"));
+        GraphNode target = graphNodeRepository.saveAndFlush(node(product, GraphNodeType.TOPIC, "TOPIC", "target"));
+        GraphNode orphan = graphNodeRepository.saveAndFlush(node(product, GraphNodeType.TAG, "TAG", "orphan"));
+        graphEdgeRepository.saveAndFlush(new GraphEdge(
+                product.tenantId(),
+                product.productId(),
+                source.getId(),
+                target.getId(),
+                GraphEdgeType.RELATED_TO
+        ));
+
+        assertThat(graphNodeRepository.findOrphansByProductId(product.productId())).containsExactly(orphan);
     }
 
     private ProductIds persistedProduct(String suffix) {

@@ -1,0 +1,26 @@
+meta {
+  name: Preview node órfão
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/nodes/{{orphanNodeId}}/preview
+  body: none
+}
+
+docs {
+Objetivo: validar preview leve com fallback por metadataJson quando não há Content associado.
+Resultado esperado: 200 com summary, difficulty e thumbnail.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("preview leve completo", function() {
+    expect(res.body.summary).to.equal('Resumo do órfão');
+    expect(res.body.difficulty).to.equal('beginner');
+    expect(res.body.thumbnail).to.equal('orphan.png');
+  });
+}

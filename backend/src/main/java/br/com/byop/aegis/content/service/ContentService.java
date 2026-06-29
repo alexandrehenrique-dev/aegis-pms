@@ -30,6 +30,7 @@ import br.com.byop.aegis.security.AuthenticatedUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.OffsetDateTime;
@@ -45,6 +46,8 @@ import java.util.regex.Pattern;
 public class ContentService {
 
     private static final Pattern KG_REF_PATTERN = Pattern.compile("\\{\\{kg-ref:([\\w-]+):([^}]+)\\}\\}");
+    private static final TypeReference<Map<String, Object>> METADATA_TYPE = new TypeReference<>() {
+    };
     private static final String TARGET_TYPE_CONTENT = "Content";
     private static final String MODULE_CONTENT = "CONTENT";
     private static final String DIFF_KEY_STATUS = "status";
@@ -282,13 +285,12 @@ public class ContentService {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> readMetadataJson(String metadataJson) {
         if (metadataJson == null || metadataJson.isBlank()) {
             return Map.of();
         }
         try {
-            return objectMapper.readValue(metadataJson, Map.class);
+            return objectMapper.readValue(metadataJson, METADATA_TYPE);
         } catch (JacksonException ex) {
             throw new IllegalStateException("Unable to deserialize content metadata", ex);
         }

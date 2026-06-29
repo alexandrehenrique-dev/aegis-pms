@@ -1,0 +1,31 @@
+meta {
+  name: Resolver órfão individual
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/orphans/{{orphanNodeId}}/resolve
+  body: json
+}
+
+body:json {
+  {
+    "action": "Revisar"
+  }
+}
+
+docs {
+Objetivo: marcar o órfão como resolvido por curadoria.
+Resultado esperado: 200 com metadata/status de revisão.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("órfão revisado", function() {
+    expect(res.body.status).to.equal('revisado');
+    expect(res.body.metadataJson).to.contain('orphanResolved');
+  });
+}

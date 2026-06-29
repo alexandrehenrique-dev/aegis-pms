@@ -1,0 +1,32 @@
+meta {
+  name: Atualizar posição do node
+  type: http
+  seq: 2
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/nodes/{{orphanNodeId}}/position
+  body: json
+}
+
+body:json {
+  {
+    "x": 120.5,
+    "y": 340.0
+  }
+}
+
+docs {
+Objetivo: persistir coordenadas x/y do node no canvas.
+Resultado esperado: 200 com x/y atualizados.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("posição persistida", function() {
+    expect(res.body.x).to.equal(120.5);
+    expect(res.body.y).to.equal(340.0);
+  });
+}

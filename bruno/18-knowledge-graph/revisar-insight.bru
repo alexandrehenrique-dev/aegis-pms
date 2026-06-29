@@ -1,0 +1,35 @@
+meta {
+  name: Revisar insight
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/insights/review
+  body: json
+}
+
+body:json {
+  {
+    "text": "Conectar TAG órfã ao tópico principal"
+  }
+}
+
+docs {
+Objetivo: marcar insight textual como revisado.
+Resultado esperado: 200 reviewed=true.
+Variaveis produzidas: reviewedInsightId.
+}
+
+script:post-response {
+bru.setVar('reviewedInsightId', res.body.id);
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("insight revisado", function() {
+    expect(res.body.reviewed).to.equal(true);
+  });
+}

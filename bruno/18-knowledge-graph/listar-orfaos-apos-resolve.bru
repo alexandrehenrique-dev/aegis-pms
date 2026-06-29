@@ -1,0 +1,25 @@
+meta {
+  name: Listar órfãos após resolve
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/orphans
+  body: none
+}
+
+docs {
+Objetivo: confirmar que o node resolvido por curadoria deixa de aparecer nos órfãos acionáveis.
+Resultado esperado: 200 sem o orphanNodeId.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("órfão resolvido saiu da lista", function() {
+    var item = res.body.find(function (node) { return node.id === bru.getVar('orphanNodeId'); });
+    expect(item).to.not.exist;
+  });
+}

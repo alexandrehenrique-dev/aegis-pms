@@ -32,4 +32,13 @@ public interface ContentRepository extends JpaRepository<Content, UUID> {
      * @return conteudo encontrado, ou {@link Optional#empty()} quando inexistente no produto
      */
     Optional<Content> findByProductIdAndId(UUID productId, UUID id);
+
+    /**
+     * Busca um conteudo pelo no do Knowledge Graph vinculado dentro de um produto.
+     *
+     * @param productId identificador do produto proprietario
+     * @param graphNodeId identificador do no vinculado
+     * @return conteudo encontrado, ou {@link Optional#empty()} quando inexistente no produto
+     */
+    Optional<Content> findByProductIdAndGraphNodeId(UUID productId, UUID graphNodeId);
 }

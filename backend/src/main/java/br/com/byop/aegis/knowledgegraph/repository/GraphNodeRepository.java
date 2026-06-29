@@ -3,6 +3,8 @@ package br.com.byop.aegis.knowledgegraph.repository;
 import br.com.byop.aegis.knowledgegraph.domain.GraphNode;
 import br.com.byop.aegis.knowledgegraph.domain.GraphNodeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -85,4 +87,24 @@ public interface GraphNodeRepository extends JpaRepository<GraphNode, UUID> {
      * @return {@code true} quando a referencia ja esta vinculada a um no do produto
      */
     boolean existsByProductIdAndRefTypeAndRefId(UUID productId, String refType, String refId);
+
+    /**
+     * Lista os nos de um produto que nao participam de nenhuma aresta, nem como
+     * origem nem como destino.
+     *
+     * @param productId identificador do produto proprietario
+     * @return nos orfaos do produto informado
+     */
+    @Query("""
+            select node
+            from GraphNode node
+            where node.productId = :productId
+              and not exists (
+                  select 1
+                  from GraphEdge edge
+                  where edge.productId = :productId
+                    and (edge.sourceNodeId = node.id or edge.targetNodeId = node.id)
+              )
+            """)
+    List<GraphNode> findOrphansByProductId(@Param("productId") UUID productId);
 }

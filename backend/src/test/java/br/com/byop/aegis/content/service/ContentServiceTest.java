@@ -28,6 +28,7 @@ import br.com.byop.aegis.knowledgegraph.api.KnowledgeGraphPort;
 import br.com.byop.aegis.product.api.ProductReference;
 import br.com.byop.aegis.product.api.ProductReferenceService;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -672,7 +673,7 @@ class ContentServiceTest {
         Content content = content(productId, ContentStatus.DRAFT);
         ReflectionTestUtils.setField(content, "metadataJson", "{\"k\":\"v\"}");
         when(contentRepository.findByProductIdAndId(productId, content.getId())).thenReturn(Optional.of(content));
-        when(brokenObjectMapper.readValue("{\"k\":\"v\"}", Map.class))
+        when(brokenObjectMapper.readValue(eq("{\"k\":\"v\"}"), any(TypeReference.class)))
                 .thenThrow(org.mockito.Mockito.mock(JacksonException.class));
         UUID contentId = content.getId();
 

@@ -254,11 +254,42 @@ type KGEntityType = "Tenant" | "Produto" | "Página" | "Asset" | "Formulário" |
 type KGNode = { id: string; label: string; type: KGEntityType; status: string; x: number; y: number; props: { k: string; v: string }[] };
 type KGEdge = { from: string; to: string; verb: string };
 ```
-O campo `x`/`y` (posição no canvas) e `props` (lista chave/valor livre) precisam existir no backend ou ser calculados/armazenados em algum lugar — hoje são fixos no mock. Motivo: `GraphCanvasView.tsx` precisa de posição persistente para o layout não "saltar" a cada carregamento; `props` é o que popula o painel de detalhe em `EntityDetails.tsx`.
+O campo `x`/`y` (posição no canvas) é persistido em `graph_nodes`; `props` é derivado de `metadataJson` como lista chave/valor ordenada. Motivo: `GraphCanvasView.tsx` precisa de posição persistente para o layout não "saltar" a cada carregamento; `props` é o que popula o painel de detalhe em `EntityDetails.tsx`.
 
 > **Correção de aderência (ADR-0016, Sprint 16):** uma auditoria de uso real encontrou que `knowledgeService.createEdge`/`ensureNodeForContent` (frontend) nunca eram chamadas por nenhum fluxo de autoria de conteúdo, e que `listNodes()`/`listEdges()` liam de um array de mock estático diferente do array que essas duas funções mutavam — ou seja, mesmo uma chamada manual a `createEdge` nunca apareceria em `GraphCanvasView`. A Sprint 16 corrige as duas coisas no frontend (mock); o contrato dos endpoints acima não muda, mas vale registrar que a criação de edge **só** deve ocorrer a partir do salvamento de um `Content` com referência inline `kg-ref` (ver `EntityPicker.tsx` integrado ao editor) — nunca por uma ação de desenho manual no `GraphCanvasView`, que é só visualização/curadoria.
 
-**`GET /api/v1/products/{productId}/graph/orphans`** — nós sem nenhuma edge. Motivo: `OrphanEntityTable.tsx` (hoje 100% mockado, nem tipo formal ainda).
+**`PATCH /api/v1/products/{productId}/graph/nodes/{nodeId}/position`** —
+```ts
+type UpdateGraphNodePositionRequest = { x: number; y: number };
+```
+Atualiza a posição persistida do nó no canvas.
+
+**`GET /api/v1/products/{productId}/graph/orphans`** — retorna `KGNode[]` acionável para `OrphanEntityTable`: nós sem nenhuma edge e ainda não marcados como resolvidos por curadoria.
+
+```ts
+type OrphanEntityRow = KGNode & {
+  action?: "Arquivar" | "Vincular" | "Associar" | "Mesclar" | "Revisar";
+};
+```
+
+**`POST /api/v1/products/{productId}/graph/orphans/{nodeId}/resolve`** —
+```ts
+type ResolveGraphOrphanRequest = { action: "Arquivar" | "Vincular" | "Associar" | "Mesclar" | "Revisar" };
+```
+Como o contrato desta etapa não possui `targetNodeId`, a resolução não cria edge real. O backend registra curadoria idempotente em `metadataJson` (`orphanResolved`, `orphanAction`, `status`) e o nó deixa de aparecer em `GET /graph/orphans`.
+
+**`POST /api/v1/products/{productId}/graph/orphans/resolve`** —
+```ts
+type ResolveGraphOrphansRequest = { ids: string[]; action?: "Arquivar" | "Vincular" | "Associar" | "Mesclar" | "Revisar" };
+```
+Aplica a mesma curadoria em lote; quando `action` é omitida, usa `Revisar`.
+
+**`POST /api/v1/products/{productId}/graph/insights/review`** —
+```ts
+type ReviewGraphInsightRequest = { text: string };
+type GraphInsightReviewSummary = { id: string; text: string; reviewed: true };
+```
+Marca um insight textual como revisado de forma idempotente, usando hash determinístico do texto por produto.
 
 ### B.10 Domínios de negócio específicos por produto (Sprint 11 — registrado, não implementar ainda)
 

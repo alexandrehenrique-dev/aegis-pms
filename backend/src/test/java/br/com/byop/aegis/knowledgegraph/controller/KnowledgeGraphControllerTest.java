@@ -10,12 +10,15 @@ import br.com.byop.aegis.knowledgegraph.domain.GraphEdgeType;
 import br.com.byop.aegis.knowledgegraph.domain.GraphNodeType;
 import br.com.byop.aegis.knowledgegraph.dto.GraphEdgeDetail;
 import br.com.byop.aegis.knowledgegraph.dto.GraphEdgeSummary;
+import br.com.byop.aegis.knowledgegraph.dto.GraphInsightReviewSummary;
 import br.com.byop.aegis.knowledgegraph.dto.GraphNeighborSummary;
 import br.com.byop.aegis.knowledgegraph.dto.GraphNodeDetail;
+import br.com.byop.aegis.knowledgegraph.dto.GraphNodePreview;
 import br.com.byop.aegis.knowledgegraph.dto.GraphNodeSummary;
 import br.com.byop.aegis.knowledgegraph.dto.GraphRelatedSummary;
 import br.com.byop.aegis.knowledgegraph.exception.GraphNodeNotFoundException;
 import br.com.byop.aegis.knowledgegraph.exception.InvalidGraphNodeException;
+import br.com.byop.aegis.knowledgegraph.exception.InvalidGraphOrphanActionException;
 import br.com.byop.aegis.knowledgegraph.service.KnowledgeGraphService;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.security.AuthenticatedUserProvider;
@@ -42,6 +45,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -132,6 +136,127 @@ class KnowledgeGraphControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(NODE_ID.toString()))
                 .andExpect(jsonPath("$.productId").value(PRODUCT_ID.toString()));
+    }
+
+    @Test
+    void shouldUpdateNodePosition() throws Exception {
+        AuthenticatedUser caller = user();
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(knowledgeGraphService.updatePosition(any(), any(), any())).thenReturn(positionedNodeDetail());
+
+        mockMvc.perform(patch("/api/v1/products/{productId}/graph/nodes/{nodeId}/position", PRODUCT_ID, NODE_ID)
+                        .with(jwt())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "x": 120.5,
+                                  "y": 340.0
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.x").value(120.5))
+                .andExpect(jsonPath("$.y").value(340.0));
+
+        verify(productAccessPort).assertAccessible(PRODUCT_ID, caller);
+    }
+
+    @Test
+    void shouldRejectInvalidPositionRequest() throws Exception {
+        mockMvc.perform(patch("/api/v1/products/{productId}/graph/nodes/{nodeId}/position", PRODUCT_ID, NODE_ID)
+                        .with(jwt())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "x": null,
+                                  "y": 340.0
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldFindOrphans() throws Exception {
+        AuthenticatedUser caller = user();
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(knowledgeGraphService.findOrphans(PRODUCT_ID)).thenReturn(List.of(nodeSummary()));
+
+        mockMvc.perform(get("/api/v1/products/{productId}/graph/orphans", PRODUCT_ID)
+                        .with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(NODE_ID.toString()))
+                .andExpect(jsonPath("$[0].type").value("ARTICLE"));
+    }
+
+    @Test
+    void shouldResolveOrphan() throws Exception {
+        AuthenticatedUser caller = user();
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(knowledgeGraphService.resolveOrphan(any(), any(), any())).thenReturn(nodeDetail());
+
+        mockMvc.perform(post("/api/v1/products/{productId}/graph/orphans/{nodeId}/resolve", PRODUCT_ID, NODE_ID)
+                        .with(jwt())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"action\":\"Revisar\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(NODE_ID.toString()));
+    }
+
+    @Test
+    void shouldResolveOrphans() throws Exception {
+        AuthenticatedUser caller = user();
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(knowledgeGraphService.resolveOrphans(any(), any())).thenReturn(List.of(nodeDetail()));
+
+        mockMvc.perform(post("/api/v1/products/{productId}/graph/orphans/resolve", PRODUCT_ID)
+                        .with(jwt())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "ids": ["33333333-3333-3333-3333-333333333333"],
+                                  "action": "Revisar"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(NODE_ID.toString()));
+    }
+
+    @Test
+    void shouldPreviewNode() throws Exception {
+        AuthenticatedUser caller = user();
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(knowledgeGraphService.previewNode(PRODUCT_ID, NODE_ID)).thenReturn(new GraphNodePreview(
+                NODE_ID,
+                "Article 1",
+                "ARTICLE",
+                "Resumo",
+                "beginner",
+                "cover.png"
+        ));
+
+        mockMvc.perform(get("/api/v1/products/{productId}/graph/nodes/{nodeId}/preview", PRODUCT_ID, NODE_ID)
+                        .with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary").value("Resumo"))
+                .andExpect(jsonPath("$.difficulty").value("beginner"))
+                .andExpect(jsonPath("$.thumbnail").value("cover.png"));
+    }
+
+    @Test
+    void shouldReviewInsight() throws Exception {
+        AuthenticatedUser caller = user();
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(knowledgeGraphService.reviewInsight(any(), any())).thenReturn(new GraphInsightReviewSummary(
+                UUID.fromString("66666666-6666-6666-6666-666666666666"),
+                "Conectar A e B",
+                true
+        ));
+
+        mockMvc.perform(post("/api/v1/products/{productId}/graph/insights/review", PRODUCT_ID)
+                        .with(jwt())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"text\":\"Conectar A e B\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reviewed").value(true));
     }
 
     @Test
@@ -236,7 +361,9 @@ class KnowledgeGraphControllerTest {
         assertThat(handler.handleGraphNodeNotFound().error()).isEqualTo("GRAPH_NODE_NOT_FOUND");
         assertThat(handler.handleInvalidGraphNode().error()).isEqualTo("INVALID_GRAPH_NODE");
         assertThat(handler.handleInvalidGraphEdge().error()).isEqualTo("INVALID_GRAPH_EDGE");
+        assertThat(handler.handleInvalidGraphOrphanAction().error()).isEqualTo("INVALID_GRAPH_ORPHAN_ACTION");
         assertThat(new InvalidGraphNodeException("invalid graph node")).hasMessage("invalid graph node");
+        assertThat(new InvalidGraphOrphanActionException("Ignorar")).hasMessage("Invalid graph orphan action: Ignorar");
     }
 
     private AuthenticatedUser user() {
@@ -284,6 +411,27 @@ class KnowledgeGraphControllerTest {
                 "article-1",
                 "Article 1",
                 "article-1",
+                "{\"lang\":\"pt-BR\"}",
+                CREATED_AT,
+                UPDATED_AT
+        );
+    }
+
+    private GraphNodeDetail positionedNodeDetail() {
+        return new GraphNodeDetail(
+                NODE_ID,
+                TENANT_ID,
+                PRODUCT_ID,
+                GraphNodeType.ARTICLE,
+                "ARTICLE",
+                "article-1",
+                "Article 1",
+                "article-1",
+                "ARTICLE",
+                "ativo",
+                120.5,
+                340.0,
+                List.of(),
                 "{\"lang\":\"pt-BR\"}",
                 CREATED_AT,
                 UPDATED_AT
