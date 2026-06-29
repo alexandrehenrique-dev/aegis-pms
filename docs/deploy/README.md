@@ -28,3 +28,39 @@ Backend source  → build → .jar (serve API + SPA na mesma origem)
 Vantagens: sem CORS, mesma sessão, deploy único.
 Limitação: atualizar o frontend exige rebuild/redeploy do artefato.
 Evolução futura: servir o SPA por CDN separada quando houver necessidade de escala.
+
+## Docker Compose Local Oficial
+
+A partir da Sprint 21, o fluxo oficial para subir a stack local completa é:
+
+```bash
+docker compose up -d --build
+```
+
+Esse comando sobe:
+
+- PostgreSQL dedicado do Aegis (`aegis-postgres`)
+- PostgreSQL dedicado do Keycloak (`keycloak-postgres`)
+- Keycloak (`aegis-keycloak`)
+- MailHog (`aegis-mailhog`)
+- Backend Spring Boot com a SPA React embutida (`aegis-backend`)
+
+Volumes persistentes nomeados:
+
+- `aegis_postgres_data`
+- `keycloak_aegis_postgres_data`
+- `aegis_assets_data`
+
+O volume `aegis_assets_data` é montado em `/app/assets` no container do backend. O bootstrap Java existente continua criando os diretórios necessários com `Files.createDirectories(...)`; no container, esses diretórios são criados dentro do volume Docker.
+
+O build do backend no Compose também constrói a SPA React em um stage Node e copia o `dist/` para o classpath do Spring Boot antes do empacotamento Maven. A imagem final continua contendo apenas JRE e JAR.
+
+O issuer externo do Keycloak permanece `http://localhost:8282/realms/aegis`. O backend containerizado valida tokens contra esse issuer e usa apenas a URL interna/JWKS container-to-container para buscar chaves e chamar APIs administrativas.
+
+Para parar sem remover dados:
+
+```bash
+docker compose down
+```
+
+Não use `docker compose down -v` em ambientes com dados que precisam ser preservados, pois esse comando remove os volumes nomeados.

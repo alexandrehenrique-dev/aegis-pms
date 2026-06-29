@@ -1,0 +1,26 @@
+meta {
+  name: Keycloak discovery issuer externo
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{keycloakIssuer}}/.well-known/openid-configuration
+  body: none
+  auth: none
+}
+
+docs {
+Objetivo: validar o discovery OIDC do Keycloak e confirmar que o issuer permanece externo.
+Resultado esperado: 200 JSON com issuer igual a {{keycloakIssuer}}.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("issuer externo preservado", function() {
+    expect(res.body.issuer).to.equal("http://localhost:8282/realms/aegis");
+  });
+}

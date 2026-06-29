@@ -56,6 +56,7 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_HTTP_PORT}
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_STRICT_HTTPS: "false"
       KC_SMTP_HOST: ${SMTP_HOST:-mailhog}
@@ -78,6 +79,56 @@ services:
     networks:
       - aegis-network
 
+  aegis-backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: aegis-backend
+    restart: unless-stopped
+    environment:
+      AEGIS_DB_HOST: aegis-postgres
+      AEGIS_DB_PORT: 5432
+      AEGIS_DB_NAME: ${AEGIS_DB_NAME}
+      AEGIS_DB_USER: ${AEGIS_DB_USER}
+      AEGIS_DB_PASSWORD: ${AEGIS_DB_PASSWORD}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      KEYCLOAK_INTERNAL_BASE_URL: ${KEYCLOAK_INTERNAL_BASE_URL:-http://keycloak:8080}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_WEB_CLIENT_ID: ${KEYCLOAK_WEB_CLIENT_ID}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_ADMIN_REALMS_PATH: ${KEYCLOAK_ADMIN_REALMS_PATH:-/admin/realms/}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      AEGIS_STORAGE_LOCAL_PATH: /app/assets
+      SMTP_HOST: ${SMTP_HOST:-mailhog}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_FROM: ${SMTP_FROM:-noreply@aegis.app}
+      SMTP_FROM_DISPLAY_NAME: ${SMTP_FROM_DISPLAY_NAME:-Aegis PMS}
+      SMTP_AUTH: ${SMTP_AUTH:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      SMTP_SSL: ${SMTP_SSL:-false}
+      AEGIS_APP_BASE_URL: http://localhost:${BACKEND_PORT}
+      AEGIS_PRODUCT_EMAIL_TEMPLATE_PATH: /app/email-templates/product
+      AEGIS_ASSETS_MULTIPART_MAX_FILE_SIZE: ${AEGIS_ASSETS_MULTIPART_MAX_FILE_SIZE:-260MB}
+      AEGIS_ASSETS_MULTIPART_MAX_REQUEST_SIZE: ${AEGIS_ASSETS_MULTIPART_MAX_REQUEST_SIZE:-260MB}
+    ports:
+      - "${BACKEND_PORT}:8080"
+    volumes:
+      - aegis_assets_data:/app/assets
+      - ./infra/keycloak/themes/aegis/email/html:/app/email-templates/product:ro
+    depends_on:
+      aegis-postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      mailhog:
+        condition: service_started
+    networks:
+      - aegis-network
+
   mailhog:
     image: mailhog/mailhog:latest
     container_name: aegis-mailhog
@@ -91,6 +142,7 @@ services:
 volumes:
   aegis_postgres_data:
   keycloak_aegis_postgres_data:
+  aegis_assets_data:
 
 networks:
   aegis-network:

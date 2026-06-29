@@ -1,0 +1,26 @@
+meta {
+  name: Backend health containerizado
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/actuator/health
+  body: none
+  auth: none
+}
+
+docs {
+Objetivo: validar que o backend containerizado responde ao health check oficial.
+Resultado esperado: 200 JSON com status UP.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("status UP", function() {
+    expect(res.body.status).to.equal("UP");
+  });
+}
