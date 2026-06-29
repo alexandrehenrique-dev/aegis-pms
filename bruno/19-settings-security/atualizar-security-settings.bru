@@ -1,0 +1,39 @@
+meta {
+  name: Atualizar security settings
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/settings/security
+  body: json
+}
+
+body:json {
+  {
+    "webhookUrl": "https://hooks.example.com/aegis",
+    "webhookSecret": "secret-local-only",
+    "analyticsEnabled": true,
+    "analyticsProviderKey": "analytics-key-local",
+    "emailDeliveryEnabled": true
+  }
+}
+
+docs {
+Objetivo: validar atualizacao de webhook, analytics e envio por email nas configuracoes de seguranca.
+Resultado esperado: 200, status connected/connected/enabled e segredo omitido da resposta.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("status de integracoes atualizado", function() {
+    expect(res.body.webhookStatus).to.equal("connected");
+    expect(res.body.analyticsStatus).to.equal("connected");
+    expect(res.body.emailStatus).to.equal("connected");
+  });
+  test("segredo nao e retornado", function() {
+    expect(res.body).to.not.have.property("webhookSecret");
+  });
+}

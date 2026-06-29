@@ -1,0 +1,36 @@
+meta {
+  name: Submit publico - form nao publicado 422
+  type: http
+  seq: 19
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms/{{invalidFormId}}/submit
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Ana Publica",
+    "email": "ana.publica@example.com",
+    "source": "site",
+    "answers": {
+      "Email": "ana.publica@example.com"
+    }
+  }
+}
+
+docs {
+Objetivo: validar que formulario em Draft nao aceita submissao publica.
+Resultado esperado: 422 SUBMISSION_FORM_NOT_PUBLISHED.
+}
+
+tests {
+  test("status 422", function() {
+    expect(res.status).to.equal(422);
+  });
+  test("erro de form nao publicado", function() {
+    expect(res.body.error).to.equal("SUBMISSION_FORM_NOT_PUBLISHED");
+  });
+}

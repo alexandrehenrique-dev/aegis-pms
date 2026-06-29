@@ -1,0 +1,28 @@
+meta {
+  name: Consultar security settings
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/settings/security
+  body: none
+}
+
+docs {
+Objetivo: validar a leitura lazy das configuracoes de seguranca do produto.
+Resultado esperado: 200, payload sem webhookSecret e status inicial desconectado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("payload nao expoe segredo", function() {
+    expect(res.body).to.not.have.property("webhookSecret");
+  });
+  test("status inicial", function() {
+    expect(res.body.webhookStatus).to.equal("disconnected");
+    expect(res.body.analyticsStatus).to.equal("disconnected");
+  });
+}

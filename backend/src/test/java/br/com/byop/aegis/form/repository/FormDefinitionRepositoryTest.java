@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,8 +45,24 @@ class FormDefinitionRepositoryTest extends RepositoryTestSupport {
         assertThat(saved.getFieldsJson()).contains("Email");
         assertThat(saved.getDeliveryChannelsJson()).isEqualTo("[]");
         assertThat(saved.getPublication()).isNull();
+        assertThat(saved.getResponseCount()).isZero();
+        assertThat(saved.getLastActivityAt()).isNull();
         assertThat(saved.getCreatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    void shouldPersistReadModelCounters() {
+        Product product = saveProduct("form-read-model");
+        FormDefinition form = formDefinitionRepository.saveAndFlush(newForm(product, "Contato"));
+        OffsetDateTime activityAt = OffsetDateTime.parse("2026-06-29T12:00:00Z");
+
+        form.registerResponse(activityAt);
+        formDefinitionRepository.saveAndFlush(form);
+
+        FormDefinition reloaded = formDefinitionRepository.findById(form.getId()).orElseThrow();
+        assertThat(reloaded.getResponseCount()).isEqualTo(1L);
+        assertThat(reloaded.getLastActivityAt()).isEqualTo(activityAt);
     }
 
     @Test

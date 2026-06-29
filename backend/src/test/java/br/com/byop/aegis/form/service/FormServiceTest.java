@@ -79,9 +79,9 @@ class FormServiceTest {
     @Test
     void shouldListFormsWithResponseCountAndLastActivity() {
         FormDefinition form = form();
-        FormSummary summary = new FormSummary(FORM_ID, "Contato", "lead", "Draft", "2", "0%", "x", "—");
+        FormSummary summary = new FormSummary(FORM_ID, "Contato", "lead", "Draft", "2", "—", "x", "—");
         when(formRepository.findAllByProductId(PRODUCT_ID)).thenReturn(List.of(form));
-        when(formMapper.toSummary(form, 0L, "0%", null)).thenReturn(summary);
+        when(formMapper.toSummary(form)).thenReturn(summary);
 
         assertThat(service.listForms(PRODUCT_ID)).containsExactly(summary);
     }

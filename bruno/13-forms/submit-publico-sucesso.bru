@@ -1,0 +1,44 @@
+meta {
+  name: Submit publico - sucesso
+  type: http
+  seq: 18
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms/{{formId}}/submit
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Ana Publica",
+    "email": "ana.publica@example.com",
+    "source": "site",
+    "answers": {
+      "Nome": "Ana Publica",
+      "Email": "ana.publica@example.com"
+    }
+  }
+}
+
+docs {
+Objetivo: validar o endpoint publico de submissao sem JWT, criado na Sprint 19.
+Resultado esperado: 201, submission criada para o form publicado.
+Variaveis produzidas: publicSubmissionId.
+}
+
+script:post-response {
+bru.setVar('publicSubmissionId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("submission publica criada", function() {
+    expect(res.body.id).to.be.a('string');
+    expect(res.body.formId).to.equal(bru.getVar('formId'));
+    expect(res.body.email).to.equal("ana.publica@example.com");
+  });
+}

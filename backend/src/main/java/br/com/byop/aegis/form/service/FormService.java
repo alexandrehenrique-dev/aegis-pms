@@ -27,8 +27,6 @@ import java.util.UUID;
 @Service
 public class FormService {
 
-    private static final String DEFAULT_CONVERSION = "0%";
-
     private final FormDefinitionRepository formRepository;
     private final FormDefinitionMapper formMapper;
     private final FormPublicationPolicy publicationPolicy;
@@ -107,7 +105,7 @@ public class FormService {
     }
 
     private FormSummary toSummary(FormDefinition form) {
-        return formMapper.toSummary(form, 0L, DEFAULT_CONVERSION, null);
+        return formMapper.toSummary(form);
     }
 
     private FormDetail toDetail(FormDefinition form) {
