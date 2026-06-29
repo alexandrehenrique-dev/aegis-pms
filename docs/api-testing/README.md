@@ -68,7 +68,8 @@ bruno/
 ├── 16-audit/
 ├── 17-settings-dashboard/
 ├── 18-knowledge-graph/
-└── 19-settings-security/
+├── 19-settings-security/
+└── 20-spa-same-origin/
 ```
 
 Os números das pastas seguem a numeração das etapas do backend em `docs/sprints/backend/` (não há pastas `07`, `08`, `09` porque essas etapas não introduziram contratos REST novos cobertos nesta collection).

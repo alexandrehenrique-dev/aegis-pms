@@ -1,0 +1,29 @@
+meta {
+  name: API me sem token continua API
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer invalid-token-for-spa-fallback-test
+}
+
+docs {
+Objetivo: confirmar que /api/v1/me nao cai no fallback da SPA.
+Resultado esperado: 401 sem token valido, nunca HTML.
+}
+
+tests {
+  test("status 401", function() {
+    expect(res.status).to.equal(401);
+  });
+  test("nao retorna html da spa", function() {
+    expect(String(res.body)).to.not.include('<div id="root">');
+  });
+}

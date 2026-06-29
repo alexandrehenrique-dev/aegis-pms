@@ -1,0 +1,25 @@
+meta {
+  name: SPA root retorna index
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/
+  body: none
+  auth: none
+}
+
+docs {
+Objetivo: confirmar que o Spring Boot serve o index.html do build React na raiz.
+Resultado esperado: 200 com shell HTML da SPA.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("retorna html da spa", function() {
+    expect(String(res.body)).to.include('<div id="root">');
+  });
+}
