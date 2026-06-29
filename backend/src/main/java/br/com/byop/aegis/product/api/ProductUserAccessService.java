@@ -1,11 +1,13 @@
 package br.com.byop.aegis.product.api;
 
 import br.com.byop.aegis.product.domain.ProductAssignment;
+import br.com.byop.aegis.product.domain.ProductAssignmentRole;
 import br.com.byop.aegis.product.domain.ProductAssignmentStatus;
 import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -44,6 +46,31 @@ public class ProductUserAccessService {
                 .filter(assignment -> callerProductIds.contains(assignment.getProductId()))
                 .forEach(assignment -> sharedSubjects.add(assignment.getUserSubject()));
         return Set.copyOf(sharedSubjects);
+    }
+
+    @Transactional(readOnly = true)
+    public long countDistinctAssignedUsers(Collection<UUID> productIds) {
+        if (productIds.isEmpty()) {
+            return 0;
+        }
+        return assignmentRepository.findAllByProductIdInAndStatus(productIds, ProductAssignmentStatus.ASSIGNED)
+                .stream()
+                .map(ProductAssignment::getUserSubject)
+                .distinct()
+                .count();
+    }
+
+    @Transactional(readOnly = true)
+    public long countDistinctProductManagers(Collection<UUID> productIds) {
+        if (productIds.isEmpty()) {
+            return 0;
+        }
+        return assignmentRepository.findAllByProductIdInAndStatus(productIds, ProductAssignmentStatus.ASSIGNED)
+                .stream()
+                .filter(assignment -> assignment.getRole() == ProductAssignmentRole.PRODUCT_MANAGER)
+                .map(ProductAssignment::getUserSubject)
+                .distinct()
+                .count();
     }
 
     @Transactional

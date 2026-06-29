@@ -1,0 +1,35 @@
+meta {
+  name: Resumo do dashboard global
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/api/v1/dashboard/summary
+  body: none
+}
+
+docs {
+Objetivo: KPIs do hub do tenant (DashboardGlobal.tsx) — agregador puro sobre
+products/content/forms/assets/users, sem tabela/cache propria. Sem path
+param: o escopo e resolvido pelo papel do caller no token (SUPER_ADMIN agrega
+globalmente, demais papeis agregam pelos produtos que conseguem ver).
+Resultado esperado: 200, todos os campos numericos presentes (podem ser 0).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("shape completo do DashboardSummaryResponse", function() {
+    expect(res.body).to.have.all.keys(
+      'activeProducts', 'archivedProducts', 'pendingContent', 'pendingContentNeedingReview',
+      'openApprovals', 'criticalApprovals', 'formsReceived', 'formsReceivedToday',
+      'recentAssets', 'activeUsers', 'productManagers', 'conversionRate'
+    );
+  });
+  test("numeros nao negativos", function() {
+    expect(res.body.activeProducts).to.be.at.least(0);
+    expect(res.body.formsReceived).to.be.at.least(0);
+  });
+}

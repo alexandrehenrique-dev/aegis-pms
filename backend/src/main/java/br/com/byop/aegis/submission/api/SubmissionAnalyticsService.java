@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -46,6 +47,27 @@ public class SubmissionAnalyticsService {
                 .max(Comparator.naturalOrder())
                 .orElse(null);
         return new SubmissionAnalyticsResponse(submissions.size(), recent, lastSubmittedAt);
+    }
+
+    /**
+     * Conta submissions recebidas no dia corrente (UTC), usado pelo
+     * agregador do dashboard (etapa 17) — metrica adicional ao
+     * {@link #summarize(UUID)}, que nao expoe um corte diario.
+     *
+     * @param productId produto cujos formularios devem ser somados
+     * @return quantidade de submissions recebidas desde o inicio do dia corrente
+     */
+    @Transactional(readOnly = true)
+    public long countToday(UUID productId) {
+        List<UUID> formIds = formReferenceService.listFormIds(productId);
+        if (formIds.isEmpty()) {
+            return 0;
+        }
+        OffsetDateTime startOfToday = OffsetDateTime.now(clock).truncatedTo(ChronoUnit.DAYS);
+        return submissionRepository.findAllByFormIdInOrderByDateDesc(formIds)
+                .stream()
+                .filter(submission -> isOnOrAfter(submission.getDate(), startOfToday))
+                .count();
     }
 
     private boolean isOnOrAfter(OffsetDateTime value, OffsetDateTime limit) {

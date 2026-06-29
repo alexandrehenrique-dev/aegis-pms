@@ -1,0 +1,34 @@
+meta {
+  name: Atualizar settings do produto
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/settings
+  body: json
+}
+
+body:json {
+  {
+    "name": "Maestro Beton"
+  }
+}
+
+docs {
+Objetivo: ProductSettings.tsx salva alteracoes do produto. O artefato da
+etapa 17 e o mock do frontend nao definem um payload concreto (sem campos
+reais enviados hoje); esta etapa cobre apenas o campo que ja existe e e
+editavel em Product (nome) — branding/SEO/publicacao ficam como retrofit
+pendente.
+Resultado esperado: 200, devolve o overview atualizado (8 cards).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("devolve overview atualizado", function() {
+    expect(res.body).to.be.an('array').with.lengthOf(8);
+  });
+}

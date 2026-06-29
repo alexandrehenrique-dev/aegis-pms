@@ -1,0 +1,31 @@
+meta {
+  name: Preview com papel invalido - 400
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/permission-matrix/preview
+  body: json
+}
+
+body:json {
+  {
+    "role": "intern"
+  }
+}
+
+docs {
+Objetivo: ADR-0014 fixa um catalogo fechado de 5 papeis — qualquer outro
+nome e rejeitado, nunca silenciosamente ignorado.
+Resultado esperado: 400 INVALID_SETTINGS_ROLE.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro INVALID_SETTINGS_ROLE", function() {
+    expect(res.body.error).to.equal('INVALID_SETTINGS_ROLE');
+  });
+}

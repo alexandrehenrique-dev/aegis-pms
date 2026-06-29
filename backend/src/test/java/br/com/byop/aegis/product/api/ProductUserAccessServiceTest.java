@@ -63,6 +63,36 @@ class ProductUserAccessServiceTest {
     }
 
     @Test
+    void shouldCountDistinctAssignedUsers() {
+        ProductAssignment pm = assignment("pm-1", ProductAssignmentRole.PRODUCT_MANAGER);
+        ProductAssignment editor = assignment("editor-1", ProductAssignmentRole.EDITOR);
+        when(assignmentRepository.findAllByProductIdInAndStatus(List.of(PRODUCT_ID), ProductAssignmentStatus.ASSIGNED))
+                .thenReturn(List.of(pm, editor));
+
+        assertThat(service.countDistinctAssignedUsers(List.of(PRODUCT_ID))).isEqualTo(2);
+    }
+
+    @Test
+    void shouldReturnZeroDistinctAssignedUsersWhenNoProductIds() {
+        assertThat(service.countDistinctAssignedUsers(List.of())).isZero();
+    }
+
+    @Test
+    void shouldCountDistinctProductManagers() {
+        ProductAssignment pm = assignment("pm-1", ProductAssignmentRole.PRODUCT_MANAGER);
+        ProductAssignment editor = assignment("editor-1", ProductAssignmentRole.EDITOR);
+        when(assignmentRepository.findAllByProductIdInAndStatus(List.of(PRODUCT_ID), ProductAssignmentStatus.ASSIGNED))
+                .thenReturn(List.of(pm, editor));
+
+        assertThat(service.countDistinctProductManagers(List.of(PRODUCT_ID))).isEqualTo(1);
+    }
+
+    @Test
+    void shouldReturnZeroDistinctProductManagersWhenNoProductIds() {
+        assertThat(service.countDistinctProductManagers(List.of())).isZero();
+    }
+
+    @Test
     void shouldRemoveTenantAssignments() {
         ProductAssignment assignment = assignment("user-1", ProductAssignmentRole.EDITOR);
         when(assignmentRepository.findAllByTenantIdAndUserSubjectAndStatus(

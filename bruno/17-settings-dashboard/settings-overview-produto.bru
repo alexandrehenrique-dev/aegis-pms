@@ -1,0 +1,30 @@
+meta {
+  name: Settings overview do produto
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/settings/overview
+  body: none
+}
+
+docs {
+Objetivo: grid de cards (Produto, Tenant, Equipe, Permissoes, Integracoes,
+Seguranca, Auditoria, SEO) consumido por SettingsOverview.tsx.
+Resultado esperado: 200, array com 8 SettingCard.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("8 cards presentes", function() {
+    expect(res.body).to.be.an('array').with.lengthOf(8);
+  });
+  test("card Produto presente com shape completo", function() {
+    var produto = res.body.find(function (card) { return card.name === 'Produto'; });
+    expect(produto).to.exist;
+    expect(produto).to.have.all.keys('name', 'description', 'status', 'lastUpdated', 'owner', 'risk');
+  });
+}

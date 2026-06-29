@@ -1,7 +1,7 @@
 package br.com.byop.aegis.system.controller;
 
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 
 /**
  * Catch-all para o React SPA (ADR-0009 + ADR-0011): qualquer rota de
@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 public class SpaFallbackController {
 
-    @RequestMapping(value = {
+    @GetMapping(value = {
         "/",
         "/login",
         "/forgot-password",

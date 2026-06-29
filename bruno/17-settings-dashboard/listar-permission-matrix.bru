@@ -1,0 +1,25 @@
+meta {
+  name: Listar permission-matrix do tenant
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/permission-matrix
+  body: none
+}
+
+docs {
+Objetivo: PermissionMatrixView.tsx — mesma matriz de listar-roles.bru, exposta
+em outra tela/rota (mesmo dado, dois shapes de tela, etapa 17).
+Resultado esperado: 200, mesmo shape de listar-roles.bru.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("mesmo shape de roles (5 papeis)", function() {
+    expect(res.body).to.be.an('array').with.lengthOf(5);
+  });
+}

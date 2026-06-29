@@ -1,0 +1,27 @@
+meta {
+  name: Settings de produto inexistente - 404
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/00000000-0000-0000-0000-000000000000/settings/overview
+  body: none
+}
+
+docs {
+Objetivo: settings e dominio de infraestrutura (Secao 10.6 do padrao de
+qualidade) — nao usa ProductAccessResolver/module-gating, apenas a regra
+geral de isolamento (produto fora do escopo do caller, ou inexistente,
+nunca revela existencia).
+Resultado esperado: 404 SETTINGS_NOT_FOUND.
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+  test("erro SETTINGS_NOT_FOUND", function() {
+    expect(res.body.error).to.equal('SETTINGS_NOT_FOUND');
+  });
+}

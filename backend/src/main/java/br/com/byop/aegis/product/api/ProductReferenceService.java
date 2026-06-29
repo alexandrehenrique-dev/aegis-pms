@@ -39,4 +39,21 @@ public class ProductReferenceService {
                 .orElseThrow(() -> new ProductNotFoundException(productId))
                 .getAssetStorageStrategy();
     }
+
+    /**
+     * Renomeia um produto — usado por {@code settings.service.SettingsService}
+     * (etapa 17, {@code PUT /products/{productId}/settings}). O chamador
+     * precisa ter validado o escopo do produto antes (via
+     * {@link ProductVisibilityService}); este metodo nao repete a checagem
+     * de acesso, apenas a mutacao.
+     *
+     * @param productId identificador do produto
+     * @param name novo nome do produto
+     */
+    @Transactional
+    public void renameProduct(UUID productId, String name) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException(productId));
+        product.rename(name);
+    }
 }

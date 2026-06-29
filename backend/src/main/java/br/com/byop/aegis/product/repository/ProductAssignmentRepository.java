@@ -5,6 +5,7 @@ import br.com.byop.aegis.product.domain.ProductAssignmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -83,4 +84,15 @@ public interface ProductAssignmentRepository extends JpaRepository<ProductAssign
      * @return atribuicoes do tenant com o status informado
      */
     List<ProductAssignment> findAllByTenantIdAndStatus(UUID tenantId, ProductAssignmentStatus status);
+
+    /**
+     * Lista atribuicoes com status especifico dentro de um conjunto de
+     * produtos — usado pelo agregador do dashboard (etapa 17) para contar
+     * usuarios distintos sem depender de um unico tenant.
+     *
+     * @param productIds identificadores dos produtos visiveis ao caller
+     * @param status status esperado da atribuicao
+     * @return atribuicoes dos produtos informados com o status informado
+     */
+    List<ProductAssignment> findAllByProductIdInAndStatus(Collection<UUID> productIds, ProductAssignmentStatus status);
 }
