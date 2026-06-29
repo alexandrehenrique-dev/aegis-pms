@@ -252,6 +252,129 @@ class KeycloakAdminClientTest {
     }
 
     @Test
+    void shouldEnsureExistingDemoUserWithPasswordAndRealmRole() {
+        stubAdminToken();
+        stubUserLookup("""
+                [
+                  {
+                    "id": "demo-user-id",
+                    "username": "super-admin@byop.io",
+                    "email": "super-admin@byop.io",
+                    "firstName": "Super",
+                    "lastName": "Admin",
+                    "enabled": true
+                  }
+                ]
+                """);
+        stubDemoUserUpdates("demo-user-id", "AEGIS_SUPER_ADMIN");
+
+        UserResponse user = client.ensureDemoUser(
+                "super-admin@byop.io",
+                "Super Admin",
+                "senha123",
+                "AEGIS_SUPER_ADMIN"
+        );
+
+        assertEquals("demo-user-id", user.id());
+        wireMockServer.verify(0, postRequestedFor(urlEqualTo("/admin/realms/aegis/users")));
+        wireMockServer.verify(putRequestedFor(urlEqualTo("/admin/realms/aegis/users/demo-user-id/reset-password"))
+                .withRequestBody(matchingJsonPath("$.value", equalTo("senha123")))
+                .withRequestBody(matchingJsonPath("$.temporary", equalTo("false"))));
+        wireMockServer.verify(postRequestedFor(urlEqualTo("/admin/realms/aegis/users/demo-user-id/role-mappings/realm"))
+                .withRequestBody(containing("AEGIS_SUPER_ADMIN")));
+    }
+
+    @Test
+    void shouldCreateDemoUserWhenMissing() {
+        stubAdminToken();
+        wireMockServer.stubFor(get(urlPathEqualTo("/admin/realms/aegis/users"))
+                .withQueryParam("email", equalTo("pm@byop.io"))
+                .withQueryParam("exact", equalTo("true"))
+                .inScenario("ensure-demo")
+                .whenScenarioStateIs(STARTED)
+                .willReturn(okJson("[]"))
+                .willSetStateTo("created"));
+        wireMockServer.stubFor(post(urlEqualTo("/admin/realms/aegis/users"))
+                .withRequestBody(matchingJsonPath("$.username", equalTo("pm@byop.io")))
+                .withRequestBody(matchingJsonPath("$.credentials[0].value", equalTo("senha123")))
+                .withRequestBody(matchingJsonPath("$.credentials[0].temporary", equalTo("false")))
+                .willReturn(created()));
+        wireMockServer.stubFor(get(urlPathEqualTo("/admin/realms/aegis/users"))
+                .withQueryParam("email", equalTo("pm@byop.io"))
+                .withQueryParam("exact", equalTo("true"))
+                .inScenario("ensure-demo")
+                .whenScenarioStateIs("created")
+                .willReturn(okJson("""
+                        [
+                          {
+                            "id": "pm-user-id",
+                            "username": "pm@byop.io",
+                            "email": "pm@byop.io",
+                            "firstName": "Marina",
+                            "lastName": "Costa",
+                            "enabled": true
+                          }
+                        ]
+                        """)));
+        stubDemoUserUpdates("pm-user-id", "AEGIS_PRODUCT_MANAGER");
+
+        UserResponse user = client.ensureDemoUser(
+                "pm@byop.io",
+                "Marina Costa",
+                "senha123",
+                "AEGIS_PRODUCT_MANAGER"
+        );
+
+        assertEquals("pm-user-id", user.id());
+        wireMockServer.verify(postRequestedFor(urlEqualTo("/admin/realms/aegis/users"))
+                .withRequestBody(matchingJsonPath("$.requiredActions", equalToJson("[]"))));
+    }
+
+    @Test
+    void shouldThrowWhenEnsuringDemoUserFails() {
+        stubAdminToken();
+        stubUserLookup("""
+                [
+                  {
+                    "id": "demo-user-id",
+                    "username": "super-admin@byop.io",
+                    "email": "super-admin@byop.io",
+                    "enabled": true
+                  }
+                ]
+                """);
+        wireMockServer.stubFor(put(urlEqualTo("/admin/realms/aegis/users/demo-user-id"))
+                .willReturn(serverError()));
+
+        assertThrows(
+                KeycloakAuthenticationException.class,
+                () -> client.ensureDemoUser(
+                        "super-admin@byop.io",
+                        "Super Admin",
+                        "senha123",
+                        "AEGIS_SUPER_ADMIN"
+                )
+        );
+    }
+
+    @Test
+    void shouldThrowWhenCreatedDemoUserCannotBeResolved() {
+        stubAdminToken();
+        stubUserLookup("[]");
+        wireMockServer.stubFor(post(urlEqualTo("/admin/realms/aegis/users")).willReturn(created()));
+
+        assertThrows(
+                KeycloakAuthenticationException.class,
+                () -> client.ensureDemoUser(
+                        "pm@byop.io",
+                        "Marina Costa",
+                        "senha123",
+                        "AEGIS_PRODUCT_MANAGER"
+                )
+        );
+    }
+
+    @Test
     void shouldThrowWhenCreatedUserCannotBeResolved() {
         stubAdminToken();
         stubUserLookup("[]");
@@ -666,5 +789,21 @@ class KeycloakAdminClientTest {
         wireMockServer.stubFor(put(urlEqualTo(
                 "/admin/realms/aegis/users/user-id/execute-actions-email?client_id=aegis-web"
         )).willReturn(noContent()));
+    }
+
+    private void stubDemoUserUpdates(String userId, String roleName) {
+        wireMockServer.stubFor(put(urlEqualTo("/admin/realms/aegis/users/" + userId))
+                .willReturn(noContent()));
+        wireMockServer.stubFor(put(urlEqualTo("/admin/realms/aegis/users/" + userId + "/reset-password"))
+                .willReturn(noContent()));
+        wireMockServer.stubFor(get(urlEqualTo("/admin/realms/aegis/roles/" + roleName))
+                .willReturn(okJson("""
+                    {
+                      "id": "role-id",
+                      "name": "%s"
+                    }
+                    """.formatted(roleName))));
+        wireMockServer.stubFor(post(urlEqualTo("/admin/realms/aegis/users/" + userId + "/role-mappings/realm"))
+                .willReturn(noContent()));
     }
 }

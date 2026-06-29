@@ -1,4 +1,4 @@
-# Etapa 21 — Seed inicial (tenants/produtos/usuários) e seed do Knowledge Graph
+# Etapa 22 — Seed inicial (tenants/produtos/usuários) e seed do Knowledge Graph
 
 > Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 06, 07, 08, 10 e 18 concluídas (Auth/SMTP, Tenant/Product/Modules, Knowledge Graph, CRUD de tenant + `ProductAssignment`, e os campos extras de grafo).
 

@@ -1,0 +1,31 @@
+meta {
+  name: Buscar node Poema
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{seedLokiProductId}}/graph/nodes?q=Poema
+  body: none
+}
+
+docs {
+Objetivo: localizar o poema criado pelo seed Loki.
+Resultado esperado: 200 com node Poema do Limiar.
+}
+
+script:post-response {
+  var node = res.body.find(function (item) { return item.refId === 'poema-do-limiar'; });
+  if (node) { bru.setVar('seedPoemaNodeId', node.id); }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("node poema existe", function() {
+    var node = res.body.find(function (item) { return item.refId === 'poema-do-limiar'; });
+    expect(node).to.exist;
+    expect(node.label).to.equal('Poema do Limiar');
+  });
+}

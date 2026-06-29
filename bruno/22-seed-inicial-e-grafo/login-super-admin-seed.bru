@@ -1,0 +1,38 @@
+meta {
+  name: Login seed - super-admin
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{keycloakIssuer}}/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: {{clientId}}
+  username: super-admin@byop.io
+  password: senha123
+}
+
+docs {
+Objetivo: autenticar com o usuario demo criado pela Sprint 22 e capturar token para validar o seed real.
+Resultado esperado: 200, access_token e refresh_token presentes.
+Variaveis produzidas: token, refreshToken.
+}
+
+script:post-response {
+  bru.setVar('token', res.body.access_token);
+  bru.setVar('refreshToken', res.body.refresh_token);
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("access_token presente", function() {
+    expect(res.body.access_token).to.be.a('string');
+  });
+}

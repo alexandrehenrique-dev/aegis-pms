@@ -28,6 +28,7 @@ public class KeycloakAdminClient {
     private static final String ACCESS_TOKEN = "access_token";
     private static final String ADMIN_API_ERROR = "Error communicating with Keycloak Admin API";
     private static final String EMPTY_ADMIN_RESPONSE = "Empty response from Keycloak Admin API";
+    private static final String PASSWORD_CREDENTIAL_TYPE = "password";
 
     private final RestClient restClient;
     private final KeycloakProperties properties;
@@ -72,6 +73,23 @@ public class KeycloakAdminClient {
         }
     }
 
+    public UserResponse ensureDemoUser(String email, String name, String password, String realmRoleName) {
+        try {
+            String accessToken = adminAccessToken();
+            KeycloakUserResponse user = findUserByEmail(email, accessToken)
+                    .orElseGet(() -> createDemoUser(email, name, password, accessToken));
+
+            setUserEnabled(user.id(), true, accessToken);
+            resetPassword(user.id(), password, accessToken);
+            assignRealmRole(user.id(), realmRoleName, accessToken);
+
+            return toUserResponse(user);
+
+        } catch (RestClientException exception) {
+            throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
+        }
+    }
+
     public Optional<UserResponse> findUserByEmail(String email) {
         try {
             String accessToken = adminAccessToken();
@@ -93,13 +111,7 @@ public class KeycloakAdminClient {
     public void setUserEnabled(String userId, boolean enabled) {
         try {
             String accessToken = adminAccessToken();
-            restClient.put()
-                    .uri(userByIdEndpoint(userId))
-                    .headers(headers -> headers.setBearerAuth(accessToken))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body("{\"enabled\":" + enabled + "}")
-                    .retrieve()
-                    .toBodilessEntity();
+            setUserEnabled(userId, enabled, accessToken);
         } catch (RestClientException exception) {
             throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
         }
@@ -224,6 +236,66 @@ public class KeycloakAdminClient {
                 ));
     }
 
+    private KeycloakUserResponse createDemoUser(String email, String name, String password, String accessToken) {
+        ResponseEntity<Void> response = restClient.post()
+                .uri(usersEndpoint())
+                .headers(headers -> headers.setBearerAuth(accessToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new KeycloakCreateUserRequest(
+                        email,
+                        email,
+                        firstName(name),
+                        lastName(name),
+                        true,
+                        List.of(),
+                        List.of(new KeycloakCredentialRequest(PASSWORD_CREDENTIAL_TYPE, password, false))
+                ))
+                .retrieve()
+                .toBodilessEntity();
+
+        return findUserByEmail(email, accessToken)
+                .orElseThrow(() -> new KeycloakAuthenticationException(
+                        "Created Keycloak demo user was not returned by lookup: " + email
+                                + " (" + response.getStatusCode() + ")"
+                ));
+    }
+
+    private void setUserEnabled(String userId, boolean enabled, String accessToken) {
+        restClient.put()
+                .uri(userByIdEndpoint(userId))
+                .headers(headers -> headers.setBearerAuth(accessToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"enabled\":" + enabled + "}")
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    private void resetPassword(String userId, String password, String accessToken) {
+        restClient.put()
+                .uri(resetPasswordEndpoint(userId))
+                .headers(headers -> headers.setBearerAuth(accessToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new KeycloakCredentialRequest(PASSWORD_CREDENTIAL_TYPE, password, false))
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    private void assignRealmRole(String userId, String realmRoleName, String accessToken) {
+        KeycloakRealmRoleResponse role = restClient.get()
+                .uri(realmRoleEndpoint(realmRoleName))
+                .headers(headers -> headers.setBearerAuth(accessToken))
+                .retrieve()
+                .body(KeycloakRealmRoleResponse.class);
+
+        restClient.post()
+                .uri(realmRoleMappingEndpoint(userId))
+                .headers(headers -> headers.setBearerAuth(accessToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(List.of(requireAdminResponse(role)))
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     private void executeResetPasswordEmail(String userId, String accessToken) {
         executeActionsEmail(userId, List.of("UPDATE_PASSWORD"), accessToken);
     }
@@ -260,6 +332,22 @@ public class KeycloakAdminClient {
                 + userId
                 + "/execute-actions-email?client_id="
                 + properties.webClientId();
+    }
+
+    private String resetPasswordEndpoint(String userId) {
+        return userByIdEndpoint(userId) + "/reset-password";
+    }
+
+    private String realmRoleEndpoint(String realmRoleName) {
+        return properties.internalBaseUrl()
+                + normalizedAdminRealmsPath()
+                + properties.realm()
+                + "/roles/"
+                + realmRoleName;
+    }
+
+    private String realmRoleMappingEndpoint(String userId) {
+        return userByIdEndpoint(userId) + "/role-mappings/realm";
     }
 
     private String normalizedAdminRealmsPath() {
@@ -330,7 +418,25 @@ public class KeycloakAdminClient {
             String firstName,
             String lastName,
             boolean enabled,
-            List<String> requiredActions
+            List<String> requiredActions,
+            List<KeycloakCredentialRequest> credentials
+    ) {
+        private KeycloakCreateUserRequest(String username, String email, String firstName, String lastName,
+                                          boolean enabled, List<String> requiredActions) {
+            this(username, email, firstName, lastName, enabled, requiredActions, null);
+        }
+    }
+
+    private record KeycloakCredentialRequest(
+            String type,
+            String value,
+            boolean temporary
+    ) {
+    }
+
+    private record KeycloakRealmRoleResponse(
+            String id,
+            String name
     ) {
     }
 }

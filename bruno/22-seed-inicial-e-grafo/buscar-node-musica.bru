@@ -1,0 +1,31 @@
+meta {
+  name: Buscar node Musica
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{seedLokiProductId}}/graph/nodes?q=Ecos
+  body: none
+}
+
+docs {
+Objetivo: localizar a musica criada pelo seed Loki.
+Resultado esperado: 200 com node Musica Ecos.
+}
+
+script:post-response {
+  var node = res.body.find(function (item) { return item.refId === 'musica-ecos'; });
+  if (node) { bru.setVar('seedMusicaNodeId', node.id); }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("node musica existe", function() {
+    var node = res.body.find(function (item) { return item.refId === 'musica-ecos'; });
+    expect(node).to.exist;
+    expect(node.label).to.equal('Musica Ecos');
+  });
+}

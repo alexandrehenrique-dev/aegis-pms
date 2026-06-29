@@ -1,0 +1,26 @@
+meta {
+  name: WikiDev JPA related
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{seedWikiDevProductId}}/graph/nodes/{{seedJpaNodeId}}/related
+  body: none
+}
+
+docs {
+Objetivo: validar related do node JPA criado pelo seed WikiDev.
+Resultado esperado: 200 contendo Artigo Spring Boot.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("JPA relacionado a Spring Boot", function() {
+    var item = res.body.find(function (related) { return related.node.refId === 'spring-boot'; });
+    expect(item).to.exist;
+    expect(item.edge.edgeType).to.equal('RELATED_TO');
+  });
+}

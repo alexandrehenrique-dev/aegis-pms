@@ -1,0 +1,26 @@
+meta {
+  name: WikiDev Spring Boot neighbors
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{seedWikiDevProductId}}/graph/nodes/{{seedSpringBootNodeId}}/neighbors
+  body: none
+}
+
+docs {
+Objetivo: validar neighbors do node Spring Boot criado pelo seed WikiDev.
+Resultado esperado: 200 contendo Artigo JPA.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("Spring Boot aponta para JPA", function() {
+    var item = res.body.find(function (neighbor) { return neighbor.node.refId === 'jpa'; });
+    expect(item).to.exist;
+    expect(item.edge.edgeType).to.equal('RELATED_TO');
+  });
+}

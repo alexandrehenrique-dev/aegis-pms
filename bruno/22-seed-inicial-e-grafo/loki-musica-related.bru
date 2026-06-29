@@ -1,0 +1,26 @@
+meta {
+  name: Loki musica related
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{seedLokiProductId}}/graph/nodes/{{seedMusicaNodeId}}/related
+  body: none
+}
+
+docs {
+Objetivo: validar related da musica criada pelo seed Loki.
+Resultado esperado: 200 contendo Poema do Limiar.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("Musica relacionada ao poema", function() {
+    var item = res.body.find(function (related) { return related.node.refId === 'poema-do-limiar'; });
+    expect(item).to.exist;
+    expect(item.edge.edgeType).to.equal('INSPIRED_BY');
+  });
+}

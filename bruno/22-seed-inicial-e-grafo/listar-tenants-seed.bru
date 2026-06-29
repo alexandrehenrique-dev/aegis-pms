@@ -1,0 +1,40 @@
+meta {
+  name: Listar tenants seed
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants
+  body: none
+}
+
+docs {
+Objetivo: validar que o SUPER_ADMIN seedado ve os tres tenants oficiais da Sprint 22.
+Resultado esperado: 200 com CLIENTES BETA, Aegis Labs e Cliente Norte.
+}
+
+script:post-response {
+  var clientesBeta = res.body.find(function (tenant) { return tenant.key === 'clientes-beta'; });
+  var aegisLabs = res.body.find(function (tenant) { return tenant.key === 'aegis-labs'; });
+  var clienteNorte = res.body.find(function (tenant) { return tenant.key === 'cliente-norte'; });
+  if (clientesBeta) { bru.setVar('seedClientesBetaTenantId', clientesBeta.id); }
+  if (aegisLabs) { bru.setVar('seedAegisLabsTenantId', aegisLabs.id); }
+  if (clienteNorte) { bru.setVar('seedClienteNorteTenantId', clienteNorte.id); }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("tenants oficiais existem", function() {
+    var keys = res.body.map(function (tenant) { return tenant.key; });
+    expect(keys).to.include('clientes-beta');
+    expect(keys).to.include('aegis-labs');
+    expect(keys).to.include('cliente-norte');
+  });
+  test("cliente norte suspenso", function() {
+    var clienteNorte = res.body.find(function (tenant) { return tenant.key === 'cliente-norte'; });
+    expect(clienteNorte.status).to.equal('suspenso');
+  });
+}

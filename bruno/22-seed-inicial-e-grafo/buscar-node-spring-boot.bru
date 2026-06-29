@@ -1,0 +1,31 @@
+meta {
+  name: Buscar node Spring Boot
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{seedWikiDevProductId}}/graph/nodes?q=Spring Boot
+  body: none
+}
+
+docs {
+Objetivo: localizar o node Artigo Spring Boot criado pelo seed WikiDev.
+Resultado esperado: 200 com node Artigo Spring Boot.
+}
+
+script:post-response {
+  var node = res.body.find(function (item) { return item.refId === 'spring-boot'; });
+  if (node) { bru.setVar('seedSpringBootNodeId', node.id); }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("node Spring Boot existe", function() {
+    var node = res.body.find(function (item) { return item.refId === 'spring-boot'; });
+    expect(node).to.exist;
+    expect(node.label).to.equal('Artigo Spring Boot');
+  });
+}

@@ -70,7 +70,8 @@ bruno/
 ├── 18-knowledge-graph/
 ├── 19-settings-security/
 ├── 20-spa-same-origin/
-└── 21-docker-stack/
+├── 21-docker-stack/
+└── 22-seed-inicial-e-grafo/
 ```
 
 Os números das pastas seguem a numeração das etapas do backend em `docs/sprints/backend/` (não há pastas `07`, `08`, `09` porque essas etapas não introduziram contratos REST novos cobertos nesta collection).
@@ -81,7 +82,7 @@ A collection usa **exclusivamente** a API `bru.getVar`/`bru.setVar` do Bruno —
 
 - **De ambiente** (`environments/*.bru`): `baseUrl`, `keycloakIssuer`, `clientId`, `username`, `password`, `tenantName`.
 - **Geradas em runtime, com default no `script:pre-request` de `collection.bru` se vazias**: `tenantKey`, `productKey`, `inviteEmail`, `assetTagName`, `graphRefSeed` (sufixo `Date.now()`, evita colisão de unique constraint em execuções repetidas).
-- **Capturadas durante a execução** (via `script:post-response` do request que as cria): `token`, `refreshToken` (login), `callerSubject` (`/me`), `tenantId` (criar tenant), `productId`/`s3ProductId` (criar produto), `userId` (convidar usuário), `assetId`/`pdfAssetId` (upload), `contentId` (criar conteúdo), `articleNodeId`/`topicNodeId`/`graphEdgeId` (Knowledge Graph), `formId`/`invalidFormId` (Sprint 13 Forms), `publicSubmissionId` (Sprint 19 Submit público), `auditTenantId`/`auditTenantDeletedEventId`/`auditEventId` (Sprint 16 Audit), `orphanNodeId`/`orphanBatchNodeId`/`reviewedInsightId` (Sprint 18 Knowledge Graph). A Sprint 21 usa apenas `baseUrl` e `keycloakIssuer` já existentes para validar health/discovery da stack Docker.
+- **Capturadas durante a execução** (via `script:post-response` do request que as cria): `token`, `refreshToken` (login), `callerSubject` (`/me`), `tenantId` (criar tenant), `productId`/`s3ProductId` (criar produto), `userId` (convidar usuário), `assetId`/`pdfAssetId` (upload), `contentId` (criar conteúdo), `articleNodeId`/`topicNodeId`/`graphEdgeId` (Knowledge Graph), `formId`/`invalidFormId` (Sprint 13 Forms), `publicSubmissionId` (Sprint 19 Submit público), `auditTenantId`/`auditTenantDeletedEventId`/`auditEventId` (Sprint 16 Audit), `orphanNodeId`/`orphanBatchNodeId`/`reviewedInsightId` (Sprint 18 Knowledge Graph), `seedClientesBetaTenantId`/`seedAegisLabsTenantId`/`seedClienteNorteTenantId`, `seedWikiDevProductId`/`seedLokiProductId` e `seedSpringBootNodeId`/`seedJpaNodeId`/`seedPoemaNodeId`/`seedMusicaNodeId` (Sprint 22 seed inicial). A Sprint 21 usa apenas `baseUrl` e `keycloakIssuer` já existentes para validar health/discovery da stack Docker.
 - **Geradas em runtime, com default no `script:pre-request` de `collection.bru`**: `auditTenantKey` (sufixo `Date.now()`, tenant descartável criado/excluído só dentro de `16-audit`, nunca o `{{tenantId}}` compartilhado).
 - **Sem default automático, preencher manualmente se necessário**: `editorToken` — usado no cenário "EDITOR tentando publicar (403)" de `11-content` e em "EDITOR tentando editar roles (403)" de `17-settings-dashboard`; `nonMemberToken` — usado no cenário "Tenant fora do escopo do caller (404)" de `16-audit` e em "TENANT_ADMIN de outro tenant (404)" de `17-settings-dashboard` (neste último precisa ser especificamente um TENANT_ADMIN sem membership no tenant, não EDITOR/VIEWER/PRODUCT_MANAGER, que recebem 403 por papel insuficiente antes da checagem de tenant). Em ambos, sem a variável preenchida, o teste aceita o 401 resultante (Bearer vazio/inválido) como comportamento esperado da limitação — não há fluxo de seed automático de um segundo usuário (EDITOR ou sem membership) nesta suíte.
 
