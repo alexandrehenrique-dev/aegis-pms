@@ -6,6 +6,7 @@ import br.com.byop.aegis.knowledgegraph.exception.DuplicateGraphNodeException;
 import br.com.byop.aegis.knowledgegraph.exception.GraphNodeNotFoundException;
 import br.com.byop.aegis.knowledgegraph.exception.InvalidGraphEdgeException;
 import br.com.byop.aegis.knowledgegraph.exception.InvalidGraphNodeException;
+import br.com.byop.aegis.knowledgegraph.exception.InvalidGraphOrphanActionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -42,5 +43,11 @@ public class KnowledgeGraphExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public CoreErrorResponse handleInvalidGraphEdge() {
         return new CoreErrorResponse("INVALID_GRAPH_EDGE");
+    }
+
+    @ExceptionHandler(InvalidGraphOrphanActionException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CoreErrorResponse handleInvalidGraphOrphanAction() {
+        return new CoreErrorResponse("INVALID_GRAPH_ORPHAN_ACTION");
     }
 }

@@ -1,0 +1,31 @@
+meta {
+  name: Revisar insight idempotente
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/insights/review
+  body: json
+}
+
+body:json {
+  {
+    "text": "Conectar TAG órfã ao tópico principal"
+  }
+}
+
+docs {
+Objetivo: confirmar idempotência do review de insight.
+Resultado esperado: mesmo id da primeira chamada.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("mesmo insight revisado", function() {
+    expect(res.body.id).to.equal(bru.getVar('reviewedInsightId'));
+    expect(res.body.reviewed).to.equal(true);
+  });
+}

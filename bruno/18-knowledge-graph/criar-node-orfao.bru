@@ -1,0 +1,40 @@
+meta {
+  name: Criar node órfão
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/nodes
+  body: json
+}
+
+body:json {
+  {
+    "nodeType": "TAG",
+    "refType": "TAG",
+    "refId": "orphan-{{graphRefSeed}}",
+    "label": "Orfão Sprint 18",
+    "slug": "orfao-sprint-18-{{graphRefSeed}}",
+    "metadataJson": "{\"summary\":\"Resumo do órfão\",\"difficulty\":\"beginner\",\"thumbnail\":\"orphan.png\"}"
+  }
+}
+
+docs {
+Objetivo: criar um node sem edge para validar layout persistente, orphans e preview.
+Resultado esperado: 201.
+Variaveis produzidas: orphanNodeId.
+}
+
+script:post-response {
+bru.setVar('orphanNodeId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("node órfão criado", function() {
+    expect(res.body.id).to.be.a('string');
+  });
+}

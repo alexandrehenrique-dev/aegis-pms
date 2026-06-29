@@ -1,0 +1,32 @@
+meta {
+  name: Resolver órfãos em lote
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/orphans/resolve
+  body: json
+}
+
+body:json {
+  {
+    "ids": ["{{orphanBatchNodeId}}"],
+    "action": "Arquivar"
+  }
+}
+
+docs {
+Objetivo: aplicar ação de curadoria em lote.
+Resultado esperado: 200 com array de nodes resolvidos.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("lote arquivado", function() {
+    expect(res.body).to.be.an('array').with.lengthOf(1);
+    expect(res.body[0].status).to.equal('arquivado');
+  });
+}

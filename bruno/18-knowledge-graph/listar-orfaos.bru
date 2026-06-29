@@ -1,0 +1,26 @@
+meta {
+  name: Listar órfãos
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/orphans
+  body: none
+}
+
+docs {
+Objetivo: listar nodes sem edge ainda não resolvidos por curadoria.
+Resultado esperado: 200 e presença do node criado nesta pasta.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("órfão criado está na lista", function() {
+    var item = res.body.find(function (node) { return node.id === bru.getVar('orphanNodeId'); });
+    expect(item).to.exist;
+    expect(item).to.include.keys('id', 'label', 'type', 'status', 'x', 'y', 'props');
+  });
+}

@@ -1,0 +1,36 @@
+meta {
+  name: Criar node órfão para lote
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/graph/nodes
+  body: json
+}
+
+body:json {
+  {
+    "nodeType": "TOPIC",
+    "refType": "TOPIC",
+    "refId": "orphan-batch-{{graphRefSeed}}",
+    "label": "Órfão Lote Sprint 18",
+    "slug": "orfao-lote-sprint-18-{{graphRefSeed}}"
+  }
+}
+
+docs {
+Objetivo: criar um segundo órfão para validar resolução em lote.
+Resultado esperado: 201.
+Variaveis produzidas: orphanBatchNodeId.
+}
+
+script:post-response {
+bru.setVar('orphanBatchNodeId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+}

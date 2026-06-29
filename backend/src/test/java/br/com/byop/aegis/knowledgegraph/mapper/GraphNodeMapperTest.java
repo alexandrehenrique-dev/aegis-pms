@@ -4,6 +4,7 @@ import br.com.byop.aegis.knowledgegraph.contract.CreateGraphNodeRequest;
 import br.com.byop.aegis.knowledgegraph.domain.GraphNode;
 import br.com.byop.aegis.knowledgegraph.domain.GraphNodeType;
 import br.com.byop.aegis.knowledgegraph.dto.GraphNodeDetail;
+import br.com.byop.aegis.knowledgegraph.dto.GraphNodeProp;
 import br.com.byop.aegis.knowledgegraph.dto.GraphNodeSummary;
 
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import org.mapstruct.factory.Mappers;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -104,6 +106,11 @@ class GraphNodeMapperTest {
         assertThat(summary.refId()).isEqualTo("content-1");
         assertThat(summary.label()).isEqualTo("Content 1");
         assertThat(summary.slug()).isEqualTo("content-1");
+        assertThat(summary.type()).isEqualTo("CONTENT");
+        assertThat(summary.status()).isEqualTo("ativo");
+        assertThat(summary.x()).isEqualTo(80.0);
+        assertThat(summary.y()).isEqualTo(160.0);
+        assertThat(summary.props()).containsExactly(new GraphNodeProp("kind", "article"));
         assertThat(summary.createdAt()).isEqualTo(createdAt);
         assertThat(summary.updatedAt()).isEqualTo(updatedAt);
     }
@@ -125,6 +132,11 @@ class GraphNodeMapperTest {
         assertThat(detail.productId()).isEqualTo(productId);
         assertThat(detail.nodeType()).isEqualTo(GraphNodeType.CONTENT);
         assertThat(detail.metadataJson()).isEqualTo("{\"kind\":\"article\"}");
+        assertThat(detail.type()).isEqualTo("CONTENT");
+        assertThat(detail.status()).isEqualTo("ativo");
+        assertThat(detail.x()).isEqualTo(80.0);
+        assertThat(detail.y()).isEqualTo(160.0);
+        assertThat(detail.props()).containsExactly(new GraphNodeProp("kind", "article"));
         assertThat(detail.createdAt()).isEqualTo(createdAt);
         assertThat(detail.updatedAt()).isEqualTo(updatedAt);
     }
@@ -133,6 +145,26 @@ class GraphNodeMapperTest {
     void shouldReturnNullWhenNodeIsNull() {
         assertThat(mapper.toSummary(null)).isNull();
         assertThat(mapper.toDetail(null)).isNull();
+    }
+
+    @Test
+    void shouldMapPropsSortedAndStatusFromMetadata() {
+        List<GraphNodeProp> props = mapper.propsFrom("{\"z\":\"last\",\"status\":\"draft\",\"a\":10,\"empty\":null}");
+
+        assertThat(props).containsExactly(
+                new GraphNodeProp("a", "10"),
+                new GraphNodeProp("status", "draft"),
+                new GraphNodeProp("z", "last")
+        );
+        assertThat(mapper.statusFrom("{\"status\":\"draft\"}")).isEqualTo("draft");
+    }
+
+    @Test
+    void shouldReturnEmptyPropsAndDefaultStatusWhenMetadataIsInvalidOrBlank() {
+        assertThat(mapper.propsFrom("{")).isEmpty();
+        assertThat(mapper.propsFrom(null)).isEmpty();
+        assertThat(mapper.propsFrom(" ")).isEmpty();
+        assertThat(mapper.statusFrom("{\"status\":\"\"}")).isEqualTo("ativo");
     }
 
     private GraphNode node(UUID nodeId, UUID tenantId, UUID productId, OffsetDateTime createdAt,
@@ -148,6 +180,7 @@ class GraphNodeMapperTest {
                 "{\"kind\":\"article\"}"
         ));
         ReflectionTestUtils.setField(node, "id", nodeId);
+        node.reposition(80.0, 160.0);
         ReflectionTestUtils.setField(node, "createdAt", createdAt);
         ReflectionTestUtils.setField(node, "updatedAt", updatedAt);
         return node;

@@ -48,6 +48,12 @@ public class GraphNode {
     @Column(nullable = false, length = 180)
     private String slug;
 
+    @Column(nullable = false)
+    private double x;
+
+    @Column(nullable = false)
+    private double y;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata_json", nullable = false, columnDefinition = "jsonb")
     private String metadataJson;
@@ -70,6 +76,8 @@ public class GraphNode {
         this.label = Objects.requireNonNull(creation.label(), "label is required");
         this.slug = Objects.requireNonNull(creation.slug(), "slug is required");
         this.metadataJson = Objects.requireNonNull(creation.metadataJson(), "metadataJson is required");
+        this.x = creation.x();
+        this.y = creation.y();
     }
 
     @PrePersist
@@ -116,8 +124,25 @@ public class GraphNode {
         return slug;
     }
 
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
     public String getMetadataJson() {
         return metadataJson;
+    }
+
+    public void reposition(double x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public void replaceMetadataJson(String metadataJson) {
+        this.metadataJson = Objects.requireNonNull(metadataJson, "metadataJson is required");
     }
 
     public OffsetDateTime getCreatedAt() {
@@ -136,7 +161,13 @@ public class GraphNode {
             String refId,
             String label,
             String slug,
-            String metadataJson
+            String metadataJson,
+            double x,
+            double y
     ) {
+        public Creation(UUID tenantId, UUID productId, GraphNodeType nodeType, String refType, String refId,
+                        String label, String slug, String metadataJson) {
+            this(tenantId, productId, nodeType, refType, refId, label, slug, metadataJson, 0.0, 0.0);
+        }
     }
 }
