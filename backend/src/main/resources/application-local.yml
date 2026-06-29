@@ -2,3 +2,8 @@ spring:
   config:
     activate:
       on-profile: local
+
+aegis:
+  seed:
+    # Credencial exclusiva para usuarios demo do profile local. Nunca usar em producao.
+    demo-user-initial-credential: ${AEGIS_SEED_DEMO_USER_INITIAL_CREDENTIAL:senha123}

@@ -1,0 +1,26 @@
+meta {
+  name: Loki poema neighbors
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{seedLokiProductId}}/graph/nodes/{{seedPoemaNodeId}}/neighbors
+  body: none
+}
+
+docs {
+Objetivo: validar neighbors do poema criado pelo seed Loki.
+Resultado esperado: 200 contendo Musica Ecos.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("Poema inspirado pela musica", function() {
+    var item = res.body.find(function (neighbor) { return neighbor.node.refId === 'musica-ecos'; });
+    expect(item).to.exist;
+    expect(item.edge.edgeType).to.equal('INSPIRED_BY');
+  });
+}

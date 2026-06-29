@@ -1,0 +1,34 @@
+meta {
+  name: Listar produtos seed
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products
+  body: none
+}
+
+docs {
+Objetivo: validar que os produtos oficiais da Sprint 22 existem e capturar IDs para o grafo.
+Resultado esperado: 200 com produtos Loki e WikiDev.
+}
+
+script:post-response {
+  var wikidev = res.body.find(function (product) { return product.key === 'wikidev'; });
+  var loki = res.body.find(function (product) { return product.key === 'loki'; });
+  if (wikidev) { bru.setVar('seedWikiDevProductId', wikidev.id); }
+  if (loki) { bru.setVar('seedLokiProductId', loki.id); }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("produtos oficiais existem", function() {
+    var keys = res.body.map(function (product) { return product.key; });
+    ['maestro-beton', 'conecta-talentos', 'alexandre-dev', 'cmss', 'loki', 'wikidev', 'aegis-core', 'aegis-docs', 'portal-norte'].forEach(function (key) {
+      expect(keys).to.include(key);
+    });
+  });
+}
