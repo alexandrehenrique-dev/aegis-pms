@@ -2,6 +2,7 @@ package br.com.byop.aegis.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -48,6 +49,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/*/forms/*/submit").permitAll()
                         .requestMatchers("/api/v1/**").authenticated()
                         // ADR-0009: a SPA é servida pelo próprio Spring Boot na mesma origem —
                         // o shell estático (index.html + bundles) precisa ser público porque a

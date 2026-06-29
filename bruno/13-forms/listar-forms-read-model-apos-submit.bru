@@ -1,0 +1,27 @@
+meta {
+  name: Listar forms - read model apos submit
+  type: http
+  seq: 21
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/forms
+  body: none
+}
+
+docs {
+Objetivo: confirmar que o read model de formularios reflete a submissao publica da Sprint 19.
+Resultado esperado: form publicado aparece com responses >= 1 e lastActivity diferente do estado vazio.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("form publicado recebeu contagem de respostas", function() {
+    var form = res.body.find(function (item) { return item.id === bru.getVar('formId'); });
+    expect(form).to.exist;
+    expect(Number(form.responses)).to.be.greaterThan(0);
+    expect(form.lastActivity).to.not.equal("Nenhuma resposta ainda");
+  });
+}

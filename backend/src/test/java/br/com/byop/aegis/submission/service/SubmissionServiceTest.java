@@ -13,12 +13,17 @@ import br.com.byop.aegis.submission.exception.InvalidSubmissionException;
 import br.com.byop.aegis.submission.exception.SubmissionNotFoundException;
 import br.com.byop.aegis.submission.mapper.SubmissionMapper;
 import br.com.byop.aegis.submission.repository.SubmissionRepository;
+import br.com.byop.aegis.submission.api.SubmissionReceivedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -27,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,12 +65,15 @@ class SubmissionServiceTest {
     @Mock
     private AssetReferenceService assetReferenceService;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private SubmissionService service;
 
     @BeforeEach
     void setUp() {
         service = new SubmissionService(submissionRepository, submissionMapper, formReferenceService,
-                assetReferenceService, new ObjectMapper());
+                assetReferenceService, new ObjectMapper(), eventPublisher);
     }
 
     @Test
@@ -133,12 +142,13 @@ class SubmissionServiceTest {
         ArgumentCaptor<Submission> captor = ArgumentCaptor.forClass(Submission.class);
         verify(submissionRepository).save(captor.capture());
         assertThat(captor.getValue().getAnswersJson()).contains(ASSET_ID.toString());
+        verify(eventPublisher).publishEvent(any(SubmissionReceivedEvent.class));
     }
 
     @Test
     void shouldSubmitWhenAnswersAreNull() {
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID))
-                .thenReturn(form(true, basicFieldsJson()));
+                .thenReturn(form(true, optionalFieldsJson()));
         when(submissionRepository.save(any(Submission.class))).thenAnswer(invocation -> invocation.getArgument(0));
         SubmissionDetail detail = new SubmissionDetail(null, FORM_ID, null, "Ana", "ana@example.com",
                 "site", "new", "—", null, null, null);
@@ -150,7 +160,7 @@ class SubmissionServiceTest {
     @Test
     void shouldIgnoreMissingUploadAnswer() {
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID))
-                .thenReturn(form(true, uploadFieldsJson(List.of("application/pdf"))));
+                .thenReturn(form(true, optionalUploadFieldsJson(List.of("application/pdf"))));
         when(submissionRepository.save(any(Submission.class))).thenAnswer(invocation -> invocation.getArgument(0));
         SubmissionDetail detail = new SubmissionDetail(null, FORM_ID, null, "Ana", "ana@example.com",
                 "site", "new", "—", null, Map.of(), null);
@@ -177,7 +187,7 @@ class SubmissionServiceTest {
         doReturn("not-a-list").when(objectMapper).readValue(any(String.class), eq(List.class));
         doReturn("{}").when(objectMapper).writeValueAsString(any());
         SubmissionService defensiveService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
         when(submissionRepository.save(any(Submission.class))).thenAnswer(invocation -> invocation.getArgument(0));
         SubmitFormCommand command = command(Map.of("Email", "ana@example.com"));
@@ -194,7 +204,7 @@ class SubmissionServiceTest {
         doReturn(List.of("not-a-map")).when(objectMapper).readValue(any(String.class), eq(List.class));
         doReturn("{}").when(objectMapper).writeValueAsString(any());
         SubmissionService defensiveService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
         when(submissionRepository.save(any(Submission.class))).thenAnswer(invocation -> invocation.getArgument(0));
         SubmitFormCommand command = command(Map.of("Email", "ana@example.com"));
@@ -213,6 +223,39 @@ class SubmissionServiceTest {
         assertThatThrownBy(() -> service.submit(PRODUCT_ID, FORM_ID, command))
                 .isInstanceOf(InvalidSubmissionException.class)
                 .hasMessage(SubmissionService.FORM_NOT_PUBLISHED_ERROR);
+    }
+
+    @Test
+    void shouldRejectSubmissionMissingRequiredField() {
+        when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
+        SubmitFormCommand command = command(Map.of("Email", " "));
+
+        assertThatThrownBy(() -> service.submit(PRODUCT_ID, FORM_ID, command))
+                .isInstanceOf(InvalidSubmissionException.class)
+                .hasMessage(SubmissionService.MISSING_REQUIRED_FIELD_ERROR);
+    }
+
+    @ParameterizedTest
+    @MethodSource("missingRequiredAnswers")
+    void shouldRejectSubmissionWhenRequiredAnswerIsMissing(Map<String, Object> answers) {
+        when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
+        SubmitFormCommand command = command(answers);
+
+        assertThatThrownBy(() -> service.submit(PRODUCT_ID, FORM_ID, command))
+                .isInstanceOf(InvalidSubmissionException.class)
+                .hasMessage(SubmissionService.MISSING_REQUIRED_FIELD_ERROR);
+    }
+
+    @ParameterizedTest
+    @MethodSource("presentRequiredAnswers")
+    void shouldAcceptNonBlankRequiredAnswerShapes(Map<String, Object> answers) {
+        when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
+        when(submissionRepository.save(any(Submission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        SubmissionDetail detail = new SubmissionDetail(null, FORM_ID, null, "Ana", "ana@example.com",
+                "site", "new", "—", null, answers, null);
+        when(submissionMapper.toDetail(any(), eq(answers))).thenReturn(detail);
+
+        assertThat(service.submit(PRODUCT_ID, FORM_ID, command(answers))).isEqualTo(detail);
     }
 
     @Test
@@ -293,7 +336,7 @@ class SubmissionServiceTest {
         when(objectMapper.readValue(any(String.class), eq(List.class))).thenReturn(List.of());
         when(objectMapper.writeValueAsString(any())).thenThrow(mock(JacksonException.class));
         SubmissionService brokenService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
         SubmitFormCommand command = command(Map.of("Email", "ana@example.com"));
 
@@ -307,7 +350,7 @@ class SubmissionServiceTest {
         ObjectMapper objectMapper = mock(ObjectMapper.class);
         when(objectMapper.readValue(any(String.class), eq(List.class))).thenThrow(mock(JacksonException.class));
         SubmissionService brokenService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
         SubmitFormCommand command = command(Map.of("Email", "ana@example.com"));
 
@@ -321,7 +364,7 @@ class SubmissionServiceTest {
         ObjectMapper objectMapper = mock(ObjectMapper.class);
         when(objectMapper.readValue(any(String.class), eq(Map.class))).thenThrow(mock(JacksonException.class));
         SubmissionService brokenService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
         when(submissionRepository.findByFormIdAndId(FORM_ID, SUBMISSION_ID)).thenReturn(Optional.of(submission()));
 
@@ -335,7 +378,7 @@ class SubmissionServiceTest {
         ObjectMapper objectMapper = mock(ObjectMapper.class);
         doReturn("not-a-map").when(objectMapper).readValue(any(String.class), eq(Map.class));
         SubmissionService defensiveService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
         Submission submission = submission();
         SubmissionDetail detail = new SubmissionDetail(SUBMISSION_ID, FORM_ID, submission.getDate(), "Ana",
                 "ana@example.com", "site", "new", "—", null, Map.of(), null);
@@ -365,10 +408,36 @@ class SubmissionServiceTest {
         return "[{\"label\":\"Email\",\"type\":\"Email\",\"required\":true}]";
     }
 
+    private String optionalFieldsJson() {
+        return "[{\"label\":\"Email\",\"type\":\"Email\",\"required\":false}]";
+    }
+
     private String uploadFieldsJson(List<String> acceptedFileTypes) {
         String values = acceptedFileTypes.stream()
                 .map(value -> "\"" + value + "\"")
                 .collect(java.util.stream.Collectors.joining(","));
         return "[{\"label\":\"Curriculo\",\"type\":\"Upload\",\"required\":true,\"acceptedFileTypes\":[" + values + "]}]";
+    }
+
+    private String optionalUploadFieldsJson(List<String> acceptedFileTypes) {
+        String values = acceptedFileTypes.stream()
+                .map(value -> "\"" + value + "\"")
+                .collect(java.util.stream.Collectors.joining(","));
+        return "[{\"label\":\"Curriculo\",\"type\":\"Upload\",\"required\":false,\"acceptedFileTypes\":[" + values + "]}]";
+    }
+
+    private static Stream<Arguments> missingRequiredAnswers() {
+        return Stream.of(
+                Arguments.of((Map<String, Object>) null),
+                Arguments.of(Map.of()),
+                Arguments.of(Map.of("Email", List.of()))
+        );
+    }
+
+    private static Stream<Arguments> presentRequiredAnswers() {
+        return Stream.of(
+                Arguments.of(Map.of("Email", List.of("ana@example.com"))),
+                Arguments.of(Map.of("Email", 42))
+        );
     }
 }

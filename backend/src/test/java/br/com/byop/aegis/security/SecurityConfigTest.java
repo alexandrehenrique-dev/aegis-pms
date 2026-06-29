@@ -66,6 +66,16 @@ class SecurityConfigTest {
             mockMvc.perform(get("/actuator/info"))
                     .andExpect(status().isNotFound());
         }
+
+        @Test
+        void shouldAllowPublicFormSubmitWithoutBearerToken() throws Exception {
+
+            mockMvc.perform(post("/api/v1/products/11111111-1111-1111-1111-111111111111/forms/"
+                            + "22222222-2222-2222-2222-222222222222/submit")
+                            .contentType(APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isNotFound());
+        }
     }
 
     @Nested

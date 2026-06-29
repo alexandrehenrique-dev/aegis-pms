@@ -14,6 +14,8 @@ import br.com.byop.aegis.submission.exception.InvalidSubmissionException;
 import br.com.byop.aegis.submission.exception.SubmissionNotFoundException;
 import br.com.byop.aegis.submission.mapper.SubmissionMapper;
 import br.com.byop.aegis.submission.repository.SubmissionRepository;
+import br.com.byop.aegis.submission.api.SubmissionReceivedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -30,6 +32,7 @@ import java.util.UUID;
 public class SubmissionService {
 
     public static final String FORM_NOT_PUBLISHED_ERROR = "SUBMISSION_FORM_NOT_PUBLISHED";
+    public static final String MISSING_REQUIRED_FIELD_ERROR = "MISSING_REQUIRED_FIELD";
     public static final String UPLOAD_ACCEPTED_TYPES_ERROR = "SUBMISSION_UPLOAD_ACCEPTED_FILE_TYPES_REQUIRED";
     public static final String INVALID_UPLOAD_ASSET_ERROR = "INVALID_SUBMISSION_UPLOAD_ASSET";
     public static final String INVALID_UPLOAD_MIME_ERROR = "INVALID_SUBMISSION_UPLOAD_MIME_TYPE";
@@ -39,15 +42,17 @@ public class SubmissionService {
     private final FormReferenceService formReferenceService;
     private final AssetReferenceService assetReferenceService;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public SubmissionService(SubmissionRepository submissionRepository, SubmissionMapper submissionMapper,
                              FormReferenceService formReferenceService, AssetReferenceService assetReferenceService,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper, ApplicationEventPublisher eventPublisher) {
         this.submissionRepository = submissionRepository;
         this.submissionMapper = submissionMapper;
         this.formReferenceService = formReferenceService;
         this.assetReferenceService = assetReferenceService;
         this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -84,12 +89,43 @@ public class SubmissionService {
             throw new InvalidSubmissionException(FORM_NOT_PUBLISHED_ERROR);
         }
         List<Map<String, Object>> fields = readList(form.fieldsJson());
+        validateRequiredAnswers(fields, command.answers());
         validateUploadAnswers(productId, fields, command.answers());
+        OffsetDateTime receivedAt = OffsetDateTime.now(ZoneOffset.UTC);
         Submission submission = submissionRepository.save(new Submission(new Submission.Creation(
-                form.id(), OffsetDateTime.now(ZoneOffset.UTC), command.name(), command.email(), command.source(),
+                form.id(), receivedAt, command.name(), command.email(), command.source(),
                 SubmissionStatus.NEW, command.ownerSubject(), command.score(), writeJson(command.answers())
         )));
+        eventPublisher.publishEvent(new SubmissionReceivedEvent(form.id(), form.productId(), receivedAt.toInstant()));
         return submissionMapper.toDetail(submission, command.answers());
+    }
+
+    private void validateRequiredAnswers(List<Map<String, Object>> fields, Map<String, Object> answers) {
+        for (Map<String, Object> field : fields) {
+            if (Boolean.TRUE.equals(field.get("required")) && isBlankAnswer(answers, stringValue(field.get("label")))) {
+                throw new InvalidSubmissionException(MISSING_REQUIRED_FIELD_ERROR);
+            }
+        }
+    }
+
+    private boolean isBlankAnswer(Map<String, Object> answers, String label) {
+        if (label.isBlank()) {
+            return false;
+        }
+        if (answers == null) {
+            return true;
+        }
+        Object answer = answers.get(label);
+        if (answer == null) {
+            return true;
+        }
+        if (answer instanceof String text) {
+            return text.isBlank();
+        }
+        if (answer instanceof List<?> list) {
+            return list.isEmpty();
+        }
+        return false;
     }
 
     private void validateUploadAnswers(UUID productId, List<Map<String, Object>> fields, Map<String, Object> answers) {

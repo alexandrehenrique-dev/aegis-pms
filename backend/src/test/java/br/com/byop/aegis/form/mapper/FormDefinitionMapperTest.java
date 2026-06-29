@@ -17,7 +17,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FormDefinitionMapperTest {
 
     private static final OffsetDateTime UPDATED_AT = OffsetDateTime.parse("2026-06-27T10:00:00Z");
-    private static final OffsetDateTime LAST_ACTIVITY = OffsetDateTime.parse("2026-06-27T11:00:00Z");
+    private static final OffsetDateTime REFERENCE_TIME = OffsetDateTime.parse("2026-06-29T12:00:00Z");
+    private static final OffsetDateTime FUTURE_ACTIVITY = OffsetDateTime.parse("2999-06-29T12:00:00Z");
 
     private final FormDefinitionMapper mapper = Mappers.getMapper(FormDefinitionMapper.class);
 
@@ -26,25 +27,27 @@ class FormDefinitionMapperTest {
         UUID id = UUID.fromString("11111111-1111-1111-1111-111111111111");
         FormDefinition form = form(id);
         form.publish("2026-06-27/forms/contato");
+        ReflectionTestUtils.setField(form, "responseCount", 12L);
+        ReflectionTestUtils.setField(form, "lastActivityAt", FUTURE_ACTIVITY);
 
-        FormSummary summary = mapper.toSummary(form, 12L, "8%", LAST_ACTIVITY);
+        FormSummary summary = mapper.toSummary(form);
 
         assertThat(summary.id()).isEqualTo(id);
         assertThat(summary.name()).isEqualTo("Contato");
         assertThat(summary.type()).isEqualTo("lead");
         assertThat(summary.status()).isEqualTo("Published");
         assertThat(summary.responses()).isEqualTo("12");
-        assertThat(summary.conversion()).isEqualTo("8%");
-        assertThat(summary.lastActivity()).isEqualTo(LAST_ACTIVITY.toString());
+        assertThat(summary.conversion()).isEqualTo("—");
+        assertThat(summary.lastActivity()).isEqualTo("há 0 minutos");
         assertThat(summary.publication()).isEqualTo("2026-06-27/forms/contato");
     }
 
     @Test
     void shouldUsePlaceholdersWhenActivityAndPublicationAreAbsent() {
-        FormSummary summary = mapper.toSummary(form(UUID.randomUUID()), 0L, "0%", null);
+        FormSummary summary = mapper.toSummary(form(UUID.randomUUID()));
 
         assertThat(summary.responses()).isEqualTo("0");
-        assertThat(summary.lastActivity()).isEqualTo("—");
+        assertThat(summary.lastActivity()).isEqualTo("Nenhuma resposta ainda");
         assertThat(summary.publication()).isEqualTo("—");
     }
 
@@ -67,7 +70,7 @@ class FormDefinitionMapperTest {
 
     @Test
     void shouldReturnNullWhenAllSourcesAreNull() {
-        assertThat(mapper.toSummary(null, 0L, null, null)).isNull();
+        assertThat(mapper.toSummary(null)).isNull();
         assertThat(mapper.toDetail(null, null, null)).isNull();
     }
 
@@ -83,30 +86,13 @@ class FormDefinitionMapperTest {
     }
 
     @Test
-    void shouldMapSummaryWithoutFormWhenDerivedSourcesExist() {
-        FormSummary summary = mapper.toSummary(null, 7L, "2%", LAST_ACTIVITY);
-
-        assertThat(summary.id()).isNull();
-        assertThat(summary.responses()).isEqualTo("7");
-        assertThat(summary.conversion()).isEqualTo("2%");
-        assertThat(summary.lastActivity()).isEqualTo(LAST_ACTIVITY.toString());
-        assertThat(summary.publication()).isNull();
-    }
-
-    @Test
-    void shouldMapSummaryWithoutFormWhenOnlyConversionExists() {
-        FormSummary summary = mapper.toSummary(null, 7L, "2%", null);
-
-        assertThat(summary.conversion()).isEqualTo("2%");
-        assertThat(summary.lastActivity()).isEqualTo("—");
-    }
-
-    @Test
-    void shouldMapSummaryWithoutFormWhenOnlyLastActivityExists() {
-        FormSummary summary = mapper.toSummary(null, 7L, null, LAST_ACTIVITY);
-
-        assertThat(summary.conversion()).isNull();
-        assertThat(summary.lastActivity()).isEqualTo(LAST_ACTIVITY.toString());
+    void shouldFormatRelativeLastActivity() {
+        assertThat(mapper.toLastActivity(REFERENCE_TIME.minusMinutes(1), REFERENCE_TIME)).isEqualTo("há 1 minuto");
+        assertThat(mapper.toLastActivity(REFERENCE_TIME.minusHours(1), REFERENCE_TIME)).isEqualTo("há 1 hora");
+        assertThat(mapper.toLastActivity(REFERENCE_TIME.minusHours(2), REFERENCE_TIME)).isEqualTo("há 2 horas");
+        assertThat(mapper.toLastActivity(REFERENCE_TIME.minusDays(1), REFERENCE_TIME)).isEqualTo("há 1 dia");
+        assertThat(mapper.toLastActivity(REFERENCE_TIME.minusDays(3), REFERENCE_TIME)).isEqualTo("há 3 dias");
+        assertThat(mapper.toLastActivity(REFERENCE_TIME.plusMinutes(1), REFERENCE_TIME)).isEqualTo("há 0 minutos");
     }
 
     @Test

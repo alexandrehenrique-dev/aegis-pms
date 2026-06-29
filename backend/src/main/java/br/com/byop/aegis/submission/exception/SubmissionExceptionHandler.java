@@ -16,8 +16,14 @@ public class SubmissionExceptionHandler {
     }
 
     @ExceptionHandler(InvalidSubmissionException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_CONTENT)
     public CoreErrorResponse handleInvalidSubmission(InvalidSubmissionException exception) {
         return new CoreErrorResponse(exception.getErrorCode());
+    }
+
+    @ExceptionHandler(TooManySubmissionsException.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public CoreErrorResponse handleTooManySubmissions() {
+        return new CoreErrorResponse("TOO_MANY_SUBMISSIONS");
     }
 }

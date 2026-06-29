@@ -1,0 +1,38 @@
+meta {
+  name: Atualizar security settings - analytics sem chave
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/settings/security
+  body: json
+}
+
+body:json {
+  {
+    "webhookUrl": "https://hooks.example.com/aegis",
+    "webhookSecret": "",
+    "analyticsEnabled": true,
+    "analyticsProviderKey": "",
+    "emailDeliveryEnabled": false
+  }
+}
+
+docs {
+Objetivo: validar o estado attention quando analytics esta habilitado sem provider key e confirmar que secret vazio nao e exposto.
+Resultado esperado: 200, analyticsStatus attention e emailStatus disabled.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("analytics precisa de chave", function() {
+    expect(res.body.analyticsStatus).to.equal("attention");
+    expect(res.body.emailStatus).to.equal("disconnected");
+  });
+  test("segredo continua omitido", function() {
+    expect(res.body).to.not.have.property("webhookSecret");
+  });
+}

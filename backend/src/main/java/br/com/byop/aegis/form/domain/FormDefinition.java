@@ -53,6 +53,12 @@ public class FormDefinition {
     @Column(length = 255)
     private String publication;
 
+    @Column(name = "response_count", nullable = false)
+    private long responseCount;
+
+    @Column(name = "last_activity_at")
+    private OffsetDateTime lastActivityAt;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -85,6 +91,11 @@ public class FormDefinition {
     public void publish(String publication) {
         this.status = FormStatus.PUBLISHED;
         this.publication = Objects.requireNonNull(publication, "publication is required");
+    }
+
+    public void registerResponse(OffsetDateTime activityAt) {
+        responseCount++;
+        lastActivityAt = Objects.requireNonNull(activityAt, "activityAt is required");
     }
 
     @PrePersist
@@ -133,6 +144,14 @@ public class FormDefinition {
 
     public String getPublication() {
         return publication;
+    }
+
+    public long getResponseCount() {
+        return responseCount;
+    }
+
+    public OffsetDateTime getLastActivityAt() {
+        return lastActivityAt;
     }
 
     public OffsetDateTime getCreatedAt() {
