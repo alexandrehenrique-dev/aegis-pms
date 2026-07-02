@@ -1,0 +1,24 @@
+meta {
+  name: Editor lista admin 403
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notifications
+  body: none
+}
+
+docs {
+Objetivo: validar que papel nao SUPER_ADMIN nao lista todas as notificacoes administrativas.
+Resultado esperado: 403 NOTIFICATION_ADMIN_FORBIDDEN.
+}
+
+tests {
+  test("status 403", function() {
+    expect(res.status).to.equal(403);
+  });
+  test("erro esperado", function() {
+    expect(res.body.error).to.equal('NOTIFICATION_ADMIN_FORBIDDEN');
+  });
+}

@@ -1,6 +1,6 @@
-# Etapa 25 — Templates de produto: esqueleto de páginas no `POST /products`
+# Etapa 26 — Templates de produto: esqueleto de páginas no `POST /products`
 
-> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 06 (Tenant/Product/Module), 21 (`pages`/`PageSection`) e 23 (`notification`) concluídas — esta etapa cria páginas/seções na criação do produto e dispara uma notificação na etapa de tenant. Adicionada **depois** do checklist final (etapa 22) e da etapa 23, mesmo padrão já usado para elas — surgiu depois, numerada por último.
+> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 06 (Tenant/Product/Module), 21 (`pages`/`PageSection`) e 25 (`notification`) concluídas — esta etapa cria páginas/seções na criação do produto e dispara uma notificação na etapa de tenant. Adicionada **depois** do checklist final (etapa 24) e da etapa 25, mesmo padrão já usado para elas — surgiu depois, numerada por último.
 
 ## Contexto fixo
 
@@ -52,7 +52,7 @@ A etapa 21 valida conteúdo por tipo de bloco (Seção C daquela etapa), mas nã
 
 ### D. Notificação de tenant suspenso/reativado (retrofit na etapa 09)
 
-> Auditoria de jornada (`docs/implementation/005_aegis_pms_user_journeys.md`, Journey 01) encontrou que mudar o status de um tenant (`PUT /tenants/{tenantId}`, etapa 09) é hoje silencioso — ninguém é avisado. Corrigido aqui, reaproveitando o domínio `notification` (etapa 23) já existente, sem mecanismo novo.
+> Auditoria de jornada (`docs/implementation/005_aegis_pms_user_journeys.md`, Journey 01) encontrou que mudar o status de um tenant (`PUT /tenants/{tenantId}`, etapa 09) é hoje silencioso — ninguém é avisado. Corrigido aqui, reaproveitando o domínio `notification` (etapa 25) já existente, sem mecanismo novo.
 
 Em `TenantService.update(...)` (etapa 09): se o `status` mudou de `"ativo"` para `"suspenso"` (ou vice-versa), chamar `NotificationService.create(...)` com `target: { type: "TENANT", tenantId }`, `type: "WARNING"` (suspensão) ou `"GENERAL"` (reativação), `presentationMode: "BELL_ONLY"` (não interrompe o usuário com modal — é informativo, ver sino), e um `bodyMarkdown` padrão (ex.: "Este tenant foi suspenso pelo administrador da plataforma. Contate o suporte para mais informações." / "Este tenant foi reativado."). `createdBySubject` é o Super Admin que fez a alteração.
 
@@ -70,7 +70,7 @@ Em `TenantService.update(...)` (etapa 09): se o `status` mudou de `"ativo"` para
 
 > Resumo — detalhe completo em `00_padrao_qualidade_e_arquitetura.md`.
 
-- **Java 25** / **Spring Boot 4.1.x**. Esta etapa **não cria entidade nova** (reaproveita `Page`/`PageSection` da etapa 21, `ProductModule` da etapa 06, `Notification` da etapa 23) — as classes novas são `ProductTemplateCatalog`, `BlockDefaults` e a extensão de `ProductService`/`TenantService`. 100% de cobertura nas classes funcionais, incluindo cada tipo do catálogo (Seção A) com pelo menos um teste confirmando as páginas/módulos certos, e `"Custom"` com teste confirmando que nada é criado.
+- **Java 25** / **Spring Boot 4.1.x**. Esta etapa **não cria entidade nova** (reaproveita `Page`/`PageSection` da etapa 21, `ProductModule` da etapa 06, `Notification` da etapa 25) — as classes novas são `ProductTemplateCatalog`, `BlockDefaults` e a extensão de `ProductService`/`TenantService`. 100% de cobertura nas classes funcionais, incluindo cada tipo do catálogo (Seção A) com pelo menos um teste confirmando as páginas/módulos certos, e `"Custom"` com teste confirmando que nada é criado.
 - Entregar em rodadas:
   1. `ProductTemplateCatalog` + `BlockDefaults` (classes de configuração, sem repository) + testes unitários puros (sem Spring context) confirmando o conteúdo de cada entrada.
   2. Extensão de `ProductService.create(...)` (scaffold de módulos + páginas, Seção C) + testes com mocks de `ProductModuleService`/`PageService` — cada `type` do catálogo com teste próprio, incluindo `"Custom"`.

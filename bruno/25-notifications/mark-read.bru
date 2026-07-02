@@ -1,0 +1,21 @@
+meta {
+  name: Mark read
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notifications/{{notificationId}}/mark-read
+  body: none
+}
+
+docs {
+Objetivo: marcar notificacao como lida sem exigir autoShown pendente.
+Resultado esperado: 204, idempotente.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

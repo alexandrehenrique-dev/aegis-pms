@@ -99,6 +99,25 @@ class TenantUserAccessServiceTest {
     }
 
     @Test
+    void shouldListActiveUserSubjects() {
+        when(membershipRepository.findDistinctUserSubjectsByStatus(TenantMembershipStatus.ACTIVE))
+                .thenReturn(List.of("user-1", "user-2"));
+
+        assertThat(service.listActiveUserSubjects())
+                .containsExactly("user-1", "user-2");
+    }
+
+    @Test
+    void shouldListActiveUserSubjectsByTenant() {
+        when(tenantRepository.existsById(TENANT_ID)).thenReturn(true);
+        when(membershipRepository.findDistinctUserSubjectsByTenantIdAndStatus(TENANT_ID, TenantMembershipStatus.ACTIVE))
+                .thenReturn(List.of("tenant-user"));
+
+        assertThat(service.listActiveUserSubjects(TENANT_ID))
+                .containsExactly("tenant-user");
+    }
+
+    @Test
     void shouldDetectOtherActiveMembership() {
         TenantMembership same = membership(tenant(TENANT_ID, "BYOP"), "user-1", "EDITOR");
         TenantMembership other = membership(tenant(OTHER_TENANT_ID, "Other"), "user-1", "VIEWER");

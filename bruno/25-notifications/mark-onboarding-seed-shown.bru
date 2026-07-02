@@ -1,0 +1,21 @@
+meta {
+  name: Mark onboarding seed shown
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notifications/25000000-0000-0000-0000-000000000001/mark-shown
+  body: none
+}
+
+docs {
+Objetivo: remover o onboarding seedado da fila modal do usuario Loki antes de validar a FEATURE criada nesta pasta. Se o usuario nao tiver status de onboarding neste ambiente, 404 tambem e aceitavel.
+Resultado esperado: 204 ou 404.
+}
+
+tests {
+  test("status 204 ou 404", function() {
+    expect([204, 404]).to.include(res.status);
+  });
+}

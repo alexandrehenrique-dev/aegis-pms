@@ -1,0 +1,26 @@
+meta {
+  name: Listar minhas notificacoes
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notifications/mine
+  body: none
+}
+
+docs {
+Objetivo: consultar historico do usuario autenticado, incluindo MODAL_ONCE e BELL_ONLY.
+Resultado esperado: 200 com ao menos as notificacoes criadas nesta pasta.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("inclui notificacoes criadas", function() {
+    const ids = res.body.map(item => item.id);
+    expect(ids).to.include(bru.getVar('notificationId'));
+    expect(ids).to.include(bru.getVar('bellNotificationId'));
+  });
+}

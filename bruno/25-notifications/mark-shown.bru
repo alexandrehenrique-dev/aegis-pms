@@ -1,0 +1,21 @@
+meta {
+  name: Mark shown
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notifications/{{notificationId}}/mark-shown
+  body: none
+}
+
+docs {
+Objetivo: marcar a notificacao modal como exibida automaticamente.
+Resultado esperado: 204, idempotente.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

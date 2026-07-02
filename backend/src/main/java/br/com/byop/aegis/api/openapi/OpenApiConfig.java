@@ -55,6 +55,7 @@ public class OpenApiConfig {
     static final String TAG_AUDIT = "Audit";
     static final String TAG_SETTINGS = "Settings";
     static final String TAG_DASHBOARD = "Dashboard";
+    static final String TAG_NOTIFICATIONS = "Notifications";
 
     private static final String API_VERSION = "v1";
     private static final String API_TITLE = "Aegis PMS API";
@@ -84,7 +85,8 @@ public class OpenApiConfig {
             TAG_USERS,
             TAG_AUDIT,
             TAG_SETTINGS,
-            TAG_DASHBOARD
+            TAG_DASHBOARD,
+            TAG_NOTIFICATIONS
     );
 
     private static final Map<String, String> TAG_DESCRIPTIONS = Map.ofEntries(
@@ -104,7 +106,8 @@ public class OpenApiConfig {
             Map.entry(TAG_USERS, "Usuários de tenant, convites, bloqueio, remoção e restauração."),
             Map.entry(TAG_AUDIT, "Consulta da trilha de auditoria por tenant."),
             Map.entry(TAG_SETTINGS, "Configurações de produto, roles, permissões e segurança."),
-            Map.entry(TAG_DASHBOARD, "Resumo agregado do dashboard operacional.")
+            Map.entry(TAG_DASHBOARD, "Resumo agregado do dashboard operacional."),
+            Map.entry(TAG_NOTIFICATIONS, "Notificações internas, onboarding e leitura por usuário.")
     );
 
     private static final List<Map.Entry<String, String>> TAG_BY_PATH_FRAGMENT = List.of(
@@ -132,7 +135,8 @@ public class OpenApiConfig {
             Map.entry("/api/v1/products/{productId}/settings", TAG_SETTINGS),
             Map.entry("/api/v1/products", TAG_PRODUCTS),
             Map.entry("/api/v1/users", TAG_USERS),
-            Map.entry("/api/v1/dashboard", TAG_DASHBOARD)
+            Map.entry("/api/v1/dashboard", TAG_DASHBOARD),
+            Map.entry("/api/v1/notifications", TAG_NOTIFICATIONS)
     );
 
     /**

@@ -3,6 +3,7 @@ package br.com.byop.aegis.product.user.service;
 import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.identity.api.IdentityUserLifecycleService;
+import br.com.byop.aegis.notification.api.NotificationOnboardingService;
 import br.com.byop.aegis.product.api.ProductUserAccessService;
 import br.com.byop.aegis.product.user.contract.InviteTenantUserRequest;
 import br.com.byop.aegis.product.user.contract.UpdateTenantUserRequest;
@@ -55,6 +56,9 @@ class TenantUserServiceTest {
 
     @Mock
     private AuditService auditService;
+
+    @Mock
+    private NotificationOnboardingService notificationOnboardingService;
 
     @InjectMocks
     private TenantUserService service;
@@ -115,12 +119,14 @@ class TenantUserServiceTest {
         when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
 
         assertThat(service.inviteUser(caller, TENANT_ID, request).status()).isEqualTo("convidado");
+        verify(notificationOnboardingService).assignOnboarding("user-1");
         org.mockito.ArgumentCaptor<br.com.byop.aegis.audit.api.AuditRecordCommand> auditCaptor =
                 org.mockito.ArgumentCaptor.forClass(br.com.byop.aegis.audit.api.AuditRecordCommand.class);
         verify(auditService).recordEvent(auditCaptor.capture());
         assertThat(auditCaptor.getValue().action()).isEqualTo("USER_INVITED_TO_TENANT");
         assertThat(auditCaptor.getValue().tenantId()).isEqualTo(TENANT_ID);
         assertThat(auditCaptor.getValue().targetId()).isEqualTo("user-1");
+        verify(notificationOnboardingService).assignOnboarding("user-1");
     }
 
     @Test
@@ -179,6 +185,7 @@ class TenantUserServiceTest {
         when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
 
         assertThat(service.inviteUser(caller, TENANT_ID, request).userId()).isEqualTo("user-1");
+        verify(notificationOnboardingService).assignOnboarding("user-1");
     }
 
     @Test

@@ -3,6 +3,8 @@ package br.com.byop.aegis.tenant.repository;
 import br.com.byop.aegis.tenant.domain.TenantMembership;
 import br.com.byop.aegis.tenant.domain.TenantMembershipStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -78,4 +80,35 @@ public interface TenantMembershipRepository extends JpaRepository<TenantMembersh
      * @return {@code true} quando ja existe membership para o usuario no tenant
      */
     boolean existsByTenantIdAndUserSubject(UUID tenantId, String userSubject);
+
+    /**
+     * Lista subjects distintos com ao menos uma membership ativa.
+     *
+     * @param status status ativo esperado
+     * @return subjects distintos de usuarios ativos em algum tenant
+     */
+    @Query("""
+            select distinct membership.userSubject
+              from TenantMembership membership
+             where membership.status = :status
+            """)
+    List<String> findDistinctUserSubjectsByStatus(@Param("status") TenantMembershipStatus status);
+
+    /**
+     * Lista subjects distintos com membership ativa em um tenant.
+     *
+     * @param tenantId identificador do tenant
+     * @param status status ativo esperado
+     * @return subjects distintos de usuarios ativos no tenant informado
+     */
+    @Query("""
+            select distinct membership.userSubject
+              from TenantMembership membership
+             where membership.tenant.id = :tenantId
+               and membership.status = :status
+            """)
+    List<String> findDistinctUserSubjectsByTenantIdAndStatus(
+            @Param("tenantId") UUID tenantId,
+            @Param("status") TenantMembershipStatus status
+    );
 }

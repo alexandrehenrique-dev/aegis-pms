@@ -325,5 +325,5 @@ Ultima execucao completa obrigatoria:
 
 ## Retrofits pendentes
 
-- Quando a etapa 24/notification existir, avaliar o fan-out de notificacao `ONBOARDING` para os 5 usuarios demo, conforme observacao do artefato da Sprint 22.
+- Quando a etapa 25/notification existir, avaliar o fan-out de notificacao `ONBOARDING` para os 5 usuarios demo, conforme observacao do artefato da Sprint 22.
 - Se o enum de `GraphNodeType` ganhar um tipo `PLAYLIST` em sprint futura, reavaliar a representacao da playlist do Loki hoje modelada como `CONTENT` + metadata `refType=PLAYLIST`.

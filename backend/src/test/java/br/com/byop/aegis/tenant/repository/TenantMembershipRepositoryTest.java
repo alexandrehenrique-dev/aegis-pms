@@ -53,6 +53,25 @@ class TenantMembershipRepositoryTest extends RepositoryTestSupport {
     }
 
     @Test
+    void shouldFindDistinctActiveUserSubjects() {
+        Tenant tenant = tenantRepository.saveAndFlush(tenant("membership-distinct"));
+        Tenant otherTenant = tenantRepository.saveAndFlush(tenant("membership-distinct-other"));
+        membershipRepository.saveAndFlush(new TenantMembership(tenant, "subject-active", "TENANT_ADMIN"));
+        membershipRepository.saveAndFlush(new TenantMembership(otherTenant, "subject-active", "VIEWER"));
+        TenantMembership suspended = new TenantMembership(tenant, "subject-suspended", "VIEWER");
+        suspended.suspend();
+        membershipRepository.saveAndFlush(suspended);
+
+        assertThat(membershipRepository.findDistinctUserSubjectsByStatus(TenantMembershipStatus.ACTIVE))
+                .contains("subject-active")
+                .doesNotContain("subject-suspended");
+        assertThat(membershipRepository.findDistinctUserSubjectsByTenantIdAndStatus(
+                tenant.getId(),
+                TenantMembershipStatus.ACTIVE
+        )).containsExactly("subject-active");
+    }
+
+    @Test
     void shouldRejectDuplicateTenantAndUserSubject() {
         Tenant tenant = tenantRepository.saveAndFlush(tenant("membership-duplicate"));
         membershipRepository.saveAndFlush(new TenantMembership(tenant, "subject-duplicate", "TENANT_ADMIN"));

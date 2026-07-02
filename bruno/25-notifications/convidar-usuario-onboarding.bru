@@ -1,0 +1,40 @@
+meta {
+  name: Convidar usuario com onboarding
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{tenantId}}/users/invite
+  body: json
+}
+
+body:json {
+  {
+    "name": "Notification User Bruno",
+    "email": "{{notificationInviteEmail}}",
+    "role": "VIEWER",
+    "allowedProducts": "Aegis",
+    "message": "Convite gerado para validar fan-out de onboarding"
+  }
+}
+
+docs {
+Objetivo: exercitar a integracao Users -> NotificationOnboardingService ao criar um novo usuario.
+Resultado esperado: 201. A collection nao loga esse usuario porque a ativacao real de senha fica para a Sprint 29.
+Variaveis produzidas: notificationTenantUserId.
+}
+
+script:post-response {
+  bru.setVar('notificationTenantUserId', res.body.userId);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("usuario convidado", function() {
+    expect(res.body.email).to.equal(bru.getVar('notificationInviteEmail'));
+    expect(res.body.userId).to.be.a('string');
+  });
+}

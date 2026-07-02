@@ -1,0 +1,42 @@
+meta {
+  name: Criar FEATURE para ALL
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notifications
+  body: json
+}
+
+body:json {
+  {
+    "type": "FEATURE",
+    "title": "Novo módulo de páginas",
+    "bodyMarkdown": "Agora você pode **compor páginas** por seções.",
+    "presentationMode": "MODAL_ONCE",
+    "target": { "type": "ALL" }
+  }
+}
+
+docs {
+Objetivo: SUPER_ADMIN cria notificacao FEATURE para todos os usuarios com membership ativa.
+Resultado esperado: 201, sem expor array interno de status.
+Variaveis produzidas: notificationId.
+}
+
+script:post-response {
+  bru.setVar('notificationId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("notificacao criada", function() {
+    expect(res.body.id).to.be.a('string');
+    expect(res.body.type).to.equal('FEATURE');
+    expect(res.body.presentationMode).to.equal('MODAL_ONCE');
+    expect(res.body).to.not.have.property('statuses');
+  });
+}
