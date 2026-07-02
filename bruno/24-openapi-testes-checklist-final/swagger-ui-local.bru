@@ -1,0 +1,30 @@
+meta {
+  name: Swagger UI local
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/swagger-ui/index.html
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization:
+}
+
+docs {
+Objetivo: confirmar que a UI do Swagger abre no profile local/dev.
+Resultado esperado: 200 HTML contendo a inicializacao do Swagger UI.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("retorna html do swagger ui", function() {
+    expect(String(res.body)).to.include("Swagger UI");
+  });
+}

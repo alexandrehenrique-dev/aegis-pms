@@ -3,6 +3,12 @@ spring:
     activate:
       on-profile: local
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
 aegis:
   seed:
     # Credencial exclusiva para usuarios demo do profile local. Nunca usar em producao.
