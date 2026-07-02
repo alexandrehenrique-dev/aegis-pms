@@ -1,0 +1,24 @@
+meta {
+  name: Buscar pagina inexistente - 404
+  type: http
+  seq: 31
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/00000000-0000-0000-0000-000000000000
+  body: none
+}
+
+docs {
+Objetivo: pagina com UUID valido mas inexistente no produto (isolamento, Secao E).
+Resultado esperado: 404 PAGE_NOT_FOUND.
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+  test("erro PAGE_NOT_FOUND", function() {
+    expect(res.body.error).to.equal("PAGE_NOT_FOUND");
+  });
+}

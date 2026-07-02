@@ -1,0 +1,43 @@
+meta {
+  name: Criar evento
+  type: http
+  seq: 26
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/events
+  body: json
+}
+
+body:json {
+  {
+    "title": "Maestro Beton ao vivo",
+    "datetime": "2026-07-12T16:00",
+    "location": "Teatro Municipal",
+    "type": "public",
+    "visibility": "public",
+    "description": "Show de saxofone com o Maestro Beton."
+  }
+}
+
+docs {
+Objetivo: Event e entidade propria (Secao A.1 da Sprint 23), nunca resolvida como "content type"; datetime e um unico valor ISO com data e hora.
+Resultado esperado: 201, type "public", visibility "public".
+Variaveis produzidas: eventId.
+}
+
+script:post-response {
+  bru.setVar('eventId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("evento criado", function() {
+    expect(res.body.id).to.be.a('string');
+    expect(res.body.title).to.equal("Maestro Beton ao vivo");
+    expect(res.body.type).to.equal("public");
+    expect(res.body.visibility).to.equal("public");
+  });
+}

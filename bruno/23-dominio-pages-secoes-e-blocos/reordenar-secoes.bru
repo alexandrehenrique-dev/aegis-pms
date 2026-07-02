@@ -1,0 +1,40 @@
+meta {
+  name: Reordenar secoes da pagina
+  type: http
+  seq: 23
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections/reorder
+  body: json
+}
+
+body:json {
+  {
+    "sectionIds": [
+      "{{downloadSectionId}}",
+      "{{contactSectionId}}",
+      "{{twoColumnSectionId}}",
+      "{{videoSectionId}}",
+      "{{audioSectionId}}",
+      "{{heroSectionId}}"
+    ]
+  }
+}
+
+docs {
+Objetivo: reordenar e sempre uma substituicao completa da lista de IDs (Secao E) — inverte a ordem de criacao das secoes.
+Resultado esperado: 200, download passa a ser order 0 e hero passa a ser order 5.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("nova ordem persistida", function() {
+    expect(res.body[0].id).to.equal(bru.getVar('downloadSectionId'));
+    expect(res.body[0].order).to.equal(0);
+    expect(res.body[5].id).to.equal(bru.getVar('heroSectionId'));
+    expect(res.body[5].order).to.equal(5);
+  });
+}

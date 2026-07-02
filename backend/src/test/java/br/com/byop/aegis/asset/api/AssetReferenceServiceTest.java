@@ -38,6 +38,7 @@ class AssetReferenceServiceTest {
         assertThat(reference.id()).isEqualTo(ASSET_ID);
         assertThat(reference.productId()).isEqualTo(PRODUCT_ID);
         assertThat(reference.mimeType()).isEqualTo("application/pdf");
+        assertThat(reference.category()).isEqualTo("document");
     }
 
     @Test

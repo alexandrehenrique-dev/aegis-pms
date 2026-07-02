@@ -1,0 +1,41 @@
+meta {
+  name: Atualizar pagina (titulo, status, seo)
+  type: http
+  seq: 25
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}
+  body: json
+}
+
+body:json {
+  {
+    "slug": "home",
+    "title": "Home — Maestro Beton",
+    "locale": "pt-BR",
+    "status": "published",
+    "seo": {
+      "title": "Maestro Beton | Home",
+      "description": "Site oficial do Maestro Beton",
+      "canonical": "https://maestrobeton.com.br",
+      "noIndex": false
+    }
+  }
+}
+
+docs {
+Objetivo: editar titulo, status e SEO de uma pagina existente, mantendo o mesmo slug (sem colisao).
+Resultado esperado: 200, status "published", version incrementada.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("pagina publicada", function() {
+    expect(res.body.status).to.equal("published");
+    expect(res.body.seo.title).to.equal("Maestro Beton | Home");
+    expect(res.body.version).to.equal(2);
+  });
+}

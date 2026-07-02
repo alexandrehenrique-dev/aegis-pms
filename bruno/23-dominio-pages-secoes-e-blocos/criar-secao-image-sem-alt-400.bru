@@ -1,0 +1,34 @@
+meta {
+  name: Criar secao image sem alt - 400
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "image",
+    "order": 1,
+    "content": {
+      "assetId": "{{assetId}}"
+    }
+  }
+}
+
+docs {
+Objetivo: todo item de imagem exige alt (Secao C) — aqui no bloco image, cujo proprio content e o item de imagem.
+Resultado esperado: 400 IMAGE_ALT_REQUIRED.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro IMAGE_ALT_REQUIRED", function() {
+    expect(res.body.error).to.equal("IMAGE_ALT_REQUIRED");
+  });
+}

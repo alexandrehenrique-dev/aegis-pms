@@ -1,0 +1,40 @@
+meta {
+  name: Criar pagina Home
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages
+  body: json
+}
+
+body:json {
+  {
+    "slug": "home",
+    "title": "Home",
+    "locale": "pt-BR"
+  }
+}
+
+docs {
+Objetivo: criar a primeira pagina do produto (curl da Secao "Validacao" da Sprint 23).
+Resultado esperado: 201, slug "home", status "draft", version 1.
+Variaveis produzidas: pageId.
+}
+
+script:post-response {
+  bru.setVar('pageId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("pagina criada em draft", function() {
+    expect(res.body.id).to.be.a('string');
+    expect(res.body.slug).to.equal("home");
+    expect(res.body.status).to.equal("draft");
+    expect(res.body.version).to.equal(1);
+  });
+}

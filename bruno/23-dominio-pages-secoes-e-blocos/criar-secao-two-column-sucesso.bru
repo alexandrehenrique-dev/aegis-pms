@@ -1,0 +1,41 @@
+meta {
+  name: Criar secao two-column - sucesso
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "two-column",
+    "order": 7,
+    "content": {
+      "left": { "type": "text", "body": "Coluna esquerda" },
+      "right": { "type": "image", "assetId": "{{assetId}}", "alt": "Foto" }
+    }
+  }
+}
+
+docs {
+Objetivo: mecanismo generico de acceptsChildren (Secao B/C) — two-column aceita text/rich-text/image/cta-section como filho em left/right.
+Resultado esperado: 201, type "two-column".
+Variaveis produzidas: twoColumnSectionId.
+}
+
+script:post-response {
+  bru.setVar('twoColumnSectionId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("secao two-column criada", function() {
+    expect(res.body.type).to.equal("two-column");
+    expect(res.body.content.left.type).to.equal("text");
+  });
+}

@@ -1,0 +1,36 @@
+meta {
+  name: Criar secao contact com fields[] (formato antigo) - 400
+  type: http
+  seq: 17
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "contact",
+    "order": 9,
+    "content": {
+      "fields": [
+        { "label": "Nome" }
+      ]
+    }
+  }
+}
+
+docs {
+Objetivo: contact nao tem mais um array de campos proprio — se o frontend mandar fields[] em vez de formId, e o formato antigo, divergente do contrato (Secao C).
+Resultado esperado: 400 SECTION_LEGACY_FIELDS_NOT_SUPPORTED.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro SECTION_LEGACY_FIELDS_NOT_SUPPORTED", function() {
+    expect(res.body.error).to.equal("SECTION_LEGACY_FIELDS_NOT_SUPPORTED");
+  });
+}

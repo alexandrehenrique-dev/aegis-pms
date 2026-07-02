@@ -1,0 +1,40 @@
+meta {
+  name: Criar secao contact com formId - sucesso
+  type: http
+  seq: 18
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "contact",
+    "order": 9,
+    "content": {
+      "formId": "{{formId}}"
+    }
+  }
+}
+
+docs {
+Objetivo: contact exige formId de um FormDefinition existente do mesmo produto (dominio form, etapa 13). Usa {{formId}} criado em 13-forms.
+Resultado esperado: 201, type "contact".
+Variaveis produzidas: contactSectionId.
+}
+
+script:post-response {
+  bru.setVar('contactSectionId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("secao contact criada", function() {
+    expect(res.body.type).to.equal("contact");
+    expect(res.body.content.formId).to.equal(bru.getVar('formId'));
+  });
+}

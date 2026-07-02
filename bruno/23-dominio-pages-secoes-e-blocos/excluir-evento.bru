@@ -1,0 +1,21 @@
+meta {
+  name: Excluir evento
+  type: http
+  seq: 37
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/events/{{eventId}}
+  body: none
+}
+
+docs {
+Objetivo: excluir um evento.
+Resultado esperado: 204.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

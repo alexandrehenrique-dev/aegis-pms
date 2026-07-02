@@ -1,0 +1,24 @@
+meta {
+  name: Reabilitar PAGES
+  type: http
+  seq: 36
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/PAGES/enable
+  body: none
+}
+
+docs {
+Objetivo: restaurar o modulo PAGES habilitado ao final da pasta, para nao quebrar pastas seguintes que dependam de {{productId}}.
+Resultado esperado: 200, enabled true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("PAGES reabilitado", function() {
+    expect(res.body.enabled).to.equal(true);
+  });
+}

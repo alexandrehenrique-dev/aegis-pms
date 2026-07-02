@@ -1,0 +1,34 @@
+meta {
+  name: Criar secao two-column aninhado dentro de si mesmo - 400
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "two-column",
+    "order": 8,
+    "content": {
+      "left": { "type": "two-column" }
+    }
+  }
+}
+
+docs {
+Objetivo: filho do mesmo type do pai (recursao) e sempre rejeitado, mesmo que o tipo esteja na lista acceptsChildren — regra generica, nao hardcoded (Secao C).
+Resultado esperado: 400 CHILD_TYPE_NOT_ALLOWED.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro CHILD_TYPE_NOT_ALLOWED", function() {
+    expect(res.body.error).to.equal("CHILD_TYPE_NOT_ALLOWED");
+  });
+}

@@ -1,0 +1,26 @@
+meta {
+  name: Buscar globals antes de configurar (objeto vazio, nao 404)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/globals
+  body: none
+}
+
+docs {
+Objetivo: confirmar que GET /globals nunca retorna 404, mesmo quando o produto ainda nao tem ProductGlobals configurado (Secao F da Sprint 23).
+Resultado esperado: 200, navbar/footer/socialLinks vazios, floatingWhatsapp ausente.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("objeto vazio", function() {
+    expect(res.body.navbar.links).to.eql([]);
+    expect(res.body.footer.links).to.eql([]);
+    expect(res.body.socialLinks).to.eql([]);
+  });
+}

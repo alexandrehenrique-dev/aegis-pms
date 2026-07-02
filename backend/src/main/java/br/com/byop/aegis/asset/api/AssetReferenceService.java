@@ -21,6 +21,6 @@ public class AssetReferenceService {
     public AssetReference getRequiredReference(UUID assetId) {
         Asset asset = assetRepository.findById(assetId)
                 .orElseThrow(() -> new AssetNotFoundException(assetId));
-        return new AssetReference(asset.getId(), asset.getProductId(), asset.getMimeType());
+        return new AssetReference(asset.getId(), asset.getProductId(), asset.getMimeType(), asset.getCategory().contractValue());
     }
 }

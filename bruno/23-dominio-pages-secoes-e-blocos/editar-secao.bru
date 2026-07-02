@@ -1,0 +1,38 @@
+meta {
+  name: Editar secao hero
+  type: http
+  seq: 22
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections/{{heroSectionId}}
+  body: json
+}
+
+body:json {
+  {
+    "type": "hero",
+    "order": 0,
+    "content": {
+      "title": "Maestro Beton — Turne 2026",
+      "image": {
+        "assetId": "{{assetId}}",
+        "alt": "Maestro Beton tocando saxofone"
+      }
+    }
+  }
+}
+
+docs {
+Objetivo: editar o conteudo de uma secao existente.
+Resultado esperado: 200, title atualizado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("title atualizado", function() {
+    expect(res.body.content.title).to.equal("Maestro Beton — Turne 2026");
+  });
+}

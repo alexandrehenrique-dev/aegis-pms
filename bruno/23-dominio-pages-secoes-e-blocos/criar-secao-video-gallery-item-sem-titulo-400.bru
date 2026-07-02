@@ -1,0 +1,39 @@
+meta {
+  name: Criar secao video-gallery com item sem title - 400
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "video-gallery",
+    "order": 6,
+    "content": {
+      "items": [
+        {
+          "source": "youtube",
+          "youtubeUrl": "https://youtu.be/dQw4w9WgXcQ"
+        }
+      ]
+    }
+  }
+}
+
+docs {
+Objetivo: cada item de video-gallery exige title (label do item na galeria), alem da mesma regra do bloco video.
+Resultado esperado: 400 VIDEO_GALLERY_ITEM_TITLE_REQUIRED.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro VIDEO_GALLERY_ITEM_TITLE_REQUIRED", function() {
+    expect(res.body.error).to.equal("VIDEO_GALLERY_ITEM_TITLE_REQUIRED");
+  });
+}

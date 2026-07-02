@@ -1,0 +1,41 @@
+meta {
+  name: Criar secao event-list - sucesso
+  type: http
+  seq: 30
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "event-list",
+    "order": 11,
+    "content": {
+      "source": {
+        "filter": {
+          "from": "2026-01-01",
+          "to": "2026-12-31",
+          "visibility": "public"
+        }
+      }
+    }
+  }
+}
+
+docs {
+Objetivo: o bloco event-list referencia o dominio proprio Event via filtro (periodo/visibilidade), nunca um "content type" generico (Secao A.1 — correcao de aderencia).
+Resultado esperado: 201, type "event-list".
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("secao event-list criada", function() {
+    expect(res.body.type).to.equal("event-list");
+    expect(res.body.content.source.filter.visibility).to.equal("public");
+  });
+}

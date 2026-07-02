@@ -1,0 +1,24 @@
+meta {
+  name: ProductGlobals continua acessivel com PAGES desabilitado
+  type: http
+  seq: 33
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/globals
+  body: none
+}
+
+docs {
+Objetivo: ProductGlobalsController NAO e gateado por modulo (navbar/footer fazem parte da estrutura basica do produto, nao de um modulo opcional — Secao E).
+Resultado esperado: 200 mesmo com PAGES desabilitado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("navbar ainda persistido", function() {
+    expect(res.body.navbar.links[0].label).to.equal("Home");
+  });
+}

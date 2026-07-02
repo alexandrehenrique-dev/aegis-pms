@@ -1,0 +1,32 @@
+meta {
+  name: Criar secao hero sem title - 400
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "hero",
+    "order": 1,
+    "content": {}
+  }
+}
+
+docs {
+Objetivo: validar a regra minima do bloco hero (Secao C).
+Resultado esperado: 400 HERO_TITLE_REQUIRED.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro HERO_TITLE_REQUIRED", function() {
+    expect(res.body.error).to.equal("HERO_TITLE_REQUIRED");
+  });
+}

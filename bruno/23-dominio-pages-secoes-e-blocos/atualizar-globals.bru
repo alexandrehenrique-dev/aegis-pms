@@ -1,0 +1,41 @@
+meta {
+  name: Atualizar ProductGlobals - sucesso
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/globals
+  body: json
+}
+
+body:json {
+  {
+    "navbar": {
+      "links": [
+        { "label": "Home", "href": "/" }
+      ]
+    },
+    "footer": {
+      "links": []
+    },
+    "socialLinks": [
+      { "platform": "instagram", "href": "https://instagram.com/maestrobeton" }
+    ]
+  }
+}
+
+docs {
+Objetivo: configurar navbar/footer/redes sociais do produto (curl da Secao "Validacao" da Sprint 23; ADR-0013).
+Resultado esperado: 200, upsert — cria porque o produto ainda nao tinha ProductGlobals.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("navbar/socialLinks persistidos", function() {
+    expect(res.body.navbar.links[0].label).to.equal("Home");
+    expect(res.body.socialLinks[0].platform).to.equal("instagram");
+  });
+}

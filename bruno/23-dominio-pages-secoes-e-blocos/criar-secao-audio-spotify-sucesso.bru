@@ -1,0 +1,42 @@
+meta {
+  name: Criar secao audio (spotify-track) - sucesso
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "audio",
+    "order": 2,
+    "content": {
+      "source": "spotify-track",
+      "spotifyUrl": "https://open.spotify.com/track/exemplo",
+      "autoplay": false
+    }
+  }
+}
+
+docs {
+Objetivo: bloco audio com source spotify-track (curl da Secao "Validacao" da Sprint 23).
+Resultado esperado: 201, type "audio".
+Variaveis produzidas: audioSectionId.
+}
+
+script:post-response {
+  bru.setVar('audioSectionId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("secao audio criada", function() {
+    expect(res.body.type).to.equal("audio");
+    expect(res.body.content.source).to.equal("spotify-track");
+  });
+}
