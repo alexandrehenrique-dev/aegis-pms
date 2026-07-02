@@ -1,0 +1,35 @@
+meta {
+  name: Criar secao video com youtubeUrl invalida - 400
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "video",
+    "order": 5,
+    "content": {
+      "source": "youtube",
+      "youtubeUrl": "https://vimeo.com/12345"
+    }
+  }
+}
+
+docs {
+Objetivo: youtubeUrl que nao bate com o regex da Secao C deve ser rejeitada.
+Resultado esperado: 400 VIDEO_YOUTUBE_URL_INVALID.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro VIDEO_YOUTUBE_URL_INVALID", function() {
+    expect(res.body.error).to.equal("VIDEO_YOUTUBE_URL_INVALID");
+  });
+}

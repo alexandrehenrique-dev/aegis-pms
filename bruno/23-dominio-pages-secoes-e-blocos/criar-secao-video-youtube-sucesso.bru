@@ -1,0 +1,42 @@
+meta {
+  name: Criar secao video (youtube) - sucesso
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "video",
+    "order": 4,
+    "content": {
+      "source": "youtube",
+      "youtubeUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "autoplay": false
+    }
+  }
+}
+
+docs {
+Objetivo: bloco video com source youtube, regex da Secao C.
+Resultado esperado: 201, type "video".
+Variaveis produzidas: videoSectionId.
+}
+
+script:post-response {
+  bru.setVar('videoSectionId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("secao video criada", function() {
+    expect(res.body.type).to.equal("video");
+    expect(res.body.content.source).to.equal("youtube");
+  });
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Buscar detalhe da pagina com secoes
+  type: http
+  seq: 21
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}
+  body: none
+}
+
+docs {
+Objetivo: confirmar que o detalhe da pagina traz todas as secoes criadas, com seo aninhado.
+Resultado esperado: 200, sections com os 6 blocos validos criados ate aqui (hero, audio, video, two-column, contact, download).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("secoes presentes", function() {
+    expect(res.body.sections.length).to.equal(6);
+    expect(res.body.seo).to.not.equal(undefined);
+  });
+}

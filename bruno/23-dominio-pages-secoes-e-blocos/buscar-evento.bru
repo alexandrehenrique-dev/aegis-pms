@@ -1,0 +1,25 @@
+meta {
+  name: Buscar detalhe do evento
+  type: http
+  seq: 28
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/events/{{eventId}}
+  body: none
+}
+
+docs {
+Objetivo: buscar o detalhe completo de um evento, incluindo description.
+Resultado esperado: 200.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("detalhe do evento", function() {
+    expect(res.body.location).to.equal("Teatro Municipal");
+    expect(res.body.description).to.equal("Show de saxofone com o Maestro Beton.");
+  });
+}

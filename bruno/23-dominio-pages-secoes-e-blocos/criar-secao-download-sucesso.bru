@@ -1,0 +1,42 @@
+meta {
+  name: Criar secao download - sucesso
+  type: http
+  seq: 19
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "download",
+    "order": 10,
+    "content": {
+      "items": [
+        { "fileAssetId": "{{assetId}}", "title": "Catalogo em PDF" }
+      ]
+    }
+  }
+}
+
+docs {
+Objetivo: bloco download referenciando um Asset existente do produto (qualquer categoria, Secao C) — usa {{assetId}} (PNG) porque {{pdfAssetId}} ja foi excluido ao final da pasta 12-assets (excluir-asset-sem-uso).
+Resultado esperado: 201, type "download".
+Variaveis produzidas: downloadSectionId.
+}
+
+script:post-response {
+  bru.setVar('downloadSectionId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("secao download criada", function() {
+    expect(res.body.type).to.equal("download");
+    expect(res.body.content.items[0].title).to.equal("Catalogo em PDF");
+  });
+}

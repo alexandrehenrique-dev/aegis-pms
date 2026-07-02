@@ -1,0 +1,24 @@
+meta {
+  name: Listar eventos do produto
+  type: http
+  seq: 27
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/events
+  body: none
+}
+
+docs {
+Objetivo: listar a agenda de eventos do produto.
+Resultado esperado: 200, array com o evento criado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("evento presente", function() {
+    expect(res.body.some(function(event) { return event.id === bru.getVar('eventId'); })).to.equal(true);
+  });
+}

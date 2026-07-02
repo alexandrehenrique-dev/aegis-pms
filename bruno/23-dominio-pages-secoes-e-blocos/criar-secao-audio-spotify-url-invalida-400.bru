@@ -1,0 +1,35 @@
+meta {
+  name: Criar secao audio com spotifyUrl invalida - 400
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "audio",
+    "order": 3,
+    "content": {
+      "source": "spotify-track",
+      "spotifyUrl": "https://spotify.com/track/exemplo"
+    }
+  }
+}
+
+docs {
+Objetivo: com source spotify-track/spotify-playlist, spotifyUrl deve bater com https://open.spotify.com/... (Secao C).
+Resultado esperado: 400 AUDIO_SPOTIFY_URL_INVALID.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro AUDIO_SPOTIFY_URL_INVALID", function() {
+    expect(res.body.error).to.equal("AUDIO_SPOTIFY_URL_INVALID");
+  });
+}

@@ -1,0 +1,45 @@
+meta {
+  name: Criar secao hero - sucesso
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "hero",
+    "order": 0,
+    "content": {
+      "title": "Maestro Beton",
+      "image": {
+        "assetId": "{{assetId}}",
+        "alt": "Maestro Beton tocando saxofone"
+      }
+    }
+  }
+}
+
+docs {
+Objetivo: criar o primeiro bloco da pagina (curl da Secao "Validacao" da Sprint 23).
+Resultado esperado: 201, type "hero", order 0.
+Variaveis produzidas: heroSectionId.
+}
+
+script:post-response {
+  bru.setVar('heroSectionId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("secao hero criada", function() {
+    expect(res.body.type).to.equal("hero");
+    expect(res.body.order).to.equal(0);
+    expect(res.body.content.title).to.equal("Maestro Beton");
+  });
+}

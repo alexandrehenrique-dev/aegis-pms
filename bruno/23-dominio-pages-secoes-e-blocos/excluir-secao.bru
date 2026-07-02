@@ -1,0 +1,21 @@
+meta {
+  name: Excluir secao
+  type: http
+  seq: 24
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections/{{downloadSectionId}}
+  body: none
+}
+
+docs {
+Objetivo: excluir uma secao especifica da pagina.
+Resultado esperado: 204.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

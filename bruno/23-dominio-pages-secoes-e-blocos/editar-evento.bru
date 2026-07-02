@@ -1,0 +1,36 @@
+meta {
+  name: Editar evento
+  type: http
+  seq: 29
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/events/{{eventId}}
+  body: json
+}
+
+body:json {
+  {
+    "title": "Maestro Beton ao vivo — remarcado",
+    "datetime": "2026-08-01T20:30",
+    "location": "Teatro Municipal - Sala Principal",
+    "type": "private",
+    "visibility": "public-summary",
+    "description": "Evento remarcado."
+  }
+}
+
+docs {
+Objetivo: editar data/local/visibilidade de um evento existente.
+Resultado esperado: 200, visibility "public-summary".
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("evento remarcado", function() {
+    expect(res.body.type).to.equal("private");
+    expect(res.body.visibility).to.equal("public-summary");
+  });
+}

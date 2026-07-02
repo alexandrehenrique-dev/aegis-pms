@@ -131,7 +131,7 @@ class SubmissionServiceTest {
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID))
                 .thenReturn(form(true, uploadFieldsJson(List.of("application/pdf"))));
         when(assetReferenceService.getRequiredReference(ASSET_ID))
-                .thenReturn(new AssetReference(ASSET_ID, PRODUCT_ID, "application/pdf"));
+                .thenReturn(new AssetReference(ASSET_ID, PRODUCT_ID, "application/pdf", "document"));
         when(submissionRepository.save(any(Submission.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(submissionMapper.toDetail(any(), any())).thenReturn(new SubmissionDetail(null, FORM_ID, null, "Ana",
                 "ana@example.com", "site", "new", "—", null, Map.of("Curriculo", ASSET_ID.toString()), null));
@@ -298,7 +298,7 @@ class SubmissionServiceTest {
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID))
                 .thenReturn(form(true, uploadFieldsJson(List.of("application/pdf"))));
         when(assetReferenceService.getRequiredReference(ASSET_ID))
-                .thenReturn(new AssetReference(ASSET_ID, OTHER_PRODUCT_ID, "application/pdf"));
+                .thenReturn(new AssetReference(ASSET_ID, OTHER_PRODUCT_ID, "application/pdf", "document"));
         SubmitFormCommand command = command(Map.of("Curriculo", ASSET_ID.toString()));
 
         assertThatThrownBy(() -> service.submit(PRODUCT_ID, FORM_ID, command))
@@ -311,7 +311,7 @@ class SubmissionServiceTest {
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID))
                 .thenReturn(form(true, uploadFieldsJson(List.of("application/pdf"))));
         when(assetReferenceService.getRequiredReference(ASSET_ID))
-                .thenReturn(new AssetReference(ASSET_ID, PRODUCT_ID, "image/png"));
+                .thenReturn(new AssetReference(ASSET_ID, PRODUCT_ID, "image/png", "image"));
         SubmitFormCommand command = command(Map.of("Curriculo", ASSET_ID.toString()));
 
         assertThatThrownBy(() -> service.submit(PRODUCT_ID, FORM_ID, command))

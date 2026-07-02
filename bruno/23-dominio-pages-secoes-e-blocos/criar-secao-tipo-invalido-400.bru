@@ -1,0 +1,32 @@
+meta {
+  name: Criar secao com type invalido - 400
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}/sections
+  body: json
+}
+
+body:json {
+  {
+    "type": "carousel-3d",
+    "order": 1,
+    "content": {}
+  }
+}
+
+docs {
+Objetivo: confirmar catalogo fechado de BlockType (curl da Secao "Validacao" da Sprint 23) — inclui o caso de footer/navbar, removidos do catalogo em favor de ProductGlobals.
+Resultado esperado: 400 UNKNOWN_BLOCK_TYPE.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("erro UNKNOWN_BLOCK_TYPE", function() {
+    expect(res.body.error).to.equal("UNKNOWN_BLOCK_TYPE");
+  });
+}

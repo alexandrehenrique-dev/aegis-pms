@@ -1,0 +1,21 @@
+meta {
+  name: Excluir pagina (cascata remove as secoes)
+  type: http
+  seq: 38
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages/{{pageId}}
+  body: none
+}
+
+docs {
+Objetivo: excluir a pagina "home" — as secoes remanescentes sao removidas em cascata (Secao E da Sprint 23; FK ON DELETE CASCADE na migration V12).
+Resultado esperado: 204.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

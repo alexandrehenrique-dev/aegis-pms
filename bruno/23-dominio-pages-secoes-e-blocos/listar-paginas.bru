@@ -1,0 +1,24 @@
+meta {
+  name: Listar paginas do produto
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/pages
+  body: none
+}
+
+docs {
+Objetivo: listar as paginas do produto.
+Resultado esperado: 200, array com a pagina "home".
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("pagina home presente", function() {
+    expect(res.body.some(function(page) { return page.slug === "home"; })).to.equal(true);
+  });
+}
