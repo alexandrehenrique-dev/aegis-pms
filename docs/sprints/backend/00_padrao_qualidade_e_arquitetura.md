@@ -15,6 +15,17 @@
 - **Namespace**: tudo é `jakarta.*` — nunca `javax.*` (isso já valia antes, mas o GPT às vezes regride para `javax.*` em exemplos antigos; rejeitar se acontecer).
 - Antes de aceitar qualquer código gerado, perguntar: "isso usa alguma API removida/alterada entre Spring Boot 3.x e 4.x?" — se a resposta não for claramente não, pedir para o GPT confirmar contra a documentação oficial do Spring Boot 4.1 antes de aplicar.
 
+## 1.1 OpenAPI/Swagger por profile
+
+Swagger/OpenAPI é configuração de ambiente e precisa ser testado como tal:
+
+- Swagger fica habilitado somente em `local` e `dev`; `prod` deve manter `springdoc.api-docs.enabled=false` e `springdoc.swagger-ui.enabled=false`.
+- A configuração OpenAPI deve preservar Bearer JWT na UI e a ordem canônica das tags.
+- Nomes de tags repetidos devem ser constantes semânticas (`TAG_PRODUCTS`, `TAG_AUTH`, etc.), nunca literais espalhados em listas, mapas e testes.
+- A lista fixa de tags deve ser centralizada em método/constante única, reutilizada pelos testes para validar ordem sem duplicar o catálogo.
+- Não usar ternários ou condicionais que retornem o mesmo valor nos dois ramos (`java:S3923`); remover a condição ou tornar a diferença real e testada.
+- Sempre que ativação/desativação de OpenAPI depender de profile, criar teste cobrindo criação dos beans nos profiles permitidos, ausência no profile bloqueado e propriedades `springdoc` dos resources de ambiente.
+
 ## 2. Estrutura por camada — nomes e responsabilidade fixos
 
 Todo domínio (`tenant`, `product`, `content`, `asset`, `form`, etc.) segue exatamente esta forma, sem variação de nome entre domínios:

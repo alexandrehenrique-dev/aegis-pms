@@ -1,0 +1,75 @@
+meta {
+  name: OpenAPI JSON completo
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v3/api-docs
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization:
+}
+
+docs {
+Objetivo: validar a especificacao OpenAPI gerada em local/dev: metadata, servidor local, Bearer JWT, tags na ordem canonica e operacoes documentadas.
+Resultado esperado: 200 JSON com todos os endpoints administrativos documentados.
+}
+
+tests {
+  const expectedTags = [
+    "System",
+    "Auth",
+    "Tenants",
+    "Products",
+    "Product Modules",
+    "Product Assignments",
+    "Knowledge Graph",
+    "Content",
+    "Pages",
+    "Assets",
+    "Forms",
+    "Submissions",
+    "Analytics",
+    "Users",
+    "Audit",
+    "Settings",
+    "Dashboard"
+  ];
+
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("metadata principal", function() {
+    expect(res.body.info.title).to.equal("Aegis PMS API");
+    expect(res.body.info.version).to.equal("v1");
+    expect(res.body.servers[0].url).to.equal("http://localhost:8080");
+  });
+
+  test("security scheme bearer jwt", function() {
+    const scheme = res.body.components.securitySchemes["bearer-jwt"];
+    expect(scheme.type).to.equal("http");
+    expect(scheme.scheme).to.equal("bearer");
+    expect(scheme.bearerFormat).to.equal("JWT");
+  });
+
+  test("tags na ordem canonica", function() {
+    expect(res.body.tags.map((tag) => tag.name)).to.deep.equal(expectedTags);
+  });
+
+  test("nenhuma operacao sem summary description ou responses", function() {
+    const missing = [];
+    Object.entries(res.body.paths).forEach(([path, methods]) => {
+      Object.entries(methods).forEach(([method, operation]) => {
+        if (!operation.summary || !operation.description || !operation.responses) {
+          missing.push(`${method.toUpperCase()} ${path}`);
+        }
+      });
+    });
+    expect(missing).to.deep.equal([]);
+  });
+}
