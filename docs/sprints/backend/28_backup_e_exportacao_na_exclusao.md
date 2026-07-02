@@ -1,4 +1,4 @@
-# Etapa 27 — Backup e exportação de dados na exclusão de produto ou tenant
+# Etapa 28 — Backup e exportação de dados na exclusão de produto ou tenant
 
 > Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisitos: etapa 12 (domínio assets + `StorageProvider`), etapa 06 (SMTP + `KeycloakAdminClient`), etapa 10 (`DELETE /tenants/{tenantId}`), etapa 11 (content), etapa 22 (pages), etapa 13 (forms), etapa 18 (knowledge graph).
 
@@ -462,7 +462,7 @@ Uma auditoria do código identificou dois stubs marcados com `// TODO Sprint fut
 | `StubProductAssignmentEmailPort` | `src/main/java`, sem `@Component` — inativo em produção, mas polui o classpath | `FreemarkerProductAssignmentEmailPort` (`@Component`) — já ativo |
 | `StubProductAssignmentInvitePort` | `src/main/java`, sem `@Component` — inativo em produção | `KeycloakProductAssignmentInvitePort` (`@Component`) — já ativo |
 
-> `StubProductAssignmentNotificationPort` tem `@Component` e o TODO referencia **Sprint 24** explicitamente — esta classe está coberta e não entra neste cleanup.
+> `StubProductAssignmentNotificationPort` tem `@Component` e o TODO referencia **Sprint 25** explicitamente — esta classe está coberta e não entra neste cleanup.
 
 **Ação obrigatória nesta etapa:**
 

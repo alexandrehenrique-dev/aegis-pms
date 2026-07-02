@@ -1,0 +1,34 @@
+meta {
+  name: Login Loki
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{keycloakIssuer}}/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: {{clientId}}
+  username: {{username}}
+  password: {{password}}
+}
+
+docs {
+Objetivo: autenticar como usuario comum para validar /mine, pending-modal e acoes de leitura.
+Resultado esperado: 200 e token salvo em {{token}}.
+}
+
+script:post-response {
+  bru.setVar('token', res.body.access_token);
+  bru.setVar('refreshToken', res.body.refresh_token);
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

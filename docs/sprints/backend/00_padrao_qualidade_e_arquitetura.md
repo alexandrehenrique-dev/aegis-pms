@@ -198,7 +198,7 @@ Os 5 papéis, sempre nesta ordem de prioridade quando uma resolução precisar e
 
 `ProductModule.enabled` (etapa 07) não é só um dado consultável pela UI — é um **portão real** que os próprios endpoints de domínio verificam antes de processar qualquer requisição. Mecanismo: anotação `@RequireModule(ModuleKey.X)` no método do controller + `ModuleAccessAspect` (Spring AOP, implementado na etapa 07) que verifica `ProductModule.enabled=true` para o `productId` do path; se desabilitado, `403` com corpo `{"error": "MODULE_DISABLED", "moduleKey": "X"}` — vale até para `SUPER_ADMIN`.
 
-Domínios gateados por módulo (etapa → `@RequireModule`): `08`/`18` → `KNOWLEDGE_GRAPH`; `11` → `CONTENT`; `12` → `ASSETS`; `13` → `FORMS`; `14` → `ANALYTICS`; `22` → `PAGES`. Domínios **não** gateados (fundação, sempre disponíveis): `09` (health/status), `10` (tenants/ProductAssignment), `15` (users), `16` (audit), `17` (settings/dashboard), `24` (notification), `26` (feedback — reportar problema não depende de nenhum módulo do produto).
+Domínios gateados por módulo (etapa → `@RequireModule`): `08`/`18` → `KNOWLEDGE_GRAPH`; `11` → `CONTENT`; `12` → `ASSETS`; `13` → `FORMS`; `14` → `ANALYTICS`; `22` → `PAGES`. Domínios **não** gateados (fundação, sempre disponíveis): `09` (health/status), `10` (tenants/ProductAssignment), `15` (users), `16` (audit), `17` (settings/dashboard), `25` (notification), `27` (feedback — reportar problema não depende de nenhum módulo do produto).
 
 Toda etapa de domínio gateada por módulo adiciona, nos próprios critérios de aceite, o cenário "módulo desabilitado para o produto → 403 `MODULE_DISABLED`" como teste obrigatório de Rodada 4 (controller).
 
@@ -230,7 +230,7 @@ A pasta `00-auth` nunca precisa ser refeita nas etapas seguintes — só as past
 
 ## 10. Isolamento entre tenants e produtos — obrigatório em todo domínio, não só nos que já mencionam
 
-As etapas 07, 08, 10, 12 e 17 já aplicam a regra "recurso de outro tenant/produto retorna 404, nunca 403 (não revelar existência)" explicitamente. Uma auditoria de consistência encontrou que essa regra **não estava repetida** nas etapas 11 (content), 13 (forms), 14 (analytics), 15 (users), 16 (audit), 18 (Knowledge Graph extras), 22 (pages) e 24 (notification) — o que não significa que a regra não vale para elas; significa que ela precisa ser explícita em **toda** etapa, não só nas que já a mencionavam por acaso.
+As etapas 07, 08, 10, 12 e 17 já aplicam a regra "recurso de outro tenant/produto retorna 404, nunca 403 (não revelar existência)" explicitamente. Uma auditoria de consistência encontrou que essa regra **não estava repetida** nas etapas 11 (content), 13 (forms), 14 (analytics), 15 (users), 16 (audit), 18 (Knowledge Graph extras), 22 (pages) e 25 (notification) — o que não significa que a regra não vale para elas; significa que ela precisa ser explícita em **toda** etapa, não só nas que já a mencionavam por acaso.
 
 **Regra, válida para toda entidade que pertence a um tenant ou produto (direta ou transitivamente, ex.: uma seção pertence a uma página que pertence a um produto):**
 
@@ -247,7 +247,7 @@ As etapas 07, 08, 10, 12 e 17 já aplicam a regra "recurso de outro tenant/produ
    - `TENANT_ADMIN` com `TenantMembership` no tenant do produto → passa
    - `PRODUCT_MANAGER | EDITOR | VIEWER` com `ProductAssignment` → passa
    - Qualquer outro caso → 404
-6. Domínios de **infraestrutura** (health/status, tenants, users, settings, audit, notifications — etapas 09, 10, 15, 16, 17 e 24) **não** usam `ProductAccessResolver` — seguem apenas a regra geral dos itens 1-4 acima.
+6. Domínios de **infraestrutura** (health/status, tenants, users, settings, audit, notifications — etapas 09, 10, 15, 16, 17 e 25) **não** usam `ProductAccessResolver` — seguem apenas a regra geral dos itens 1-4 acima.
 7. `ProductAccessResolver` centraliza esta lógica. **Nunca duplicar** a lógica de acesso de conteúdo em cada Service — sempre delegar ao `ProductAccessResolver` e cobrir os 5 cenários (SUPER_ADMIN com/sem assignment, TENANT_ADMIN, PRODUCT_MANAGER, cross-tenant) nos testes da Rodada 3 da etapa de domínio correspondente.
 
 ## 12. Artefato de continuidade entre etapas: `SPRINT-RESULTADO.md`

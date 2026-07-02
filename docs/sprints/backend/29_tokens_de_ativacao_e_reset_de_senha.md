@@ -1,4 +1,4 @@
-# Etapa 28 — Tokens de ativação de convite e reset de senha via Aegis (sem redirecionar para o Keycloak)
+# Etapa 29 — Tokens de ativação de convite e reset de senha via Aegis (sem redirecionar para o Keycloak)
 
 > Pré-requisitos: etapa 06 (SMTP + `KeycloakAdminClient`), etapa 10 (`ProductAssignment`), etapa 15 (users).
 >

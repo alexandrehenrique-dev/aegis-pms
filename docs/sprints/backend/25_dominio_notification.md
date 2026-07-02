@@ -1,6 +1,6 @@
-# Etapa 24 — Domínio `notification` (onboarding + notificações direcionadas)
+# Etapa 25 — Domínio `notification` (onboarding + notificações direcionadas)
 
-> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 07 (Tenant/Product/Membership), 10 (ProductAssignment) e 15 (Users) concluídas — esta etapa precisa resolver "todos os usuários", "usuários de um tenant" e "usuários específicos" como destinatários. Etapa adicionada pela Sprint 14 do frontend (`docs/sprints/14_onboarding_real_e_sistema_de_notificacoes.md`), depois da fundação e dos domínios de produto já estarem todos especificados — por isso entra numerada depois da etapa 23 (checklist final), mesmo padrão já usado para a etapa 22 (`pages`, adicionada pela Sprint 11).
+> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 07 (Tenant/Product/Membership), 10 (ProductAssignment) e 15 (Users) concluídas — esta etapa precisa resolver "todos os usuários", "usuários de um tenant" e "usuários específicos" como destinatários. Etapa adicionada pela Sprint 14 do frontend (`docs/sprints/14_onboarding_real_e_sistema_de_notificacoes.md`), depois da fundação e dos domínios de produto já estarem todos especificados — por isso entra numerada depois da etapa 24 (OpenAPI/Swagger, testes e checklist final), mesmo padrão já usado para a etapa 23 (`pages`, adicionada pela Sprint 11).
 
 ## Contexto fixo
 

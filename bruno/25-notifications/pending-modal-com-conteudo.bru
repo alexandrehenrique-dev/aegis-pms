@@ -1,0 +1,26 @@
+meta {
+  name: Pending modal com conteudo
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notifications/mine/pending-modal
+  body: none
+}
+
+docs {
+Objetivo: usuario comum consulta a notificacao modal pendente mais antiga.
+Resultado esperado: 200 com notificationId da FEATURE criada para ALL.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("retorna notificacao modal", function() {
+    expect(res.body.id).to.equal(bru.getVar('notificationId'));
+    expect(res.body.presentationMode).to.equal('MODAL_ONCE');
+    expect(res.body.autoShown).to.equal(false);
+  });
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Pending modal 204
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notifications/mine/pending-modal
+  body: none
+}
+
+docs {
+Objetivo: confirmar que a FEATURE marcada como shown nao aparece novamente e BELL_ONLY nunca entra nesse endpoint.
+Resultado esperado: 204.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

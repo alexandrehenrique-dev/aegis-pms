@@ -139,7 +139,7 @@ A Sprint 10 fechou o fluxo backend de Super Admin para criar tenant, editar/excl
 - Remocao de ProductAssignment envia e-mail de revogacao, sem tocar em membership ou Keycloak.
 - MailHog e criterio de aceite no ambiente de desenvolvimento; envio para Gmail real nao e requisito de dev.
 - `loginTheme` do realm permanece `null` intencionalmente porque nao ha tema `login/`.
-- NotificationService nao foi criado em paralelo; o ponto segue isolado no `StubProductAssignmentNotificationPort` para Sprint 24.
+- NotificationService nao foi criado em paralelo; o ponto segue isolado no `StubProductAssignmentNotificationPort` para Sprint 25.
 
 ## Migrations e Persistencia
 
@@ -177,7 +177,7 @@ A Sprint 10 fechou o fluxo backend de Super Admin para criar tenant, editar/excl
 
 - `StubProductAssignmentInvitePort`: fallback/teste, nao bean ativo principal.
 - `StubProductAssignmentEmailPort`: fallback/teste, nao bean ativo principal.
-- `StubProductAssignmentNotificationPort`: TODO futuro da Sprint 24/NotificationService.
+- `StubProductAssignmentNotificationPort`: TODO futuro da Sprint 25/NotificationService.
 - Nao foi criado SMTP paralelo.
 - Nao foi criado NotificationService paralelo.
 
@@ -234,7 +234,7 @@ A Sprint 10 fechou o fluxo backend de Super Admin para criar tenant, editar/excl
 
 ## Retrofits Pendentes
 
-- Sprint 24: integrar `ProductAssignmentNotificationPort` ao NotificationService real.
+- Sprint 25: integrar `ProductAssignmentNotificationPort` ao NotificationService real.
 - Etapa 27: alterar exclusoes destrutivas para fluxo de backup/export assíncrono.
 - Etapa 28: substituir convites/reset por `AuthActionToken` e links Aegis no frontend.
 

@@ -4,6 +4,7 @@ import br.com.byop.aegis.audit.api.AuditRecordCommand;
 import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.identity.api.IdentityUserLifecycleService;
+import br.com.byop.aegis.notification.api.NotificationOnboardingService;
 import br.com.byop.aegis.product.api.ProductUserAccess;
 import br.com.byop.aegis.product.api.ProductUserAccessService;
 import br.com.byop.aegis.product.user.contract.InviteTenantUserRequest;
@@ -48,17 +49,20 @@ public class TenantUserService {
     private final ProductUserAccessService productUserAccessService;
     private final TenantUserMapper userMapper;
     private final AuditService auditService;
+    private final NotificationOnboardingService notificationOnboardingService;
 
     public TenantUserService(IdentityUserLifecycleService identityUserLifecycleService,
                              TenantUserAccessService tenantUserAccessService,
                              ProductUserAccessService productUserAccessService,
                              TenantUserMapper userMapper,
-                             AuditService auditService) {
+                             AuditService auditService,
+                             NotificationOnboardingService notificationOnboardingService) {
         this.identityUserLifecycleService = identityUserLifecycleService;
         this.tenantUserAccessService = tenantUserAccessService;
         this.productUserAccessService = productUserAccessService;
         this.userMapper = userMapper;
         this.auditService = auditService;
+        this.notificationOnboardingService = notificationOnboardingService;
     }
 
     @Transactional(readOnly = true)
@@ -89,6 +93,7 @@ public class TenantUserService {
 
         String role = parseRole(request.role());
         TenantMembershipReference membership = tenantUserAccessService.invite(tenantId, user.id(), role);
+        notificationOnboardingService.assignOnboarding(user.id());
         recordAudit(tenantId, caller.subject(), "USER_INVITED_TO_TENANT", user.id(), user.displayName(),
                 null, Map.of("role", role, DIFF_KEY_STATUS, STATUS_INVITED));
         return toSummary(membership, user);

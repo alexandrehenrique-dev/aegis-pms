@@ -6,6 +6,7 @@ import br.com.byop.aegis.knowledgegraph.api.GraphSeedEdgeCommand;
 import br.com.byop.aegis.knowledgegraph.api.GraphSeedNodeCommand;
 import br.com.byop.aegis.knowledgegraph.api.GraphSeedNodeReference;
 import br.com.byop.aegis.knowledgegraph.api.KnowledgeGraphSeedService;
+import br.com.byop.aegis.notification.api.NotificationOnboardingService;
 import br.com.byop.aegis.product.api.ModuleKey;
 import br.com.byop.aegis.product.api.ProductSeedCommand;
 import br.com.byop.aegis.product.api.ProductSeedReference;
@@ -75,15 +76,18 @@ public class DemoSeedService {
     private final TenantSeedService tenantSeedService;
     private final ProductSeedService productSeedService;
     private final KnowledgeGraphSeedService knowledgeGraphSeedService;
+    private final NotificationOnboardingService notificationOnboardingService;
     private final String localDemoUserInitialCredential;
 
     public DemoSeedService(IdentityDemoUserService identityDemoUserService, TenantSeedService tenantSeedService,
                            ProductSeedService productSeedService, KnowledgeGraphSeedService knowledgeGraphSeedService,
+                           NotificationOnboardingService notificationOnboardingService,
                            @Value("${aegis.seed.demo-user-initial-credential}") String localDemoUserInitialCredential) {
         this.identityDemoUserService = identityDemoUserService;
         this.tenantSeedService = tenantSeedService;
         this.productSeedService = productSeedService;
         this.knowledgeGraphSeedService = knowledgeGraphSeedService;
+        this.notificationOnboardingService = notificationOnboardingService;
         this.localDemoUserInitialCredential = localDemoUserInitialCredential;
     }
 
@@ -92,6 +96,7 @@ public class DemoSeedService {
         Map<String, TenantSeedReference> tenants = seedTenants();
         Map<String, ProductSeedReference> products = seedProducts(tenants);
         seedMemberships(users, tenants);
+        seedOnboarding(users);
         seedAssignments(users, products);
         seedKnowledgeGraph(products);
     }
@@ -194,6 +199,10 @@ public class DemoSeedService {
         ensureProductManagerAssignments(users.get(USER_PM_SLUG), products);
         productSeedService.ensureAssignment(products.get(PRODUCT_MAESTRO_BETON).id(), users.get(USER_EDITOR_SLUG).id(), ROLE_EDITOR);
         productSeedService.ensureAssignment(products.get(PRODUCT_MAESTRO_BETON).id(), users.get(USER_VIEWER_SLUG).id(), ROLE_VIEWER);
+    }
+
+    private void seedOnboarding(Map<String, IdentityUser> users) {
+        users.values().forEach(user -> notificationOnboardingService.assignOnboarding(user.id()));
     }
 
     private void ensureProductManagerAssignments(IdentityUser user, Map<String, ProductSeedReference> products) {

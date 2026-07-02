@@ -1,6 +1,6 @@
-# Etapa 26 — Domínio `feedback` (reportar problema)
+# Etapa 27 — Domínio `feedback` (reportar problema)
 
-> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 06 (Tenant/Product), 11 (`asset`, para o anexo) e 23 (`notification`, opcional — ver Seção E). Adicionada **depois** do checklist final (etapa 22) e das etapas 23/24, mesmo padrão já usado para elas.
+> Cole este arquivo inteiro numa conversa nova do GPT. Pré-requisito: etapas 06 (Tenant/Product), 11 (`asset`, para o anexo) e 25 (`notification`, opcional — ver Seção E). Adicionada **depois** do checklist final (etapa 24) e das etapas 25/26, mesmo padrão já usado para elas.
 
 ## Contexto fixo
 
@@ -55,11 +55,11 @@ type FeedbackSummary = {
 - `GET /feedback` (todos os tenants) é só `SUPER_ADMIN`; `GET /tenants/{tenantId}/feedback` aceita `SUPER_ADMIN` ou `TENANT_ADMIN` do próprio tenant — qualquer outro papel/tenant alheio recebe 403/404 conforme a regra de isolamento padrão (Seção 10 do padrão de qualidade).
 - `attachmentAssetId`, se informado, precisa existir e pertencer ao mesmo `tenantId` do feedback — mesma regra de isolamento já usada para qualquer referência de asset em outro domínio.
 - `id` legível (`AGS-####`) é gerado pelo backend na criação — sequencial ou aleatório de 4 dígitos (decisão de implementação, documentar a escolha); nunca o `UUID` interno é exposto como identificador principal na resposta de criação (mantém a expectativa visual que o frontend mock já criou).
-- **(Opcional, ver Seção E)** Ao criar um feedback com `priority: "crítica"`, considerar notificar o(s) `SUPER_ADMIN` via o domínio `notification` (etapa 23) — registrar como melhoria futura se não for feito nesta etapa, não bloquear a entrega por isso.
+- **(Opcional, ver Seção E)** Ao criar um feedback com `priority: "crítica"`, considerar notificar o(s) `SUPER_ADMIN` via o domínio `notification` (etapa 25) — registrar como melhoria futura se não for feito nesta etapa, não bloquear a entrega por isso.
 
-### E. Integração opcional com `notification` (etapa 23)
+### E. Integração opcional com `notification` (etapa 25)
 
-Se a etapa 23 já estiver implementada: ao criar um `Feedback` com `priority: "crítica"`, chamar `NotificationService.create(...)` com `target: { type: "USERS", userIds: [...super admins...] }` (resolver a lista de Super Admins via `TenantMembership`), `type: "WARNING"`, `presentationMode: "BELL_ONLY"`. Se a etapa 23 ainda não existir quando esta etapa for executada, pular esta seção — é um retrofit a fazer depois, não bloqueia a entrega do domínio `feedback`.
+Se a etapa 25 já estiver implementada: ao criar um `Feedback` com `priority: "crítica"`, chamar `NotificationService.create(...)` com `target: { type: "USERS", userIds: [...super admins...] }` (resolver a lista de Super Admins via `TenantMembership`), `type: "WARNING"`, `presentationMode: "BELL_ONLY"`. Se a etapa 25 ainda não existir quando esta etapa for executada, pular esta seção — é um retrofit a fazer depois, não bloqueia a entrega do domínio `feedback`.
 
 ## Critérios de aceite
 

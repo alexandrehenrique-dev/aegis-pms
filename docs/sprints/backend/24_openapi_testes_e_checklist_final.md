@@ -98,4 +98,4 @@ git commit -m "feat(backend): swagger, testes minimos, 100% cobertura jacoco e c
 
 ## Ao terminar esta etapa
 
-Volte para `00_indice_e_instrucoes.md` e siga os passos finais de `git push`/merge da branch `sprint/02-fundacao-backend` em `develop`. A partir daqui, a Sprint 24 em diante volta a ser executada com Claude/Cowork (ver `docs/sprints/README.md` para a ordem recomendada).
+Volte para `00_indice_e_instrucoes.md` e siga os passos finais de `git push`/merge da branch `sprint/02-fundacao-backend` em `develop`. A partir daqui, a Sprint 25 em diante volta a ser executada com Claude/Cowork (ver `docs/sprints/README.md` para a ordem recomendada).

@@ -1,0 +1,39 @@
+meta {
+  name: Criar BELL_ONLY
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notifications
+  body: json
+}
+
+body:json {
+  {
+    "type": "GENERAL",
+    "title": "Aviso no sino",
+    "bodyMarkdown": "<p>Esta notificação não deve aparecer como modal.</p>",
+    "presentationMode": "BELL_ONLY",
+    "target": { "type": "ALL" }
+  }
+}
+
+docs {
+Objetivo: criar notificacao BELL_ONLY para confirmar que ela aparece no historico, mas nao em pending-modal.
+Resultado esperado: 201.
+Variaveis produzidas: bellNotificationId.
+}
+
+script:post-response {
+  bru.setVar('bellNotificationId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("modo bell only", function() {
+    expect(res.body.presentationMode).to.equal('BELL_ONLY');
+  });
+}

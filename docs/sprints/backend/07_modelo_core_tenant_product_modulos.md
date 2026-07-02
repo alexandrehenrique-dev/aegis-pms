@@ -111,7 +111,7 @@ Habilitar/desabilitar módulo (Seção C) não pode ficar só decorativo — as 
 
 Este mecanismo vale até para `SUPER_ADMIN` — módulo desabilitado bloqueia todo papel, sem exceção (para usar a funcionalidade, primeiro habilita o módulo via `enable`).
 
-As etapas 07/17 (`KNOWLEDGE_GRAPH`), 10 (`CONTENT`), 11 (`ASSETS`), 12 (`FORMS`), 13 (`ANALYTICS`) e 21 (`PAGES`) anotam seus próprios controllers com `@RequireModule(ModuleKey.X)` reaproveitando esta implementação — não recriam o mecanismo. Domínios de fundação (09 tenants/ProductAssignment, 14 users, 15 audit, 16 settings/dashboard, 23 notification) **não** usam `@RequireModule` — não são módulos que um tenant liga/desliga.
+As etapas 07/17 (`KNOWLEDGE_GRAPH`), 10 (`CONTENT`), 11 (`ASSETS`), 12 (`FORMS`), 13 (`ANALYTICS`) e 21 (`PAGES`) anotam seus próprios controllers com `@RequireModule(ModuleKey.X)` reaproveitando esta implementação — não recriam o mecanismo. Domínios de fundação (09 tenants/ProductAssignment, 14 users, 15 audit, 16 settings/dashboard, 25 notification) **não** usam `@RequireModule` — não são módulos que um tenant liga/desliga.
 
 ### F. Padrão de qualidade e entrega (obrigatório)
 

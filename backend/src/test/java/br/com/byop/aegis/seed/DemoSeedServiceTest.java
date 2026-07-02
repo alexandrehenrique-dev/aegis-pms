@@ -4,6 +4,7 @@ import br.com.byop.aegis.identity.api.IdentityDemoUserService;
 import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.knowledgegraph.api.GraphSeedNodeReference;
 import br.com.byop.aegis.knowledgegraph.api.KnowledgeGraphSeedService;
+import br.com.byop.aegis.notification.api.NotificationOnboardingService;
 import br.com.byop.aegis.product.api.ProductSeedReference;
 import br.com.byop.aegis.product.api.ProductSeedService;
 import br.com.byop.aegis.tenant.api.TenantSeedReference;
@@ -19,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,11 +41,12 @@ class DemoSeedServiceTest {
         TenantSeedService tenants = mock(TenantSeedService.class);
         ProductSeedService products = mock(ProductSeedService.class);
         KnowledgeGraphSeedService graph = mock(KnowledgeGraphSeedService.class);
+        NotificationOnboardingService onboarding = mock(NotificationOnboardingService.class);
         stubUsers(identity);
         stubTenants(tenants);
         stubProducts(products);
         stubGraphNodes(graph);
-        DemoSeedService service = new DemoSeedService(identity, tenants, products, graph,
+        DemoSeedService service = new DemoSeedService(identity, tenants, products, graph, onboarding,
                 LOCAL_DEMO_USER_INITIAL_CREDENTIAL);
 
         service.seed();
@@ -54,6 +57,7 @@ class DemoSeedServiceTest {
         verify(products, atLeast(15)).ensureAssignment(any(UUID.class), anyString(), anyString());
         verify(graph, atLeast(9)).ensureNode(any());
         verify(graph, atLeast(7)).ensureEdge(any());
+        verify(onboarding, times(5)).assignOnboarding(anyString());
     }
 
     private void stubUsers(IdentityDemoUserService identity) {

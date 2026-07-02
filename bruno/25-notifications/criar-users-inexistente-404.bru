@@ -1,0 +1,37 @@
+meta {
+  name: Criar USERS inexistente rejeitado
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/notifications
+  body: json
+}
+
+body:json {
+  {
+    "type": "GENERAL",
+    "title": "Usuario inexistente",
+    "bodyMarkdown": "Nao deve persistir fan-out parcial.",
+    "presentationMode": "BELL_ONLY",
+    "target": {
+      "type": "USERS",
+      "userIds": ["usuario-inexistente-sprint-25"]
+    }
+  }
+}
+
+docs {
+Objetivo: validar que target USERS com subject inexistente e rejeitado antes de criar status.
+Resultado esperado: 404 NOTIFICATION_TARGET_USER_NOT_FOUND.
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+  test("erro esperado", function() {
+    expect(res.body.error).to.equal('NOTIFICATION_TARGET_USER_NOT_FOUND');
+  });
+}

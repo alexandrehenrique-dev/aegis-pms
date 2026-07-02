@@ -63,6 +63,17 @@ public class TenantUserAccessService {
     }
 
     @Transactional(readOnly = true)
+    public List<String> listActiveUserSubjects() {
+        return membershipRepository.findDistinctUserSubjectsByStatus(TenantMembershipStatus.ACTIVE);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> listActiveUserSubjects(UUID tenantId) {
+        ensureTenantExists(tenantId);
+        return membershipRepository.findDistinctUserSubjectsByTenantIdAndStatus(tenantId, TenantMembershipStatus.ACTIVE);
+    }
+
+    @Transactional(readOnly = true)
     public boolean hasOtherActiveMembership(String userSubject, UUID ignoredTenantId) {
         return membershipRepository.findAllByUserSubjectAndStatus(userSubject, TenantMembershipStatus.ACTIVE)
                 .stream()
