@@ -89,6 +89,22 @@ public class Product {
         this.status = ProductStatus.ARCHIVED;
     }
 
+    public void markDeleting() {
+        this.status = ProductStatus.DELETING;
+    }
+
+    public void markDeleted() {
+        this.status = ProductStatus.DELETED;
+    }
+
+    public void markExportFailed() {
+        this.status = ProductStatus.EXPORT_FAILED;
+    }
+
+    public void markDeleteFailed() {
+        this.status = ProductStatus.DELETE_FAILED;
+    }
+
     @PrePersist
     void prePersist() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);

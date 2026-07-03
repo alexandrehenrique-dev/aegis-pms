@@ -9,6 +9,7 @@ import br.com.byop.aegis.tenant.exception.InvalidTenantConfirmationException;
 import br.com.byop.aegis.tenant.exception.TenantAlreadyExistsException;
 import br.com.byop.aegis.tenant.exception.TenantExceptionHandler;
 import br.com.byop.aegis.tenant.exception.TenantNotFoundException;
+import br.com.byop.aegis.tenant.dto.TenantDeleteAcceptedResponse;
 import br.com.byop.aegis.tenant.service.TenantService;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -152,6 +153,8 @@ class TenantControllerTest {
         AuthenticatedUser caller = user();
         UUID tenantId = UUID.fromString("12121212-1212-1212-1212-121212121212");
         when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(tenantService.deleteTenant(any(AuthenticatedUser.class), any(UUID.class), any()))
+                .thenReturn(new TenantDeleteAcceptedResponse("Exportação iniciada."));
 
         mockMvc.perform(delete("/api/v1/tenants/{tenantId}", tenantId)
                         .with(jwt())
@@ -161,7 +164,8 @@ class TenantControllerTest {
                                   "confirmationText": "BYOP"
                                 }
                                 """))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.message").value("Exportação iniciada."));
     }
 
     @Test

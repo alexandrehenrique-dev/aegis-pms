@@ -6,5 +6,9 @@ package br.com.byop.aegis.product.domain;
 public enum ProductStatus {
     ACTIVE,
     SUSPENDED,
-    ARCHIVED
+    ARCHIVED,
+    DELETING,
+    DELETED,
+    EXPORT_FAILED,
+    DELETE_FAILED
 }

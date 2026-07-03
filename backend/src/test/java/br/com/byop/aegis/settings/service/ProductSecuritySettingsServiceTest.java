@@ -74,6 +74,21 @@ class ProductSecuritySettingsServiceTest {
     }
 
     @Test
+    void shouldCreateSettingsWhenUpdatingForTheFirstTime() {
+        AuthenticatedUser caller = user("ROLE_TENANT_ADMIN");
+        when(productVisibilityService.listVisibleProducts(caller)).thenReturn(List.of(scope()));
+        when(repository.findById(PRODUCT_ID)).thenReturn(Optional.empty());
+        when(repository.save(any(ProductSecuritySettings.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ProductSecuritySettingsResponse response = service().updateSecuritySettings(caller, PRODUCT_ID,
+                new UpdateProductSecuritySettingsRequest("https://example.com/hook", "secret",
+                        true, "ga-key", true));
+
+        assertThat(response.webhookStatus()).isEqualTo("connected");
+        verify(repository).save(any(ProductSecuritySettings.class));
+    }
+
+    @Test
     void shouldRejectProductManagerWithForbidden() {
         AuthenticatedUser caller = user("ROLE_PRODUCT_MANAGER");
         ProductSecuritySettingsService settingsService = service();

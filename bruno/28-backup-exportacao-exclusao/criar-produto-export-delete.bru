@@ -1,0 +1,38 @@
+meta {
+  name: Criar produto para export/delete
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+}
+
+body:json {
+  {
+    "tenantId": "{{exportDeleteTenantId}}",
+    "key": "export-delete-product-{{graphRefSeed}}",
+    "name": "Export Delete Product",
+    "type": "Custom",
+    "defaultLocale": "pt-BR"
+  }
+}
+
+script:post-response {
+  bru.setVar('exportDeleteProductId', res.body.id);
+}
+
+docs {
+Objetivo: criar produto descartavel para a validacao de DELETE /products/{productId}.
+Resultado esperado: 201 e variavel exportDeleteProductId preenchida.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("product id presente", function() {
+    expect(bru.getVar('exportDeleteProductId')).to.be.a('string');
+  });
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Excluir produto - confirmationText errado
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/products/{{exportDeleteProductId}}
+  body: json
+}
+
+body:json {
+  {
+    "confirmationText": "nome-errado-de-proposito"
+  }
+}
+
+docs {
+Objetivo: confirmationText diferente do nome do produto deve impedir qualquer exclusao/exportacao.
+Resultado esperado: 400.
+}
+
+tests {
+  test("status 400", function() {
+    expect(res.status).to.equal(400);
+  });
+}

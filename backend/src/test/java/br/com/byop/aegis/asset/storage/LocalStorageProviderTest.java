@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedStatic;
 
+import java.io.InputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -190,11 +191,22 @@ class LocalStorageProviderTest {
     }
 
     @Test
+    void shouldWrapIOExceptionWhenOpeningStream() {
+        LocalStorageProvider provider = newProvider();
+        try (MockedStatic<Files> mocked = mockStatic(Files.class, CALLS_REAL_METHODS)) {
+            mocked.when(() -> Files.newInputStream(any(Path.class))).thenThrow(new IOException("disk error"));
+
+            assertThatThrownBy(() -> provider.openStream("aegis/pms/x/y/image/foto.png"))
+                    .isInstanceOf(AssetStorageException.class);
+        }
+    }
+
+    @Test
     void shouldWrapIOExceptionWhenLoadingContent() {
         LocalStorageProvider provider = newProvider();
         String storageKey = provider.store(TENANT_ID, PRODUCT_ID, AssetCategory.IMAGE, "foto.png", "x".getBytes(StandardCharsets.UTF_8));
         try (MockedStatic<Files> mocked = mockStatic(Files.class, CALLS_REAL_METHODS)) {
-            mocked.when(() -> Files.readAllBytes(any(Path.class))).thenThrow(new IOException("disk error"));
+            mocked.when(() -> Files.newInputStream(any(Path.class))).thenReturn(new FailingInputStream());
 
             assertThatThrownBy(() -> provider.loadContent(storageKey))
                     .isInstanceOf(AssetStorageException.class);
@@ -203,5 +215,13 @@ class LocalStorageProviderTest {
 
     private LocalStorageProvider newProvider() {
         return new LocalStorageProvider(tempDir.toString());
+    }
+
+    private static final class FailingInputStream extends InputStream {
+
+        @Override
+        public int read() throws IOException {
+            throw new IOException("disk error");
+        }
     }
 }

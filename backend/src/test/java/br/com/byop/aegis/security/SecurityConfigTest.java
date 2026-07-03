@@ -76,6 +76,13 @@ class SecurityConfigTest {
                             .content("{}"))
                     .andExpect(status().isNotFound());
         }
+
+        @Test
+        void shouldAllowExportDownloadWithoutBearerToken() throws Exception {
+
+            mockMvc.perform(get("/api/v1/exports/11111111-1111-1111-1111-111111111111/download"))
+                    .andExpect(status().isNotFound());
+        }
     }
 
     @Nested

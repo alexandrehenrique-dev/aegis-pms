@@ -49,6 +49,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/exports/*/download").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/*/forms/*/submit").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         // ADR-0009: a SPA é servida pelo próprio Spring Boot na mesma origem —

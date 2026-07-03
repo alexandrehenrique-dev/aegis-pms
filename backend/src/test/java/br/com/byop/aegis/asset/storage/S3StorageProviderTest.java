@@ -8,9 +8,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
@@ -19,6 +23,7 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -165,6 +170,22 @@ class S3StorageProviderTest {
         verify(s3Client, never()).putObject(any(Consumer.class), any(RequestBody.class));
     }
 
+    @Test
+    void shouldOpenObjectStreamByKey() {
+        ResponseInputStream<GetObjectResponse> response = new ResponseInputStream<>(
+                GetObjectResponse.builder().build(),
+                AbortableInputStream.create(InputStream.nullInputStream())
+        );
+        when(s3Client.getObject(any(Consumer.class))).thenReturn(response);
+
+        InputStream stream = provider().openStream("aegis/pms/x/y/image/foto.png");
+
+        GetObjectRequest built = capturedGetObjectRequest();
+        assertThat(stream).isSameAs(response);
+        assertThat(built.bucket()).isEqualTo("aegis-bucket");
+        assertThat(built.key()).isEqualTo("aegis/pms/x/y/image/foto.png");
+    }
+
     private PutObjectRequest capturedPutObjectRequest() {
         ArgumentCaptor<Consumer<PutObjectRequest.Builder>> captor = ArgumentCaptor.captor();
         verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
@@ -177,6 +198,14 @@ class S3StorageProviderTest {
         ArgumentCaptor<Consumer<DeleteObjectRequest.Builder>> captor = ArgumentCaptor.captor();
         verify(s3Client).deleteObject(captor.capture());
         DeleteObjectRequest.Builder builder = DeleteObjectRequest.builder();
+        captor.getValue().accept(builder);
+        return builder.build();
+    }
+
+    private GetObjectRequest capturedGetObjectRequest() {
+        ArgumentCaptor<Consumer<GetObjectRequest.Builder>> captor = ArgumentCaptor.captor();
+        verify(s3Client).getObject(captor.capture());
+        GetObjectRequest.Builder builder = GetObjectRequest.builder();
         captor.getValue().accept(builder);
         return builder.build();
     }
