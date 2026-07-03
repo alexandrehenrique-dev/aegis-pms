@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { authActivationService } from "../services/authActivationService";
 import { AuthCard, AuthEnvBadge, AuthLogo } from "../components/AuthChrome";
+import type { ApiError } from "../../../shared/services/apiClient";
 
 export function ForgotPasswordScreen() {
   const navigate = useNavigate();
@@ -15,11 +17,18 @@ export function ForgotPasswordScreen() {
     setError("");
     if (!email.includes("@")) { setError("E-mail inválido. Verifique e tente novamente."); return; }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setAttempts((a) => a + 1);
-      navigate("/forgot-password/sent", { state: { email } });
-    }, 800);
+    authActivationService
+      .requestPasswordReset(email)
+      .then(() => {
+        setAttempts((a) => a + 1);
+        navigate("/forgot-password/sent", { state: { email } });
+      })
+      .catch((err: ApiError) => {
+        if (err.status === 429) { setError("rate_limit"); return; }
+        // Não revelar se o e-mail existe ou não — navegar para /sent mesmo em erro.
+        navigate("/forgot-password/sent", { state: { email } });
+      })
+      .finally(() => setLoading(false));
   };
 
   return (

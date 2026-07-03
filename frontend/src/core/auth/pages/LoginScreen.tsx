@@ -1,21 +1,31 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../useAuth";
 import { mockUsers, mockTenantsByUser, mockProductsByUser } from "../mocks/users";
 import { AuthCard, AuthEnvBadge, AuthLogo } from "../components/AuthChrome";
 import { getApiMode } from "../../config/keycloakConfig";
+import { toast } from "../../notifications/toast";
 import type { LoginError } from "../../../shared/types";
 
 export function LoginScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<LoginError>("");
+
+  useEffect(() => {
+    const toastMessage = (location.state as { toast?: string } | null)?.toast;
+    if (toastMessage) {
+      toast.success(toastMessage);
+      window.history.replaceState({}, "", location.pathname);
+    }
+  }, [location.state, location.pathname]);
 
   const handleLogin = () => {
     setError("");

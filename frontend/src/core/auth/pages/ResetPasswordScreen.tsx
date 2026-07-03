@@ -1,28 +1,37 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { motion } from "motion/react";
-import { CheckCircle2, Loader2 } from "lucide-react";
-import { AuthCard, AuthEnvBadge, AuthLogo, PasswordStrengthBar, getPasswordStrength } from "../components/AuthChrome";
+import { useNavigate, useSearchParams } from "react-router";
+import { Loader2 } from "lucide-react";
+import { authActionErrorCode, authActivationService } from "../services/authActivationService";
+import { AuthCard, AuthEnvBadge, AuthLogo, PasswordStrengthBar } from "../components/AuthChrome";
+import { getPasswordStrength } from "../passwordStrength";
 
 export function ResetPasswordScreen() {
   const navigate = useNavigate();
-  const [tokenState, setTokenState] = useState<"valid" | "invalid" | "expired">("valid");
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+
+  const [tokenState, setTokenState] = useState<"valid" | "invalid" | "expired">(token ? "valid" : "invalid");
   const [pwd, setPwd] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   const handleReset = () => {
+    if (!token) return;
     setError("");
     if (pwd !== confirm) { setError("As senhas não coincidem. Verifique e tente novamente."); return; }
     if (getPasswordStrength(pwd) === "fraca") { setError("Senha muito fraca. Use ao menos 8 caracteres com números."); return; }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSuccess(true);
-      setTimeout(() => navigate("/login"), 1500);
-    }, 800);
+    authActivationService
+      .confirmPasswordReset(token, pwd)
+      .then(() => navigate("/login", { state: { toast: "Senha redefinida! Faça login para continuar." } }))
+      .catch((err) => {
+        const code = authActionErrorCode(err);
+        if (code === "TOKEN_EXPIRED") setTokenState("expired");
+        else if (code === "WEAK_PASSWORD") setError("Senha fraca. Use ao menos 8 caracteres, letras e números.");
+        else setTokenState("invalid");
+      })
+      .finally(() => setLoading(false));
   };
 
   return (
@@ -35,12 +44,6 @@ export function ResetPasswordScreen() {
             <div className="rounded-lg border border-destructive/20 bg-[#FDEBE8] p-4 text-sm text-destructive">{tokenState === "expired" ? "Link expirado. Solicite um novo link de recuperação." : "Link inválido. Verifique o e-mail recebido."}</div>
             <button onClick={() => navigate("/forgot-password")} className="mt-4 flex w-full items-center justify-center rounded-lg bg-primary py-2.5 text-sm text-primary-foreground transition hover:bg-primary/90">Solicitar novo link</button>
           </>
-        ) : success ? (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-[#ede9fe]"><CheckCircle2 size={24} className="text-primary" /></div>
-            <h2 className="font-semibold">Senha redefinida com sucesso!</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Redirecionando para o login...</p>
-          </motion.div>
         ) : (
           <>
             <h1 className="mb-1 text-xl font-semibold tracking-[-.02em]">Definir nova senha</h1>
@@ -62,11 +65,6 @@ export function ResetPasswordScreen() {
             </div>
           </>
         )}
-        <div className="mt-4 flex gap-1.5 text-xs">
-          <button onClick={() => setTokenState("valid")} className="flex-1 rounded-lg border border-border bg-muted p-1 text-muted-foreground">válido</button>
-          <button onClick={() => setTokenState("expired")} className="flex-1 rounded-lg border border-border bg-muted p-1 text-muted-foreground">expirado</button>
-          <button onClick={() => setTokenState("invalid")} className="flex-1 rounded-lg border border-border bg-muted p-1 text-muted-foreground">inválido</button>
-        </div>
       </AuthCard>
     </div>
   );
