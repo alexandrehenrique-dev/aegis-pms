@@ -608,6 +608,131 @@ telegramFeedbackNotifier.notify(savedFeedback);
 - Verificar que uma exceção do `RestClient` **não propaga** para o caller (feedback ainda salvo).
 - Verificar que `notify` é no-op quando `productId` é nulo ou settings não tem token configurado.
 
+### D.5 — Swagger UI dando 401 em todas as requisições após "Authorize"
+
+**Causa raiz:** `OpenApiConfig` usa `SecurityScheme.Type.HTTP` com `scheme("bearer")` — isso gera apenas um campo de texto no Swagger UI onde o usuário precisa colar um JWT manualmente. Não existe nenhum fluxo OAuth2 configurado, então quando o usuário clica em "Authorize", o Swagger não sabe como obter um token do Keycloak — e consequentemente não inclui o header `Authorization` nas requisições.
+
+Problema secundário: `SecurityConfig.cors` só libera `http://localhost:5173`. Embora o Swagger UI esteja na mesma origem da API (`http://localhost:8080`), o fluxo OAuth2 Authorization Code requer que o redirect de volta ao Swagger (`/swagger-ui/oauth2-redirect.html`) esteja registrado no Keycloak — e que o cliente Keycloak tenha `Web Origins` incluindo `http://localhost:8080`.
+
+**D.5.1 — `OpenApiConfig.java`: adicionar OAuth2 Authorization Code + PKCE**
+
+Injetar a URL do issuer e adicionar o scheme OAuth2 ao lado do Bearer existente (mantém retrocompatibilidade com Bruno/curl que usam o Bearer manual):
+
+```java
+// Adicionar injeção no topo da classe:
+@Value("${keycloak.issuer-uri}")
+private String keycloakIssuerUri;
+```
+
+No bean `aegisOpenApi()`, adicionar o scheme OAuth2 **antes** do `bearerJwt` existente:
+
+```java
+SecurityScheme oauth2Pkce = new SecurityScheme()
+    .name("oauth2-pkce")
+    .type(SecurityScheme.Type.OAUTH2)
+    .description("Login via Keycloak — clique em Authorize, autentique e o token será injetado automaticamente.")
+    .flows(new OAuthFlows()
+        .authorizationCode(new OAuthFlow()
+            .authorizationUrl(keycloakIssuerUri + "/protocol/openid-connect/auth")
+            .tokenUrl(keycloakIssuerUri + "/protocol/openid-connect/token")
+            .scopes(new Scopes()
+                .addString("openid",  "OpenID Connect")
+                .addString("profile", "Nome e dados básicos do usuário")
+                .addString("email",   "E-mail do usuário")
+            )
+        )
+    );
+```
+
+Registrar ambos os schemes e aplicar ambos como `SecurityRequirement` global:
+
+```java
+return new OpenAPI()
+    .info(/* ... igual ao atual ... */)
+    .servers(/* ... igual ao atual ... */)
+    .components(new Components()
+        .addSecuritySchemes("oauth2-pkce",    oauth2Pkce)    // ← NOVO
+        .addSecuritySchemes(BEARER_AUTH_SCHEME, bearerJwt))  // ← já existia
+    .security(List.of(
+        new SecurityRequirement().addList("oauth2-pkce", List.of("openid", "profile", "email")),
+        new SecurityRequirement().addList(BEARER_AUTH_SCHEME)
+    ))
+    .tags(orderedTags());
+```
+
+No `documentedOperations()`, atualizar `requiresBearerToken` → adicionar ambos quando proteção é necessária:
+
+```java
+if (requiresBearerToken(path, tag)) {
+    operation.addSecurityItem(new SecurityRequirement()
+        .addList("oauth2-pkce", List.of("openid", "profile", "email")));
+    operation.addSecurityItem(new SecurityRequirement()
+        .addList(BEARER_AUTH_SCHEME));
+} else {
+    operation.setSecurity(List.of());
+}
+```
+
+Imports adicionais necessários:
+
+```java
+import io.swagger.v3.oas.models.security.OAuthFlow;
+import io.swagger.v3.oas.models.security.OAuthFlows;
+import io.swagger.v3.oas.models.security.Scopes;
+import org.springframework.beans.factory.annotation.Value;
+```
+
+**D.5.2 — `application-local.yml`: configuração do Swagger UI OAuth2**
+
+```yaml
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    oauth2-redirect-url: http://localhost:8080/swagger-ui/oauth2-redirect.html
+    oauth:
+      client-id: aegis-app          # mesmo clientId já criado na etapa 03
+      client-secret: ""             # public client — sem secret
+      scopes: "openid profile email"
+      use-pkce-with-authorization-code-grant: true
+      app-name: "Aegis PMS"
+```
+
+> `client-secret` vazio porque `aegis-app` é um public client (PKCE substitui o secret). Se em algum momento virar confidential client, preencher com a env var `${SWAGGER_OAUTH_CLIENT_SECRET:}`.
+
+**D.5.3 — Keycloak: registrar redirect URI do Swagger (retrofit na etapa 03)**
+
+No Keycloak Admin (`http://localhost:8282/admin`) → realm `aegis` → client `aegis-app`:
+
+1. **Valid Redirect URIs**: adicionar `http://localhost:8080/swagger-ui/oauth2-redirect.html`
+2. **Web Origins**: adicionar `http://localhost:8080` (Keycloak precisa devolver CORS headers para o Swagger UI que roda na mesma origem da API)
+3. Confirmar que **Standard Flow Enabled** = ON (Authorization Code grant)
+4. Confirmar que **PKCE Code Challenge Method** = S256 (ou deixar sem restrição para aceitar PKCE automaticamente)
+
+Documentar no export do realm (`infra/keycloak/realm-export.json`) após a mudança, para o `docker compose up` já subir com essa configuração (ver etapa 03, Seção D — export automático do realm).
+
+**D.5.4 — Verificação após a correção**
+
+```bash
+# 1. Subir o ambiente local
+docker compose up -d
+
+# 2. Abrir http://localhost:8080/swagger-ui — deve aparecer dois botões "Authorize":
+#    · oauth2-pkce  → clicando abre popup do Keycloak
+#    · bearer-jwt   → campo de texto para colar token manualmente
+
+# 3. Clicar em "Authorize" → oauth2-pkce → autenticar com um usuário do realm aegis
+#    → após login no Keycloak, o popup fecha automaticamente
+
+# 4. Executar GET /api/v1/me — deve retornar 200 com os dados do usuário autenticado
+#    (não mais 401)
+
+# 5. Executar GET /api/v1/tenants — deve retornar 200 para SUPER_ADMIN, 403 para outros papéis
+```
+
+> **Nota de UX:** com dois schemes listados, o Swagger UI mostra ambos no diálogo "Authorize". O usuário deve autorizar apenas o `oauth2-pkce` (clicando no botão específico dele) ou apenas o `bearer-jwt` — não ambos ao mesmo tempo, para evitar conflito de header. Documentar isso no bloco `description` do `aegisOpenApi()` ou como um aviso na `info.description`.
+
 ---
 
 ## E. Padrão de qualidade e entrega (obrigatório)
@@ -628,7 +753,8 @@ telegramFeedbackNotifier.notify(savedFeedback);
   4. Teste de integração `@SpringBootTest` + `@Sql` confirmando: os 6 produtos existem via `GET /products`, Maestro Beton tem 7 páginas, Loki tem 5 graph nodes.
   5. Retrofits D.1, D.2, D.3 + testes.
   6. Retrofit D.4 (Telegram para feedback): migration dos campos `telegram_alert_*`, `TelegramFeedbackNotifier` + testes (mock RestClient), extensão de `GET/PUT /settings` + teste de que token nunca retorna em claro.
-  7. Bruno collection atualizada (pasta `30-seed-homologacao/`): `GET /products?tenantId=a0000000-...`, `GET /products/b0000000-...-001/pages`, `GET /products/b0000000-...-006/graph/nodes`, `PUT /products/{id}/settings` com `telegramAlert`. Rodar `npx @usebruno/cli run --env local` — todos aprovados.
+  7. Retrofit D.5 (Swagger OAuth2): `OpenApiConfig` com scheme `oauth2-pkce`, `application-local.yml` com `springdoc.swagger-ui.oauth.*`, Keycloak redirect URI registrado → verificar `GET /me` respondendo 200 no Swagger UI após login PKCE.
+  8. Bruno collection atualizada (pasta `30-seed-homologacao/`): `GET /products?tenantId=a0000000-...`, `GET /products/b0000000-...-001/pages`, `GET /products/b0000000-...-006/graph/nodes`, `PUT /products/{id}/settings` com `telegramAlert`. Rodar `npx @usebruno/cli run --env local` — todos aprovados.
 
 ---
 
@@ -653,6 +779,11 @@ telegramFeedbackNotifier.notify(savedFeedback);
 - [ ] Envio de feedback com produto que tem Telegram configurado dispara mensagem ao bot (verificar via Telegram ou via mock de `RestClient` no teste de integração).
 - [ ] Envio de feedback com `attachmentAssetId` inclui a URL `/api/v1/assets/{id}/download` na mensagem Telegram.
 - [ ] Falha no Telegram (timeout, token inválido) não reverte o `Feedback` persistido — o `POST /feedback` retorna 201 normalmente.
+- [ ] Swagger UI em `http://localhost:8080/swagger-ui` exibe dois schemes: `oauth2-pkce` e `bearer-jwt`.
+- [ ] Clicar em "Authorize → oauth2-pkce" abre popup do Keycloak; após login, popup fecha e Swagger UI passa a incluir `Authorization: Bearer <token>` em todas as requisições protegidas.
+- [ ] `GET /api/v1/me` no Swagger UI retorna 200 após autenticação OAuth2 (não mais 401).
+- [ ] `GET /api/v1/tenants` retorna 403 para Editor/Viewer (role incorreta) e 200 para SUPER_ADMIN — autenticação funcionando, autorização por papel também.
+- [ ] `realm-export.json` atualizado com `http://localhost:8080/swagger-ui/oauth2-redirect.html` na lista de redirect URIs válidos e `http://localhost:8080` em Web Origins do client `aegis-app`.
 - [ ] Spring Modulith aprovado (sem violação de módulo nova).
 - [ ] `npx @usebruno/cli run --env local` — todos os requests aprovados (collection cumulativa incluindo a pasta `30-seed-homologacao/`).
 
