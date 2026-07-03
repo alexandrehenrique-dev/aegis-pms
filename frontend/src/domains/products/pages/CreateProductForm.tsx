@@ -61,14 +61,29 @@ export function CreateProductForm() {
   const [s3Region, setS3Region] = useState("");
   const [touchedSlug, setTouchedSlug] = useState(false);
   const [touched, setTouched] = useState<{ name?: boolean; slug?: boolean }>({});
+  const [slugTakenErr, setSlugTakenErr] = useState<string | undefined>();
+  const [checkingSlug, setCheckingSlug] = useState(false);
 
   const nameErr = textLengthError(name, 3, 100, "Nome do produto");
-  const slugErr = slugError(slug);
-  const hasErrors = !!nameErr || !!slugErr;
+  const slugErr = slugError(slug) || slugTakenErr;
+  const hasErrors = !!nameErr || !!slugErr || checkingSlug;
 
   const handleNameChange = (v: string) => {
     setName(v);
     if (!touchedSlug) setSlug(slugify(v));
+  };
+
+  const handleSlugBlur = async () => {
+    setTouched((t) => ({ ...t, slug: true }));
+    setSlugTakenErr(undefined);
+    if (slugError(slug)) return;
+    setCheckingSlug(true);
+    try {
+      const available = await productsService.checkSlugAvailable(slug);
+      if (!available) setSlugTakenErr("Este identificador já está em uso neste tenant.");
+    } finally {
+      setCheckingSlug(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -101,7 +116,7 @@ export function CreateProductForm() {
             {/* fixo por enquanto: tenant/idioma do wizard são fixos no MVP — ADR/Sprint 09 */}
             {tenantId && <SelectLike label="Tenant" value={tenant?.name ?? "Carregando..."} locked />}
             <Field label="Nome do produto" value={name} onChange={handleNameChange} onBlur={() => setTouched((t) => ({ ...t, name: true }))} error={touched.name ? nameErr : undefined} />
-            <Field label="Slug" value={slug} onChange={(v) => { setTouchedSlug(true); setSlug(slugify(v)); }} onBlur={() => setTouched((t) => ({ ...t, slug: true }))} error={touched.slug ? slugErr : undefined} />
+            <Field label="Slug" value={slug} onChange={(v) => { setTouchedSlug(true); setSlugTakenErr(undefined); setSlug(slugify(v)); }} onBlur={handleSlugBlur} error={touched.slug ? (checkingSlug ? "Verificando disponibilidade..." : slugErr) : undefined} />
             <SelectLike label="Tipo" value={type} options={PRODUCT_TYPES} onChange={setType} />
             <SelectLike label="Idioma padrão" value="Português (Brasil)" locked />
             <div className="md:col-span-2"><Field label="Descrição" value={description} onChange={setDescription} textarea /></div>
@@ -122,7 +137,10 @@ export function CreateProductForm() {
               />
             </div>
           </div>
-          <div className="mt-4 rounded-xl bg-muted p-3 text-sm"><CheckCircle2 size={16} className="mb-2 text-primary" />Slug disponível: <b>{slug}</b></div>
+          <div className="mt-4 rounded-xl bg-muted p-3 text-sm">
+            <CheckCircle2 size={16} className={`mb-2 ${slugTakenErr ? "text-destructive" : "text-primary"}`} />
+            {slugTakenErr ? "Slug indisponível: " : "Slug disponível: "}<b>{slug}</b>
+          </div>
         </Card>
         <ProductSummaryPanel slug={slug} tenantName={tenant?.name} moduleCount={selectedList.length} />
       </div>

@@ -32,14 +32,29 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
   const [s3Bucket, setS3Bucket] = useState("");
   const [s3Region, setS3Region] = useState("");
   const [touched, setTouched] = useState<{ name?: boolean; slug?: boolean }>({});
+  const [slugTakenErr, setSlugTakenErr] = useState<string | undefined>();
+  const [checkingSlug, setCheckingSlug] = useState(false);
 
   const nameErr = textLengthError(name, 3, 100, "Nome do produto");
-  const slugErr = slugError(slug);
-  const hasErrors = !!nameErr || !!slugErr;
+  const slugErr = slugError(slug) || slugTakenErr;
+  const hasErrors = !!nameErr || !!slugErr || checkingSlug;
 
   const handleNameChange = (v: string) => {
     setName(v);
     if (!touchedSlug) setSlug(slugify(v));
+  };
+
+  const handleSlugBlur = async () => {
+    setTouched((t) => ({ ...t, slug: true }));
+    setSlugTakenErr(undefined);
+    if (slugError(slug)) return;
+    setCheckingSlug(true);
+    try {
+      const available = await productsService.checkSlugAvailable(slug);
+      if (!available) setSlugTakenErr("Este identificador já está em uso neste tenant.");
+    } finally {
+      setCheckingSlug(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -72,7 +87,7 @@ export function CreateProductModal({ tenantId, tenantName, onClose, onCreated }:
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
           <Field label="Nome do produto" value={name} onChange={handleNameChange} onBlur={() => setTouched((t) => ({ ...t, name: true }))} error={touched.name ? nameErr : undefined} />
-          <Field label="Slug" value={slug} onChange={(v) => { setTouchedSlug(true); setSlug(slugify(v)); }} onBlur={() => setTouched((t) => ({ ...t, slug: true }))} error={touched.slug ? slugErr : undefined} />
+          <Field label="Slug" value={slug} onChange={(v) => { setTouchedSlug(true); setSlugTakenErr(undefined); setSlug(slugify(v)); }} onBlur={handleSlugBlur} error={touched.slug ? (checkingSlug ? "Verificando disponibilidade..." : slugErr) : undefined} />
           <SelectLike label="Tipo" value={type} options={PRODUCT_TYPES} onChange={setType} />
           <div>
             <p className="mb-2 text-sm font-medium">Módulos iniciais</p>

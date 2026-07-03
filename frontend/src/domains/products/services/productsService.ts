@@ -34,6 +34,24 @@ export const productsService = {
     return productsStore;
   },
 
+  /**
+   * Unicidade de `key`/slug por tenant (Sprint 19, Tarefa E) — validada no
+   * blur do form de criação de produto. Regra de negócio real (não é só
+   * formato) por isso não entra em `shared/utils/validation.ts`.
+   */
+  async checkSlugAvailable(slug: string): Promise<boolean> {
+    if (IS_API_MODE) {
+      const response = await apiClient.get<{ available: boolean }>(`/products/check-slug?slug=${encodeURIComponent(slug)}`);
+      return response.available;
+    }
+    logApiCall("GET", `/api/v1/admin/products/check-slug?slug=${slug}`);
+    // Compara pelo nome slugificado, não pelo `id` — produtos seed (`products.mocks.ts`)
+    // têm `id` curto (`p1`..`p13`) desacoplado do slug legível; produtos criados em
+    // runtime usam `slugify(name)` como `id` (ver `create()` abaixo), então os dois
+    // casos convergem comparando por `slugify(p.name)`.
+    return !productsStore.some((p) => slugify(p.name) === slug);
+  },
+
   async listModuleCatalog(): Promise<ListModulesResponse> {
     // Catálogo de módulos: em modo api, vem do backend por produto.
     // Path: /products/{productId}/modules — implementar quando houver contexto de produto.

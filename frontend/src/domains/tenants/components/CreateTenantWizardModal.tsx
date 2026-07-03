@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, CheckCircle2, Loader2, X } from "lucide-react";
-import { Badge, Button, Field, fade } from "../../../shared/components/Primitives";
+import { Badge, Button, Field, SelectLike, fade } from "../../../shared/components/Primitives";
 import { useAuth } from "../../../core/auth/AuthContext";
 import { tenantsService } from "../../../core/tenants/services/tenantsService";
 import { productsService } from "../../products/services/productsService";
@@ -11,12 +11,15 @@ import { usersService } from "../../users/services/usersService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { PRODUCT_TYPE_MODULE_DEFAULTS } from "../../../core/products/moduleDefaults";
 import { slugify } from "../../../shared/utils/slugify";
-import { emailError, slugError, textLengthError } from "../../../shared/utils/validation";
+import { assignmentXorError, emailError, slugError, textLengthError } from "../../../shared/utils/validation";
 import type { TenantOption } from "../../../shared/types";
 import type { ProductSummary } from "../../products/contracts/responses";
 import type { ProductAssignmentSummary } from "../../users/contracts/productAssignments";
 
 const INITIAL_MODULES = (PRODUCT_TYPE_MODULE_DEFAULTS["Site Institucional"] ?? []).filter((m) => m.default).map((m) => m.key);
+
+/** Catálogo de planos de tenant (mesmos valores usados em `tenants.mocks.ts`/`EditTenantModal`). */
+const PLAN_OPTIONS = ["Starter", "Pro", "Enterprise"];
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -42,6 +45,7 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
   const [tenantSlug, setTenantSlug] = useState("novo-tenant");
   const [touchedTenantSlug, setTouchedTenantSlug] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
+  const [plan, setPlan] = useState(PLAN_OPTIONS[0]);
   const [touched1, setTouched1] = useState<{ name?: boolean; slug?: boolean; email?: boolean }>({});
 
   const tenantNameErr = textLengthError(tenantName, 3, 100, "Nome do tenant");
@@ -59,14 +63,29 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
   const [productSlug, setProductSlug] = useState("novo-produto");
   const [touchedProductSlug, setTouchedProductSlug] = useState(false);
   const [touched2, setTouched2] = useState<{ name?: boolean; slug?: boolean }>({});
+  const [productSlugTakenErr, setProductSlugTakenErr] = useState<string | undefined>();
+  const [checkingProductSlug, setCheckingProductSlug] = useState(false);
 
   const productNameErr = textLengthError(productName, 3, 100, "Nome do produto");
-  const productSlugErr = slugError(productSlug);
-  const step2HasErrors = !!productNameErr || !!productSlugErr;
+  const productSlugErr = slugError(productSlug) || productSlugTakenErr;
+  const step2HasErrors = !!productNameErr || !!productSlugErr || checkingProductSlug;
 
   const handleProductNameChange = (v: string) => {
     setProductName(v);
     if (!touchedProductSlug) setProductSlug(slugify(v));
+  };
+
+  const handleProductSlugBlur = async () => {
+    setTouched2((t) => ({ ...t, slug: true }));
+    setProductSlugTakenErr(undefined);
+    if (slugError(productSlug)) return;
+    setCheckingProductSlug(true);
+    try {
+      const available = await productsService.checkSlugAvailable(productSlug);
+      if (!available) setProductSlugTakenErr("Este identificador já está em uso neste tenant.");
+    } finally {
+      setCheckingProductSlug(false);
+    }
   };
 
   // Step 3 fields
@@ -75,17 +94,18 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
   const [selectedEmail, setSelectedEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [touched3, setTouched3] = useState<{ inviteEmail?: boolean }>({});
+  const [touched3, setTouched3] = useState<{ inviteEmail?: boolean; xor?: boolean }>({});
   const [role, setRole] = useState("Editor");
 
   const inviteEmailErr = assignMode === "invite" ? emailError(inviteEmail) : undefined;
+  const assignXorErr = assignmentXorError(selectedEmail, inviteEmail);
 
   const handleCreateTenant = async () => {
     setTouched1({ name: true, slug: true, email: true });
     if (step1HasErrors) return;
     setSaving(true);
     try {
-      const created = await tenantsService.create({ name: tenantName, slug: tenantSlug, plan: "Starter", initialAdminEmail: adminEmail });
+      const created = await tenantsService.create({ name: tenantName, slug: tenantSlug, plan, initialAdminEmail: adminEmail });
       setTenant(created);
       setStep(2);
     } finally {
@@ -112,10 +132,9 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
   };
 
   const handleAssignUser = async () => {
-    if (assignMode === "invite") {
-      setTouched3({ inviteEmail: true });
-      if (inviteEmailErr) return;
-    }
+    setTouched3({ inviteEmail: assignMode === "invite", xor: true });
+    if (assignXorErr) return;
+    if (assignMode === "invite" && inviteEmailErr) return;
     if (!tenant || !product?.id) return;
     setSaving(true);
     try {
@@ -134,7 +153,7 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
     }
   };
 
-  const canSubmitAssign = assignMode === "existing" ? !!selectedEmail : !!inviteEmail.trim() && !!inviteName.trim() && !inviteEmailErr;
+  const canSubmitAssign = !assignXorErr && (assignMode === "existing" ? !!selectedEmail : !!inviteEmail.trim() && !!inviteName.trim() && !inviteEmailErr);
 
   return (
     <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={step < 4 ? onClose : undefined}>
@@ -152,6 +171,7 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
             <Field label="Nome do tenant" value={tenantName} onChange={handleTenantNameChange} onBlur={() => setTouched1((t) => ({ ...t, name: true }))} error={touched1.name ? tenantNameErr : undefined} />
             <Field label="Slug / identificador único" value={tenantSlug} onChange={(v) => { setTouchedTenantSlug(true); setTenantSlug(slugify(v)); }} onBlur={() => setTouched1((t) => ({ ...t, slug: true }))} error={touched1.slug ? tenantSlugErr : undefined} />
             <Field label="E-mail do Tenant Admin inicial" value={adminEmail} onChange={setAdminEmail} onBlur={() => setTouched1((t) => ({ ...t, email: true }))} error={touched1.email ? adminEmailErr : undefined} />
+            <SelectLike label="Plano" value={plan} options={PLAN_OPTIONS} onChange={setPlan} />
           </div>
         )}
 
@@ -159,7 +179,7 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
           <div className="space-y-3">
             <div className="rounded-lg bg-muted p-2.5 text-xs text-muted-foreground">Tenant: <b className="text-foreground">{tenant?.name}</b></div>
             <Field label="Nome do produto" value={productName} onChange={handleProductNameChange} onBlur={() => setTouched2((t) => ({ ...t, name: true }))} error={touched2.name ? productNameErr : undefined} />
-            <Field label="Slug" value={productSlug} onChange={(v) => { setTouchedProductSlug(true); setProductSlug(slugify(v)); }} onBlur={() => setTouched2((t) => ({ ...t, slug: true }))} error={touched2.slug ? productSlugErr : undefined} />
+            <Field label="Slug" value={productSlug} onChange={(v) => { setTouchedProductSlug(true); setProductSlugTakenErr(undefined); setProductSlug(slugify(v)); }} onBlur={handleProductSlugBlur} error={touched2.slug ? (checkingProductSlug ? "Verificando disponibilidade..." : productSlugErr) : undefined} />
           </div>
         )}
 
@@ -173,18 +193,19 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
             {assignMode === "invite" ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Nome" value={inviteName} onChange={setInviteName} />
-                <Field label="Email" value={inviteEmail} onChange={setInviteEmail} onBlur={() => setTouched3({ inviteEmail: true })} error={touched3.inviteEmail ? inviteEmailErr : undefined} />
+                <Field label="Email" value={inviteEmail} onChange={setInviteEmail} onBlur={() => setTouched3((t) => ({ ...t, inviteEmail: true, xor: true }))} error={touched3.inviteEmail ? inviteEmailErr : undefined} />
               </div>
             ) : (
               <div className="max-h-40 space-y-1.5 overflow-y-auto">
                 {existingUsers?.map((u) => (
-                  <button key={u.email} onClick={() => setSelectedEmail(u.email)} className={`flex w-full items-center justify-between rounded-lg border p-2.5 text-left text-sm transition ${selectedEmail === u.email ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}>
+                  <button key={u.email} onClick={() => { setSelectedEmail(u.email); setTouched3((t) => ({ ...t, xor: true })); }} className={`flex w-full items-center justify-between rounded-lg border p-2.5 text-left text-sm transition ${selectedEmail === u.email ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}>
                     <span><b>{u.name}</b> <span className="text-muted-foreground">· {u.email}</span></span>
                     {selectedEmail === u.email && <CheckCircle2 size={14} className="text-primary" />}
                   </button>
                 ))}
               </div>
             )}
+            {touched3.xor && assignXorErr && <p className="text-xs text-destructive">{assignXorErr}</p>}
             <div className="flex flex-wrap gap-2">{["Editor", "Product Manager", "Viewer"].map((r) => <Badge key={r} tone={role === r ? "violet" : "neutral"}><button onClick={() => setRole(r)}>{r}</button></Badge>)}</div>
           </div>
         )}

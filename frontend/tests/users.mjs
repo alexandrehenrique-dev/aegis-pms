@@ -15,7 +15,11 @@ async function main() {
     await page.waitForTimeout(800);
     await page.locator('input[placeholder*="Buscar"]').fill("Maestro");
     await page.waitForTimeout(300);
-    await page.getByRole("button", { name: /^Abrir/ }).click();
+    // Sprint 19 (escopo SUPER_ADMIN): o card de produto mostra "Gerenciar" em vez de
+    // "Abrir"/"Abrir produto" para este papel (mesma rota, so o rotulo muda —
+    // ver ProductCard.tsx `isSuperAdmin`). Aceita os dois rotulos para nao acoplar
+    // este teste ao papel logado.
+    await page.getByRole("button", { name: /^(Abrir|Gerenciar)/ }).click();
     await page.waitForTimeout(800);
 
     await page.getByText("Monitorar usuários e convites").click();
