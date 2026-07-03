@@ -28,12 +28,12 @@ public class IdentityUserLifecycleService {
         return toIdentityUser(keycloakAdminClient.inviteUser(email, name));
     }
 
-    public void executeActionsEmail(String userId, List<String> requiredActions) {
-        keycloakAdminClient.executeActionsEmail(userId, requiredActions);
-    }
-
     public void setUserEnabled(String userId, boolean enabled) {
         keycloakAdminClient.setUserEnabled(userId, enabled);
+    }
+
+    public void executeActionsEmail(String userId, List<String> requiredActions) {
+        keycloakAdminClient.executeActionsEmail(userId, requiredActions);
     }
 
     private IdentityUser toIdentityUser(UserResponse user) {

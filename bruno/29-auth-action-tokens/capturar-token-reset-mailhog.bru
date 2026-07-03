@@ -1,0 +1,60 @@
+meta {
+  name: Capturar token de reset no MailHog
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{mailhogBaseUrl}}/api/v2/messages?limit=50
+  body: none
+  auth: none
+}
+
+docs {
+Objetivo: buscar no MailHog o e-mail enviado para resetPasswordEmail e extrair o UUID do parametro token da URL /reset-password.
+Resultado esperado: 200 e variavel passwordResetToken preenchida.
+Pre-requisito: executar antes "Solicitar reset de senha" e manter MailHog acessivel em mailhogBaseUrl.
+}
+
+script:post-response {
+  const targetEmail = bru.getVar('resetPasswordEmail');
+  const items = res.body.items || res.body.Items || [];
+  const tokenPattern = /\/reset-password\?token=([0-9a-fA-F-]{36})/;
+
+  function decodeQuotedPrintable(value) {
+    return value
+      .replace(/=\r?\n/g, '')
+      .replace(/=3D/g, '=');
+  }
+
+  function recipientMatches(message) {
+    const to = message.To || message.to || [];
+    if (Array.isArray(to)) {
+      return to.some((recipient) => {
+        const mailbox = recipient.Mailbox || recipient.mailbox || '';
+        const domain = recipient.Domain || recipient.domain || '';
+        const address = domain ? mailbox + '@' + domain : mailbox;
+        return address === targetEmail;
+      });
+    }
+    return false;
+  }
+
+  const message = items.find((item) => recipientMatches(item));
+  const rawBody = message && message.Content ? String(message.Content.Body || '') : '';
+  const body = decodeQuotedPrintable(rawBody);
+  const match = body.match(tokenPattern);
+
+  if (match) {
+    bru.setVar('passwordResetToken', match[1]);
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("passwordResetToken capturado", function() {
+    expect(bru.getVar('passwordResetToken')).to.match(/^[0-9a-fA-F-]{36}$/);
+  });
+}

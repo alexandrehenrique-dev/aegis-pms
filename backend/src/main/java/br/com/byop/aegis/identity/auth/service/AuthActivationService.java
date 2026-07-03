@@ -1,0 +1,113 @@
+package br.com.byop.aegis.identity.auth.service;
+
+import br.com.byop.aegis.identity.api.IdentityAuthActionAuditEvent;
+import br.com.byop.aegis.identity.api.IdentityUser;
+import br.com.byop.aegis.identity.api.IdentityUserLifecycleService;
+import br.com.byop.aegis.identity.auth.client.KeycloakAdminClient;
+import br.com.byop.aegis.identity.auth.domain.AuthActionToken;
+import br.com.byop.aegis.identity.auth.dto.AuthInviteValidationResponse;
+import br.com.byop.aegis.identity.auth.dto.AuthMessageResponse;
+import br.com.byop.aegis.identity.auth.exception.KeycloakAuthenticationException;
+import br.com.byop.aegis.identity.auth.exception.WeakPasswordException;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Map;
+import java.util.UUID;
+
+@Service
+public class AuthActivationService {
+
+    private static final String ACTIVATE_MESSAGE = "Conta ativada. Faça login para continuar.";
+    private static final String RESET_REQUEST_MESSAGE =
+            "Se este e-mail existe na plataforma, um link de recuperação será enviado.";
+    private static final String RESET_CONFIRM_MESSAGE = "Senha redefinida. Faça login para continuar.";
+
+    private final AuthActionTokenService tokenService;
+    private final AuthActionEmailService emailService;
+    private final PasswordPolicy passwordPolicy;
+    private final KeycloakAdminClient keycloakAdminClient;
+    private final IdentityUserLifecycleService userLifecycleService;
+    private final ApplicationEventPublisher eventPublisher;
+
+    public AuthActivationService(AuthActionTokenService tokenService,
+                                 AuthActionEmailService emailService,
+                                 PasswordPolicy passwordPolicy,
+                                 KeycloakAdminClient keycloakAdminClient,
+                                 IdentityUserLifecycleService userLifecycleService,
+                                 ApplicationEventPublisher eventPublisher) {
+        this.tokenService = tokenService;
+        this.emailService = emailService;
+        this.passwordPolicy = passwordPolicy;
+        this.keycloakAdminClient = keycloakAdminClient;
+        this.userLifecycleService = userLifecycleService;
+        this.eventPublisher = eventPublisher;
+    }
+
+    @Transactional(readOnly = true)
+    public AuthInviteValidationResponse validateInvite(UUID tokenId) {
+        AuthActionToken token = tokenService.validateInvite(tokenId);
+        return new AuthInviteValidationResponse(
+                token.getUserName(),
+                token.getUserEmail(),
+                token.getTenantName(),
+                tokenService.productNames(token),
+                token.getRole(),
+                token.getInviterName(),
+                token.getExpiresAt()
+        );
+    }
+
+    @Transactional
+    public AuthMessageResponse activate(UUID tokenId, String password) {
+        passwordPolicy.assertStrong(password);
+        AuthActionToken token = tokenService.consumeInvite(tokenId);
+        updatePassword(token.getKeycloakId(), password);
+        keycloakAdminClient.setUserEnabled(token.getKeycloakId(), true);
+        keycloakAdminClient.clearRequiredActions(token.getKeycloakId());
+        audit(token, "USER_INVITE_ACTIVATED");
+        return new AuthMessageResponse(ACTIVATE_MESSAGE);
+    }
+
+    @Transactional
+    public AuthMessageResponse requestPasswordReset(String email) {
+        userLifecycleService.findByEmail(email)
+                .ifPresent(this::sendPasswordReset);
+        return new AuthMessageResponse(RESET_REQUEST_MESSAGE);
+    }
+
+    @Transactional
+    public AuthMessageResponse confirmPasswordReset(UUID tokenId, String password) {
+        passwordPolicy.assertStrong(password);
+        AuthActionToken token = tokenService.consumePasswordReset(tokenId);
+        updatePassword(token.getKeycloakId(), password);
+        audit(token, "PASSWORD_RESET_COMPLETED");
+        return new AuthMessageResponse(RESET_CONFIRM_MESSAGE);
+    }
+
+    private void sendPasswordReset(IdentityUser user) {
+        AuthActionToken token = tokenService.createPasswordReset(user);
+        emailService.sendPasswordReset(token);
+        audit(token, "PASSWORD_RESET_REQUESTED");
+    }
+
+    private void updatePassword(String keycloakId, String password) {
+        try {
+            keycloakAdminClient.resetPassword(keycloakId, password);
+        } catch (KeycloakAuthenticationException _) {
+            throw new WeakPasswordException(PasswordPolicy.WEAK_CREDENTIAL_MESSAGE);
+        }
+    }
+
+    private void audit(AuthActionToken token, String action) {
+        eventPublisher.publishEvent(new IdentityAuthActionAuditEvent(
+                token.getTenantId(),
+                token.getKeycloakId(),
+                action,
+                token.getKeycloakId(),
+                token.getUserName(),
+                Map.of("tokenId", token.getId().toString())
+        ));
+    }
+}

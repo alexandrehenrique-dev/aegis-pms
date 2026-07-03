@@ -24,6 +24,16 @@ class ProductAssignmentPortStubTest {
     }
 
     @Test
+    void inviteStubShouldUseDefaultContextOverload() {
+        StubProductAssignmentInvitePort port = new StubProductAssignmentInvitePort();
+
+        IdentityUser user = port.invite(tenantId, productId, "Aegis", "guest@byop.dev", "EDITOR", "Admin");
+
+        assertThat(user.id()).isEqualTo("invite:guest@byop.dev");
+        assertThat(user.email()).isEqualTo("guest@byop.dev");
+    }
+
+    @Test
     void emailStubShouldAcceptNotificationCall() {
         StubProductAssignmentEmailPort port = new StubProductAssignmentEmailPort();
         ProductAssignmentEmailCommand command = emailCommand();

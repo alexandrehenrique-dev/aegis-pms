@@ -7,8 +7,11 @@ import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.method.HandlerMethod;
 
@@ -116,6 +119,47 @@ class OpenApiConfigTest {
         assertThat(tenantOperation.getTags()).containsExactly(OpenApiConfig.TAG_FEEDBACK);
     }
 
+    @Test
+    void shouldDocumentRemainingHttpMethodsAndSuccessCodes() throws NoSuchMethodException {
+
+        Operation putOperation = customize(new ProductSampleController(), "putMethod");
+        Operation patchOperation = customize(new ProductSampleController(), "patchMethod");
+        Operation deleteOperation = customize(new ProductSampleController(), "deleteMethod");
+        Operation createdOperation = customize(new ProductSampleController(), "createdMethod",
+                new Operation().responses(new io.swagger.v3.oas.models.responses.ApiResponses()
+                        .addApiResponse("201", new io.swagger.v3.oas.models.responses.ApiResponse())));
+        Operation noContentOperation = customize(new ProductSampleController(), "noContentMethod",
+                new Operation().responses(new io.swagger.v3.oas.models.responses.ApiResponses()
+                        .addApiResponse("204", new io.swagger.v3.oas.models.responses.ApiResponse())));
+
+        assertThat(putOperation.getSummary()).isEqualTo("Atualiza products");
+        assertThat(patchOperation.getSummary()).isEqualTo("Atualiza parcialmente products");
+        assertThat(deleteOperation.getSummary()).isEqualTo("Remove products");
+        assertThat(createdOperation.getResponses()).containsKey("201");
+        assertThat(noContentOperation.getResponses()).containsKey("204");
+    }
+
+    @Test
+    void shouldDocumentFallbackMappingsAndPublicSubmissionSecurity() throws NoSuchMethodException {
+
+        Operation fallbackOperation = customize(new PlainSampleController(), "plainMethod");
+        Operation rootOperation = customize(new RootSampleController(), "rootMethod");
+        Operation classOnlyOperation = customize(new ClassOnlySampleController(), "classOnlyMethod");
+        Operation publicSubmissionOperation = customize(new ProductSampleController(), "publicSubmissionMethod");
+        Method deprecatedMethod = PlainSampleController.class.getDeclaredMethod("deprecatedMethod");
+
+        assertThat(fallbackOperation.getTags()).containsExactly(OpenApiConfig.TAG_SYSTEM);
+        assertThat(fallbackOperation.getSummary()).isEqualTo("Executa plainMethod");
+        assertThat(rootOperation.getSummary()).isEqualTo("Consulta rootMethod");
+        assertThat(classOnlyOperation.getDescription()).contains("GET /api/v1/system");
+        assertThat(publicSubmissionOperation.getSecurity()).isEmpty();
+        assertThat((String) org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                OpenApiConfig.class,
+                "firstMappingValue",
+                deprecatedMethod.getAnnotation(Deprecated.class)
+        )).isEmpty();
+    }
+
     private AnnotationConfigApplicationContext contextForProfile(String profile) {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
         context.getEnvironment().setActiveProfiles(profile);
@@ -139,10 +183,14 @@ class OpenApiConfigTest {
     }
 
     private Operation customize(Object controller, String methodName) throws NoSuchMethodException {
+        return customize(controller, methodName, new Operation());
+    }
+
+    private Operation customize(Object controller, String methodName, Operation operation) throws NoSuchMethodException {
         OperationCustomizer customizer = config.documentedOperations();
         Method method = controller.getClass().getDeclaredMethod(methodName);
         HandlerMethod handlerMethod = new HandlerMethod(controller, method);
-        return customizer.customize(new Operation(), handlerMethod);
+        return customizer.customize(operation, handlerMethod);
     }
 
     private static class ProductSampleController {
@@ -154,6 +202,66 @@ class OpenApiConfigTest {
 
         @GetMapping("/api/v1/products/{productId}/forms/{formId}/submissions")
         void submissionMethod() {
+            // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
+        }
+
+        @PostMapping(path = "/api/v1/products")
+        void createdMethod() {
+            // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
+        }
+
+        @PutMapping(path = "/api/v1/products")
+        void putMethod() {
+            // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
+        }
+
+        @PatchMapping(path = "/api/v1/products")
+        void patchMethod() {
+            // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
+        }
+
+        @DeleteMapping(path = "/api/v1/products")
+        void deleteMethod() {
+            // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
+        }
+
+        @PostMapping(path = "/api/v1/products/{productId}/forms/{formId}/submit")
+        void publicSubmissionMethod() {
+            // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
+        }
+
+        @DeleteMapping(path = "/api/v1/products")
+        void noContentMethod() {
+            // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
+        }
+    }
+
+    @RequestMapping
+    private static class RootSampleController {
+
+        @GetMapping
+        void rootMethod() {
+            // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
+        }
+    }
+
+    private static class PlainSampleController {
+
+        void plainMethod() {
+            // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
+        }
+
+        @Deprecated
+        void deprecatedMethod() {
+            // Metodo usado apenas para expor anotacao generica ao helper privado.
+        }
+    }
+
+    @RequestMapping("/api/v1/system")
+    private static class ClassOnlySampleController {
+
+        @GetMapping
+        void classOnlyMethod() {
             // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
         }
     }

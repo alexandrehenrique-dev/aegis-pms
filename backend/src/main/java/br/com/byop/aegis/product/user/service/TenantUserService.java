@@ -2,6 +2,8 @@ package br.com.byop.aegis.product.user.service;
 
 import br.com.byop.aegis.audit.api.AuditRecordCommand;
 import br.com.byop.aegis.audit.api.AuditService;
+import br.com.byop.aegis.identity.api.IdentityActionInviteCommand;
+import br.com.byop.aegis.identity.api.IdentityActionTokenService;
 import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.identity.api.IdentityUserLifecycleService;
 import br.com.byop.aegis.notification.api.NotificationOnboardingService;
@@ -21,6 +23,7 @@ import br.com.byop.aegis.tenant.api.TenantUserAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -45,6 +48,7 @@ public class TenantUserService {
     private static final String DIFF_KEY_STATUS = "status";
 
     private final IdentityUserLifecycleService identityUserLifecycleService;
+    private final IdentityActionTokenService identityActionTokenService;
     private final TenantUserAccessService tenantUserAccessService;
     private final ProductUserAccessService productUserAccessService;
     private final TenantUserMapper userMapper;
@@ -52,12 +56,14 @@ public class TenantUserService {
     private final NotificationOnboardingService notificationOnboardingService;
 
     public TenantUserService(IdentityUserLifecycleService identityUserLifecycleService,
+                             IdentityActionTokenService identityActionTokenService,
                              TenantUserAccessService tenantUserAccessService,
                              ProductUserAccessService productUserAccessService,
                              TenantUserMapper userMapper,
                              AuditService auditService,
                              NotificationOnboardingService notificationOnboardingService) {
         this.identityUserLifecycleService = identityUserLifecycleService;
+        this.identityActionTokenService = identityActionTokenService;
         this.tenantUserAccessService = tenantUserAccessService;
         this.productUserAccessService = productUserAccessService;
         this.userMapper = userMapper;
@@ -93,6 +99,7 @@ public class TenantUserService {
 
         String role = parseRole(request.role());
         TenantMembershipReference membership = tenantUserAccessService.invite(tenantId, user.id(), role);
+        sendInviteActivation(user, membership, request.allowedProducts(), role, caller.name());
         notificationOnboardingService.assignOnboarding(user.id());
         recordAudit(tenantId, caller.subject(), "USER_INVITED_TO_TENANT", user.id(), user.displayName(),
                 null, Map.of("role", role, DIFF_KEY_STATUS, STATUS_INVITED));
@@ -120,7 +127,8 @@ public class TenantUserService {
         if (!STATUS_INVITED.equals(membership.status())) {
             throw new InvalidTenantUserOperationException("Invite can only be resent for pending users");
         }
-        identityUserLifecycleService.executeActionsEmail(userId, List.of("UPDATE_PASSWORD"));
+        IdentityUser user = identityUserLifecycleService.getRequiredUser(userId);
+        sendInviteActivation(user, membership, membershipProductNames(membership), membership.role(), caller.name());
         return toSummary(membership);
     }
 
@@ -155,7 +163,8 @@ public class TenantUserService {
         }
         TenantMembershipReference restored = tenantUserAccessService.restore(tenantId, userId);
         identityUserLifecycleService.setUserEnabled(userId, true);
-        identityUserLifecycleService.executeActionsEmail(userId, List.of("UPDATE_PASSWORD"));
+        IdentityUser user = identityUserLifecycleService.getRequiredUser(userId);
+        sendInviteActivation(user, restored, membershipProductNames(restored), restored.role(), caller.name());
         recordAudit(tenantId, caller.subject(), "USER_RESTORED_TO_TENANT", userId, null,
                 Map.of(DIFF_KEY_STATUS, current.status()), Map.of(DIFF_KEY_STATUS, STATUS_ACTIVE));
         return toSummary(restored);
@@ -223,6 +232,37 @@ public class TenantUserService {
                 membership.userSubject()
         );
         return userMapper.toSummary(membership, user, assignments);
+    }
+
+    private void sendInviteActivation(IdentityUser user, TenantMembershipReference membership, String productNames,
+                                      String role, String inviterName) {
+        identityActionTokenService.sendInviteActivation(new IdentityActionInviteCommand(
+                user.id(),
+                user.email(),
+                user.displayName(),
+                membership.tenantId(),
+                membership.tenantName(),
+                splitProductNames(productNames),
+                role,
+                inviterName
+        ));
+    }
+
+    private String membershipProductNames(TenantMembershipReference membership) {
+        return String.join(", ", productUserAccessService.listTenantAssignments(membership.tenantId(), membership.userSubject())
+                .stream()
+                .map(ProductUserAccess::productName)
+                .toList());
+    }
+
+    private List<String> splitProductNames(String productNames) {
+        if (productNames == null || productNames.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(productNames.split(","))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .toList();
     }
 
     private boolean isSuperAdmin(AuthenticatedUser caller) {

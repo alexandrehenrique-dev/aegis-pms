@@ -1,0 +1,32 @@
+meta {
+  name: Confirmar reset de senha
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/reset-password/confirm
+  body: json
+}
+
+body:json {
+  {
+    "token": "{{passwordResetToken}}",
+    "password": "{{newPassword}}"
+  }
+}
+
+docs {
+Objetivo: consumir token PASSWORD_RESET e persistir a nova senha no Keycloak.
+Resultado esperado: 200 com mensagem de senha redefinida. Este request torna o token USED; execute uma vez por token.
+Pre-requisito: executar antes "Solicitar reset de senha" e "Capturar token de reset no MailHog", ou preencher passwordResetToken manualmente a partir do link no MailHog/tabela auth_action_tokens.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("mensagem de reset", function() {
+    expect(res.body.message).to.equal("Senha redefinida. Faça login para continuar.");
+  });
+}

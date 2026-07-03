@@ -1,0 +1,31 @@
+meta {
+  name: Ativar convite senha fraca - 422
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/activate
+  body: json
+}
+
+body:json {
+  {
+    "token": "{{inviteActivationToken}}",
+    "password": "fraca"
+  }
+}
+
+docs {
+Objetivo: confirmar validacao backend de senha fraca no fluxo de ativacao.
+Resultado esperado: 422 WEAK_PASSWORD quando inviteActivationToken estiver preenchido com token pendente valido. O token nao e consumido porque a politica de senha falha antes do consumo.
+}
+
+tests {
+  test("status 422", function() {
+    expect(res.status).to.equal(422);
+  });
+  test("erro WEAK_PASSWORD", function() {
+    expect(res.body.error).to.equal("WEAK_PASSWORD");
+  });
+}

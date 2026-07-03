@@ -1,6 +1,5 @@
 package br.com.byop.aegis.identity.auth.service;
 
-import br.com.byop.aegis.identity.auth.client.KeycloakAdminClient;
 import br.com.byop.aegis.identity.auth.client.KeycloakTokenClient;
 import br.com.byop.aegis.identity.auth.client.KeycloakTokenResponse;
 import br.com.byop.aegis.identity.auth.dto.AuthMessageResponse;
@@ -14,15 +13,15 @@ public class AuthService {
     private static final String GENERIC_ACCOUNT_RECOVERY_MESSAGE =
             "Se o e-mail estiver cadastrado, você receberá as instruções em breve.";
 
-    private final KeycloakAdminClient keycloakAdminClient;
+    private final AuthActivationService authActivationService;
     private final KeycloakTokenClient keycloakTokenClient;
 
     public AuthService(
             KeycloakTokenClient keycloakTokenClient,
-            KeycloakAdminClient keycloakAdminClient
+            AuthActivationService authActivationService
     ) {
         this.keycloakTokenClient = keycloakTokenClient;
-        this.keycloakAdminClient = keycloakAdminClient;
+        this.authActivationService = authActivationService;
     }
 
     public AuthTokenResponse login(String username, String password) {
@@ -40,7 +39,7 @@ public class AuthService {
     }
 
     public AuthMessageResponse forgotPassword(String email) {
-        keycloakAdminClient.sendResetPasswordEmail(email);
+        authActivationService.requestPasswordReset(email);
         return new AuthMessageResponse(GENERIC_ACCOUNT_RECOVERY_MESSAGE);
     }
 }

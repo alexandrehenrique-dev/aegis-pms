@@ -1,6 +1,8 @@
 package br.com.byop.aegis.product.user.service;
 
 import br.com.byop.aegis.audit.api.AuditService;
+import br.com.byop.aegis.identity.api.IdentityActionInviteCommand;
+import br.com.byop.aegis.identity.api.IdentityActionTokenService;
 import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.identity.api.IdentityUserLifecycleService;
 import br.com.byop.aegis.notification.api.NotificationOnboardingService;
@@ -44,6 +46,9 @@ class TenantUserServiceTest {
 
     @Mock
     private IdentityUserLifecycleService identityUserLifecycleService;
+
+    @Mock
+    private IdentityActionTokenService identityActionTokenService;
 
     @Mock
     private TenantUserAccessService tenantUserAccessService;
@@ -127,6 +132,20 @@ class TenantUserServiceTest {
         assertThat(auditCaptor.getValue().tenantId()).isEqualTo(TENANT_ID);
         assertThat(auditCaptor.getValue().targetId()).isEqualTo("user-1");
         verify(notificationOnboardingService).assignOnboarding("user-1");
+    }
+
+    @Test
+    void shouldSplitInviteProductNamesDefensively() {
+        assertThat((List<String>) org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                service,
+                "splitProductNames",
+                (String) null
+        )).isEmpty();
+        assertThat((List<String>) org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                service,
+                "splitProductNames",
+                " , Aegis, , Forms "
+        )).containsExactly("Aegis", "Forms");
     }
 
     @Test
@@ -327,7 +346,7 @@ class TenantUserServiceTest {
 
         service.resendInvite(caller, TENANT_ID, "user-1");
 
-        verify(identityUserLifecycleService).executeActionsEmail("user-1", List.of("UPDATE_PASSWORD"));
+        verify(identityActionTokenService).sendInviteActivation(any(IdentityActionInviteCommand.class));
     }
 
     @Test
@@ -365,7 +384,7 @@ class TenantUserServiceTest {
         verify(productUserAccessService).removeTenantAssignments(TENANT_ID, "user-1");
         verify(identityUserLifecycleService).setUserEnabled("user-1", false);
         verify(identityUserLifecycleService).setUserEnabled("user-1", true);
-        verify(identityUserLifecycleService).executeActionsEmail("user-1", List.of("UPDATE_PASSWORD"));
+        verify(identityActionTokenService).sendInviteActivation(any(IdentityActionInviteCommand.class));
         verify(auditService, times(3)).recordEvent(any());
     }
 

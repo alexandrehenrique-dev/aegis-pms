@@ -1,0 +1,46 @@
+meta {
+  name: Gerar convite de tenant
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{authActionTenantId}}/users/invite
+  body: json
+}
+
+body:json {
+  {
+    "name": "Auth Action Bruno",
+    "email": "{{authActionInviteEmail}}",
+    "role": "EDITOR",
+    "allowedProducts": "Aegis",
+    "message": "Convite gerado para validar token Aegis"
+  }
+}
+
+docs {
+Objetivo: disparar o fluxo autenticado que cria usuario convidado, persiste AuthActionToken INVITE e envia e-mail ao MailHog.
+Resultado esperado: 201. O token nao volta na resposta por seguranca; ele deve ser capturado do link do e-mail.
+Variaveis utilizadas: token, authActionTenantId, authActionInviteEmail.
+Variaveis produzidas: authActionTenantUserId.
+}
+
+script:pre-request {
+  bru.setVar('authActionInviteEmail', 'auth-action-' + Date.now() + '@example.com');
+}
+
+script:post-response {
+  bru.setVar('authActionTenantUserId', res.body.userId);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("usuario convidado", function() {
+    expect(res.body.email).to.equal(bru.getVar('authActionInviteEmail'));
+    expect(res.body.status).to.equal("convidado");
+    expect(res.body.userId).to.be.a("string");
+  });
+}
