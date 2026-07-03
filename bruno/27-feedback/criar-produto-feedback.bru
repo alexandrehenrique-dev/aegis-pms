@@ -1,0 +1,38 @@
+meta {
+  name: Criar produto para feedback
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+}
+
+body:json {
+  {
+    "tenantId": "{{feedbackTenantId}}",
+    "key": "feedback-product-{{graphRefSeed}}",
+    "name": "Feedback Product",
+    "type": "Custom",
+    "defaultLocale": "pt-BR"
+  }
+}
+
+script:post-response {
+  bru.setVar('feedbackProductId', res.body.id);
+}
+
+docs {
+Objetivo: criar produto dedicado para reportes com productId e anexo.
+Resultado esperado: 201 e variavel feedbackProductId preenchida.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("product id presente", function() {
+    expect(bru.getVar('feedbackProductId')).to.be.a('string');
+  });
+}

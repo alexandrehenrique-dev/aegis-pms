@@ -111,4 +111,22 @@ public interface TenantMembershipRepository extends JpaRepository<TenantMembersh
             @Param("tenantId") UUID tenantId,
             @Param("status") TenantMembershipStatus status
     );
+
+    /**
+     * Lista subjects distintos com membership ativa em um papel especifico.
+     *
+     * @param role papel canonico da membership
+     * @param status status ativo esperado
+     * @return subjects distintos com o papel e status informados
+     */
+    @Query("""
+            select distinct membership.userSubject
+              from TenantMembership membership
+             where membership.role = :role
+               and membership.status = :status
+            """)
+    List<String> findDistinctUserSubjectsByRoleAndStatus(
+            @Param("role") String role,
+            @Param("status") TenantMembershipStatus status
+    );
 }

@@ -1,0 +1,34 @@
+meta {
+  name: Upload asset para feedback
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{feedbackProductId}}/assets
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(fixtures/teste.png) @contentType(image/png)
+  friendlyName: Screenshot do bug
+}
+
+script:post-response {
+  bru.setVar('feedbackAssetId', res.body.id);
+}
+
+docs {
+Objetivo: fazer upload real via dominio asset; feedback recebe apenas attachmentAssetId.
+Resultado esperado: 201 e variavel feedbackAssetId preenchida.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("asset id presente", function() {
+    expect(bru.getVar('feedbackAssetId')).to.be.a('string');
+  });
+}

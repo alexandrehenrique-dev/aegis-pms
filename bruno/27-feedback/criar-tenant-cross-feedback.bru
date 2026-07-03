@@ -1,0 +1,34 @@
+meta {
+  name: Criar tenant cross-tenant
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants
+  body: json
+}
+
+body:json {
+  {
+    "key": "feedback-cross-tenant-{{graphRefSeed}}",
+    "name": "Feedback Cross Tenant",
+    "plan": "FREE",
+    "initialAdminEmail": "feedback-cross-{{graphRefSeed}}@example.com"
+  }
+}
+
+script:post-response {
+  bru.setVar('feedbackCrossTenantId', res.body.id);
+}
+
+docs {
+Objetivo: preparar um segundo tenant para gerar asset de outro tenant.
+Resultado esperado: 201.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+}

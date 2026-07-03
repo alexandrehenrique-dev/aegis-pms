@@ -1,0 +1,34 @@
+meta {
+  name: Rejeitar asset cross-tenant
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/v1/feedback
+  body: json
+}
+
+body:json {
+  {
+    "productId": "{{feedbackProductId}}",
+    "category": "Bug",
+    "priority": "alta",
+    "description": "Tentativa de usar asset de outro tenant.",
+    "attachmentAssetId": "{{feedbackCrossAssetId}}"
+  }
+}
+
+docs {
+Objetivo: validar isolamento — attachmentAssetId de outro tenant deve ser rejeitado.
+Resultado esperado: 404 FEEDBACK_ATTACHMENT_NOT_FOUND.
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+  test("erro esperado", function() {
+    expect(res.body.error).to.equal("FEEDBACK_ATTACHMENT_NOT_FOUND");
+  });
+}

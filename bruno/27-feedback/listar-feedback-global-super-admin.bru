@@ -1,0 +1,25 @@
+meta {
+  name: Listar feedback global como SUPER_ADMIN
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{baseUrl}}/api/v1/feedback
+  body: none
+}
+
+docs {
+Objetivo: validar listagem global exclusiva de SUPER_ADMIN.
+Resultado esperado: 200 e inclui feedback criado nesta pasta.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("inclui feedback criado", function() {
+    const ids = res.body.map(function(item) { return item.id; });
+    expect(ids).to.include(bru.getVar('feedbackId'));
+  });
+}

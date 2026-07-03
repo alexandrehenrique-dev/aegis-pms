@@ -56,6 +56,7 @@ public class OpenApiConfig {
     static final String TAG_SETTINGS = "Settings";
     static final String TAG_DASHBOARD = "Dashboard";
     static final String TAG_NOTIFICATIONS = "Notifications";
+    static final String TAG_FEEDBACK = "Feedback";
 
     private static final String API_VERSION = "v1";
     private static final String API_TITLE = "Aegis PMS API";
@@ -86,7 +87,8 @@ public class OpenApiConfig {
             TAG_AUDIT,
             TAG_SETTINGS,
             TAG_DASHBOARD,
-            TAG_NOTIFICATIONS
+            TAG_NOTIFICATIONS,
+            TAG_FEEDBACK
     );
 
     private static final Map<String, String> TAG_DESCRIPTIONS = Map.ofEntries(
@@ -107,12 +109,14 @@ public class OpenApiConfig {
             Map.entry(TAG_AUDIT, "Consulta da trilha de auditoria por tenant."),
             Map.entry(TAG_SETTINGS, "Configurações de produto, roles, permissões e segurança."),
             Map.entry(TAG_DASHBOARD, "Resumo agregado do dashboard operacional."),
-            Map.entry(TAG_NOTIFICATIONS, "Notificações internas, onboarding e leitura por usuário.")
+            Map.entry(TAG_NOTIFICATIONS, "Notificações internas, onboarding e leitura por usuário."),
+            Map.entry(TAG_FEEDBACK, "Reporte de problemas, sugestões e gestão de status de feedbacks.")
     );
 
     private static final List<Map.Entry<String, String>> TAG_BY_PATH_FRAGMENT = List.of(
             Map.entry("/api/v1/system", TAG_SYSTEM),
             Map.entry("/api/v1/auth", TAG_AUTH),
+            Map.entry("/api/v1/tenants/{tenantId}/feedback", TAG_FEEDBACK),
             Map.entry("/api/v1/tenants/{tenantId}/users", TAG_USERS),
             Map.entry("/api/v1/tenants/{tenantId}/audit-events", TAG_AUDIT),
             Map.entry("/api/v1/tenants/{tenantId}/roles", TAG_SETTINGS),
@@ -136,7 +140,8 @@ public class OpenApiConfig {
             Map.entry("/api/v1/products", TAG_PRODUCTS),
             Map.entry("/api/v1/users", TAG_USERS),
             Map.entry("/api/v1/dashboard", TAG_DASHBOARD),
-            Map.entry("/api/v1/notifications", TAG_NOTIFICATIONS)
+            Map.entry("/api/v1/notifications", TAG_NOTIFICATIONS),
+            Map.entry("/api/v1/feedback", TAG_FEEDBACK)
     );
 
     /**

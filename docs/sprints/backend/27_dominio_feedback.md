@@ -57,9 +57,25 @@ type FeedbackSummary = {
 - `id` legível (`AGS-####`) é gerado pelo backend na criação — sequencial ou aleatório de 4 dígitos (decisão de implementação, documentar a escolha); nunca o `UUID` interno é exposto como identificador principal na resposta de criação (mantém a expectativa visual que o frontend mock já criou).
 - **(Opcional, ver Seção E)** Ao criar um feedback com `priority: "crítica"`, considerar notificar o(s) `SUPER_ADMIN` via o domínio `notification` (etapa 25) — registrar como melhoria futura se não for feito nesta etapa, não bloquear a entrega por isso.
 
-### E. Integração opcional com `notification` (etapa 25)
+### E. Integração com `notification` (etapa 25) — sino para prioridade crítica
 
 Se a etapa 25 já estiver implementada: ao criar um `Feedback` com `priority: "crítica"`, chamar `NotificationService.create(...)` com `target: { type: "USERS", userIds: [...super admins...] }` (resolver a lista de Super Admins via `TenantMembership`), `type: "WARNING"`, `presentationMode: "BELL_ONLY"`. Se a etapa 25 ainda não existir quando esta etapa for executada, pular esta seção — é um retrofit a fazer depois, não bloqueia a entrega do domínio `feedback`.
+
+### F. Retrofits registrados para a etapa 30 (última etapa de backend)
+
+> Dois gaps identificados que **não bloqueiam** a entrega desta etapa, mas devem ser fechados na etapa 30:
+
+**F.1 — Dispatch para Telegram**
+
+Ao criar qualquer `Feedback`, se o tenant (ou o produto associado ao feedback) tiver Telegram configurado (`ProductSettings.telegramAlertBotToken` + `ProductSettings.telegramAlertChatId`, adicionados na etapa 30 às settings de nível de produto), enviar uma mensagem via Telegram Bot API. A mensagem deve incluir: `id` legível (`AGS-####`), categoria, prioridade, descrição resumida (primeiras 200 chars), tenant/produto, usuário, tela, e — se houver `attachmentAssetId` — a URL de download do asset (via `GET /assets/{id}/download`). Falha no envio ao Telegram **não deve reverter** o `Feedback` já persistido: registrar erro em log e deixar o `Feedback` salvo. Ver etapa 30, Seção D.4.
+
+**F.2 — Tela de visualização (Super Admin) — frontend Sprint 23**
+
+`GET /feedback` e `GET /tenants/{tenantId}/feedback` já existem nesta etapa, mas nenhuma tela do frontend os consome. Os feedbacks ficam visíveis apenas via API ou banco de dados até a Sprint 23 do frontend (`23_inbox_de_feedbacks_super_admin.md`) criar a tela de inbox. Ver Sprint 23 para detalhes da UI.
+
+**F.3 — Tela de configuração Telegram — frontend Sprint 23**
+
+`SecuritySettingsPanel.tsx` já exibe "Telegram futuro" como linha placeholder. A configuração real (`botToken`/`chatId` por produto) deve ser exposta nesse mesmo painel na Sprint 23, depois que a etapa 30 adicionar os campos no modelo de settings.
 
 ## Critérios de aceite
 

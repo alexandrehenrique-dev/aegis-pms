@@ -1,0 +1,31 @@
+meta {
+  name: Upload asset cross-tenant
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{feedbackCrossProductId}}/assets
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  file: @file(fixtures/teste.png) @contentType(image/png)
+  friendlyName: Screenshot cross tenant
+}
+
+script:post-response {
+  bru.setVar('feedbackCrossAssetId', res.body.id);
+}
+
+docs {
+Objetivo: criar asset em outro tenant para validar rejeicao no POST /feedback.
+Resultado esperado: 201.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+}

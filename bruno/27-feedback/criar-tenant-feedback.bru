@@ -1,0 +1,37 @@
+meta {
+  name: Criar tenant para feedback
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants
+  body: json
+}
+
+body:json {
+  {
+    "key": "feedback-tenant-{{graphRefSeed}}",
+    "name": "Feedback Tenant",
+    "plan": "FREE",
+    "initialAdminEmail": "feedback-admin-{{graphRefSeed}}@example.com"
+  }
+}
+
+script:post-response {
+  bru.setVar('feedbackTenantId', res.body.id);
+}
+
+docs {
+Objetivo: criar tenant isolado para os testes da pasta 27.
+Resultado esperado: 201 e variavel feedbackTenantId preenchida.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("tenant id presente", function() {
+    expect(bru.getVar('feedbackTenantId')).to.be.a('string');
+  });
+}

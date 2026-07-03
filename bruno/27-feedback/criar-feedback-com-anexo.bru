@@ -1,0 +1,42 @@
+meta {
+  name: Criar feedback com attachmentAssetId
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/feedback
+  body: json
+}
+
+body:json {
+  {
+    "productId": "{{feedbackProductId}}",
+    "category": "Erro visual",
+    "priority": "crítica",
+    "description": "Card principal sobrepoe o menu lateral.",
+    "screenName": "/dashboard",
+    "attachmentAssetId": "{{feedbackAssetId}}"
+  }
+}
+
+script:post-response {
+  bru.setVar('feedbackWithAttachmentId', res.body.id);
+}
+
+docs {
+Objetivo: validar que feedback referencia asset existente do mesmo tenant sem upload proprio.
+Resultado esperado: 201, attachmentAssetId igual ao asset criado no dominio asset.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("attachment confere", function() {
+    expect(res.body.attachmentAssetId).to.equal(bru.getVar('feedbackAssetId'));
+  });
+  test("priority critica preservada", function() {
+    expect(res.body.priority).to.equal("crítica");
+  });
+}

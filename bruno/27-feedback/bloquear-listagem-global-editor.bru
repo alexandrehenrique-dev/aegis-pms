@@ -1,0 +1,24 @@
+meta {
+  name: Bloquear listagem global como editor
+  type: http
+  seq: 18
+}
+
+get {
+  url: {{baseUrl}}/api/v1/feedback
+  body: none
+}
+
+docs {
+Objetivo: validar que usuario comum nao acessa listagem global.
+Resultado esperado: 403 FEEDBACK_FORBIDDEN.
+}
+
+tests {
+  test("status 403", function() {
+    expect(res.status).to.equal(403);
+  });
+  test("erro esperado", function() {
+    expect(res.body.error).to.equal("FEEDBACK_FORBIDDEN");
+  });
+}

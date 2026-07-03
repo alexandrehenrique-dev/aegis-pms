@@ -1,0 +1,35 @@
+meta {
+  name: Criar produto cross-tenant
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+}
+
+body:json {
+  {
+    "tenantId": "{{feedbackCrossTenantId}}",
+    "key": "feedback-cross-product-{{graphRefSeed}}",
+    "name": "Feedback Cross Product",
+    "type": "Custom",
+    "defaultLocale": "pt-BR"
+  }
+}
+
+script:post-response {
+  bru.setVar('feedbackCrossProductId', res.body.id);
+}
+
+docs {
+Objetivo: criar produto em tenant diferente para upload do asset cross-tenant.
+Resultado esperado: 201.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+}

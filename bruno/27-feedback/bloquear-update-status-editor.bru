@@ -1,0 +1,30 @@
+meta {
+  name: Bloquear update status como editor
+  type: http
+  seq: 20
+}
+
+put {
+  url: {{baseUrl}}/api/v1/feedback/{{feedbackId}}/status
+  body: json
+}
+
+body:json {
+  {
+    "status": "resolvido"
+  }
+}
+
+docs {
+Objetivo: validar que update de status e exclusivo de SUPER_ADMIN.
+Resultado esperado: 403 FEEDBACK_FORBIDDEN.
+}
+
+tests {
+  test("status 403", function() {
+    expect(res.status).to.equal(403);
+  });
+  test("erro esperado", function() {
+    expect(res.body.error).to.equal("FEEDBACK_FORBIDDEN");
+  });
+}

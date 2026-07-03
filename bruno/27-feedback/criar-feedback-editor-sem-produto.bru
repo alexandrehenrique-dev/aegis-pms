@@ -1,0 +1,38 @@
+meta {
+  name: Criar feedback como editor sem produto
+  type: http
+  seq: 19
+}
+
+post {
+  url: {{baseUrl}}/api/v1/feedback
+  body: json
+}
+
+body:json {
+  {
+    "category": "Sugestão",
+    "priority": "baixa",
+    "description": "Adicionar atalho para voltar ao dashboard.",
+    "screenName": "/help"
+  }
+}
+
+script:post-response {
+  bru.setVar('feedbackEditorId', res.body.id);
+}
+
+docs {
+Objetivo: validar que qualquer usuario autenticado pode criar feedback; sem productId,
+o backend resolve o unico tenant ativo do editor demo.
+Resultado esperado: 201, id legivel AGS-####.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("id AGS", function() {
+    expect(res.body.id).to.match(/^AGS-[0-9]{4,}$/);
+  });
+}

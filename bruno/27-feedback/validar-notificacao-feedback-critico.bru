@@ -1,0 +1,32 @@
+meta {
+  name: Validar notificacao de feedback critico
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notifications/mine
+  body: none
+}
+
+docs {
+Objetivo: validar que feedback com prioridade critica gera sino BELL_ONLY para SUPER_ADMIN.
+Resultado esperado: 200 e notificacao de feedback critico vinculada ao id AGS criado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("notificacao critica encontrada", function() {
+    const notifications = Array.isArray(res.body) ? res.body : [];
+    const feedbackId = bru.getVar('feedbackWithAttachmentId');
+    const item = notifications.find(function(notification) {
+      return notification.title === 'Feedback critico recebido'
+        && notification.presentationMode === 'BELL_ONLY'
+        && notification.type === 'WARNING'
+        && String(notification.bodyMarkdown || '').includes(feedbackId);
+    });
+    expect(item).to.not.equal(undefined);
+  });
+}

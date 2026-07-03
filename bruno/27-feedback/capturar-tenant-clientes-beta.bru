@@ -1,0 +1,30 @@
+meta {
+  name: Capturar tenant Clientes Beta
+  type: http
+  seq: 16
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants
+  body: none
+}
+
+script:post-response {
+  const tenants = Array.isArray(res.body) ? res.body : [];
+  const clientesBeta = tenants.find(function(tenant) { return tenant.key === 'clientes-beta'; });
+  if (clientesBeta) { bru.setVar('seedClientesBetaTenantId', clientesBeta.id); }
+}
+
+docs {
+Objetivo: localizar o tenant seed clientes-beta para validar acesso TENANT_ADMIN sem depender da pasta 22.
+Resultado esperado: 200 e tenant id capturado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("tenant clientes-beta encontrado", function() {
+    expect(bru.getVar('seedClientesBetaTenantId')).to.match(/^[0-9a-f-]{36}$/);
+  });
+}

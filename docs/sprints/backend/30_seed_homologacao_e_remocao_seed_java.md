@@ -503,6 +503,111 @@ public class AuditRequestContextInterceptor implements HandlerInterceptor {
 
 Registrar em `WebMvcConfigurer.addInterceptors(...)`. `AuditService.record(...)` lê do `AuditContextHolder` para preencher os campos antes de persistir.
 
+### D.4 — Dispatch de feedback para Telegram (retrofit da etapa 27, Seção F.1)
+
+A etapa 27 documentou este gap: feedbacks ficam apenas no banco; não há notificação proativa quando alguém reporta um problema. Esta seção fecha isso.
+
+**D.4.1 — Campo Telegram nas settings de produto**
+
+Adicionar dois campos opcionais ao `ProductSettings` (entidade/tabela da etapa 17):
+
+```java
+// em ProductSettings.java
+@Column(name = "telegram_alert_bot_token", length = 128)
+private String telegramAlertBotToken;   // token do bot (nunca expor em GET — retornar mascarado "••••xxxx")
+
+@Column(name = "telegram_alert_chat_id", length = 64)
+private String telegramAlertChatId;     // chat ou group ID do canal de alertas
+```
+
+Migration associada (incluir no mesmo `V_NEXT__seed_homologacao.sql` ou em script separado — verificar se a tabela `product_settings` existe antes de alterar):
+
+```sql
+ALTER TABLE product_settings
+  ADD COLUMN IF NOT EXISTS telegram_alert_bot_token VARCHAR(128),
+  ADD COLUMN IF NOT EXISTS telegram_alert_chat_id   VARCHAR(64);
+```
+
+Endpoints afetados (extensão do `GET/PUT /api/v1/products/{productId}/settings` da etapa 17):
+- `GET` → retorna `{ ..., telegramAlert: { chatId: "...", botTokenMasked: "••••aBcD" } | null }`
+- `PUT` → aceita `{ ..., telegramAlert: { chatId: "...", botToken: "..." } }` — salva ambos; `botToken` nunca é retornado em claro.
+
+> Usar os mesmos campos `chatId`/`botToken` que `FormDeliveryPolicy.java` já valida: é o mesmo mecanismo, só a origem dos valores é diferente (settings de produto em vez de delivery-channel do form).
+
+**D.4.2 — `TelegramFeedbackNotifier` (novo componente no módulo `feedback`)**
+
+```java
+@Component
+public class TelegramFeedbackNotifier {
+
+    private final ProductSettingsRepository productSettingsRepo;
+    private final AssetRepository assetRepo;              // para montar URL do anexo
+    private final RestClient restClient;
+
+    /** Chamado APÓS a persistência do Feedback. Falha silenciosa — não lança exceção. */
+    public void notify(Feedback feedback) {
+        if (feedback.getProductId() == null) return;
+
+        productSettingsRepo.findByProductId(feedback.getProductId())
+            .filter(s -> s.getTelegramAlertBotToken() != null && s.getTelegramAlertChatId() != null)
+            .ifPresent(settings -> sendToTelegram(feedback, settings));
+    }
+
+    private void sendToTelegram(Feedback feedback, ProductSettings settings) {
+        try {
+            String text = buildMessage(feedback);
+            String url = "https://api.telegram.org/bot%s/sendMessage".formatted(settings.getTelegramAlertBotToken());
+            restClient.post().uri(url)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("chat_id", settings.getTelegramAlertChatId(), "text", text, "parse_mode", "HTML"))
+                .retrieve()
+                .toBodilessEntity();
+        } catch (Exception ex) {
+            log.warn("Telegram dispatch falhou para feedback {} — {}", feedback.getId(), ex.getMessage());
+            // Nunca propaga: o Feedback já está persistido, o dispatch é best-effort
+        }
+    }
+
+    private String buildMessage(Feedback feedback) {
+        String assetInfo = "";
+        if (feedback.getAttachmentAssetId() != null) {
+            // URL de download relativo — o destinatário pode colar no browser com o token correto
+            assetInfo = "\n📎 Anexo: <code>/api/v1/assets/%s/download</code>".formatted(feedback.getAttachmentAssetId());
+        }
+        String desc = feedback.getDescription().length() > 200
+            ? feedback.getDescription().substring(0, 200) + "…"
+            : feedback.getDescription();
+        return """
+            🐛 <b>Feedback Aegis — %s</b>
+            Categoria: %s | Prioridade: <b>%s</b>
+            Produto: %s | Tela: %s
+            Usuário: %s
+            
+            %s%s
+            """.formatted(
+                feedback.getId(),
+                feedback.getCategory(), feedback.getPriority(),
+                feedback.getProductId(), feedback.getScreenName() != null ? feedback.getScreenName() : "—",
+                feedback.getCreatedBySubject(),
+                desc, assetInfo
+            );
+    }
+}
+```
+
+**D.4.3 — Wiring em `FeedbackService.create(...)`**
+
+```java
+// Após persistir o Feedback:
+telegramFeedbackNotifier.notify(savedFeedback);
+```
+
+**D.4.4 — Testes**
+
+- `TelegramFeedbackNotifierTest`: mock de `RestClient`; verificar que a mensagem contém o ID legível, categoria, prioridade, e a URL do asset quando `attachmentAssetId` está preenchido.
+- Verificar que uma exceção do `RestClient` **não propaga** para o caller (feedback ainda salvo).
+- Verificar que `notify` é no-op quando `productId` é nulo ou settings não tem token configurado.
+
 ---
 
 ## E. Padrão de qualidade e entrega (obrigatório)
@@ -522,7 +627,8 @@ Registrar em `WebMvcConfigurer.addInterceptors(...)`. `AuditService.record(...)`
      ```
   4. Teste de integração `@SpringBootTest` + `@Sql` confirmando: os 6 produtos existem via `GET /products`, Maestro Beton tem 7 páginas, Loki tem 5 graph nodes.
   5. Retrofits D.1, D.2, D.3 + testes.
-  6. Bruno collection atualizada (pasta `30-seed-homologacao/`): `GET /products?tenantId=a0000000-...`, `GET /products/b0000000-...-001/pages`, `GET /products/b0000000-...-006/graph/nodes`. Rodar `npx @usebruno/cli run --env local` — todos aprovados.
+  6. Retrofit D.4 (Telegram para feedback): migration dos campos `telegram_alert_*`, `TelegramFeedbackNotifier` + testes (mock RestClient), extensão de `GET/PUT /settings` + teste de que token nunca retorna em claro.
+  7. Bruno collection atualizada (pasta `30-seed-homologacao/`): `GET /products?tenantId=a0000000-...`, `GET /products/b0000000-...-001/pages`, `GET /products/b0000000-...-006/graph/nodes`, `PUT /products/{id}/settings` com `telegramAlert`. Rodar `npx @usebruno/cli run --env local` — todos aprovados.
 
 ---
 
@@ -542,6 +648,11 @@ Registrar em `WebMvcConfigurer.addInterceptors(...)`. `AuditService.record(...)`
 - [ ] Migration é idempotente: rodar duas vezes seguidas sem erro.
 - [ ] Eventos de auditoria de `MODULE_ENABLED`, `FORM_SUBMISSION_RECEIVED` aparecem em `GET /audit/events`.
 - [ ] Campos `traceId`, `ip`, `userAgent` não são `null` nos eventos de auditoria.
+- [ ] `PUT /api/v1/products/{id}/settings` aceita `telegramAlert.botToken` + `telegramAlert.chatId` e persiste.
+- [ ] `GET /api/v1/products/{id}/settings` retorna `telegramAlert.botTokenMasked` (ex: `"••••aBcD"`) — nunca o token em claro.
+- [ ] Envio de feedback com produto que tem Telegram configurado dispara mensagem ao bot (verificar via Telegram ou via mock de `RestClient` no teste de integração).
+- [ ] Envio de feedback com `attachmentAssetId` inclui a URL `/api/v1/assets/{id}/download` na mensagem Telegram.
+- [ ] Falha no Telegram (timeout, token inválido) não reverte o `Feedback` persistido — o `POST /feedback` retorna 201 normalmente.
 - [ ] Spring Modulith aprovado (sem violação de módulo nova).
 - [ ] `npx @usebruno/cli run --env local` — todos os requests aprovados (collection cumulativa incluindo a pasta `30-seed-homologacao/`).
 

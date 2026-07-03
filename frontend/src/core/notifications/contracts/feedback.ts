@@ -1,4 +1,4 @@
-/** Espelha `CreateFeedbackRequest`/`FeedbackSummary` do backend (etapa 25 — `25_dominio_feedback.md`). */
+/** Espelha `CreateFeedbackRequest`/`FeedbackSummary` do backend (etapa 27 — `27_dominio_feedback.md`). */
 export type CreateFeedbackRequest = {
   productId?: string;
   category: string;

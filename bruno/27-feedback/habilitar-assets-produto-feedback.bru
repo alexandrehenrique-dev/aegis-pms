@@ -1,0 +1,24 @@
+meta {
+  name: Habilitar ASSETS no produto feedback
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{feedbackProductId}}/modules/ASSETS/enable
+  body: none
+}
+
+docs {
+Objetivo: habilitar o modulo ASSETS para criar o anexo real usado por /feedback.
+Resultado esperado: 200, enabled true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("ASSETS habilitado", function() {
+    expect(res.body.enabled).to.equal(true);
+  });
+}
