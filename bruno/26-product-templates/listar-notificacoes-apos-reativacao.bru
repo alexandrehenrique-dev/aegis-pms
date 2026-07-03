@@ -1,0 +1,29 @@
+meta {
+  name: Listar notificacoes apos reativacao - GENERAL BELL_ONLY
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notifications/mine
+  body: none
+}
+
+docs {
+Objetivo: confirmar que a reativacao do tenant criou uma notificacao GENERAL,
+presentationMode BELL_ONLY, para o usuario logado (membro do tenant).
+Resultado esperado: 200, inclui uma notificacao GENERAL/BELL_ONLY recente.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("inclui notificacao de reativacao", function() {
+    const found = res.body.some(function(item) {
+      return item.type === "GENERAL" && item.presentationMode === "BELL_ONLY"
+        && item.title === "Tenant reativado";
+    });
+    expect(found).to.equal(true);
+  });
+}

@@ -1,5 +1,6 @@
 package br.com.byop.aegis.product.service;
 
+import br.com.byop.aegis.product.api.ModuleKey;
 import br.com.byop.aegis.product.command.CreateProductCommand;
 import br.com.byop.aegis.product.api.AssetStorageStrategy;
 import br.com.byop.aegis.product.api.ProductCreatedEvent;
@@ -7,6 +8,7 @@ import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductAssignment;
 import br.com.byop.aegis.product.domain.ProductAssignmentRole;
 import br.com.byop.aegis.product.domain.ProductAssignmentStatus;
+import br.com.byop.aegis.product.domain.ProductModuleTemplateCatalog;
 import br.com.byop.aegis.product.domain.ProductTypeKey;
 import br.com.byop.aegis.product.dto.ProductDetail;
 import br.com.byop.aegis.product.dto.ProductModuleSummary;
@@ -48,18 +50,20 @@ public class ProductService {
     private final ProductModuleRepository moduleRepository;
     private final ProductModuleMapper moduleMapper;
     private final ProductMapper productMapper;
+    private final ProductModuleService productModuleService;
     private final ApplicationEventPublisher eventPublisher;
 
     public ProductService(ProductRepository productRepository, TenantAccessService tenantAccessService,
                           ProductAssignmentRepository assignmentRepository, ProductModuleRepository moduleRepository,
                           ProductModuleMapper moduleMapper, ProductMapper productMapper,
-                          ApplicationEventPublisher eventPublisher) {
+                          ProductModuleService productModuleService, ApplicationEventPublisher eventPublisher) {
         this.productRepository = productRepository;
         this.tenantAccessService = tenantAccessService;
         this.assignmentRepository = assignmentRepository;
         this.moduleRepository = moduleRepository;
         this.moduleMapper = moduleMapper;
         this.productMapper = productMapper;
+        this.productModuleService = productModuleService;
         this.eventPublisher = eventPublisher;
     }
 
@@ -88,9 +92,23 @@ public class ProductService {
                 caller.subject(),
                 ProductAssignmentRole.PRODUCT_MANAGER
         ));
-        eventPublisher.publishEvent(new ProductCreatedEvent(product.getTenantId(), product.getId(), storageStrategy));
+        enableRecommendedModules(product, type);
+        eventPublisher.publishEvent(new ProductCreatedEvent(product.getTenantId(), product.getId(), storageStrategy,
+                type.name(), product.getDefaultLocale()));
 
         return productMapper.toSummary(product);
+    }
+
+    /**
+     * Habilita, na ordem do catalogo (dependencias primeiro — ex. {@code CONTENT}
+     * antes de {@code KNOWLEDGE_GRAPH}), os modulos recomendados para {@code type}
+     * (ADR-0017, Etapa 26). {@link ProductTypeKey#CUSTOM} nao recomenda nenhum
+     * modulo, entao este metodo nao faz nada para ele.
+     */
+    private void enableRecommendedModules(Product product, ProductTypeKey type) {
+        for (ModuleKey moduleKey : ProductModuleTemplateCatalog.recommendedModulesFor(type)) {
+            productModuleService.enableModule(product.getId(), moduleKey.name());
+        }
     }
 
     @Transactional(readOnly = true)

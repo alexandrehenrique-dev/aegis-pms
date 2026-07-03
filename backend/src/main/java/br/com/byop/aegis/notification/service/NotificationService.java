@@ -18,9 +18,13 @@ import br.com.byop.aegis.notification.repository.NotificationRepository;
 import br.com.byop.aegis.notification.repository.UserNotificationStatusRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.shared.markdown.SharedMarkdownSanitizer;
+import br.com.byop.aegis.tenant.api.TenantLifecycleTransition;
+import br.com.byop.aegis.tenant.api.TenantStatusChangedEvent;
 import br.com.byop.aegis.tenant.api.TenantUserAccessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -38,6 +42,11 @@ public class NotificationService {
     private static final String TARGET_ALL = "ALL";
     private static final String TARGET_TENANT = "TENANT";
     private static final String TARGET_USERS = "USERS";
+    private static final String TENANT_SUSPENDED_TITLE = "Tenant suspenso";
+    private static final String TENANT_SUSPENDED_BODY =
+            "Este tenant foi suspenso pelo administrador da plataforma. Contate o suporte para mais informações.";
+    private static final String TENANT_REACTIVATED_TITLE = "Tenant reativado";
+    private static final String TENANT_REACTIVATED_BODY = "Este tenant foi reativado.";
 
     private final NotificationRepository notificationRepository;
     private final UserNotificationStatusRepository statusRepository;
@@ -115,6 +124,48 @@ public class NotificationService {
                 .stream()
                 .map(notificationMapper::toResponse)
                 .toList();
+    }
+
+    /**
+     * Cria a notificacao interna {@code BELL_ONLY} de suspensao/reativacao de
+     * tenant (Etapa 26, retrofit da etapa 09), com fan-out para os usuarios
+     * ativos do tenant. Reaproveita a mesma persistencia/resolucao de
+     * destinatarios de {@link #create}, sem o gate de {@code SUPER_ADMIN}
+     * daquele metodo — o chamador ({@code TenantService}, via {@link
+     * TenantStatusChangedEvent}) ja validou a propria operacao de atualizar o
+     * tenant antes de chegar aqui.
+     *
+     * @param tenantId tenant cujo status mudou
+     * @param transition direcao da mudanca (suspensao ou reativacao)
+     * @param actorSubject subject de quem alterou o status do tenant
+     */
+    @Transactional
+    public void notifyTenantStatusChange(UUID tenantId, TenantLifecycleTransition transition, String actorSubject) {
+        doNotifyTenantStatusChange(tenantId, transition, actorSubject);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void onTenantStatusChanged(TenantStatusChangedEvent event) {
+        doNotifyTenantStatusChange(event.tenantId(), event.transition(), event.actorSubject());
+    }
+
+    /**
+     * Logica real de {@link #notifyTenantStatusChange}, extraida para um metodo
+     * privado nao-transacional para evitar self-invocation entre o metodo
+     * publico e {@link #onTenantStatusChanged} (java:S6809) — mesmo padrao ja
+     * usado em {@code ContentService.doTransition} (Sprint 11).
+     */
+    private void doNotifyTenantStatusChange(UUID tenantId, TenantLifecycleTransition transition, String actorSubject) {
+        boolean suspended = transition == TenantLifecycleTransition.SUSPENDED;
+        NotificationType type = suspended ? NotificationType.WARNING : NotificationType.GENERAL;
+        String title = suspended ? TENANT_SUSPENDED_TITLE : TENANT_REACTIVATED_TITLE;
+        String body = suspended ? TENANT_SUSPENDED_BODY : TENANT_REACTIVATED_BODY;
+
+        List<String> recipients = distinct(tenantUserAccessService.listActiveUserSubjects(tenantId));
+        Notification notification = new Notification(type, title, markdownSanitizer.sanitize(body),
+                NotificationPresentationMode.BELL_ONLY, actorSubject);
+        Notification saved = notificationRepository.save(notification);
+        saveStatuses(saved, recipients);
     }
 
     @Transactional

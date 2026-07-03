@@ -1,0 +1,40 @@
+meta {
+  name: Criar produto Custom
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+}
+
+body:json {
+  {
+    "tenantId": "{{templateTenantId}}",
+    "key": "template-custom-{{graphRefSeed}}",
+    "name": "Template Custom",
+    "type": "Custom",
+    "defaultLocale": "pt-BR"
+  }
+}
+
+docs {
+Objetivo: validar que "Custom" nao aciona nenhum scaffold — produto nasce
+100% em branco (sem modulo habilitado, sem pagina criada).
+Resultado esperado: 201, id presente.
+Variaveis produzidas: templateCustomProductId.
+}
+
+script:post-response {
+  bru.setVar('templateCustomProductId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("product id presente", function() {
+    expect(res.body.id).to.be.a('string');
+  });
+}

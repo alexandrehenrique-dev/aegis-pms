@@ -1,0 +1,41 @@
+meta {
+  name: Criar tenant para os testes de scaffold/notificacao
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants
+  body: json
+}
+
+body:json {
+  {
+    "key": "template-tenant-{{graphRefSeed}}",
+    "name": "Template Tenant",
+    "plan": "FREE",
+    "initialAdminEmail": "{{inviteEmail}}"
+  }
+}
+
+docs {
+Objetivo: criar um tenant proprio para esta pasta (nao reaproveita {{tenantId}}
+compartilhado) — o usuario logado no momento desta chamada vira TenantMembership
+ACTIVE deste tenant, e e o mesmo usuario que consulta /notifications/mine mais
+abaixo, sem depender de qual foi o ultimo login de uma pasta anterior.
+Resultado esperado: 201, id presente.
+Variaveis produzidas: templateTenantId.
+}
+
+script:post-response {
+  bru.setVar('templateTenantId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("tenant id presente", function() {
+    expect(res.body.id).to.be.a('string');
+  });
+}

@@ -267,6 +267,50 @@ class NotificationServiceTest {
                 .isInstanceOf(OnboardingNotificationNotFoundException.class);
     }
 
+    @Test
+    void shouldCreateWarningBellOnlyNotificationOnTenantSuspended() {
+        when(tenantUserAccessService.listActiveUserSubjects(TENANT_ID)).thenReturn(List.of("tenant-user"));
+        when(notificationRepository.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+
+        service.notifyTenantStatusChange(TENANT_ID, br.com.byop.aegis.tenant.api.TenantLifecycleTransition.SUSPENDED,
+                "super-admin");
+
+        ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notificationCaptor.capture());
+        Notification saved = notificationCaptor.getValue();
+        assertThat(saved.getType()).isEqualTo(NotificationType.WARNING);
+        assertThat(saved.getPresentationMode()).isEqualTo(NotificationPresentationMode.BELL_ONLY);
+        assertThat(saved.getCreatedBySubject()).isEqualTo("super-admin");
+        ArgumentCaptor<UserNotificationStatus> statusCaptor = ArgumentCaptor.forClass(UserNotificationStatus.class);
+        verify(statusRepository).save(statusCaptor.capture());
+        assertThat(statusCaptor.getValue().getUserSubject()).isEqualTo("tenant-user");
+    }
+
+    @Test
+    void shouldCreateGeneralBellOnlyNotificationOnTenantReactivated() {
+        when(tenantUserAccessService.listActiveUserSubjects(TENANT_ID)).thenReturn(List.of("tenant-user"));
+        when(notificationRepository.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+
+        service.notifyTenantStatusChange(TENANT_ID, br.com.byop.aegis.tenant.api.TenantLifecycleTransition.REACTIVATED,
+                "super-admin");
+
+        ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notificationCaptor.capture());
+        assertThat(notificationCaptor.getValue().getType()).isEqualTo(NotificationType.GENERAL);
+        assertThat(notificationCaptor.getValue().getPresentationMode()).isEqualTo(NotificationPresentationMode.BELL_ONLY);
+    }
+
+    @Test
+    void shouldNotifyOnTenantStatusChangedEvent() {
+        when(tenantUserAccessService.listActiveUserSubjects(TENANT_ID)).thenReturn(List.of("tenant-user"));
+        when(notificationRepository.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+
+        service.onTenantStatusChanged(new br.com.byop.aegis.tenant.api.TenantStatusChangedEvent(TENANT_ID,
+                br.com.byop.aegis.tenant.api.TenantLifecycleTransition.SUSPENDED, "super-admin"));
+
+        verify(notificationRepository).save(any(Notification.class));
+    }
+
     private static Stream<Arguments> invalidTargets() {
         CreateNotificationRequest.Target tenantWithoutId = new CreateNotificationRequest.Target("TENANT", null, null);
         CreateNotificationRequest.Target unknownTarget = new CreateNotificationRequest.Target("UNKNOWN", null, null);
