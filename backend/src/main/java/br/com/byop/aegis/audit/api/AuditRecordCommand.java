@@ -5,7 +5,7 @@ import java.util.UUID;
 
 /**
  * Comando de gravacao de um evento de auditoria, recebido por
- * {@link AuditService#record(AuditRecordCommand)}. Campos opcionais
+ * {@link AuditService#recordEvent(AuditRecordCommand)}. Campos opcionais
  * ({@code productId}, {@code targetType}/{@code targetId}/{@code targetLabel},
  * {@code module}, {@code before}/{@code after}) podem ser {@code null} — o
  * risco nunca e informado pelo chamador, e sempre calculado internamente a

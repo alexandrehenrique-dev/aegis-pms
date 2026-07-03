@@ -44,6 +44,7 @@ public class FeedbackService {
     private final AssetReferenceService assetReferenceService;
     private final TenantUserAccessService tenantUserAccessService;
     private final FeedbackNotificationService feedbackNotificationService;
+    private final TelegramFeedbackNotifier telegramFeedbackNotifier;
 
     public FeedbackService(FeedbackRepository feedbackRepository,
                            FeedbackMapper feedbackMapper,
@@ -51,7 +52,8 @@ public class FeedbackService {
                            ProductAccessPort productAccessPort,
                            AssetReferenceService assetReferenceService,
                            TenantUserAccessService tenantUserAccessService,
-                           FeedbackNotificationService feedbackNotificationService) {
+                           FeedbackNotificationService feedbackNotificationService,
+                           TelegramFeedbackNotifier telegramFeedbackNotifier) {
         this.feedbackRepository = feedbackRepository;
         this.feedbackMapper = feedbackMapper;
         this.productReferenceService = productReferenceService;
@@ -59,6 +61,7 @@ public class FeedbackService {
         this.assetReferenceService = assetReferenceService;
         this.tenantUserAccessService = tenantUserAccessService;
         this.feedbackNotificationService = feedbackNotificationService;
+        this.telegramFeedbackNotifier = telegramFeedbackNotifier;
     }
 
     @Transactional
@@ -78,6 +81,7 @@ public class FeedbackService {
                 request.attachmentAssetId()
         ));
         Feedback saved = feedbackRepository.save(feedback);
+        telegramFeedbackNotifier.notify(saved);
         notifyCriticalFeedback(caller, saved);
         return feedbackMapper.toSummary(saved);
     }

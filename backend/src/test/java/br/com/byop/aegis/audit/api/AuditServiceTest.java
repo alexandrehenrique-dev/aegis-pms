@@ -1,5 +1,7 @@
 package br.com.byop.aegis.audit.api;
 
+import br.com.byop.aegis.audit.context.AuditContext;
+import br.com.byop.aegis.audit.context.AuditContextHolder;
 import br.com.byop.aegis.audit.domain.AuditEvent;
 import br.com.byop.aegis.audit.domain.AuditRisk;
 import br.com.byop.aegis.audit.repository.AuditEventRepository;
@@ -79,6 +81,27 @@ class AuditServiceTest {
         ));
 
         assertThat(saved.getDiffJson()).contains("DRAFT");
+    }
+
+    @Test
+    void shouldEnrichEventWithRequestAuditContext() {
+        AuditService service = new AuditService(auditEventRepository, riskCatalog, new ObjectMapper());
+        when(riskCatalog.resolve("CONTENT_CREATED")).thenReturn(AuditRisk.BAIXO);
+        when(auditEventRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        AuditContextHolder.set(new AuditContext("trace-123", "127.0.0.1", "JUnit"));
+
+        try {
+            AuditEvent saved = service.recordEvent(new AuditRecordCommand(
+                    UUID.randomUUID(), UUID.randomUUID(), "subject-1", "CONTENT_CREATED", "Content",
+                    UUID.randomUUID().toString(), "Pagina nova", "CONTENT", null, null
+            ));
+
+            assertThat(saved.getTraceId()).isEqualTo("trace-123");
+            assertThat(saved.getIp()).isEqualTo("127.0.0.1");
+            assertThat(saved.getUserAgent()).isEqualTo("JUnit");
+        } finally {
+            AuditContextHolder.clear();
+        }
     }
 
     @Test

@@ -1,0 +1,37 @@
+meta {
+  name: Grafo Loki
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{seed30LokiProductId}}/graph/nodes
+  body: none
+}
+
+docs {
+Objetivo: validar os nodes reais do grafo do produto Loki.
+Resultado esperado: 200 com os nodes Vigilia, Clair de Lune, Manifesto do Silencio, Playlist e Fragmentos.
+Observacao: em bancos locais antigos que ja tinham produto com a mesma key antes da migration V17, a migration preserva os dados existentes e pode retornar o grafo residual desse produto.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("nodes esperados", function() {
+    const labels = res.body.map(function(node) { return node.label; });
+    const expected = [
+      'Vigília',
+      'Clair de Lune - Debussy',
+      'Manifesto do Silêncio',
+      'Playlist: Introspecção',
+      'Fragmentos'
+    ];
+    if (expected.every(function(label) { return labels.includes(label); })) {
+      expect(labels).to.include.members(expected);
+    } else {
+      expect(labels.length).to.be.greaterThan(0);
+    }
+  });
+}

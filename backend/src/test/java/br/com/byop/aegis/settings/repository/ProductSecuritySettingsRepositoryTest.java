@@ -36,7 +36,7 @@ class ProductSecuritySettingsRepositoryTest extends RepositoryTestSupport {
         ProductSecuritySettings settings = new ProductSecuritySettings(product.getId());
 
         settings.update(new ProductSecuritySettings.Update("https://example.com/hook", "secret",
-                true, "ga-key", true));
+                true, "ga-key", true, "123", "telegram-token"));
         ProductSecuritySettings saved = repository.saveAndFlush(settings);
 
         assertThat(saved.getProductId()).isEqualTo(product.getId());
@@ -45,6 +45,8 @@ class ProductSecuritySettingsRepositoryTest extends RepositoryTestSupport {
         assertThat(saved.isAnalyticsEnabled()).isTrue();
         assertThat(saved.getAnalyticsProviderKey()).isEqualTo("ga-key");
         assertThat(saved.isEmailDeliveryEnabled()).isTrue();
+        assertThat(saved.getTelegramAlertChatId()).isEqualTo("123");
+        assertThat(saved.getTelegramAlertBotToken()).isEqualTo("telegram-token");
         assertThat(saved.getUpdatedAt()).isNotNull();
     }
 
@@ -53,13 +55,15 @@ class ProductSecuritySettingsRepositoryTest extends RepositoryTestSupport {
         Product product = saveProduct("security-settings-secret");
         ProductSecuritySettings settings = new ProductSecuritySettings(product.getId());
         settings.update(new ProductSecuritySettings.Update("https://example.com/hook", "secret",
-                false, null, false));
+                false, null, false, "123", "telegram-token"));
 
-        settings.update(new ProductSecuritySettings.Update(" ", "", true, "ga-key", true));
+        settings.update(new ProductSecuritySettings.Update(" ", "", true, "ga-key", true, " ", ""));
 
         assertThat(settings.getWebhookUrl()).isNull();
         assertThat(settings.getWebhookSecret()).isEqualTo("secret");
         assertThat(settings.getAnalyticsProviderKey()).isEqualTo("ga-key");
+        assertThat(settings.getTelegramAlertChatId()).isNull();
+        assertThat(settings.getTelegramAlertBotToken()).isNull();
     }
 
     @Test

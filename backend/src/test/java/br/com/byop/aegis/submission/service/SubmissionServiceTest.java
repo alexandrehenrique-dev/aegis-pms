@@ -1,5 +1,7 @@
 package br.com.byop.aegis.submission.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.asset.api.AssetReference;
 import br.com.byop.aegis.asset.api.AssetReferenceService;
 import br.com.byop.aegis.form.api.FormReference;
@@ -68,12 +70,18 @@ class SubmissionServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private AuditService auditService;
+
+    @Mock
+    private FormSubmissionTelegramNotifier telegramNotifier;
+
     private SubmissionService service;
 
     @BeforeEach
     void setUp() {
         service = new SubmissionService(submissionRepository, submissionMapper, formReferenceService,
-                assetReferenceService, new ObjectMapper(), eventPublisher);
+                assetReferenceService, new ObjectMapper(), eventPublisher, auditService, telegramNotifier);
     }
 
     @Test
@@ -142,6 +150,15 @@ class SubmissionServiceTest {
         ArgumentCaptor<Submission> captor = ArgumentCaptor.forClass(Submission.class);
         verify(submissionRepository).save(captor.capture());
         assertThat(captor.getValue().getAnswersJson()).contains(ASSET_ID.toString());
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        AuditRecordCommand audit = auditCaptor.getValue();
+        assertThat(audit.tenantId()).isEqualTo(TENANT_ID);
+        assertThat(audit.productId()).isEqualTo(PRODUCT_ID);
+        assertThat(audit.actorSubject()).isEqualTo("system");
+        assertThat(audit.action()).isEqualTo("FORM_SUBMISSION_RECEIVED");
+        assertThat(audit.targetId()).isEqualTo(FORM_ID.toString());
+        verify(telegramNotifier).notify(any(FormReference.class), any(Submission.class));
         verify(eventPublisher).publishEvent(any(SubmissionReceivedEvent.class));
     }
 
@@ -187,7 +204,7 @@ class SubmissionServiceTest {
         doReturn("not-a-list").when(objectMapper).readValue(any(String.class), eq(List.class));
         doReturn("{}").when(objectMapper).writeValueAsString(any());
         SubmissionService defensiveService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher, auditService, telegramNotifier);
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
         when(submissionRepository.save(any(Submission.class))).thenAnswer(invocation -> invocation.getArgument(0));
         SubmitFormCommand command = command(Map.of("Email", "ana@example.com"));
@@ -204,7 +221,7 @@ class SubmissionServiceTest {
         doReturn(List.of("not-a-map")).when(objectMapper).readValue(any(String.class), eq(List.class));
         doReturn("{}").when(objectMapper).writeValueAsString(any());
         SubmissionService defensiveService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher, auditService, telegramNotifier);
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
         when(submissionRepository.save(any(Submission.class))).thenAnswer(invocation -> invocation.getArgument(0));
         SubmitFormCommand command = command(Map.of("Email", "ana@example.com"));
@@ -336,7 +353,7 @@ class SubmissionServiceTest {
         when(objectMapper.readValue(any(String.class), eq(List.class))).thenReturn(List.of());
         when(objectMapper.writeValueAsString(any())).thenThrow(mock(JacksonException.class));
         SubmissionService brokenService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher, auditService, telegramNotifier);
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
         SubmitFormCommand command = command(Map.of("Email", "ana@example.com"));
 
@@ -350,7 +367,7 @@ class SubmissionServiceTest {
         ObjectMapper objectMapper = mock(ObjectMapper.class);
         when(objectMapper.readValue(any(String.class), eq(List.class))).thenThrow(mock(JacksonException.class));
         SubmissionService brokenService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher, auditService, telegramNotifier);
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
         SubmitFormCommand command = command(Map.of("Email", "ana@example.com"));
 
@@ -364,7 +381,7 @@ class SubmissionServiceTest {
         ObjectMapper objectMapper = mock(ObjectMapper.class);
         when(objectMapper.readValue(any(String.class), eq(Map.class))).thenThrow(mock(JacksonException.class));
         SubmissionService brokenService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher, auditService, telegramNotifier);
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID)).thenReturn(form(true, basicFieldsJson()));
         when(submissionRepository.findByFormIdAndId(FORM_ID, SUBMISSION_ID)).thenReturn(Optional.of(submission()));
 
@@ -378,7 +395,7 @@ class SubmissionServiceTest {
         ObjectMapper objectMapper = mock(ObjectMapper.class);
         doReturn("not-a-map").when(objectMapper).readValue(any(String.class), eq(Map.class));
         SubmissionService defensiveService = new SubmissionService(submissionRepository, submissionMapper,
-                formReferenceService, assetReferenceService, objectMapper, eventPublisher);
+                formReferenceService, assetReferenceService, objectMapper, eventPublisher, auditService, telegramNotifier);
         Submission submission = submission();
         SubmissionDetail detail = new SubmissionDetail(SUBMISSION_ID, FORM_ID, submission.getDate(), "Ana",
                 "ana@example.com", "site", "new", "—", null, Map.of(), null);
@@ -390,7 +407,7 @@ class SubmissionServiceTest {
     }
 
     private FormReference form(boolean published, String fieldsJson) {
-        return new FormReference(FORM_ID, TENANT_ID, PRODUCT_ID, published, fieldsJson);
+        return new FormReference(FORM_ID, TENANT_ID, PRODUCT_ID, published, fieldsJson, "[]");
     }
 
     private Submission submission() {

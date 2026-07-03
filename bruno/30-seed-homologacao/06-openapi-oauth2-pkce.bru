@@ -1,0 +1,35 @@
+meta {
+  name: OpenAPI OAuth2 PKCE
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/v3/api-docs
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization:
+}
+
+docs {
+Objetivo: validar que o Swagger/OpenAPI local expoe o scheme `oauth2-pkce` ao lado do `bearer-jwt`.
+Resultado esperado: 200, security schemes `oauth2-pkce` e `bearer-jwt` presentes.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("oauth2-pkce presente", function() {
+    const scheme = res.body.components.securitySchemes["oauth2-pkce"];
+    expect(scheme.type).to.equal("oauth2");
+    expect(scheme.flows.authorizationCode.authorizationUrl).to.include("/protocol/openid-connect/auth");
+    expect(scheme.flows.authorizationCode.tokenUrl).to.include("/protocol/openid-connect/token");
+  });
+  test("bearer jwt preservado", function() {
+    expect(res.body.components.securitySchemes["bearer-jwt"].scheme).to.equal("bearer");
+  });
+}

@@ -165,8 +165,10 @@ class ProductControllerTest {
 
     @Test
     void shouldEnableModule() throws Exception {
+        AuthenticatedUser caller = user();
         ProductModuleSummary summary = moduleSummary(true);
-        when(productModuleService.enableModule(PRODUCT_ID, "CONTENT")).thenReturn(summary);
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(productModuleService.enableModule(PRODUCT_ID, "CONTENT", caller)).thenReturn(summary);
 
         mockMvc.perform(post("/api/v1/products/{productId}/modules/{moduleKey}/enable", PRODUCT_ID, "CONTENT")
                         .with(jwt()))
@@ -178,8 +180,10 @@ class ProductControllerTest {
 
     @Test
     void shouldDisableModule() throws Exception {
+        AuthenticatedUser caller = user();
         ProductModuleSummary summary = moduleSummary(false);
-        when(productModuleService.disableModule(PRODUCT_ID, "CONTENT")).thenReturn(summary);
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(productModuleService.disableModule(PRODUCT_ID, "CONTENT", caller)).thenReturn(summary);
 
         mockMvc.perform(post("/api/v1/products/{productId}/modules/{moduleKey}/disable", PRODUCT_ID, "CONTENT")
                         .with(jwt()))
@@ -191,7 +195,9 @@ class ProductControllerTest {
 
     @Test
     void shouldReturnBadRequestWhenModuleKeyIsInvalid() throws Exception {
-        when(productModuleService.enableModule(PRODUCT_ID, "UNKNOWN"))
+        AuthenticatedUser caller = user();
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(productModuleService.enableModule(PRODUCT_ID, "UNKNOWN", caller))
                 .thenThrow(new InvalidModuleKeyException("UNKNOWN"));
 
         mockMvc.perform(post("/api/v1/products/{productId}/modules/{moduleKey}/enable", PRODUCT_ID, "UNKNOWN")
@@ -202,7 +208,9 @@ class ProductControllerTest {
 
     @Test
     void shouldReturnBadRequestWhenModuleDependencyIsMissing() throws Exception {
-        when(productModuleService.enableModule(PRODUCT_ID, "KNOWLEDGE_GRAPH"))
+        AuthenticatedUser caller = user();
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(productModuleService.enableModule(PRODUCT_ID, "KNOWLEDGE_GRAPH", caller))
                 .thenThrow(new ModuleDependencyMissingException(ModuleKey.KNOWLEDGE_GRAPH, ModuleKey.CONTENT));
 
         mockMvc.perform(post("/api/v1/products/{productId}/modules/{moduleKey}/enable", PRODUCT_ID, "KNOWLEDGE_GRAPH")

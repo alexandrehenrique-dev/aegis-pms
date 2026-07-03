@@ -35,6 +35,6 @@ public class FormReferenceService {
 
     private FormReference toReference(FormDefinition form) {
         return new FormReference(form.getId(), form.getTenantId(), form.getProductId(),
-                form.getStatus() == FormStatus.PUBLISHED, form.getFieldsJson());
+                form.getStatus() == FormStatus.PUBLISHED, form.getFieldsJson(), form.getDeliveryChannelsJson());
     }
 }

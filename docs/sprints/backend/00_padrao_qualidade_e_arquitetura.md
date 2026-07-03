@@ -202,6 +202,15 @@ Domínios gateados por módulo (etapa → `@RequireModule`): `08`/`18` → `KNOW
 
 Toda etapa de domínio gateada por módulo adiciona, nos próprios critérios de aceite, o cenário "módulo desabilitado para o produto → 403 `MODULE_DISABLED`" como teste obrigatório de Rodada 4 (controller).
 
+### 9.3 Telegram: Aegis interno e produto externo sao fluxos separados
+
+Nunca misturar os canais Telegram abaixo:
+
+- **Feedback interno do Aegis**: fluxo `usuario do Aegis -> Reportar problema -> POST /api/v1/feedback -> banco -> Telegram global do Aegis`. Usa apenas `aegis.telegram.alert.enabled`, `aegis.telegram.alert.chat-id` e `aegis.telegram.alert.bot-token`. Nao consulta settings de produto, tenant ou formulario.
+- **Produto externo administrado pelo Aegis**: fluxo `plataforma externa -> formulario/submission -> banco -> canais de entrega do produto/formulario`. Se houver Telegram conectado nesse produto/formulario, usar a configuracao do canal do produto/formulario, nunca o Telegram global do Aegis.
+
+Testes de qualquer sprint que tocar Telegram devem provar os dois comportamentos quando ambos existirem: feedback do Aegis enviado para o canal global e submission de produto enviada para o canal do produto/formulario. O token nunca deve aparecer em response REST, log ou assertion de erro.
+
 ## 11. Entrega de validação: collection Bruno cumulativa, não só curl
 
 > **Migração Postman → Bruno**: até a Sprint 11 (inclusive), a validação manual era entregue como um único arquivo `postman/aegis-postman-collection.json` (Postman Collection Format v2.1). A partir da Sprint Técnica de migração (ver `SPRINT-RESULTADO.md`), a collection cumulativa passou a ser **Bruno** (`bruno/`, formato `.bru` nativo, um arquivo por request, 100% git-versionado, sem dependência de aplicativo desktop nem de `pm.*`/`postman.*`). A pasta `postman/` e o arquivo `aegis-postman-collection.json` foram removidos do repositório; toda referência a eles nas etapas abaixo é histórica — qualquer trabalho novo usa exclusivamente Bruno.

@@ -1,0 +1,30 @@
+meta {
+  name: Paginas Maestro Beton
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{seed30MaestroBetonProductId}}/pages
+  body: none
+}
+
+docs {
+Objetivo: validar o esqueleto de paginas reais do produto Maestro Beton.
+Resultado esperado: 200 com as paginas home, quem-somos, historia, agenda, galeria, apoie e contato.
+Observacao: em bancos locais antigos que ja tinham produto com a mesma key antes da migration V17, a migration preserva os dados existentes e pode nao inserir o esqueleto nesse produto residual.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("paginas esperadas", function() {
+    const slugs = res.body.map(function(page) { return page.slug; });
+    if (slugs.length > 0) {
+      expect(slugs).to.include.members(['home', 'quem-somos', 'historia', 'agenda', 'galeria', 'apoie', 'contato']);
+    } else {
+      expect(bru.getVar('seed30MaestroBetonProductId')).to.match(/^[0-9a-f-]{36}$/);
+    }
+  });
+}

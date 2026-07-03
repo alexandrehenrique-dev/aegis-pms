@@ -503,110 +503,96 @@ public class AuditRequestContextInterceptor implements HandlerInterceptor {
 
 Registrar em `WebMvcConfigurer.addInterceptors(...)`. `AuditService.record(...)` lê do `AuditContextHolder` para preencher os campos antes de persistir.
 
-### D.4 — Dispatch de feedback para Telegram (retrofit da etapa 27, Seção F.1)
+### D.4 — Dispatch Telegram: separar Aegis interno de produto externo
 
-A etapa 27 documentou este gap: feedbacks ficam apenas no banco; não há notificação proativa quando alguém reporta um problema. Esta seção fecha isso.
+A etapa 27 documentou este gap: feedbacks do Aegis ficam apenas no banco; não há notificação proativa quando alguém reporta um problema dentro da UI do Aegis. Esta seção fecha isso sem misturar com o fluxo de formulários de produtos externos.
 
-**D.4.1 — Campo Telegram nas settings de produto**
+Regra obrigatória:
 
-Adicionar dois campos opcionais ao `ProductSettings` (entidade/tabela da etapa 17):
+- **Fluxo Aegis interno:** `user -> Reportar problema na tela do Aegis -> POST /api/v1/feedback -> banco -> Telegram global do Aegis`, se `aegis.telegram.alert.enabled=true`.
+- **Fluxo produto externo:** `plataforma externa administrada pelo Aegis -> formulario/submission -> banco -> canais de entrega do produto/formulario`. Se esse produto/formulario tiver Telegram conectado, a entrega usa o Telegram configurado no canal do produto/formulario. Nao usa o Telegram global do Aegis.
 
-```java
-// em ProductSettings.java
-@Column(name = "telegram_alert_bot_token", length = 128)
-private String telegramAlertBotToken;   // token do bot (nunca expor em GET — retornar mascarado "••••xxxx")
+**D.4.1 — Telegram global do Aegis para `Feedback`**
 
-@Column(name = "telegram_alert_chat_id", length = 64)
-private String telegramAlertChatId;     // chat ou group ID do canal de alertas
+Adicionar configuracao global, desligada por padrao:
+
+```yaml
+aegis:
+  telegram:
+    alert:
+      enabled: ${AEGIS_TELEGRAM_ALERT_ENABLED:false}
+      chat-id: ${AEGIS_TELEGRAM_ALERT_CHAT_ID:}
+      bot-token: ${AEGIS_TELEGRAM_ALERT_BOT_TOKEN:}
 ```
 
-Migration associada (incluir no mesmo `V_NEXT__seed_homologacao.sql` ou em script separado — verificar se a tabela `product_settings` existe antes de alterar):
+`TelegramFeedbackNotifier` fica no modulo `feedback`, recebe apenas `RestClient` e as propriedades `aegis.telegram.alert.*`, e e chamado apos persistir o `Feedback`.
+
+Regras:
+- se `enabled=false`, `chat-id` vazio ou `bot-token` vazio, `notify` e no-op;
+- falha de Telegram e best-effort: loga o erro e nao reverte o `Feedback` salvo;
+- token nunca aparece em response REST, log ou mensagem;
+- a mensagem inclui `AGS-####`, categoria, prioridade, tenant/produto, tela, usuario, preview da descricao e `/api/v1/assets/{id}/download` quando houver anexo.
+
+**D.4.2 — Telegram de produto/formulario**
+
+Adicionar dois campos opcionais em `product_security_settings`, porque o schema atual nao tem tabela `product_settings`:
+
+```java
+@Column(name = "telegram_alert_bot_token", length = 128)
+private String telegramAlertBotToken;
+
+@Column(name = "telegram_alert_chat_id", length = 64)
+private String telegramAlertChatId;
+```
+
+Migration associada:
 
 ```sql
-ALTER TABLE product_settings
+ALTER TABLE product_security_settings
   ADD COLUMN IF NOT EXISTS telegram_alert_bot_token VARCHAR(128),
   ADD COLUMN IF NOT EXISTS telegram_alert_chat_id   VARCHAR(64);
 ```
 
-Endpoints afetados (extensão do `GET/PUT /api/v1/products/{productId}/settings` da etapa 17):
-- `GET` → retorna `{ ..., telegramAlert: { chatId: "...", botTokenMasked: "••••aBcD" } | null }`
-- `PUT` → aceita `{ ..., telegramAlert: { chatId: "...", botToken: "..." } }` — salva ambos; `botToken` nunca é retornado em claro.
+Endpoints afetados (extensão do endpoint real de security settings):
+- `GET /api/v1/products/{productId}/settings/security` retorna `{ ..., telegramAlert: { chatId: "...", botTokenMasked: "****aBcD" } | null }`
+- `PUT /api/v1/products/{productId}/settings/security` aceita `{ ..., telegramAlert: { chatId: "...", botToken: "..." } }` e salva ambos; `botToken` nunca e retornado em claro.
 
-> Usar os mesmos campos `chatId`/`botToken` que `FormDeliveryPolicy.java` já valida: é o mesmo mecanismo, só a origem dos valores é diferente (settings de produto em vez de delivery-channel do form).
+O dispatch de submission usa o canal Telegram configurado no formulario (`deliveryChannelsJson`) quando ele estiver habilitado e contiver `chatId`/`botToken`. A configuracao de security settings de produto e a conexao administrativa do produto, exposta para UI; ela nao substitui o Telegram global do Aegis.
 
-**D.4.2 — `TelegramFeedbackNotifier` (novo componente no módulo `feedback`)**
+**D.4.3 — `TelegramFeedbackNotifier` (novo componente no módulo `feedback`)**
 
 ```java
 @Component
 public class TelegramFeedbackNotifier {
 
-    private final ProductSettingsRepository productSettingsRepo;
-    private final AssetRepository assetRepo;              // para montar URL do anexo
     private final RestClient restClient;
+    private final boolean enabled;
+    private final String chatId;
+    private final String botToken;
 
-    /** Chamado APÓS a persistência do Feedback. Falha silenciosa — não lança exceção. */
+    /** Chamado apos a persistencia do Feedback. Falha silenciosa: nao lanca excecao. */
     public void notify(Feedback feedback) {
-        if (feedback.getProductId() == null) return;
-
-        productSettingsRepo.findByProductId(feedback.getProductId())
-            .filter(s -> s.getTelegramAlertBotToken() != null && s.getTelegramAlertChatId() != null)
-            .ifPresent(settings -> sendToTelegram(feedback, settings));
-    }
-
-    private void sendToTelegram(Feedback feedback, ProductSettings settings) {
-        try {
-            String text = buildMessage(feedback);
-            String url = "https://api.telegram.org/bot%s/sendMessage".formatted(settings.getTelegramAlertBotToken());
-            restClient.post().uri(url)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("chat_id", settings.getTelegramAlertChatId(), "text", text, "parse_mode", "HTML"))
-                .retrieve()
-                .toBodilessEntity();
-        } catch (Exception ex) {
-            log.warn("Telegram dispatch falhou para feedback {} — {}", feedback.getId(), ex.getMessage());
-            // Nunca propaga: o Feedback já está persistido, o dispatch é best-effort
+        if (!enabled || chatId.isBlank() || botToken.isBlank()) {
+            return;
         }
-    }
-
-    private String buildMessage(Feedback feedback) {
-        String assetInfo = "";
-        if (feedback.getAttachmentAssetId() != null) {
-            // URL de download relativo — o destinatário pode colar no browser com o token correto
-            assetInfo = "\n📎 Anexo: <code>/api/v1/assets/%s/download</code>".formatted(feedback.getAttachmentAssetId());
-        }
-        String desc = feedback.getDescription().length() > 200
-            ? feedback.getDescription().substring(0, 200) + "…"
-            : feedback.getDescription();
-        return """
-            🐛 <b>Feedback Aegis — %s</b>
-            Categoria: %s | Prioridade: <b>%s</b>
-            Produto: %s | Tela: %s
-            Usuário: %s
-            
-            %s%s
-            """.formatted(
-                feedback.getId(),
-                feedback.getCategory(), feedback.getPriority(),
-                feedback.getProductId(), feedback.getScreenName() != null ? feedback.getScreenName() : "—",
-                feedback.getCreatedBySubject(),
-                desc, assetInfo
-            );
+        sendToAegisTelegram(feedback);
     }
 }
 ```
 
-**D.4.3 — Wiring em `FeedbackService.create(...)`**
+**D.4.4 — Wiring em `FeedbackService.create(...)`**
 
 ```java
 // Após persistir o Feedback:
 telegramFeedbackNotifier.notify(savedFeedback);
 ```
 
-**D.4.4 — Testes**
+**D.4.5 — Testes**
 
 - `TelegramFeedbackNotifierTest`: mock de `RestClient`; verificar que a mensagem contém o ID legível, categoria, prioridade, e a URL do asset quando `attachmentAssetId` está preenchido.
 - Verificar que uma exceção do `RestClient` **não propaga** para o caller (feedback ainda salvo).
-- Verificar que `notify` é no-op quando `productId` é nulo ou settings não tem token configurado.
+- Verificar que `notify` é no-op quando o Telegram global do Aegis esta desligado ou incompleto.
+- `FormSubmissionTelegramNotifierTest`: mock de `RestClient`; verificar que submission de formulario externo envia mensagem para o canal Telegram do formulario quando `deliveryChannelsJson` contem canal `telegram` habilitado.
 
 ### D.5 — Swagger UI dando 401 em todas as requisições após "Authorize"
 
@@ -692,18 +678,18 @@ springdoc:
     enabled: true
     oauth2-redirect-url: http://localhost:8080/swagger-ui/oauth2-redirect.html
     oauth:
-      client-id: aegis-app          # mesmo clientId já criado na etapa 03
+      client-id: aegis-web          # mesmo clientId já criado na etapa 03
       client-secret: ""             # public client — sem secret
       scopes: "openid profile email"
       use-pkce-with-authorization-code-grant: true
       app-name: "Aegis PMS"
 ```
 
-> `client-secret` vazio porque `aegis-app` é um public client (PKCE substitui o secret). Se em algum momento virar confidential client, preencher com a env var `${SWAGGER_OAUTH_CLIENT_SECRET:}`.
+> `client-secret` vazio porque `aegis-web` é um public client (PKCE substitui o secret). Se em algum momento virar confidential client, preencher com a env var `${SWAGGER_OAUTH_CLIENT_SECRET:}`.
 
 **D.5.3 — Keycloak: registrar redirect URI do Swagger (retrofit na etapa 03)**
 
-No Keycloak Admin (`http://localhost:8282/admin`) → realm `aegis` → client `aegis-app`:
+No Keycloak Admin (`http://localhost:8282/admin`) → realm `aegis` → client `aegis-web`:
 
 1. **Valid Redirect URIs**: adicionar `http://localhost:8080/swagger-ui/oauth2-redirect.html`
 2. **Web Origins**: adicionar `http://localhost:8080` (Keycloak precisa devolver CORS headers para o Swagger UI que roda na mesma origem da API)
@@ -752,9 +738,9 @@ docker compose up -d
      ```
   4. Teste de integração `@SpringBootTest` + `@Sql` confirmando: os 6 produtos existem via `GET /products`, Maestro Beton tem 7 páginas, Loki tem 5 graph nodes.
   5. Retrofits D.1, D.2, D.3 + testes.
-  6. Retrofit D.4 (Telegram para feedback): migration dos campos `telegram_alert_*`, `TelegramFeedbackNotifier` + testes (mock RestClient), extensão de `GET/PUT /settings` + teste de que token nunca retorna em claro.
+  6. Retrofit D.4 (Telegram): `TelegramFeedbackNotifier` usando apenas `aegis.telegram.alert.*` para feedback interno do Aegis; campos `telegram_alert_*` em `product_security_settings` para a configuracao de produto/formulario; testes com mock de `RestClient` para ambos os fluxos.
   7. Retrofit D.5 (Swagger OAuth2): `OpenApiConfig` com scheme `oauth2-pkce`, `application-local.yml` com `springdoc.swagger-ui.oauth.*`, Keycloak redirect URI registrado → verificar `GET /me` respondendo 200 no Swagger UI após login PKCE.
-  8. Bruno collection atualizada (pasta `30-seed-homologacao/`): `GET /products?tenantId=a0000000-...`, `GET /products/b0000000-...-001/pages`, `GET /products/b0000000-...-006/graph/nodes`, `PUT /products/{id}/settings` com `telegramAlert`. Rodar `npx @usebruno/cli run --env local` — todos aprovados.
+  8. Bruno collection atualizada (pasta `30-seed-homologacao/`): captura `clientes-beta` e produtos por `key`, valida paginas/grafo reais, `PUT /products/{id}/settings/security` com `telegramAlert` e OpenAPI com `oauth2-pkce`. Rodar `npx @usebruno/cli run --env local` — todos aprovados.
 
 ---
 
@@ -774,16 +760,18 @@ docker compose up -d
 - [ ] Migration é idempotente: rodar duas vezes seguidas sem erro.
 - [ ] Eventos de auditoria de `MODULE_ENABLED`, `FORM_SUBMISSION_RECEIVED` aparecem em `GET /audit/events`.
 - [ ] Campos `traceId`, `ip`, `userAgent` não são `null` nos eventos de auditoria.
-- [ ] `PUT /api/v1/products/{id}/settings` aceita `telegramAlert.botToken` + `telegramAlert.chatId` e persiste.
-- [ ] `GET /api/v1/products/{id}/settings` retorna `telegramAlert.botTokenMasked` (ex: `"••••aBcD"`) — nunca o token em claro.
-- [ ] Envio de feedback com produto que tem Telegram configurado dispara mensagem ao bot (verificar via Telegram ou via mock de `RestClient` no teste de integração).
+- [ ] `PUT /api/v1/products/{id}/settings/security` aceita `telegramAlert.botToken` + `telegramAlert.chatId` e persiste.
+- [ ] `GET /api/v1/products/{id}/settings/security` retorna `telegramAlert.botTokenMasked` (ex: `"****aBcD"`) — nunca o token em claro.
+- [ ] Envio de feedback interno do Aegis dispara mensagem ao Telegram global do Aegis quando `aegis.telegram.alert.enabled=true` e `chat-id`/`bot-token` estao configurados.
+- [ ] Envio de feedback interno do Aegis nao consulta Telegram de produto, tenant ou formulario.
+- [ ] Submissao de formulario de produto externo dispara mensagem ao Telegram do canal de entrega do formulario/produto quando esse canal estiver configurado e habilitado.
 - [ ] Envio de feedback com `attachmentAssetId` inclui a URL `/api/v1/assets/{id}/download` na mensagem Telegram.
 - [ ] Falha no Telegram (timeout, token inválido) não reverte o `Feedback` persistido — o `POST /feedback` retorna 201 normalmente.
 - [ ] Swagger UI em `http://localhost:8080/swagger-ui` exibe dois schemes: `oauth2-pkce` e `bearer-jwt`.
 - [ ] Clicar em "Authorize → oauth2-pkce" abre popup do Keycloak; após login, popup fecha e Swagger UI passa a incluir `Authorization: Bearer <token>` em todas as requisições protegidas.
 - [ ] `GET /api/v1/me` no Swagger UI retorna 200 após autenticação OAuth2 (não mais 401).
 - [ ] `GET /api/v1/tenants` retorna 403 para Editor/Viewer (role incorreta) e 200 para SUPER_ADMIN — autenticação funcionando, autorização por papel também.
-- [ ] `realm-export.json` atualizado com `http://localhost:8080/swagger-ui/oauth2-redirect.html` na lista de redirect URIs válidos e `http://localhost:8080` em Web Origins do client `aegis-app`.
+- [ ] `realm-export.json` atualizado com `http://localhost:8080/swagger-ui/oauth2-redirect.html` na lista de redirect URIs válidos e `http://localhost:8080` em Web Origins do client `aegis-web`.
 - [ ] Spring Modulith aprovado (sem violação de módulo nova).
 - [ ] `npx @usebruno/cli run --env local` — todos os requests aprovados (collection cumulativa incluindo a pasta `30-seed-homologacao/`).
 

@@ -67,7 +67,11 @@ Se a etapa 25 já estiver implementada: ao criar um `Feedback` com `priority: "c
 
 **F.1 — Dispatch para Telegram**
 
-Ao criar qualquer `Feedback`, se o tenant (ou o produto associado ao feedback) tiver Telegram configurado (`ProductSettings.telegramAlertBotToken` + `ProductSettings.telegramAlertChatId`, adicionados na etapa 30 às settings de nível de produto), enviar uma mensagem via Telegram Bot API. A mensagem deve incluir: `id` legível (`AGS-####`), categoria, prioridade, descrição resumida (primeiras 200 chars), tenant/produto, usuário, tela, e — se houver `attachmentAssetId` — a URL de download do asset (via `GET /assets/{id}/download`). Falha no envio ao Telegram **não deve reverter** o `Feedback` já persistido: registrar erro em log e deixar o `Feedback` salvo. Ver etapa 30, Seção D.4.
+Ao criar qualquer `Feedback` pelo fluxo interno do Aegis (`user -> Reportar problema na UI do Aegis -> POST /feedback -> banco`), enviar uma mensagem para o **Telegram global do Aegis** quando `aegis.telegram.alert.enabled=true` e `aegis.telegram.alert.chat-id`/`bot-token` estiverem configurados. Este fluxo nao usa Telegram configurado em produto, tenant ou formulario.
+
+A mensagem deve incluir: `id` legível (`AGS-####`), categoria, prioridade, descrição resumida (primeiras 200 chars), tenant/produto, usuário, tela, e — se houver `attachmentAssetId` — a URL de download do asset (via `GET /assets/{id}/download`). Falha no envio ao Telegram **não deve reverter** o `Feedback` já persistido: registrar erro em log e deixar o `Feedback` salvo. Ver etapa 30, Seção D.4.
+
+Fluxo separado: reports/formularios enviados a partir de um produto externo administrado pelo Aegis seguem `plataforma externa -> formulario/submission -> banco -> canais de entrega do produto/formulario`. Quando esse produto/formulario tiver Telegram conectado, a entrega vai para o Telegram configurado nesse canal, sem usar o Telegram global do Aegis.
 
 **F.2 — Tela de visualização (Super Admin) — frontend Sprint 23**
 
@@ -75,7 +79,7 @@ Ao criar qualquer `Feedback`, se o tenant (ou o produto associado ao feedback) t
 
 **F.3 — Tela de configuração Telegram — frontend Sprint 23**
 
-`SecuritySettingsPanel.tsx` já exibe "Telegram futuro" como linha placeholder. A configuração real (`botToken`/`chatId` por produto) deve ser exposta nesse mesmo painel na Sprint 23, depois que a etapa 30 adicionar os campos no modelo de settings.
+`SecuritySettingsPanel.tsx` já exibe "Telegram futuro" como linha placeholder. A configuração real (`botToken`/`chatId` por produto) deve ser exposta nesse mesmo painel na Sprint 23, depois que a etapa 30 adicionar os campos no modelo de settings. Essa configuração pertence aos fluxos de produto/formulario; ela nao controla o dispatch do `POST /feedback` interno do Aegis.
 
 ## Critérios de aceite
 

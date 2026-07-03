@@ -57,13 +57,17 @@ public class ProductController {
 
     @PostMapping("/api/v1/products/{productId}/modules/{moduleKey}/enable")
     public ProductModuleSummary enableModule(@PathVariable("productId") UUID productId,
-                                             @PathVariable("moduleKey") String moduleKey) {
-        return productModuleService.enableModule(productId, moduleKey);
+                                             @PathVariable("moduleKey") String moduleKey,
+                                             Authentication authentication) {
+        AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
+        return productModuleService.enableModule(productId, moduleKey, caller);
     }
 
     @PostMapping("/api/v1/products/{productId}/modules/{moduleKey}/disable")
     public ProductModuleSummary disableModule(@PathVariable("productId") UUID productId,
-                                              @PathVariable("moduleKey") String moduleKey) {
-        return productModuleService.disableModule(productId, moduleKey);
+                                              @PathVariable("moduleKey") String moduleKey,
+                                              Authentication authentication) {
+        AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
+        return productModuleService.disableModule(productId, moduleKey, caller);
     }
 }

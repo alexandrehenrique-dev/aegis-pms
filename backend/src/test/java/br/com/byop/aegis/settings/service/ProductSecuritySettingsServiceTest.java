@@ -66,7 +66,7 @@ class ProductSecuritySettingsServiceTest {
 
         ProductSecuritySettingsResponse response = service().updateSecuritySettings(caller, PRODUCT_ID,
                 new UpdateProductSecuritySettingsRequest("https://example.com/hook", "secret",
-                        true, "ga-key", true));
+                        true, "ga-key", true, null));
 
         assertThat(response.webhookStatus()).isEqualTo("connected");
         assertThat(response.analyticsEnabled()).isTrue();
@@ -82,9 +82,12 @@ class ProductSecuritySettingsServiceTest {
 
         ProductSecuritySettingsResponse response = service().updateSecuritySettings(caller, PRODUCT_ID,
                 new UpdateProductSecuritySettingsRequest("https://example.com/hook", "secret",
-                        true, "ga-key", true));
+                        true, "ga-key", true,
+                        new UpdateProductSecuritySettingsRequest.TelegramAlertRequest("123", "token-1234")));
 
         assertThat(response.webhookStatus()).isEqualTo("connected");
+        assertThat(response.telegramAlert().chatId()).isEqualTo("123");
+        assertThat(response.telegramAlert().botTokenMasked()).isEqualTo("****1234");
         verify(repository).save(any(ProductSecuritySettings.class));
     }
 

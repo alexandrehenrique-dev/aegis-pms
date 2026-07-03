@@ -1,5 +1,7 @@
 package br.com.byop.aegis.submission.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.asset.api.AssetReference;
 import br.com.byop.aegis.asset.api.AssetReferenceService;
 import br.com.byop.aegis.form.api.FormReference;
@@ -36,6 +38,10 @@ public class SubmissionService {
     public static final String UPLOAD_ACCEPTED_TYPES_ERROR = "SUBMISSION_UPLOAD_ACCEPTED_FILE_TYPES_REQUIRED";
     public static final String INVALID_UPLOAD_ASSET_ERROR = "INVALID_SUBMISSION_UPLOAD_ASSET";
     public static final String INVALID_UPLOAD_MIME_ERROR = "INVALID_SUBMISSION_UPLOAD_MIME_TYPE";
+    private static final String SYSTEM_ACTOR = "system";
+    private static final String ACTION_FORM_SUBMISSION_RECEIVED = "FORM_SUBMISSION_RECEIVED";
+    private static final String TARGET_TYPE_FORM = "Form";
+    private static final String MODULE_FORM = "FORM";
 
     private final SubmissionRepository submissionRepository;
     private final SubmissionMapper submissionMapper;
@@ -43,16 +49,21 @@ public class SubmissionService {
     private final AssetReferenceService assetReferenceService;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final AuditService auditService;
+    private final FormSubmissionTelegramNotifier telegramNotifier;
 
     public SubmissionService(SubmissionRepository submissionRepository, SubmissionMapper submissionMapper,
                              FormReferenceService formReferenceService, AssetReferenceService assetReferenceService,
-                             ObjectMapper objectMapper, ApplicationEventPublisher eventPublisher) {
+                             ObjectMapper objectMapper, ApplicationEventPublisher eventPublisher,
+                             AuditService auditService, FormSubmissionTelegramNotifier telegramNotifier) {
         this.submissionRepository = submissionRepository;
         this.submissionMapper = submissionMapper;
         this.formReferenceService = formReferenceService;
         this.assetReferenceService = assetReferenceService;
         this.objectMapper = objectMapper;
         this.eventPublisher = eventPublisher;
+        this.auditService = auditService;
+        this.telegramNotifier = telegramNotifier;
     }
 
     @Transactional(readOnly = true)
@@ -96,6 +107,22 @@ public class SubmissionService {
                 form.id(), receivedAt, command.name(), command.email(), command.source(),
                 SubmissionStatus.NEW, command.ownerSubject(), command.score(), writeJson(command.answers())
         )));
+        Map<String, Object> auditPayload = new LinkedHashMap<>();
+        auditPayload.put("submissionId", submission.getId());
+        auditPayload.put("source", command.source());
+        auditService.recordEvent(new AuditRecordCommand(
+                form.tenantId(),
+                form.productId(),
+                SYSTEM_ACTOR,
+                ACTION_FORM_SUBMISSION_RECEIVED,
+                TARGET_TYPE_FORM,
+                form.id().toString(),
+                form.id().toString(),
+                MODULE_FORM,
+                null,
+                auditPayload
+        ));
+        telegramNotifier.notify(form, submission);
         eventPublisher.publishEvent(new SubmissionReceivedEvent(form.id(), form.productId(), receivedAt.toInstant()));
         return submissionMapper.toDetail(submission, command.answers());
     }
