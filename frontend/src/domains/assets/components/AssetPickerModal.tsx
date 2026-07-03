@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Search, X } from "lucide-react";
-import { Badge, Button, SkeletonLines, PartialErrorWidget, fade } from "../../../shared/components/Primitives";
+import { Badge, Button, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { fade } from "../../../shared/components/motion";
 import { assetsService } from "../services/assetsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AssetTypeIcon } from "./AssetBits";

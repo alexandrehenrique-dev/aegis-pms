@@ -6,7 +6,7 @@ import { Badge, Button, Card, EmptyState, Field, PageHeader, SkeletonLines, Part
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { EventsManagerDrawer } from "../components/EventsManagerDrawer";
 import { PermGate } from "../../../app/guards/PermGate";
-import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
+import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { toast } from "../../../core/notifications/toast";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";

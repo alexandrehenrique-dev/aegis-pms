@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { CheckCircle2, Circle, Loader2, AlertTriangle } from "lucide-react";
-import { fade } from "./Primitives";
+import { fade } from "./motion";
 
 export type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 

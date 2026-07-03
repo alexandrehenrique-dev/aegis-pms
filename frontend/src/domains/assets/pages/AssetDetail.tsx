@@ -4,7 +4,7 @@ import { AnimatePresence } from "motion/react";
 import { Badge, Button, Card, PageHeader } from "../../../shared/components/Primitives";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { PermGate } from "../../../app/guards/PermGate";
-import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
+import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { AssetUsagePanel } from "../components/AssetUsagePanel";
 import { toast } from "../../../core/notifications/toast";
 import { assetsService } from "../services/assetsService";

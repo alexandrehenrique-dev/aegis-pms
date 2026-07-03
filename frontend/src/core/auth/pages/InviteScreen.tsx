@@ -1,45 +1,61 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
-import { useAuth } from "../AuthContext";
-import { AuthEnvBadge, AuthLogo, PasswordStrengthBar, getPasswordStrength } from "../components/AuthChrome";
-import { roleLabels } from "../../permissions/roles";
-import type { AuthUser, InviteStatus, ProductOption, TenantOption, UserRole } from "../../../shared/types";
-import { fade } from "../../../shared/components/Primitives";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { authActionErrorCode, authActivationService, type InviteTokenData } from "../services/authActivationService";
+import { AuthEnvBadge, AuthLogo, PasswordStrengthBar } from "../components/AuthChrome";
+import { getPasswordStrength } from "../passwordStrength";
+import type { InviteStatus } from "../../../shared/types";
+import { fade } from "../../../shared/components/motion";
 
 export function InviteScreen() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const [status, setStatus] = useState<InviteStatus>("valid");
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+
+  const [status, setStatus] = useState<InviteStatus>("loading");
+  const [invite, setInvite] = useState<InviteTokenData | null>(null);
   const [pwd, setPwd] = useState("");
   const [confirm, setConfirm] = useState("");
   const [terms, setTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [done, setDone] = useState(false);
 
-  const invite = { name: "João Alves", email: "joao@byop.com", tenant: "BYOP", role: "editor" as UserRole, products: ["Maestro Beton"], inviter: "Ana Martins", validUntil: "25 jun 2026" };
+  useEffect(() => {
+    if (!token) { setStatus("revoked"); return; }
+    authActivationService
+      .validateInviteToken(token)
+      .then((data) => { setInvite(data); setStatus("valid"); })
+      .catch((err) => {
+        const code = authActionErrorCode(err);
+        if (code === "TOKEN_EXPIRED") setStatus("expired");
+        else if (code === "TOKEN_ALREADY_USED") setStatus("used");
+        else setStatus("revoked");
+      });
+  }, [token]);
 
   const handleActivate = () => {
+    if (!token) return;
     setError("");
     if (pwd !== confirm) { setError("As senhas não coincidem."); return; }
     if (getPasswordStrength(pwd) === "fraca") { setError("Senha muito fraca. Use ao menos 8 caracteres com números."); return; }
     if (!terms) { setError("Você precisa aceitar os termos para continuar."); return; }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setDone(true);
-      const u: AuthUser = { id: "u_inv", name: invite.name, email: invite.email, role: invite.role, initials: "JA" };
-      const t: TenantOption[] = [{ id: "t1", name: "BYOP", plan: "Pro", productCount: 6, lastAccess: "agora", status: "ativo" }];
-      const p: Record<string, ProductOption[]> = { t1: [{ id: "p1", name: "Maestro Beton", type: "Site Institucional", status: "Ativo", modules: 6 }] };
-      setTimeout(() => { login(u, t, p); navigate("/select-tenant"); }, 1500);
-    }, 800);
+    authActivationService
+      .activateAccount(token, pwd)
+      .then(() => navigate("/login", { state: { toast: "Conta ativada! Faça login para continuar." } }))
+      .catch((err) => {
+        const code = authActionErrorCode(err);
+        if (code === "WEAK_PASSWORD") setError("A senha deve ter ao menos 8 caracteres, incluindo letras e números.");
+        else if (code === "TOKEN_EXPIRED") setStatus("expired");
+        else setError("Ocorreu um erro. Tente novamente.");
+      })
+      .finally(() => setLoading(false));
   };
 
   const statusMsgs: Partial<Record<InviteStatus, string>> = {
-    expired: `Este convite expirou em ${invite.validUntil}. Solicite um novo convite ao administrador.`,
-    revoked: "Este convite foi revogado pelo administrador.",
+    expired: `Este convite expirou${invite?.expiresAt ? ` em ${new Date(invite.expiresAt).toLocaleDateString("pt-BR")}` : ""}. Solicite um novo convite ao administrador.`,
+    revoked: "Este convite é inválido ou foi revogado pelo administrador.",
     used: "Este convite já foi utilizado. Faça login com sua conta.",
   };
 
@@ -49,26 +65,25 @@ export function InviteScreen() {
       <div className="w-full max-w-[480px]">
         <motion.div {...fade} className="rounded-2xl border border-border bg-card p-8 shadow-[0_24px_80px_rgba(28,28,28,.08)]">
           <AuthLogo />
-          {done ? (
-            <div className="text-center">
-              <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-[#ede9fe]"><CheckCircle2 size={24} className="text-primary" /></div>
-              <h2 className="font-semibold">Conta ativada com sucesso!</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Redirecionando para a plataforma...</p>
+          {status === "loading" ? (
+            <div className="flex flex-col items-center gap-3 py-6 text-sm text-muted-foreground">
+              <Loader2 size={20} className="animate-spin" />
+              Validando convite...
             </div>
           ) : status !== "valid" ? (
             <>
               <div className="rounded-lg border border-destructive/20 bg-[#FDEBE8] p-4 text-sm text-destructive">{statusMsgs[status]}</div>
               <button onClick={() => navigate("/login")} className="mt-4 flex w-full items-center justify-center rounded-lg bg-primary py-2.5 text-sm text-primary-foreground transition hover:bg-primary/90">Ir ao login</button>
             </>
-          ) : (
+          ) : invite ? (
             <>
               <div className="mb-6 rounded-xl bg-[#ede9fe] p-4">
-                <p className="text-sm font-semibold text-[#7c3aed]">Convite para {invite.tenant}</p>
-                <p className="mt-1 text-sm text-muted-foreground">Olá, <b>{invite.name}</b>. {invite.inviter} convidou você para operar na plataforma Aegis PMS.</p>
+                <p className="text-sm font-semibold text-[#7c3aed]">Convite para {invite.tenantName}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Olá, <b>{invite.userName}</b>. {invite.inviterName} convidou você para operar na plataforma Aegis PMS.</p>
                 <div className="mt-3 grid gap-1.5 text-xs text-muted-foreground">
-                  <div className="flex justify-between"><span>Papel</span><b>{roleLabels[invite.role]}</b></div>
-                  <div className="flex justify-between"><span>Produtos</span><b>{invite.products.join(", ")}</b></div>
-                  <div className="flex justify-between"><span>Válido até</span><b>{invite.validUntil}</b></div>
+                  <div className="flex justify-between"><span>Papel</span><b>{invite.role}</b></div>
+                  <div className="flex justify-between"><span>Produtos</span><b>{invite.productNames.join(", ")}</b></div>
+                  <div className="flex justify-between"><span>E-mail</span><b>{invite.userEmail}</b></div>
                 </div>
               </div>
               <h2 className="mb-1 font-semibold">Definir senha e ativar conta</h2>
@@ -94,12 +109,7 @@ export function InviteScreen() {
               </div>
               <button onClick={() => navigate("/login")} className="mt-4 flex w-full items-center justify-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"><ArrowLeft size={14} />Voltar ao login</button>
             </>
-          )}
-          <div className="mt-4 flex gap-1 text-xs">
-            {(["valid", "expired", "revoked", "used"] as InviteStatus[]).map((s) => (
-              <button key={s} onClick={() => { setDone(false); setStatus(s); }} className="flex-1 rounded-lg border border-border bg-muted p-1 text-muted-foreground">{s}</button>
-            ))}
-          </div>
+          ) : null}
         </motion.div>
       </div>
     </div>

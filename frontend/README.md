@@ -66,3 +66,15 @@ src/
 ```
 
 Mais contexto arquitetural em `docs/implementation/011_aegis_pms_frontend_architecture_blueprint.md` na raiz do repositório.
+
+## Padrão de qualidade (obrigatório antes de commitar)
+
+```bash
+npm run lint       # ESLint — deve terminar com 0 erros e 0 warnings
+npm run typecheck  # tsc -b --noEmit — deve terminar sem erros
+npm run build      # não roda ESLint sozinho; não substitui o lint acima
+```
+
+`npm run build` **não** roda ESLint — passar no build não significa que o lint está limpo. Os três comandos são gates independentes de toda sprint frontend.
+
+Padrões recorrentes de warning do ESLint (`react-refresh/only-export-components`, `react-hooks/exhaustive-deps`) e como corrigi-los sem suprimir a regra estão documentados em `AGENTS.md`, Seção 4.1, na raiz do repositório.

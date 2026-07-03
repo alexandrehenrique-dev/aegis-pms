@@ -5,7 +5,7 @@ import { Filter, Search } from "lucide-react";
 import { Badge, Button, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { PermGate } from "../../../app/guards/PermGate";
-import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
+import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { contentService } from "../services/contentService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { ContentStatusBadge } from "../components/ContentStatusBadge";

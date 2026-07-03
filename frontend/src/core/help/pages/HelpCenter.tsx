@@ -2,7 +2,7 @@ import { AlertTriangle } from "lucide-react";
 import { Card, PageHeader } from "../../../shared/components/Primitives";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../../shared/components/ui/accordion";
 import { useCurrentProduct } from "../../products/useCurrentProduct";
-import { useFeedbackModal } from "../../notifications/FeedbackModalContext";
+import { useFeedbackModal } from "../../notifications/useFeedbackModal";
 import { resolveEnabledModules } from "../../products/moduleDefaults";
 import { MODULE_FAQ_TOPICS, PLATFORM_OVERVIEW_TOPICS } from "../helpTopics";
 

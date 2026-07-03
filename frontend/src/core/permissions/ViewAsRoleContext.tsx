@@ -1,16 +1,7 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { UserRole } from "../../shared/types";
-import { useAuth } from "../auth/AuthContext";
-
-type ViewAsRoleContextValue = { viewAsRole: UserRole; setViewAsRole: (r: UserRole) => void; restore: () => void };
-
-const ViewAsRoleContext = createContext<ViewAsRoleContextValue | undefined>(undefined);
-
-export function useViewAsRole(): ViewAsRoleContextValue {
-  const ctx = useContext(ViewAsRoleContext);
-  if (!ctx) throw new Error("useViewAsRole must be used within a ViewAsRoleProvider");
-  return ctx;
-}
+import { useAuth } from "../auth/useAuth";
+import { ViewAsRoleContext } from "./viewAsRoleContextDefinition";
 
 /** Lets Tenant/Super admins simulate viewing the app as another role (permission preview). */
 export function ViewAsRoleProvider({ children }: { children: ReactNode }) {

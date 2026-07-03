@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router";
 import { ChevronRight } from "lucide-react";
-import { useAuth } from "../../core/auth/AuthContext";
+import { useAuth } from "../../core/auth/useAuth";
 import { nav } from "./navConfig";
 
 const sectionLabels: Record<string, string> = Object.fromEntries(nav.map((n) => [n.path, n.label]));

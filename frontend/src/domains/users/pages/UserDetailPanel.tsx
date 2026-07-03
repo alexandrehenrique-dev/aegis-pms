@@ -8,7 +8,7 @@ import { SettingsSection } from "../../settings/components/SettingsBits";
 import { AuditTimeline } from "../../audit/pages/AuditTimeline";
 import { toast } from "../../../core/notifications/toast";
 import { usersService } from "../services/usersService";
-import { useAuth } from "../../../core/auth/AuthContext";
+import { useAuth } from "../../../core/auth/useAuth";
 import type { UserStatus } from "../contracts/responses";
 
 export function UserDetailPanel() {

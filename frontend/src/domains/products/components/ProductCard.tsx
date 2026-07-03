@@ -9,7 +9,7 @@ import { getProductSlug } from "../../../shared/utils/productSlugs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../shared/components/ui/dropdown-menu";
 import { toast } from "../../../core/notifications/toast";
 import { productsService } from "../services/productsService";
-import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
+import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import type { ProductSummary } from "../contracts/responses";
 
 export function ProductCard({ p }: { p: ProductSummary }) {

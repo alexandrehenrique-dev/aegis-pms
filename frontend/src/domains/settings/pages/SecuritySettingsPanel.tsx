@@ -4,7 +4,7 @@ import { Badge, Button, Card, PageHeader } from "../../../shared/components/Prim
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../../shared/components/ui/dialog";
 import { toast } from "../../../core/notifications/toast";
 import { settingsService } from "../services/settingsService";
-import { useAuth } from "../../../core/auth/AuthContext";
+import { useAuth } from "../../../core/auth/useAuth";
 
 const SESSIONS = [
   { device: "Chrome · macOS", location: "São Paulo, BR", lastActive: "agora" },

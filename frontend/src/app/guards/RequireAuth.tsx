@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router";
-import { useAuth } from "../../core/auth/AuthContext";
+import { useAuth } from "../../core/auth/useAuth";
 
 /**
  * Guards the authenticated section of the app. Redirects to /login if there's

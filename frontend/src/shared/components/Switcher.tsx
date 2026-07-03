@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { CheckCircle2, ChevronDown, Search } from "lucide-react";
-import { fade, EmptyState } from "./Primitives";
+import { EmptyState } from "./Primitives";
+import { fade } from "./motion";
 
 export type SwitcherItem = { id: string; name: string; meta?: string };
 

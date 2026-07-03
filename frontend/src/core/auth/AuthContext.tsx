@@ -1,37 +1,10 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AuthUser, ProductOption, TenantOption } from "../../shared/types";
 import { setAuthTokenProvider } from "../../shared/services/apiClient";
 import { logApiCall } from "../../shared/services/devLog";
 import { setNotificationsCurrentUser } from "../notifications/services/notificationsService";
 import type { DeleteProductRequest, UpdateProductRequest } from "../../domains/products/contracts/requests";
-
-type AuthContextValue = {
-  authUser: AuthUser | null;
-  selectedTenant: TenantOption | null;
-  selectedProduct: ProductOption | null;
-  userTenants: TenantOption[];
-  userProducts: Record<string, ProductOption[]>;
-  effectiveTenant: TenantOption | null;
-  tenantProducts: ProductOption[];
-  effectiveProduct: ProductOption | null;
-  login: (user: AuthUser, tenants: TenantOption[], products: Record<string, ProductOption[]>) => void;
-  logout: () => void;
-  selectTenant: (tenant: TenantOption | null) => void;
-  selectProduct: (product: ProductOption | null) => void;
-  switchTenant: (tenantId: string) => void;
-  switchProduct: (productId: string) => void;
-  updateProduct: (productId: string, req: UpdateProductRequest) => void;
-  removeProduct: (productId: string, req: DeleteProductRequest) => void;
-  toggleFavorite: (productId: string) => void;
-};
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
-  return ctx;
-}
+import { AuthContext, type AuthContextValue } from "./authContextDefinition";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -47,35 +20,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setNotificationsCurrentUser(authUser?.id ?? null);
   }, [authUser]);
 
-  const login = (user: AuthUser, tenants: TenantOption[], products: Record<string, ProductOption[]>) => {
+  const login = useCallback((user: AuthUser, tenants: TenantOption[], products: Record<string, ProductOption[]>) => {
     setAuthUser(user);
     setUserTenants(tenants);
     setUserProducts(products);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setAuthUser(null);
     setSelectedTenant(null);
     setSelectedProduct(null);
     setUserTenants([]);
     setUserProducts({});
-  };
+  }, []);
 
-  const effectiveTenant = selectedTenant ?? (userTenants.length === 1 ? userTenants[0] : null);
-  const tenantProducts = effectiveTenant ? userProducts[effectiveTenant.id] || [] : [];
-  const activeProducts = tenantProducts.filter((p) => p.status !== "Arquivado" && p.modules > 0);
-  const effectiveProduct = selectedProduct ?? (activeProducts.length === 1 ? activeProducts[0] : null);
+  const effectiveTenant = useMemo(
+    () => selectedTenant ?? (userTenants.length === 1 ? userTenants[0] : null),
+    [selectedTenant, userTenants],
+  );
+  const tenantProducts = useMemo(
+    () => (effectiveTenant ? userProducts[effectiveTenant.id] || [] : []),
+    [effectiveTenant, userProducts],
+  );
+  const effectiveProduct = useMemo(() => {
+    const activeProducts = tenantProducts.filter((p) => p.status !== "Arquivado" && p.modules > 0);
+    return selectedProduct ?? (activeProducts.length === 1 ? activeProducts[0] : null);
+  }, [selectedProduct, tenantProducts]);
 
-  const switchTenant = (tenantId: string) => {
+  const switchTenant = useCallback((tenantId: string) => {
     const t = userTenants.find((t) => t.id === tenantId);
     if (t) { setSelectedTenant(t); setSelectedProduct(null); }
-  };
+  }, [userTenants]);
 
-  const switchProduct = (productId: string) => {
+  const switchProduct = useCallback((productId: string) => {
     if (!effectiveTenant) return;
     const p = (userProducts[effectiveTenant.id] || []).find((p) => p.id === productId);
     if (p) setSelectedProduct(p);
-  };
+  }, [effectiveTenant, userProducts]);
 
   /**
    * Editar Produto a partir de ProductSelectScreen (botão direito → menu de
@@ -84,14 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * ser aberto. Ponto de integração real (Sprint 07): `PATCH
    * /api/v1/admin/products/{productId}` (docs/AEGIS_PMS_V1.md §8.4).
    */
-  const updateProduct = (productId: string, req: UpdateProductRequest) => {
+  const updateProduct = useCallback((productId: string, req: UpdateProductRequest) => {
     if (!effectiveTenant) return;
     logApiCall("PATCH", `/api/v1/admin/products/${productId}`, req);
     const tenantId = effectiveTenant.id;
     const patch = { name: req.name, type: req.type, status: req.status, modulesList: req.modules, modules: req.modules.length };
     setUserProducts((prev) => ({ ...prev, [tenantId]: (prev[tenantId] ?? []).map((p) => (p.id === productId ? { ...p, ...patch } : p)) }));
     setSelectedProduct((sp) => (sp && sp.id === productId ? { ...sp, ...patch } : sp));
-  };
+  }, [effectiveTenant]);
 
   /**
    * Favoritar/desfavoritar produto (Sprint 15, Tarefa E.1) — antes só existia
@@ -100,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * qualquer papel que veja `/select-product`, não só quem gerencia produtos
    * (favoritar é preferência pessoal, não administração).
    */
-  const toggleFavorite = (productId: string) => {
+  const toggleFavorite = useCallback((productId: string) => {
     if (!effectiveTenant) return;
     const tenantId = effectiveTenant.id;
     setUserProducts((prev) => ({
@@ -108,23 +89,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       [tenantId]: (prev[tenantId] ?? []).map((p) => (p.id === productId ? { ...p, isFavorite: !p.isFavorite } : p)),
     }));
     setSelectedProduct((sp) => (sp && sp.id === productId ? { ...sp, isFavorite: !sp.isFavorite } : sp));
-  };
+  }, [effectiveTenant]);
 
   /** Exclusão lógica (soft delete) — `DELETE /api/v1/admin/products/{productId}` (docs/AEGIS_PMS_V1.md §8.4/§8.5: produto nunca é apagado fisicamente). */
-  const removeProduct = (productId: string, req: DeleteProductRequest) => {
+  const removeProduct = useCallback((productId: string, req: DeleteProductRequest) => {
     if (!effectiveTenant) return;
     logApiCall("DELETE", `/api/v1/admin/products/${productId}`, req);
     const tenantId = effectiveTenant.id;
     setUserProducts((prev) => ({ ...prev, [tenantId]: (prev[tenantId] ?? []).filter((p) => p.id !== productId) }));
     setSelectedProduct((sp) => (sp && sp.id === productId ? null : sp));
-  };
+  }, [effectiveTenant]);
 
   const value = useMemo<AuthContextValue>(() => ({
     authUser, selectedTenant, selectedProduct, userTenants, userProducts,
     effectiveTenant, tenantProducts, effectiveProduct,
     login, logout, selectTenant: setSelectedTenant, selectProduct: setSelectedProduct,
     switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite,
-  }), [authUser, selectedTenant, selectedProduct, userTenants, userProducts, effectiveTenant, tenantProducts, effectiveProduct]);
+  }), [
+    authUser, selectedTenant, selectedProduct, userTenants, userProducts, effectiveTenant, tenantProducts, effectiveProduct,
+    login, logout, switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

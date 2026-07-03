@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { fade } from "../../shared/components/Primitives";
+import { fade } from "../../shared/components/motion";
 
 export function ScreenSkeleton() {
   return (

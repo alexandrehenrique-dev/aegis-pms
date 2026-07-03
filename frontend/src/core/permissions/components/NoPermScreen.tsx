@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { Lock } from "lucide-react";
-import { fade, Badge } from "../../../shared/components/Primitives";
+import { Badge } from "../../../shared/components/Primitives";
+import { fade } from "../../../shared/components/motion";
 import type { UserRole } from "../../../shared/types";
 import { roleLabels } from "../roles";
 

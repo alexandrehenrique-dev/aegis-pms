@@ -4,7 +4,7 @@ import { AnimatePresence } from "motion/react";
 import { AlertTriangle, Plus } from "lucide-react";
 import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
 import { PermGate } from "../../../app/guards/PermGate";
-import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
+import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { contentService } from "../services/contentService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { NewContentModal } from "../components/NewContentModal";

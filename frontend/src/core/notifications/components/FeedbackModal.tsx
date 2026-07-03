@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { CheckCircle2, Loader2, Plus, X } from "lucide-react";
-import { fade, Button } from "../../../shared/components/Primitives";
+import { Button } from "../../../shared/components/Primitives";
+import { fade } from "../../../shared/components/motion";
 import { toast } from "../toast";
-import { useAuth } from "../../auth/AuthContext";
+import { useAuth } from "../../auth/useAuth";
 import { assetsService } from "../../../domains/assets/services/assetsService";
 import { feedbackService } from "../services/feedbackService";
 

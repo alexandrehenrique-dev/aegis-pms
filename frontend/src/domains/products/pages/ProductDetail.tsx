@@ -4,7 +4,7 @@ import { Button, Card, PageHeader } from "../../../shared/components/Primitives"
 import { OperationalTimeline } from "../../../shared/components/OperationalTimeline";
 import { ModuleCatalog } from "../components/ModuleCatalog";
 import { toast } from "../../../core/notifications/toast";
-import { useAuth } from "../../../core/auth/AuthContext";
+import { useAuth } from "../../../core/auth/useAuth";
 
 const TABS = ["Visão Geral", "Módulos", "Conteúdo", "Assets", "Forms", "Analytics", "Graph", "Configurações"] as const;
 const TAB_ROUTES: Record<string, string> = { "Conteúdo": "/content", "Assets": "/assets", "Forms": "/forms", "Analytics": "/analytics", "Graph": "/knowledge/graph", "Configurações": "/settings/product" };
