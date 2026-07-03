@@ -49,9 +49,11 @@ public class ProductSecuritySettingsService {
         resolveProductScope(caller, productId);
         ProductSecuritySettings settings = repository.findById(productId)
                 .orElseGet(() -> new ProductSecuritySettings(productId));
+        String telegramChatId = request.telegramAlert() == null ? null : request.telegramAlert().chatId();
+        String telegramBotToken = request.telegramAlert() == null ? null : request.telegramAlert().botToken();
         settings.update(new ProductSecuritySettings.Update(
                 request.webhookUrl(), request.webhookSecret(), request.analyticsEnabled(),
-                request.analyticsProviderKey(), request.emailDeliveryEnabled()
+                request.analyticsProviderKey(), request.emailDeliveryEnabled(), telegramChatId, telegramBotToken
         ));
         return mapper.toResponse(repository.save(settings));
     }

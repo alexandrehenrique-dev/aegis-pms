@@ -1,8 +1,8 @@
 # Sprint 23 — Inbox de feedbacks e configuração Telegram por produto
 
-> Pré-requisitos: Sprint 22 (tutorial de onboarding) e etapa 30 do backend (`30_seed_homologacao_e_remocao_seed_java.md`) — especificamente a Seção D.4, que adiciona `GET/PUT /api/v1/products/{id}/settings` com `telegramAlert` e os endpoints `GET /api/v1/feedback` / `GET /api/v1/tenants/{tenantId}/feedback`. O feedback **já é persistido** pela etapa 27 do backend; esta sprint só cria as telas que consumem o que já existe.
+> Pré-requisitos: Sprint 22 (tutorial de onboarding) e etapa 30 do backend (`30_seed_homologacao_e_remocao_seed_java.md`) — especificamente a Seção D.4, que adiciona o Telegram global do Aegis para `POST /feedback`, `GET/PUT /api/v1/products/{id}/settings/security` com `telegramAlert` para produtos/formularios, e os endpoints `GET /api/v1/feedback` / `GET /api/v1/tenants/{tenantId}/feedback`. O feedback **já é persistido** pela etapa 27 do backend; esta sprint só cria as telas que consumem o que já existe.
 >
-> **Por que agora:** o domínio `feedback` está implementado no backend desde a etapa 27, mas os registros só eram visíveis via banco de dados ou chamada direta à API. Com a etapa 30 adicionando o dispatch para Telegram, o Super Admin pode receber alertas imediatamente — mas ainda precisa de uma tela para gerenciar o histórico, atualizar status e confirmar que o Telegram está configurado corretamente.
+> **Por que agora:** o domínio `feedback` está implementado no backend desde a etapa 27, mas os registros só eram visíveis via banco de dados ou chamada direta à API. Com a etapa 30 adicionando o dispatch para o Telegram global do Aegis, o Super Admin pode receber alertas imediatamente — mas ainda precisa de uma tela para gerenciar o histórico e atualizar status. A configuração Telegram por produto continua existindo em `SecuritySettingsPanel`, mas pertence ao fluxo de produtos/formularios externos, nao ao fluxo interno de feedback do Aegis.
 >
 > **Branch:** `sprint/23-feedback-inbox-e-telegram`
 
@@ -14,7 +14,8 @@ Situação atual após a implementação das etapas 27 e 30:
 - `POST /api/v1/feedback` persiste feedbacks com ID legível (`AGS-####`), categoria, prioridade, contexto da tela e anexo.
 - `GET /api/v1/feedback` (Super Admin) e `GET /api/v1/tenants/{tenantId}/feedback` (Tenant Admin) respondem com a lista.
 - `PUT /api/v1/feedback/{feedbackId}/status` permite atualizar o status (`aberto` → `em_analise` → `resolvido`).
-- `GET/PUT /api/v1/products/{id}/settings` agora inclui `telegramAlert.chatId` + `telegramAlert.botTokenMasked`.
+- `POST /api/v1/feedback` envia alerta para o Telegram global do Aegis quando `aegis.telegram.alert.*` estiver ativo no backend.
+- `GET/PUT /api/v1/products/{id}/settings/security` agora inclui `telegramAlert.chatId` + `telegramAlert.botTokenMasked` para fluxos de produtos/formularios externos.
 - `SecuritySettingsPanel.tsx` já tem uma linha placeholder `["Telegram futuro", "futuro", "—", "—"]` esperando ser preenchida.
 - `feedbackService.ts` já tem `create()` e `listAll()` implementados com toggle `IS_API_MODE`.
 
@@ -185,9 +186,9 @@ Chat ID     [-1001234567890       ]  ✓ configurado
 ```
 
 Comportamento:
-- Ao carregar, buscar via `GET /api/v1/products/{effectiveProduct.id}/settings` — exibir `telegramAlert.botTokenMasked` (nunca o token real).
+- Ao carregar, buscar via `GET /api/v1/products/{effectiveProduct.id}/settings/security` — exibir `telegramAlert.botTokenMasked` (nunca o token real).
 - "Alterar" troca o campo masked por um `<input type="password">` para o usuário digitar o novo token.
-- "Salvar" chama `PUT /api/v1/products/{effectiveProduct.id}/settings` com `{ telegramAlert: { chatId, botToken } }`.
+- "Salvar" chama `PUT /api/v1/products/{effectiveProduct.id}/settings/security` com `{ telegramAlert: { chatId, botToken } }`.
 - "Remover configuração" envia `{ telegramAlert: null }` — limpa os campos no backend.
 - Após salvar, exibir um toast "Telegram configurado ✓" com `toast.success(...)`.
 
@@ -213,7 +214,7 @@ e ao mock de `updateProductSettings(...)`, aceitar e persistir `telegramAlert` n
 - [ ] Drawer de detalhe mostra todos os campos, incluindo link de download do anexo quando `attachmentAssetId` existe.
 - [ ] Link de download do anexo aponta para `/api/v1/assets/{id}/download` e abre em nova aba.
 - [ ] `SecuritySettingsPanel` mostra o formulário de Telegram (não o placeholder "futuro").
-- [ ] Salvar configuração Telegram chama `PUT /products/{id}/settings` com `telegramAlert`; token nunca aparece em claro na UI após salvar (sempre mascarado).
+- [ ] Salvar configuração Telegram chama `PUT /products/{id}/settings/security` com `telegramAlert`; token nunca aparece em claro na UI após salvar (sempre mascarado).
 - [ ] "Remover configuração" limpa o `telegramAlert` (mock: limpa do store; API: envia `null`).
 - [ ] Em modo mock (`VITE_API_MODE !== 'api'`), todas as interações acima funcionam com os stores em memória — sem erros de runtime.
 - [ ] Sem regressão em nenhuma funcionalidade existente (permissões, `FeedbackModal`, upload de asset no feedback).

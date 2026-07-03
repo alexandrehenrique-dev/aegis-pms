@@ -20,12 +20,15 @@ public class AuditRiskCatalog {
             Map.entry("TENANT_DELETED", AuditRisk.ALTO),
             Map.entry("PRODUCT_ASSIGNMENT_CREATED", AuditRisk.BAIXO),
             Map.entry("PRODUCT_ASSIGNMENT_REMOVED", AuditRisk.MEDIO),
+            Map.entry("MODULE_ENABLED", AuditRisk.MEDIO),
+            Map.entry("MODULE_DISABLED", AuditRisk.MEDIO),
             Map.entry("USER_INVITED_TO_TENANT", AuditRisk.BAIXO),
             Map.entry("USER_BLOCKED", AuditRisk.MEDIO),
             Map.entry("USER_REMOVED_FROM_TENANT", AuditRisk.ALTO),
             Map.entry("USER_RESTORED_TO_TENANT", AuditRisk.MEDIO),
             Map.entry("CONTENT_CREATED", AuditRisk.BAIXO),
             Map.entry("CONTENT_PUBLISHED", AuditRisk.MEDIO),
+            Map.entry("FORM_SUBMISSION_RECEIVED", AuditRisk.BAIXO),
             Map.entry("ASSET_DELETED", AuditRisk.ALTO)
     );
 

@@ -1,0 +1,48 @@
+meta {
+  name: Capturar produtos reais
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products
+  body: none
+}
+
+script:post-response {
+  const products = Array.isArray(res.body) ? res.body : [];
+  const byKey = {};
+  products.forEach(function(product) {
+    byKey[product.key] = product.id;
+  });
+  if (byKey['maestro-beton']) { bru.setVar('seed30MaestroBetonProductId', byKey['maestro-beton']); }
+  if (byKey['cmss']) { bru.setVar('seed30CmssProductId', byKey['cmss']); }
+  if (byKey['wikidev']) { bru.setVar('seed30WikiDevProductId', byKey['wikidev']); }
+  if (byKey['loki']) { bru.setVar('seed30LokiProductId', byKey['loki']); }
+}
+
+docs {
+Objetivo: confirmar que a migration de homologacao disponibiliza os produtos reais do tenant CLIENTES BETA.
+Resultado esperado: 200 e captura dos IDs por `key`, sem depender de UUID fixo quando o banco local ja tinha seed antigo.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("seis produtos reais existem", function() {
+    const keys = res.body.map(function(product) { return product.key; });
+    expect(keys).to.include.members([
+      'maestro-beton',
+      'conecta-talentos',
+      'alexandre-dev',
+      'cmss',
+      'wikidev',
+      'loki'
+    ]);
+  });
+  test("ids principais capturados", function() {
+    expect(bru.getVar('seed30MaestroBetonProductId')).to.match(/^[0-9a-f-]{36}$/);
+    expect(bru.getVar('seed30LokiProductId')).to.match(/^[0-9a-f-]{36}$/);
+  });
+}

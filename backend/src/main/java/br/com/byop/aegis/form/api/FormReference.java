@@ -7,6 +7,7 @@ public record FormReference(
         UUID tenantId,
         UUID productId,
         boolean published,
-        String fieldsJson
+        String fieldsJson,
+        String deliveryChannelsJson
 ) {
 }

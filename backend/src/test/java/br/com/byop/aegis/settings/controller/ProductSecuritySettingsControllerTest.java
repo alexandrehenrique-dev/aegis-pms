@@ -70,11 +70,18 @@ class ProductSecuritySettingsControllerTest {
                                   "webhookSecret": "secret",
                                   "analyticsEnabled": true,
                                   "analyticsProviderKey": "ga-key",
-                                  "emailDeliveryEnabled": true
+                                  "emailDeliveryEnabled": true,
+                                  "telegramAlert": {
+                                    "chatId": "123",
+                                    "botToken": "secret-token"
+                                  }
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.analyticsEnabled").value(true))
+                .andExpect(jsonPath("$.telegramAlert.chatId").value("123"))
+                .andExpect(jsonPath("$.telegramAlert.botTokenMasked").value("****1234"))
+                .andExpect(jsonPath("$.*", not(org.hamcrest.Matchers.hasItem("secret-token"))))
                 .andExpect(jsonPath("$.webhookSecret").doesNotExist());
     }
 
@@ -105,6 +112,7 @@ class ProductSecuritySettingsControllerTest {
 
     private ProductSecuritySettingsResponse response() {
         return new ProductSecuritySettingsResponse("https://example.com/hook", true, "ga-key", true,
-                OffsetDateTime.parse("2026-06-29T12:00:00Z"), "connected", "connected", "connected");
+                OffsetDateTime.parse("2026-06-29T12:00:00Z"), "connected", "connected", "connected",
+                new ProductSecuritySettingsResponse.TelegramAlertResponse("123", "****1234"));
     }
 }

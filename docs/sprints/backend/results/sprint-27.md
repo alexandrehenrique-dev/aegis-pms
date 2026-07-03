@@ -97,7 +97,8 @@ A reanalise SonarQube for IDE fica pendente na IDE local, pois nao ha runner CLI
 
 ## Retrofits pendentes
 
-- Dispatch Telegram fica para a etapa 30, quando os campos `ProductSettings.telegramAlertBotToken` e `ProductSettings.telegramAlertChatId` existirem.
+- Dispatch Telegram do feedback interno fica para a etapa 30 e deve usar configuracao global do Aegis (`aegis.telegram.alert.*`), nao configuracao de produto.
+- Configuracao Telegram por produto/formulario fica em fluxo separado de submission/canais de entrega; nao controla o `POST /feedback` interno do Aegis.
 - Ajustar o frontend `FeedbackModal.tsx` em sprint frontend para usar `<input type="file">` real, fazer upload via `POST /products/{productId}/assets` quando houver produto e enviar o `attachmentAssetId` no `POST /feedback`.
 
 ## Critérios de aceite atendidos

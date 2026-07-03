@@ -38,7 +38,8 @@ tests {
     "Audit",
     "Settings",
     "Dashboard",
-    "Notifications"
+    "Notifications",
+    "Feedback"
   ];
 
   test("status 200", function() {
@@ -56,6 +57,13 @@ tests {
     expect(scheme.type).to.equal("http");
     expect(scheme.scheme).to.equal("bearer");
     expect(scheme.bearerFormat).to.equal("JWT");
+  });
+
+  test("security scheme oauth2 pkce", function() {
+    const scheme = res.body.components.securitySchemes["oauth2-pkce"];
+    expect(scheme.type).to.equal("oauth2");
+    expect(scheme.flows.authorizationCode.authorizationUrl).to.include("/protocol/openid-connect/auth");
+    expect(scheme.flows.authorizationCode.tokenUrl).to.include("/protocol/openid-connect/token");
   });
 
   test("tags na ordem canonica", function() {

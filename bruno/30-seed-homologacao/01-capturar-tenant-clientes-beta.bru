@@ -1,0 +1,32 @@
+meta {
+  name: Capturar tenant Clientes Beta
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants
+  body: none
+}
+
+script:post-response {
+  const tenants = Array.isArray(res.body) ? res.body : [];
+  const tenant = tenants.find(function(item) { return item.key === 'clientes-beta'; });
+  if (tenant) {
+    bru.setVar('seed30ClientesBetaTenantId', tenant.id);
+  }
+}
+
+docs {
+Objetivo: localizar o tenant real de homologacao CLIENTES BETA criado pela migration SQL da etapa 30.
+Resultado esperado: 200 e tenant `clientes-beta` capturado para os requests seguintes.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("clientes-beta encontrado", function() {
+    expect(bru.getVar('seed30ClientesBetaTenantId')).to.match(/^[0-9a-f-]{36}$/);
+  });
+}

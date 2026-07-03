@@ -8,10 +8,14 @@ import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import io.swagger.v3.oas.models.security.OAuthFlow;
+import io.swagger.v3.oas.models.security.OAuthFlows;
+import io.swagger.v3.oas.models.security.Scopes;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.tags.Tag;
+import org.springframework.beans.factory.annotation.Value;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,6 +42,7 @@ import java.util.Map;
 public class OpenApiConfig {
 
     static final String BEARER_AUTH_SCHEME = "bearer-jwt";
+    static final String OAUTH2_PKCE_SCHEME = "oauth2-pkce";
     static final String TAG_SYSTEM = "System";
     static final String TAG_AUTH = "Auth";
     static final String TAG_TENANTS = "Tenants";
@@ -61,6 +66,10 @@ public class OpenApiConfig {
     private static final String API_VERSION = "v1";
     private static final String API_TITLE = "Aegis PMS API";
     private static final String LOCAL_SERVER_URL = "http://localhost:8080";
+    private static final String DEFAULT_KEYCLOAK_ISSUER_URI = "http://localhost:8282/realms/aegis";
+    private static final String OPENID_SCOPE = "openid";
+    private static final String PROFILE_SCOPE = "profile";
+    private static final String EMAIL_SCOPE = "email";
     private static final String HTTP_STATUS_OK = "200";
     private static final String HTTP_STATUS_CREATED = "201";
     private static final String HTTP_STATUS_NO_CONTENT = "204";
@@ -144,6 +153,9 @@ public class OpenApiConfig {
             Map.entry("/api/v1/feedback", TAG_FEEDBACK)
     );
 
+    @Value("${keycloak.issuer-uri:" + DEFAULT_KEYCLOAK_ISSUER_URI + "}")
+    private String keycloakIssuerUri = DEFAULT_KEYCLOAK_ISSUER_URI;
+
     /**
      * Metadados canônicos da API REST administrativa.
      *
@@ -157,18 +169,37 @@ public class OpenApiConfig {
                 .scheme("bearer")
                 .bearerFormat("JWT")
                 .description("Cole um access token JWT emitido pelo Keycloak usando o formato Bearer.");
+        SecurityScheme oauth2Pkce = new SecurityScheme()
+                .name(OAUTH2_PKCE_SCHEME)
+                .type(SecurityScheme.Type.OAUTH2)
+                .description("Fluxo Authorization Code com PKCE para autenticar no Keycloak pelo Swagger UI.")
+                .flows(new OAuthFlows()
+                        .authorizationCode(new OAuthFlow()
+                                .authorizationUrl(keycloakIssuerUri + "/protocol/openid-connect/auth")
+                                .tokenUrl(keycloakIssuerUri + "/protocol/openid-connect/token")
+                                .scopes(new Scopes()
+                                        .addString(OPENID_SCOPE, "OpenID Connect")
+                                        .addString(PROFILE_SCOPE, "Perfil do usuário")
+                                        .addString(EMAIL_SCOPE, "E-mail do usuário"))));
 
         return new OpenAPI()
                 .info(new Info()
                         .title(API_TITLE)
                         .version(API_VERSION)
                         .description("API REST administrativa do Aegis PMS para operar tenants, produtos, "
-                                + "conteúdo, páginas, assets, formulários, usuários, auditoria e configurações."))
+                                + "conteúdo, páginas, assets, formulários, usuários, auditoria e configurações. "
+                                + "No Swagger UI local, prefira o scheme oauth2-pkce para login via Keycloak; "
+                                + "bearer-jwt fica disponível para colar tokens manualmente."))
                 .servers(List.of(new Server()
                         .url(LOCAL_SERVER_URL)
                         .description("Servidor local de desenvolvimento")))
-                .components(new Components().addSecuritySchemes(BEARER_AUTH_SCHEME, bearerJwt))
-                .security(List.of(new SecurityRequirement().addList(BEARER_AUTH_SCHEME)))
+                .components(new Components()
+                        .addSecuritySchemes(OAUTH2_PKCE_SCHEME, oauth2Pkce)
+                        .addSecuritySchemes(BEARER_AUTH_SCHEME, bearerJwt))
+                .security(List.of(
+                        new SecurityRequirement().addList(OAUTH2_PKCE_SCHEME,
+                                List.of(OPENID_SCOPE, PROFILE_SCOPE, EMAIL_SCOPE)),
+                        new SecurityRequirement().addList(BEARER_AUTH_SCHEME)))
                 .tags(orderedTags());
     }
 
@@ -189,6 +220,8 @@ public class OpenApiConfig {
             operation.setDescription(descriptionFor(httpMethod, path, tag));
             operation.setResponses(responsesFor(operation.getResponses()));
             if (requiresBearerToken(path, tag)) {
+                operation.addSecurityItem(new SecurityRequirement().addList(OAUTH2_PKCE_SCHEME,
+                        List.of(OPENID_SCOPE, PROFILE_SCOPE, EMAIL_SCOPE)));
                 operation.addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH_SCHEME));
             } else {
                 operation.setSecurity(List.of());

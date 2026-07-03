@@ -251,7 +251,7 @@ class SectionContentValidationServiceTest {
     void shouldAcceptValidContact() {
         UUID formId = UUID.randomUUID();
         when(formReferenceService.getRequiredReference(PRODUCT_ID, formId))
-                .thenReturn(new FormReference(formId, UUID.randomUUID(), PRODUCT_ID, true, "[]"));
+                .thenReturn(new FormReference(formId, UUID.randomUUID(), PRODUCT_ID, true, "[]", "[]"));
 
         service.validateSectionContent(PRODUCT_ID, BlockType.CONTACT, Map.of("formId", formId.toString()));
     }
@@ -304,7 +304,7 @@ class SectionContentValidationServiceTest {
     void shouldAcceptValidForm() {
         UUID formId = UUID.randomUUID();
         when(formReferenceService.getRequiredReference(PRODUCT_ID, formId))
-                .thenReturn(new FormReference(formId, UUID.randomUUID(), PRODUCT_ID, true, "[]"));
+                .thenReturn(new FormReference(formId, UUID.randomUUID(), PRODUCT_ID, true, "[]", "[]"));
 
         service.validateSectionContent(PRODUCT_ID, BlockType.FORM, Map.of("formId", formId.toString()));
     }

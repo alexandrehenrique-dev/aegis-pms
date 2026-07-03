@@ -2,6 +2,7 @@ package br.com.byop.aegis.api.openapi;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.junit.jupiter.api.Test;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
@@ -60,7 +61,7 @@ class OpenApiConfigTest {
     }
 
     @Test
-    void shouldExposeApiMetadataAndBearerJwtSecurityScheme() {
+    void shouldExposeApiMetadataBearerJwtAndOauth2PkceSecuritySchemes() {
 
         OpenAPI openAPI = config.aegisOpenApi();
 
@@ -68,7 +69,18 @@ class OpenApiConfigTest {
         assertThat(openAPI.getInfo().getVersion()).isEqualTo("v1");
         assertThat(openAPI.getServers()).singleElement()
                 .satisfies(server -> assertThat(server.getUrl()).isEqualTo("http://localhost:8080"));
-        assertThat(openAPI.getComponents().getSecuritySchemes()).containsKey(OpenApiConfig.BEARER_AUTH_SCHEME);
+        assertThat(openAPI.getComponents().getSecuritySchemes())
+                .containsKeys(OpenApiConfig.OAUTH2_PKCE_SCHEME, OpenApiConfig.BEARER_AUTH_SCHEME);
+        SecurityScheme oauth2Pkce = openAPI.getComponents()
+                .getSecuritySchemes()
+                .get(OpenApiConfig.OAUTH2_PKCE_SCHEME);
+        assertThat(oauth2Pkce.getType()).isEqualTo(SecurityScheme.Type.OAUTH2);
+        assertThat(oauth2Pkce.getFlows().getAuthorizationCode().getAuthorizationUrl())
+                .isEqualTo("http://localhost:8282/realms/aegis/protocol/openid-connect/auth");
+        assertThat(oauth2Pkce.getFlows().getAuthorizationCode().getTokenUrl())
+                .isEqualTo("http://localhost:8282/realms/aegis/protocol/openid-connect/token");
+        assertThat(oauth2Pkce.getFlows().getAuthorizationCode().getScopes())
+                .containsKeys("openid", "profile", "email");
         assertThat(openAPI.getTags())
                 .extracting(io.swagger.v3.oas.models.tags.Tag::getName)
                 .containsExactlyElementsOf(OpenApiConfig.orderedTagNames());
@@ -85,8 +97,9 @@ class OpenApiConfigTest {
                 .contains("GET /api/v1/products")
                 .contains("contratos REST em /api/v1");
         assertThat(operation.getResponses()).containsKeys("200", "400", "401", "403", "404");
-        assertThat(operation.getSecurity()).singleElement()
-                .satisfies(requirement -> assertThat(requirement).containsKey(OpenApiConfig.BEARER_AUTH_SCHEME));
+        assertThat(operation.getSecurity())
+                .anySatisfy(requirement -> assertThat(requirement).containsKey(OpenApiConfig.OAUTH2_PKCE_SCHEME))
+                .anySatisfy(requirement -> assertThat(requirement).containsKey(OpenApiConfig.BEARER_AUTH_SCHEME));
     }
 
     @Test

@@ -57,6 +57,7 @@ class FeedbackServiceTest {
     private AssetReferenceService assetReferenceService;
     private TenantUserAccessService tenantUserAccessService;
     private FeedbackNotificationService feedbackNotificationService;
+    private TelegramFeedbackNotifier telegramFeedbackNotifier;
     private FeedbackService service;
 
     @BeforeEach
@@ -67,9 +68,10 @@ class FeedbackServiceTest {
         assetReferenceService = mock(AssetReferenceService.class);
         tenantUserAccessService = mock(TenantUserAccessService.class);
         feedbackNotificationService = mock(FeedbackNotificationService.class);
+        telegramFeedbackNotifier = mock(TelegramFeedbackNotifier.class);
         FeedbackMapper mapper = Mappers.getMapper(FeedbackMapper.class);
         service = new FeedbackService(feedbackRepository, mapper, productReferenceService, productAccessPort,
-                assetReferenceService, tenantUserAccessService, feedbackNotificationService);
+                assetReferenceService, tenantUserAccessService, feedbackNotificationService, telegramFeedbackNotifier);
     }
 
     @Test
@@ -90,6 +92,7 @@ class FeedbackServiceTest {
         verify(feedbackRepository).save(feedbackCaptor.capture());
         assertThat(feedbackCaptor.getValue().getCreatedBySubject()).isEqualTo("editor-subject");
         verify(productAccessPort).assertAccessible(PRODUCT_ID, editor());
+        verify(telegramFeedbackNotifier).notify(feedbackCaptor.getValue());
         verify(feedbackNotificationService, never()).notifyCriticalFeedback(any());
     }
 

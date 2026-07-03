@@ -32,6 +32,12 @@ public class ProductSecuritySettings {
     @Column(name = "email_delivery_enabled", nullable = false)
     private boolean emailDeliveryEnabled;
 
+    @Column(name = "telegram_alert_bot_token", length = 128)
+    private String telegramAlertBotToken;
+
+    @Column(name = "telegram_alert_chat_id", length = 64)
+    private String telegramAlertChatId;
+
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
@@ -50,6 +56,12 @@ public class ProductSecuritySettings {
         analyticsEnabled = update.analyticsEnabled();
         analyticsProviderKey = blankToNull(update.analyticsProviderKey());
         emailDeliveryEnabled = update.emailDeliveryEnabled();
+        if (update.telegramAlertChatId() != null) {
+            telegramAlertChatId = blankToNull(update.telegramAlertChatId());
+        }
+        if (update.telegramAlertBotToken() != null) {
+            telegramAlertBotToken = blankToNull(update.telegramAlertBotToken());
+        }
         updatedAt = OffsetDateTime.now(ZoneOffset.UTC);
     }
 
@@ -81,6 +93,14 @@ public class ProductSecuritySettings {
         return emailDeliveryEnabled;
     }
 
+    public String getTelegramAlertBotToken() {
+        return telegramAlertBotToken;
+    }
+
+    public String getTelegramAlertChatId() {
+        return telegramAlertChatId;
+    }
+
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
     }
@@ -90,7 +110,9 @@ public class ProductSecuritySettings {
             String webhookSecret,
             boolean analyticsEnabled,
             String analyticsProviderKey,
-            boolean emailDeliveryEnabled
+            boolean emailDeliveryEnabled,
+            String telegramAlertChatId,
+            String telegramAlertBotToken
     ) {
     }
 }

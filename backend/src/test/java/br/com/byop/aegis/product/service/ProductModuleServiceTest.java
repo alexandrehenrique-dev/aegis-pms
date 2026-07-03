@@ -1,5 +1,7 @@
 package br.com.byop.aegis.product.service;
 
+import br.com.byop.aegis.audit.api.AuditRecordCommand;
+import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.product.api.ModuleKey;
 import br.com.byop.aegis.product.api.AssetStorageStrategy;
 import br.com.byop.aegis.product.domain.Product;
@@ -12,7 +14,9 @@ import br.com.byop.aegis.product.exception.ProductNotFoundException;
 import br.com.byop.aegis.product.mapper.ProductModuleMapper;
 import br.com.byop.aegis.product.repository.ProductModuleRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
+import br.com.byop.aegis.security.AuthenticatedUser;
 import java.time.OffsetDateTime;
+import java.util.Set;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -41,6 +45,9 @@ class ProductModuleServiceTest {
 
     @Mock
     private ProductModuleMapper moduleMapper;
+
+    @Mock
+    private AuditService auditService;
 
     @InjectMocks
     private ProductModuleService moduleService;
@@ -196,6 +203,52 @@ class ProductModuleServiceTest {
         assertThat(result.enabled()).isFalse();
     }
 
+    @Test
+    void shouldRecordAuditWhenCallerEnablesModule() {
+        Product product = product();
+        ProductModule savedModule = new ProductModule(product, ModuleKey.CONTENT);
+        savedModule.enable();
+        ProductModuleSummary summary = moduleSummary(product.getId(), ModuleKey.CONTENT, true);
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(moduleRepository.findByProductIdAndModuleKey(product.getId(), ModuleKey.CONTENT)).thenReturn(Optional.empty());
+        when(moduleRepository.save(any(ProductModule.class))).thenReturn(savedModule);
+        when(moduleMapper.toSummary(savedModule)).thenReturn(summary);
+        AuthenticatedUser caller = caller();
+
+        moduleService.enableModule(product.getId(), "CONTENT", caller);
+
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        AuditRecordCommand command = auditCaptor.getValue();
+        assertThat(command.tenantId()).isEqualTo(product.getTenantId());
+        assertThat(command.productId()).isEqualTo(product.getId());
+        assertThat(command.actorSubject()).isEqualTo("pm-subject");
+        assertThat(command.action()).isEqualTo("MODULE_ENABLED");
+        assertThat(command.after()).containsEntry("moduleKey", "CONTENT").containsEntry("enabled", true);
+    }
+
+    @Test
+    void shouldRecordAuditWhenCallerDisablesModule() {
+        Product product = product();
+        ProductModule content = new ProductModule(product, ModuleKey.CONTENT);
+        content.enable();
+        ProductModuleSummary summary = moduleSummary(product.getId(), ModuleKey.CONTENT, false);
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(moduleRepository.existsByProductIdAndModuleKeyAndEnabledTrue(product.getId(), ModuleKey.KNOWLEDGE_GRAPH))
+                .thenReturn(false);
+        when(moduleRepository.findByProductIdAndModuleKey(product.getId(), ModuleKey.CONTENT)).thenReturn(Optional.of(content));
+        when(moduleRepository.save(content)).thenReturn(content);
+        when(moduleMapper.toSummary(content)).thenReturn(summary);
+        AuthenticatedUser caller = caller();
+
+        moduleService.disableModule(product.getId(), "CONTENT", caller);
+
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().action()).isEqualTo("MODULE_DISABLED");
+        assertThat(auditCaptor.getValue().after()).containsEntry("enabled", false);
+    }
+
     private Product product() {
         Product product = new Product(
                 UUID.fromString("22222222-2222-2222-2222-222222222222"),
@@ -219,5 +272,10 @@ class ProductModuleServiceTest {
                 OffsetDateTime.parse("2026-06-25T10:00:00-03:00"),
                 OffsetDateTime.parse("2026-06-25T10:10:00-03:00")
         );
+    }
+
+    private AuthenticatedUser caller() {
+        return new AuthenticatedUser("pm-subject", "pm@byop.io", "pm", "Product Manager",
+                Set.of("ROLE_PRODUCT_MANAGER"));
     }
 }

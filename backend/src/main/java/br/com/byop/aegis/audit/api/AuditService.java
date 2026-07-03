@@ -1,5 +1,7 @@
 package br.com.byop.aegis.audit.api;
 
+import br.com.byop.aegis.audit.context.AuditContext;
+import br.com.byop.aegis.audit.context.AuditContextHolder;
 import br.com.byop.aegis.audit.domain.AuditEvent;
 import br.com.byop.aegis.audit.repository.AuditEventRepository;
 import br.com.byop.aegis.audit.service.AuditRiskCatalog;
@@ -36,15 +38,16 @@ public class AuditService {
     /**
      * Grava um novo evento de auditoria, calculando o risco a partir da acao
      * e serializando {@code before}/{@code after} em {@code diffJson}.
-     * {@code traceId}/{@code ip}/{@code userAgent} ficam {@code null} nesta
-     * sprint — nenhum {@code Service} de dominio tem acesso a
-     * {@code HttpServletRequest} (ver padrao de qualidade, Secao 2).
+     * {@code traceId}/{@code ip}/{@code userAgent} sao obtidos do contexto
+     * tecnico capturado pelo interceptor HTTP, mantendo services de dominio
+     * independentes de {@code HttpServletRequest}.
      *
      * @param command dados do evento a gravar
      * @return o evento persistido
      */
     @Transactional
     public AuditEvent recordEvent(AuditRecordCommand command) {
+        AuditContext context = AuditContextHolder.current().orElse(null);
         AuditEvent event = new AuditEvent(new AuditEvent.Creation(
                 command.tenantId(),
                 command.productId(),
@@ -56,9 +59,9 @@ public class AuditService {
                 command.module(),
                 riskCatalog.resolve(command.action()),
                 writeDiffJson(command.before(), command.after()),
-                null,
-                null,
-                null
+                context == null ? null : context.traceId(),
+                context == null ? null : context.ip(),
+                context == null ? null : context.userAgent()
         ));
         return auditEventRepository.save(event);
     }

@@ -1,0 +1,42 @@
+meta {
+  name: Atualizar Telegram de produto
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/v1/products/{{seed30MaestroBetonProductId}}/settings/security
+  body: json
+}
+
+body:json {
+  {
+    "webhookUrl": "https://hooks.example.com/aegis",
+    "webhookSecret": "secret-local-only",
+    "analyticsEnabled": true,
+    "analyticsProviderKey": "analytics-key-local",
+    "emailDeliveryEnabled": true,
+    "telegramAlert": {
+      "chatId": "chat-local-30",
+      "botToken": "telegram-token-local-1234"
+    }
+  }
+}
+
+docs {
+Objetivo: validar a configuracao Telegram do fluxo de produto/formulario, separada do Telegram global do Aegis.
+Resultado esperado: 200, chatId persistido e token retornado apenas mascarado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("telegram retornado mascarado", function() {
+    expect(res.body.telegramAlert.chatId).to.equal("chat-local-30");
+    expect(res.body.telegramAlert.botTokenMasked).to.equal("****1234");
+  });
+  test("token nao retorna em claro", function() {
+    expect(JSON.stringify(res.body)).to.not.include("telegram-token-local-1234");
+  });
+}

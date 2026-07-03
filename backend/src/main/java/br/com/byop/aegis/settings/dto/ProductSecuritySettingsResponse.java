@@ -10,6 +10,12 @@ public record ProductSecuritySettingsResponse(
         OffsetDateTime updatedAt,
         String webhookStatus,
         String analyticsStatus,
-        String emailStatus
+        String emailStatus,
+        TelegramAlertResponse telegramAlert
 ) {
+    public record TelegramAlertResponse(
+            String chatId,
+            String botTokenMasked
+    ) {
+    }
 }

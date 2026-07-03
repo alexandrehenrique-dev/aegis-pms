@@ -5,6 +5,12 @@ public record UpdateProductSecuritySettingsRequest(
         String webhookSecret,
         boolean analyticsEnabled,
         String analyticsProviderKey,
-        boolean emailDeliveryEnabled
+        boolean emailDeliveryEnabled,
+        TelegramAlertRequest telegramAlert
 ) {
+    public record TelegramAlertRequest(
+            String chatId,
+            String botToken
+    ) {
+    }
 }
