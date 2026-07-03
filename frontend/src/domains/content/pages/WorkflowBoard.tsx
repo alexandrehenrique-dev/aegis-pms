@@ -3,7 +3,7 @@ import { AnimatePresence } from "motion/react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Badge, Button, Card, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
-import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
+import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { roleLabels } from "../../../core/permissions/roles";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";

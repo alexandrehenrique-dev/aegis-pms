@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { AlertTriangle } from "lucide-react";
-import { fade } from "../../../shared/components/Primitives";
+import { fade } from "../../../shared/components/motion";
 import { AegisLogo } from "../../../shared/components/AegisLogo";
 import { Markdown } from "../../../shared/components/Markdown";
 import type { Notification } from "../contracts/notification";

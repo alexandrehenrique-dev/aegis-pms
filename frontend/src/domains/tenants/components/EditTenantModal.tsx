@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { Loader2, X } from "lucide-react";
-import { Button, Field, fade } from "../../../shared/components/Primitives";
+import { Button, Field } from "../../../shared/components/Primitives";
+import { fade } from "../../../shared/components/motion";
 import { tenantsService } from "../../../core/tenants/services/tenantsService";
 import { toast } from "../../../core/notifications/toast";
 import type { TenantOption } from "../../../shared/types";

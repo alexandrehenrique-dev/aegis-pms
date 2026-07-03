@@ -1,4 +1,4 @@
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/useAuth";
 
 /** Current product selection state, derived from the auth/session store. */
 export function useCurrentProduct() {

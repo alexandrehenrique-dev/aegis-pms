@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, Bell, GraduationCap, Info, Megaphone, X, type LucideIcon } from "lucide-react";
-import { fade } from "./Primitives";
+import { fade } from "./motion";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { formatRelativeTime } from "../utils/relativeTime";
 import { notificationsService } from "../../core/notifications/services/notificationsService";

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
-import { fade } from "./Primitives";
+import { fade } from "./motion";
 
 /**
  * Base reutilizável de modal "tipo diálogo" — overlay + conteúdo centralizado

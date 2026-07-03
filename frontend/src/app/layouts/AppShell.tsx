@@ -3,8 +3,8 @@ import { Outlet, useLocation, useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, Building2, CheckCircle2, Clock3, HelpCircle, LogOut, Menu, Monitor, Moon, Sun, X } from "lucide-react";
 
-import { useAuth } from "../../core/auth/AuthContext";
-import { useViewAsRole } from "../../core/permissions/ViewAsRoleContext";
+import { useAuth } from "../../core/auth/useAuth";
+import { useViewAsRole } from "../../core/permissions/useViewAsRole";
 import { roleDescriptions, roleLabels, roleVisibleNav } from "../../core/permissions/roles";
 import { resolveEnabledModules } from "../../core/products/moduleDefaults";
 import { isRouteBlocked } from "../../core/permissions/roles";
@@ -12,14 +12,14 @@ import { SimulationBanner } from "../../core/permissions/components/SimulationBa
 import { ReadOnlyBanner } from "../../core/permissions/components/ReadOnlyBanner";
 import { ToasterHost } from "../../core/notifications/components/ToasterHost";
 import { FeedbackModal } from "../../core/notifications/components/FeedbackModal";
-import { useFeedbackModal } from "../../core/notifications/FeedbackModalContext";
+import { useFeedbackModal } from "../../core/notifications/useFeedbackModal";
 import { PendingNotificationGate } from "../../core/notifications/PendingNotificationGate";
 
 import { AegisLogo } from "../../shared/components/AegisLogo";
 import { Switcher, type SwitcherItem } from "../../shared/components/Switcher";
 import { GlobalSearch } from "../../shared/components/GlobalSearch";
 import { Notifications } from "../../shared/components/Notifications";
-import { useTheme } from "../providers/ThemeProvider";
+import { useTheme } from "../providers/useTheme";
 
 import { nav, tabsForPath } from "./navConfig";
 import { AppNav } from "./AppNav";

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { AlertTriangle, ChevronRight, Lock } from "lucide-react";
-import { Badge, Button, fade } from "../../../shared/components/Primitives";
+import { Badge, Button } from "../../../shared/components/Primitives";
+import { fade } from "../../../shared/components/motion";
 import type { UserRole } from "../../../shared/types";
 import { wfBadgeTone, wfImpact, type PendingDrop, type WFStatus } from "../mocks/content.mocks";
 import { wfCanTransition } from "./wfRules";

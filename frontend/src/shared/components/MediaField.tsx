@@ -7,7 +7,7 @@ import type { AssetSummary } from "../../domains/assets/contracts/responses";
 const FILTER_LABEL: Record<AssetTypeFilter, string> = { imagem: "imagem", PDF: "PDF", áudio: "áudio", "vídeo": "vídeo", qualquer: "arquivo" };
 
 /** Sugere um `alt` legível a partir do nome do arquivo (Sprint 13, Tarefa C.2): remove extensão e separadores, capitaliza. */
-export function suggestAltFromFilename(filename: string): string {
+function suggestAltFromFilename(filename: string): string {
   const withoutExt = filename.replace(/\.[a-z0-9]+$/i, "");
   const words = withoutExt.replace(/[-_]+/g, " ").trim();
   return words.charAt(0).toUpperCase() + words.slice(1);

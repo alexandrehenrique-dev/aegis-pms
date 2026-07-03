@@ -6,7 +6,7 @@ import { Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { PermGate } from "../../../app/guards/PermGate";
-import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
+import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { toast } from "../../../core/notifications/toast";
 import { formsService } from "../services/formsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";

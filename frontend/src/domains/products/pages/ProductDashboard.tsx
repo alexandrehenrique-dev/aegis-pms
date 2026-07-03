@@ -1,13 +1,13 @@
 import { useNavigate, useSearchParams } from "react-router";
 import { ChevronRight, ExternalLink } from "lucide-react";
-import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
+import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { isRouteBlocked } from "../../../core/permissions/roles";
 import { Button, Card, KPIWidget, PageHeader } from "../../../shared/components/Primitives";
 import { OperationalTimeline } from "../../../shared/components/OperationalTimeline";
 import { QuickActions } from "../components/QuickActions";
 import { ModuleCatalog } from "../components/ModuleCatalog";
 import { ProductEmpty } from "./ProductEmpty";
-import { useAuth } from "../../../core/auth/AuthContext";
+import { useAuth } from "../../../core/auth/useAuth";
 
 export function ProductDashboard() {
   const navigate = useNavigate();

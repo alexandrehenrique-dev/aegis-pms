@@ -1,8 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
-
-type FeedbackModalContextValue = { open: boolean; setOpen: (open: boolean) => void };
-
-const FeedbackModalContext = createContext<FeedbackModalContextValue | null>(null);
+import { useState, type ReactNode } from "react";
+import { FeedbackModalContext } from "./feedbackModalContextDefinition";
 
 /**
  * Estado do `FeedbackModal` movido para contexto (Sprint 13, Tarefa O.2) —
@@ -14,10 +11,4 @@ const FeedbackModalContext = createContext<FeedbackModalContextValue | null>(nul
 export function FeedbackModalProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return <FeedbackModalContext.Provider value={{ open, setOpen }}>{children}</FeedbackModalContext.Provider>;
-}
-
-export function useFeedbackModal() {
-  const ctx = useContext(FeedbackModalContext);
-  if (!ctx) throw new Error("useFeedbackModal deve ser usado dentro de FeedbackModalProvider");
-  return ctx;
 }

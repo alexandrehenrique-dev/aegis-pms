@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from "react-router";
-import { useViewAsRole } from "../../core/permissions/ViewAsRoleContext";
+import { useViewAsRole } from "../../core/permissions/useViewAsRole";
 import { isRouteBlocked } from "../../core/permissions/roles";
 import { NoPermScreen } from "../../core/permissions/components/NoPermScreen";
 

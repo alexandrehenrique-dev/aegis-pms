@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router";
 import { Button, Card } from "../../../shared/components/Primitives";
 import { PermGate } from "../../../app/guards/PermGate";
-import { useViewAsRole } from "../../../core/permissions/ViewAsRoleContext";
+import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { ContentStatusBadge } from "./ContentStatusBadge";
 import type { ContentRow } from "../contracts/responses";
 

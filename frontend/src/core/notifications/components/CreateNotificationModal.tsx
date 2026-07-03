@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { CheckCircle2, Loader2, X } from "lucide-react";
-import { Badge, Button, Field, SelectLike, fade } from "../../../shared/components/Primitives";
+import { Badge, Button, Field, SelectLike } from "../../../shared/components/Primitives";
+import { fade } from "../../../shared/components/motion";
 import { MarkdownField } from "../../../shared/components/MarkdownField";
 import { mockUsers } from "../../auth/mocks/users";
 import { notificationsService } from "../services/notificationsService";

@@ -2,8 +2,7 @@ import { forwardRef, type ButtonHTMLAttributes, type MouseEvent, type ReactNode 
 import { motion } from "motion/react";
 import { AlertTriangle, ChevronDown, Circle, Lock, Plus, Sparkles } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-
-export const fade = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.2 } };
+import { fade } from "./motion";
 
 /**
  * forwardRef é necessário porque Radix (`PopoverTrigger asChild`,

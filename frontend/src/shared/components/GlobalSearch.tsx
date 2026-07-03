@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { Command, Search, X } from "lucide-react";
-import { fade, EmptyState } from "./Primitives";
+import { EmptyState } from "./Primitives";
+import { fade } from "./motion";
 import { searchIndex, type SearchEntry } from "../../mocks/searchIndex";
 
 export function GlobalSearch() {

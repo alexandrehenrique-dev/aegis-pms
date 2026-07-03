@@ -1,7 +1,8 @@
 import { type ReactNode } from "react";
 import { motion } from "motion/react";
-import { fade } from "../../../shared/components/Primitives";
+import { fade } from "../../../shared/components/motion";
 import { AegisLogo } from "../../../shared/components/AegisLogo";
+import { getPasswordStrength } from "../passwordStrength";
 
 export function AuthCard({ children }: { children: ReactNode }) {
   return (
@@ -29,13 +30,6 @@ export function AuthEnvBadge() {
       staging
     </div>
   );
-}
-
-export function getPasswordStrength(pwd: string): "fraca" | "média" | "forte" {
-  if (pwd.length < 8) return "fraca";
-  if (pwd.length >= 12 && /\d/.test(pwd) && /[!@#$%^&*]/.test(pwd)) return "forte";
-  if (pwd.length >= 8 && /\d/.test(pwd)) return "média";
-  return "fraca";
 }
 
 export function PasswordStrengthBar({ password }: { password: string }) {

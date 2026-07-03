@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
-import { useAuth } from "../../../core/auth/AuthContext";
+import { useAuth } from "../../../core/auth/useAuth";
 import { toast } from "../../../core/notifications/toast";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { Field } from "../../../shared/components/Primitives";

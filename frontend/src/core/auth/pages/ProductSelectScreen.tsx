@@ -2,11 +2,12 @@ import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, Building2, ChevronRight, Clock3, LogOut, MoreVertical, Plus, Star } from "lucide-react";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../useAuth";
 import { getPostLoginLandingPath } from "../../permissions/roles";
 import { AegisLogo } from "../../../shared/components/AegisLogo";
 import { ProductStatusBadge } from "../../../shared/components/ProductStatusBadge";
-import { Button, EmptyState, fade } from "../../../shared/components/Primitives";
+import { Button, EmptyState } from "../../../shared/components/Primitives";
+import { fade } from "../../../shared/components/motion";
 import { MobileDrawerMenu } from "../../../shared/components/MobileDrawerMenu";
 // domains/products é consumido aqui mesmo vivendo em core/auth — mesmo
 // padrão de domains/tenants em TenantSelectScreen. Botão direito em um
