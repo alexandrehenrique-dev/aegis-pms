@@ -1,0 +1,41 @@
+meta {
+  name: Criar produto Site Institucional
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+}
+
+body:json {
+  {
+    "tenantId": "{{templateTenantId}}",
+    "key": "template-site-{{graphRefSeed}}",
+    "name": "Template Site Institucional",
+    "type": "Site Institucional",
+    "defaultLocale": "pt-BR"
+  }
+}
+
+docs {
+Objetivo: validar o scaffold da Etapa 26 — criar produto "Site Institucional" deve
+habilitar os modulos recomendados (Paginas, Conteudo, Assets, Forms, SEO, Analytics)
+e gerar o esqueleto de paginas/secoes automaticamente.
+Resultado esperado: 201, id presente.
+Variaveis produzidas: templateSiteProductId.
+}
+
+script:post-response {
+  bru.setVar('templateSiteProductId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("product id presente", function() {
+    expect(res.body.id).to.be.a('string');
+  });
+}

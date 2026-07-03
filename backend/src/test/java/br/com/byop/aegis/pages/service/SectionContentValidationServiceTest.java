@@ -266,8 +266,23 @@ class SectionContentValidationServiceTest {
     }
 
     @Test
-    void shouldRejectContactWithoutFormId() {
-        Map<String, Object> content = Map.of();
+    void shouldAcceptContactWithoutFormId() {
+        service.validateSectionContent(PRODUCT_ID, BlockType.CONTACT, Map.of());
+    }
+
+    @Test
+    void shouldAcceptContactWithBlankFormId() {
+        service.validateSectionContent(PRODUCT_ID, BlockType.CONTACT, Map.of("formId", ""));
+    }
+
+    @Test
+    void shouldAcceptFormWithoutFormId() {
+        service.validateSectionContent(PRODUCT_ID, BlockType.FORM, Map.of());
+    }
+
+    @Test
+    void shouldRejectContactWithNonStringFormId() {
+        Map<String, Object> content = Map.of("formId", 123);
 
         assertThatThrownBy(() -> service.validateSectionContent(PRODUCT_ID, BlockType.CONTACT, content))
                 .isInstanceOf(InvalidSectionContentException.class)
@@ -326,12 +341,8 @@ class SectionContentValidationServiceTest {
     }
 
     @Test
-    void shouldRejectDownloadWithEmptyItemsList() {
-        Map<String, Object> content = Map.of("items", List.of());
-
-        assertThatThrownBy(() -> service.validateSectionContent(PRODUCT_ID, BlockType.DOWNLOAD, content))
-                .isInstanceOf(InvalidSectionContentException.class)
-                .extracting("errorCode").isEqualTo("DOWNLOAD_ITEMS_REQUIRED");
+    void shouldAcceptDownloadWithEmptyItemsList() {
+        service.validateSectionContent(PRODUCT_ID, BlockType.DOWNLOAD, Map.of("items", List.of()));
     }
 
     @Test

@@ -70,6 +70,9 @@ class ProductServiceTest {
     private ProductMapper productMapper;
 
     @Mock
+    private ProductModuleService productModuleService;
+
+    @Mock
     private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
@@ -117,6 +120,67 @@ class ProductServiceTest {
         assertThat(eventCaptor.getValue().tenantId()).isEqualTo(savedProduct.getTenantId());
         assertThat(eventCaptor.getValue().productId()).isEqualTo(savedProduct.getId());
         assertThat(eventCaptor.getValue().assetStorageStrategy()).isEqualTo(AssetStorageStrategy.LOCAL);
+        assertThat(eventCaptor.getValue().productType()).isEqualTo("SITE_INSTITUCIONAL");
+        assertThat(eventCaptor.getValue().defaultLocale()).isEqualTo("pt-BR");
+
+        var moduleOrder = org.mockito.Mockito.inOrder(productModuleService);
+        moduleOrder.verify(productModuleService).enableModule(savedProductId(), "PAGES");
+        moduleOrder.verify(productModuleService).enableModule(savedProductId(), "CONTENT");
+        moduleOrder.verify(productModuleService).enableModule(savedProductId(), "ASSETS");
+        moduleOrder.verify(productModuleService).enableModule(savedProductId(), "FORMS");
+        moduleOrder.verify(productModuleService).enableModule(savedProductId(), "SEO");
+        moduleOrder.verify(productModuleService).enableModule(savedProductId(), "ANALYTICS");
+    }
+
+    @Test
+    void shouldEnableContentBeforeKnowledgeGraphForKnowledgeBase() {
+        UUID tenantId = UUID.fromString("13131313-1313-1313-1313-131313131313");
+        Product savedProduct = product(tenant(tenantId, "kb"), "kb-product");
+        when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
+        when(productRepository.existsByTenantIdAndKey(tenantId, "kb-product")).thenReturn(false);
+        when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
+        when(productMapper.toSummary(savedProduct)).thenReturn(productSummary(tenantId, savedProductId(), "kb-product"));
+
+        productService.createProduct(user("creator-subject", "ROLE_TENANT_ADMIN"),
+                createCommand(tenantId, "kb-product", "Knowledge Base"));
+
+        var moduleOrder = org.mockito.Mockito.inOrder(productModuleService);
+        moduleOrder.verify(productModuleService).enableModule(savedProductId(), "CONTENT");
+        moduleOrder.verify(productModuleService).enableModule(savedProductId(), "KNOWLEDGE_GRAPH");
+    }
+
+    @Test
+    void shouldNotEnableAnyModuleForCustomProduct() {
+        UUID tenantId = UUID.fromString("14141414-1414-1414-1414-141414141414");
+        Product savedProduct = product(tenant(tenantId, "custom"), "custom-product");
+        when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
+        when(productRepository.existsByTenantIdAndKey(tenantId, "custom-product")).thenReturn(false);
+        when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
+        when(productMapper.toSummary(savedProduct)).thenReturn(productSummary(tenantId, savedProductId(), "custom-product"));
+
+        productService.createProduct(user("creator-subject", "ROLE_TENANT_ADMIN"),
+                createCommand(tenantId, "custom-product", ProductTypeKey.CUSTOM.name()));
+
+        verify(productModuleService, never()).enableModule(any(), any());
+    }
+
+    @Test
+    void shouldPropagateFailureFromModuleEnablingWithoutPublishingEvent() {
+        UUID tenantId = UUID.fromString("15151515-1515-1515-1515-151515151515");
+        Product savedProduct = product(tenant(tenantId, "broken"), "broken-product");
+        when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
+        when(productRepository.existsByTenantIdAndKey(tenantId, "broken-product")).thenReturn(false);
+        when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
+        org.mockito.Mockito.doThrow(new RuntimeException("boom"))
+                .when(productModuleService).enableModule(savedProductId(), "PAGES");
+        AuthenticatedUser caller = user("creator-subject", "ROLE_TENANT_ADMIN");
+        CreateProductCommand command = createCommand(tenantId, "broken-product", "Site Institucional");
+
+        assertThatThrownBy(() -> productService.createProduct(caller, command))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("boom");
+
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test

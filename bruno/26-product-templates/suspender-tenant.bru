@@ -1,0 +1,33 @@
+meta {
+  name: Suspender tenant
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/api/v1/tenants/{{templateTenantId}}
+  body: json
+}
+
+body:json {
+  {
+    "name": "Template Tenant",
+    "plan": "FREE",
+    "status": "suspenso"
+  }
+}
+
+docs {
+Objetivo: validar o retrofit da Etapa 26 na etapa 09 — suspender um tenant
+deve disparar notificacao interna BELL_ONLY/WARNING para os usuarios do tenant.
+Resultado esperado: 200, status "suspenso".
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("tenant suspenso", function() {
+    expect(res.body.status).to.equal("suspenso");
+  });
+}

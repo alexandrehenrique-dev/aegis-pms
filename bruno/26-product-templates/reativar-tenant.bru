@@ -1,0 +1,33 @@
+meta {
+  name: Reativar tenant
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{baseUrl}}/api/v1/tenants/{{templateTenantId}}
+  body: json
+}
+
+body:json {
+  {
+    "name": "Template Tenant",
+    "plan": "FREE",
+    "status": "ativo"
+  }
+}
+
+docs {
+Objetivo: validar que reativar um tenant suspenso dispara notificacao interna
+BELL_ONLY/GENERAL.
+Resultado esperado: 200, status "ativo".
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("tenant reativado", function() {
+    expect(res.body.status).to.equal("ativo");
+  });
+}

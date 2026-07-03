@@ -1,0 +1,29 @@
+meta {
+  name: Listar notificacoes apos suspensao - WARNING BELL_ONLY
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/notifications/mine
+  body: none
+}
+
+docs {
+Objetivo: confirmar que a suspensao do tenant criou uma notificacao WARNING,
+presentationMode BELL_ONLY, para o usuario logado (membro do tenant).
+Resultado esperado: 200, inclui uma notificacao WARNING/BELL_ONLY recente.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("inclui notificacao de suspensao", function() {
+    const found = res.body.some(function(item) {
+      return item.type === "WARNING" && item.presentationMode === "BELL_ONLY"
+        && item.title === "Tenant suspenso";
+    });
+    expect(found).to.equal(true);
+  });
+}

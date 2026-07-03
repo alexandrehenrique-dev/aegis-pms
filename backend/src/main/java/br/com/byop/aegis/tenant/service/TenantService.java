@@ -2,6 +2,8 @@ package br.com.byop.aegis.tenant.service;
 
 import br.com.byop.aegis.audit.api.AuditRecordCommand;
 import br.com.byop.aegis.audit.api.AuditService;
+import br.com.byop.aegis.tenant.api.TenantLifecycleTransition;
+import br.com.byop.aegis.tenant.api.TenantStatusChangedEvent;
 import br.com.byop.aegis.tenant.command.CreateTenantCommand;
 import br.com.byop.aegis.tenant.contract.DeleteTenantRequest;
 import br.com.byop.aegis.tenant.contract.UpdateTenantRequest;
@@ -18,6 +20,7 @@ import br.com.byop.aegis.tenant.mapper.TenantMapper;
 import br.com.byop.aegis.tenant.repository.TenantMembershipRepository;
 import br.com.byop.aegis.tenant.repository.TenantRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,13 +40,15 @@ public class TenantService {
     private final TenantMembershipRepository membershipRepository;
     private final TenantMapper tenantMapper;
     private final AuditService auditService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public TenantService(TenantRepository tenantRepository, TenantMembershipRepository membershipRepository,
-                         TenantMapper tenantMapper, AuditService auditService) {
+                         TenantMapper tenantMapper, AuditService auditService, ApplicationEventPublisher eventPublisher) {
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
         this.tenantMapper = tenantMapper;
         this.auditService = auditService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -86,14 +91,41 @@ public class TenantService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
         Map<String, Object> before = tenantSnapshot(tenant);
+        TenantStatus statusBefore = tenant.getStatus();
 
         tenant.rename(request.name());
         tenant.changePlan(request.plan());
-        applyStatus(tenant, parseStatus(request.status()));
+        TenantStatus statusAfter = parseStatus(request.status());
+        applyStatus(tenant, statusAfter);
         Tenant savedTenant = tenantRepository.save(tenant);
         recordTenantUpdateAudit(caller, savedTenant, before);
+        publishLifecycleTransition(caller, savedTenant, statusBefore, statusAfter);
 
         return tenantMapper.toSummary(savedTenant);
+    }
+
+    /**
+     * Publica {@link TenantStatusChangedEvent} apenas quando o status
+     * transicionou entre ativo e suspenso (em qualquer direcao) — nunca para
+     * outras mudancas (ex. arquivamento) nem quando o status nao mudou
+     * (Etapa 26, retrofit da etapa 09).
+     */
+    private void publishLifecycleTransition(AuthenticatedUser caller, Tenant tenant, TenantStatus statusBefore,
+                                            TenantStatus statusAfter) {
+        TenantLifecycleTransition transition = resolveTransition(statusBefore, statusAfter);
+        if (transition != null) {
+            eventPublisher.publishEvent(new TenantStatusChangedEvent(tenant.getId(), transition, caller.subject()));
+        }
+    }
+
+    private TenantLifecycleTransition resolveTransition(TenantStatus statusBefore, TenantStatus statusAfter) {
+        if (statusBefore == TenantStatus.ACTIVE && statusAfter == TenantStatus.SUSPENDED) {
+            return TenantLifecycleTransition.SUSPENDED;
+        }
+        if (statusBefore == TenantStatus.SUSPENDED && statusAfter == TenantStatus.ACTIVE) {
+            return TenantLifecycleTransition.REACTIVATED;
+        }
+        return null;
     }
 
     @Transactional

@@ -1,0 +1,35 @@
+meta {
+  name: Listar paginas do Site Institucional - 7 paginas
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{templateSiteProductId}}/pages
+  body: none
+}
+
+docs {
+Objetivo: confirmar que o scaffold criou as 7 paginas esperadas (ADR-0017),
+cada uma em status "draft".
+Resultado esperado: 200, array com exatamente 7 paginas: home, quem-somos,
+historia, agenda, galeria, apoie, contato.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("exatamente 7 paginas", function() {
+    expect(res.body.length).to.equal(7);
+  });
+  test("slugs esperados presentes", function() {
+    const slugs = res.body.map(function(page) { return page.slug; });
+    ["home", "quem-somos", "historia", "agenda", "galeria", "apoie", "contato"].forEach(function(slug) {
+      expect(slugs).to.include(slug);
+    });
+  });
+  test("todas as paginas nascem em draft", function() {
+    expect(res.body.every(function(page) { return page.status === "draft"; })).to.equal(true);
+  });
+}

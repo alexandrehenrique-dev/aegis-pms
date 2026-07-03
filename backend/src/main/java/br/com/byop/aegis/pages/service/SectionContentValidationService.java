@@ -180,9 +180,20 @@ public class SectionContentValidationService {
         }
     }
 
+    /**
+     * Valida a referencia de {@code formId}, exceto quando ausente/em branco —
+     * um {@code contact}/{@code form} "ainda nao vinculado a um form" e um
+     * estado valido (ex.: esqueleto de pagina criado no scaffold de produto,
+     * Etapa 26, antes de o Tenant Admin escolher/criar o form real). Um
+     * {@code formId} preenchido continua validado normalmente, inclusive
+     * formato invalido ou referencia inexistente.
+     */
     private void validateFormReference(UUID productId, Map<String, Object> content) {
         if (content.containsKey(KEY_FIELDS)) {
             throw invalid("SECTION_LEGACY_FIELDS_NOT_SUPPORTED", "fields[] is no longer supported, use formId");
+        }
+        if (isBlank(content.get(KEY_FORM_ID))) {
+            return;
         }
         UUID formId = requireUuid(content, KEY_FORM_ID, "FORM_REFERENCE_REQUIRED");
         try {
@@ -192,11 +203,19 @@ public class SectionContentValidationService {
         }
     }
 
+    private boolean isBlank(Object value) {
+        return value == null || (value instanceof String text && text.isBlank());
+    }
+
+    /**
+     * Valida a lista de {@code items}, que pode estar vazia — um {@code download}
+     * "ainda sem arquivos" e um estado valido (ex.: esqueleto de pagina criado
+     * no scaffold de produto, Etapa 26, antes de o Tenant Admin subir o
+     * arquivo real); a chave {@code items} continua obrigatoria (nunca
+     * {@code null}/ausente), só o tamanho minimo deixou de ser exigido.
+     */
     private void validateDownload(UUID productId, Map<String, Object> content) {
         List<Map<String, Object>> items = requireItemsList(content, "DOWNLOAD_ITEMS_REQUIRED");
-        if (items.isEmpty()) {
-            throw invalid("DOWNLOAD_ITEMS_REQUIRED", "items must have at least 1 element");
-        }
         for (Map<String, Object> item : items) {
             requireAsset(productId, item, "DOWNLOAD_ITEM_ASSET_INVALID", null);
             requireNonBlankString(item, KEY_TITLE, "DOWNLOAD_ITEM_TITLE_REQUIRED");

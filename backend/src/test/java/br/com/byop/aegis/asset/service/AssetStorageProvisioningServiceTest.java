@@ -63,7 +63,8 @@ class AssetStorageProvisioningServiceTest {
 
     @Test
     void shouldProvisionOnProductCreatedEvent() {
-        service.onProductCreated(new ProductCreatedEvent(TENANT_ID, PRODUCT_ID, AssetStorageStrategy.LOCAL));
+        service.onProductCreated(new ProductCreatedEvent(TENANT_ID, PRODUCT_ID, AssetStorageStrategy.LOCAL,
+                "SITE_INSTITUCIONAL", "pt-BR"));
 
         verify(localStorageProvider).provisionProductFolders(TENANT_ID, PRODUCT_ID);
     }

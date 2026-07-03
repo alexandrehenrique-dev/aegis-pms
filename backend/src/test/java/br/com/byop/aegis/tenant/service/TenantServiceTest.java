@@ -3,6 +3,8 @@ package br.com.byop.aegis.tenant.service;
 import br.com.byop.aegis.audit.api.AuditRecordCommand;
 import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import br.com.byop.aegis.tenant.api.TenantLifecycleTransition;
+import br.com.byop.aegis.tenant.api.TenantStatusChangedEvent;
 import br.com.byop.aegis.tenant.command.CreateTenantCommand;
 import br.com.byop.aegis.tenant.contract.DeleteTenantRequest;
 import br.com.byop.aegis.tenant.contract.UpdateTenantRequest;
@@ -29,6 +31,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,6 +55,9 @@ class TenantServiceTest {
 
     @Mock
     private AuditService auditService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private TenantService tenantService;
@@ -202,6 +208,12 @@ class TenantServiceTest {
         assertThat(auditCaptor.getValue().action()).isEqualTo("TENANT_UPDATED");
         assertThat(auditCaptor.getValue().before()).containsEntry("name", "BYOP");
         assertThat(auditCaptor.getValue().after()).containsEntry("name", "BYOP Updated");
+
+        ArgumentCaptor<TenantStatusChangedEvent> eventCaptor = ArgumentCaptor.forClass(TenantStatusChangedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().tenantId()).isEqualTo(tenantId);
+        assertThat(eventCaptor.getValue().transition()).isEqualTo(TenantLifecycleTransition.SUSPENDED);
+        assertThat(eventCaptor.getValue().actorSubject()).isEqualTo("admin-subject");
     }
 
     @Test
@@ -224,6 +236,9 @@ class TenantServiceTest {
 
         assertThat(result).isEqualTo(summary);
         assertThat(tenant.getStatus()).isEqualTo(TenantStatus.ACTIVE);
+        ArgumentCaptor<TenantStatusChangedEvent> eventCaptor = ArgumentCaptor.forClass(TenantStatusChangedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().transition()).isEqualTo(TenantLifecycleTransition.REACTIVATED);
     }
 
     @Test
@@ -245,6 +260,41 @@ class TenantServiceTest {
 
         assertThat(result).isEqualTo(summary);
         assertThat(tenant.getStatus()).isEqualTo(TenantStatus.ARCHIVED);
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void shouldNotPublishLifecycleEventWhenTransitioningFromSuspendedToArchived() {
+        AuthenticatedUser caller = user("admin-subject", "ROLE_TENANT_ADMIN");
+        UUID tenantId = UUID.fromString("adacadac-adac-adac-adac-adacadacadac");
+        Tenant tenant = new Tenant("byop", "BYOP");
+        tenant.suspend();
+        ReflectionTestUtils.setField(tenant, "id", tenantId);
+        TenantSummary summary = tenantSummary("byop");
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(tenantRepository.save(tenant)).thenReturn(tenant);
+        when(tenantMapper.toSummary(tenant)).thenReturn(summary);
+
+        tenantService.updateTenant(caller, tenantId, new UpdateTenantRequest("BYOP", "FREE", "arquivado"));
+
+        assertThat(tenant.getStatus()).isEqualTo(TenantStatus.ARCHIVED);
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void shouldNotPublishLifecycleEventWhenStatusDoesNotChange() {
+        AuthenticatedUser caller = user("admin-subject", "ROLE_TENANT_ADMIN");
+        UUID tenantId = UUID.fromString("bcbcbcbc-bcbc-bcbc-bcbc-bcbcbcbcbcbc");
+        Tenant tenant = new Tenant("byop", "BYOP");
+        ReflectionTestUtils.setField(tenant, "id", tenantId);
+        TenantSummary summary = tenantSummary("byop");
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
+        when(tenantRepository.save(tenant)).thenReturn(tenant);
+        when(tenantMapper.toSummary(tenant)).thenReturn(summary);
+
+        tenantService.updateTenant(caller, tenantId, new UpdateTenantRequest("BYOP", "FREE", "ativo"));
+
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
