@@ -101,6 +101,35 @@ class TenantAccessServiceTest {
         assertThat(service.findTenantName(TENANT_ID)).isNull();
     }
 
+    @Test
+    void shouldMarkTutorialCompletedOnAllMembershipsOfUser() {
+        Tenant tenantOne = tenant(TENANT_ID, "one");
+        Tenant tenantTwo = tenant(UUID.fromString("22222222-2222-2222-2222-222222222222"), "two");
+        TenantMembership membershipOne = membership(tenantOne, "EDITOR", TenantMembershipStatus.ACTIVE);
+        TenantMembership membershipTwo = membership(tenantTwo, "VIEWER", TenantMembershipStatus.ACTIVE);
+        when(membershipRepository.findAllByUserSubject("subject"))
+                .thenReturn(List.of(membershipOne, membershipTwo));
+
+        service.markTutorialCompleted("subject");
+
+        assertThat(membershipOne.isTutorialCompleted()).isTrue();
+        assertThat(membershipTwo.isTutorialCompleted()).isTrue();
+    }
+
+    @Test
+    void shouldCheckTutorialCompleted() {
+        when(membershipRepository.existsByUserSubjectAndTutorialCompletedTrue("subject")).thenReturn(true);
+
+        assertThat(service.hasCompletedTutorial("subject")).isTrue();
+    }
+
+    @Test
+    void shouldReportTutorialNotCompletedWhenNoMembershipHasIt() {
+        when(membershipRepository.existsByUserSubjectAndTutorialCompletedTrue("subject")).thenReturn(false);
+
+        assertThat(service.hasCompletedTutorial("subject")).isFalse();
+    }
+
     private Tenant tenant(UUID tenantId, String key) {
         Tenant tenant = new Tenant(key, "Tenant " + key);
         ReflectionTestUtils.setField(tenant, "id", tenantId);

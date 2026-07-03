@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { AlertTriangle } from "lucide-react";
 import { fade } from "../../../shared/components/motion";
 import { AegisLogo } from "../../../shared/components/AegisLogo";
 import { Markdown } from "../../../shared/components/Markdown";
+import { useTutorial } from "../../tutorial/useTutorial";
+import { tutorialService } from "../../tutorial/tutorialService";
 import type { Notification } from "../contracts/notification";
 
 /**
@@ -21,8 +24,21 @@ import type { Notification } from "../contracts/notification";
  * e `ContextActionMenu.tsx` para o uso de portal.
  */
 export function NotificationModal({ notification, onClose }: { notification: Notification; onClose: () => void }) {
+  const { startTutorial } = useTutorial();
+  const [startTour, setStartTour] = useState(!tutorialService.isCompleted());
+
+  const showTutorialOption = notification.type === "ONBOARDING" && !tutorialService.isCompleted();
+
+  const handleDismiss = () => {
+    onClose();
+    if (showTutorialOption && startTour) {
+      // Pequeno delay para a modal fechar antes do tour iniciar
+      setTimeout(() => startTutorial(), 300);
+    }
+  };
+
   return createPortal(
-    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={handleDismiss}>
       <motion.div {...fade} className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 text-center">
           <AegisLogo size="md" className="mx-auto" />
@@ -36,7 +52,20 @@ export function NotificationModal({ notification, onClose }: { notification: Not
         <div className="mb-5 max-h-[50vh] overflow-y-auto text-sm">
           <Markdown>{notification.bodyMarkdown}</Markdown>
         </div>
-        <button onClick={onClose} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 active:scale-[0.97] shadow-[0_4px_14px_rgba(124,58,237,.25)]">Entendi</button>
+        {showTutorialOption && (
+          <label className="mb-4 flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm select-none">
+            <input
+              type="checkbox"
+              checked={startTour}
+              onChange={(e) => setStartTour(e.target.checked)}
+              className="h-4 w-4 rounded accent-primary"
+            />
+            <span className="text-foreground">
+              Fazer um tour pela plataforma <span className="text-muted-foreground">(recomendado)</span>
+            </span>
+          </label>
+        )}
+        <button onClick={handleDismiss} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 active:scale-[0.97] shadow-[0_4px_14px_rgba(124,58,237,.25)]">Entendi</button>
       </motion.div>
     </motion.div>,
     document.body,

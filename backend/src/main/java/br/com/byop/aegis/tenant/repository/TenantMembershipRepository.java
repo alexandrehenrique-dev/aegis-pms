@@ -46,6 +46,14 @@ public interface TenantMembershipRepository extends JpaRepository<TenantMembersh
     boolean existsByTenantIdAndUserSubjectAndStatus(UUID tenantId, String userSubject, TenantMembershipStatus status);
 
     /**
+     * Verifica se o usuario ja concluiu o tutorial de onboarding em qualquer tenant (Sprint 22).
+     *
+     * @param userSubject subject do usuario no Keycloak
+     * @return {@code true} quando ao menos uma membership do usuario tem o tutorial concluido
+     */
+    boolean existsByUserSubjectAndTutorialCompletedTrue(String userSubject);
+
+    /**
      * Lista memberships vinculadas a um tenant.
      *
      * @param tenantId identificador do tenant

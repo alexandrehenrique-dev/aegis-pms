@@ -45,7 +45,7 @@ export function EditorialDashboard() {
       <AnimatePresence>{showNewContent && <NewContentModal onClose={() => setShowNewContent(false)} />}</AnimatePresence>
       <PageHeader title="Conteúdo" module="Conteúdo" desc="Gerencie artigos, traduções, revisões e publicações deste produto." badge="Maestro Beton">
         <PermGate allowed={canEdit}><Button onClick={() => navigate("/content/workflow")}>Ver workflow</Button></PermGate>
-        <PermGate allowed={canEdit}><Button primary onClick={() => setShowNewContent(true)}><Plus size={15} />Novo conteúdo</Button></PermGate>
+        <PermGate allowed={canEdit}><Button data-tour="content-novo" primary onClick={() => setShowNewContent(true)}><Plus size={15} />Novo conteúdo</Button></PermGate>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">

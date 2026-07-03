@@ -21,7 +21,7 @@ export function SettingsOverview() {
         <Button primary onClick={() => navigate("/settings/product")}>Configurar produto</Button>
       </PageHeader>
       {loading ? <SkeletonLines /> : error || !settingCards ? <PartialErrorWidget /> : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{settingCards.map((c) => <SettingsCard key={c.name} c={c} />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{settingCards.map((c, i) => <SettingsCard key={c.name} c={c} data-tour={i === 0 ? "settings-geral" : undefined} />)}</div>
       )}
       <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>

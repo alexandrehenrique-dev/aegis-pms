@@ -1,0 +1,25 @@
+meta {
+  name: Completar tutorial
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tutorial/complete
+  body: none
+}
+
+docs {
+  Objetivo: marcar o tutorial interativo de onboarding como concluido para o
+  usuario autenticado (Sprint 22, Secao E). Fora do prefixo /api/v1/auth/**
+  de proposito (esse prefixo e permitAll no SecurityConfig, ja que os demais
+  endpoints de AuthController sao pre-autenticacao) — por isso o endpoint
+  fica em /api/v1/tutorial/complete, autenticado por padrao.
+  Resultado esperado: 204 No Content.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

@@ -1,0 +1,22 @@
+meta {
+  name: Completar tutorial de novo (idempotente)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tutorial/complete
+  body: none
+}
+
+docs {
+  Objetivo: confirmar que chamar o endpoint uma segunda vez nao e um erro
+  (Sprint 22, Secao E — "o endpoint de conclusao e idempotente").
+  Resultado esperado: 204 No Content, igual a primeira chamada.
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

@@ -4,7 +4,7 @@ import { timeline, timelineRoutes } from "../../mocks/timeline";
 export function OperationalTimeline() {
   const navigate = useNavigate();
   return (
-    <div className="space-y-1">
+    <div data-tour="dashboard-timeline" className="space-y-1">
       {timeline.map((t, i) => (
         <button key={t} onClick={() => navigate(timelineRoutes[i] ?? "/dashboard")} className="flex w-full gap-3 rounded-xl p-3 text-left transition hover:bg-muted">
           <div className="mt-1 flex flex-col items-center">

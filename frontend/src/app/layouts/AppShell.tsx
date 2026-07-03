@@ -105,7 +105,7 @@ export function AppShell() {
         <AegisLogo size="sm" />
         <div><p className="font-semibold tracking-[-.02em]">Aegis PMS</p><p className="text-[11px] text-muted-foreground">Product OS</p></div>
       </div>
-      <nav className="space-y-1">
+      <nav data-tour="sidebar-nav" className="space-y-1">
         {visibleNav.map((item) => {
           const Icon = item.icon;
           const active = location.pathname === item.path || location.pathname.startsWith(item.path + "/");

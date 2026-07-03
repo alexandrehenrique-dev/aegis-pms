@@ -49,9 +49,9 @@ export function UserTable() {
             <FilterGroup label="Produto" options={options.products} value={product} onChange={setProduct} />
           </PopoverContent>
         </Popover>
-        <Button primary onClick={() => navigate("/users/invite")}>Convidar</Button>
+        <Button data-tour="users-convidar" primary onClick={() => navigate("/users/invite")}>Convidar</Button>
       </PageHeader>
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div data-tour="users-table" className="overflow-hidden rounded-2xl border border-border bg-card">
         <table className="hidden w-full text-left text-sm lg:table">
           <thead className="bg-muted text-xs text-muted-foreground">
             <tr>{["Nome", "Email", "Papel", "Produtos", "Status", "Último acesso", "Convite", "Ações"].map((h) => <th key={h} className="p-3">{h}</th>)}</tr>
