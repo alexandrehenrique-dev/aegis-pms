@@ -30,3 +30,18 @@ export function slugError(value: string, min = 3, max = 50): string | undefined 
   if (trimmed.length < min || trimmed.length > max) return `Deve ter entre ${min} e ${max} caracteres.`;
   return undefined;
 }
+
+/**
+ * Atribuição de produto a usuário (Sprint 19, Tarefa E): exatamente um entre
+ * `userId` (usuário existente) e `inviteEmail` (convite) deve estar
+ * preenchido. Recebe os dois valores brutos do form, não só o do modo ativo
+ * no momento — isso pega o caso em que o usuário preenche um campo, troca de
+ * modo e deixa o valor anterior esquecido no state.
+ */
+export function assignmentXorError(userId: string, inviteEmail: string): string | undefined {
+  const hasUser = !!userId.trim();
+  const hasInvite = !!inviteEmail.trim();
+  if (hasUser && hasInvite) return "Selecione um usuário existente OU informe um e-mail de convite — não os dois.";
+  if (!hasUser && !hasInvite) return "Selecione um usuário existente ou informe um e-mail de convite.";
+  return undefined;
+}

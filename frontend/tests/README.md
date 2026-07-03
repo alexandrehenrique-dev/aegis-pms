@@ -84,6 +84,7 @@ Um script por domínio funcional (cobertura geral do app, fora do escopo origina
 | `knowledge-graph.mjs` | Overview, Graph Canvas, busca de entidade, Órfãos, Insights → abrir entidade | `admin@byop.io`, tenant **Aegis Labs**, produto **Aegis Docs** (módulo só vem habilitado por padrão em produtos tipo "Knowledge Base"; Maestro Beton não tem) |
 | `settings.mjs` | Visão geral, Produto, Tenant, Permissões (+ "Salvar permissões"), Segurança | `super-admin@byop.io` (tenant_admin é bloqueado em `/settings/security`) |
 | `users.mjs` | Lista (via "Próximas ações" do `ProductDashboard`), convidar usuário, abrir detalhe | `super-admin@byop.io` |
+| `tenant-wizard.mjs` | `CreateTenantWizardModal` (`/select-tenant`, "Criar Tenant"): plano do tenant editável (passo 1), unicidade de slug de produto via `productsService.checkSlugAvailable` no blur (passo 2), validação XOR `userId`/`inviteEmail` na atribuição (passo 3) — gaps fechados como follow-up da Sprint 19 | `super-admin@byop.io` |
 | `audit.mjs` | Timeline, "Ver detalhe" de um evento, link cruzado "Abrir recurso" → `/settings/roles` | `admin@byop.io` (tenant_admin) |
 | `notifications-and-help.mjs` | "Criar Notificação" (super_admin, em `/select-tenant`), sino de notificações, Central de Ajuda, link "Reportar um problema" → `FeedbackModal` | `super-admin@byop.io` |
 
