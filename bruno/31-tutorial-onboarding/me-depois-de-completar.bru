@@ -1,0 +1,26 @@
+meta {
+  name: Me - depois de completar (tutorialCompleted true)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me
+  body: none
+}
+
+docs {
+  Objetivo: confirmar que `GET /me` reflete `tutorialCompleted: true` depois
+  da conclusao (Sprint 22, Secao I — reconstroi o cache local em outro
+  dispositivo, sem request adicional).
+  Resultado esperado: 200, tutorialCompleted true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("tutorialCompleted true", function() {
+    expect(res.body.tutorialCompleted).to.equal(true);
+  });
+}

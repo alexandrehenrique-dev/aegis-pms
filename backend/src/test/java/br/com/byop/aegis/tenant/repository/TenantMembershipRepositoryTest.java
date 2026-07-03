@@ -72,6 +72,21 @@ class TenantMembershipRepositoryTest extends RepositoryTestSupport {
     }
 
     @Test
+    void shouldCheckTutorialCompletedAcrossMemberships() {
+        Tenant tenant = tenantRepository.saveAndFlush(tenant("membership-tutorial"));
+        TenantMembership notCompleted = new TenantMembership(tenant, "subject-tutorial-pending", "EDITOR");
+        membershipRepository.saveAndFlush(notCompleted);
+
+        assertThat(membershipRepository.existsByUserSubjectAndTutorialCompletedTrue("subject-tutorial-pending")).isFalse();
+
+        TenantMembership completed = new TenantMembership(tenant, "subject-tutorial-done", "EDITOR");
+        completed.completeTutorial();
+        membershipRepository.saveAndFlush(completed);
+
+        assertThat(membershipRepository.existsByUserSubjectAndTutorialCompletedTrue("subject-tutorial-done")).isTrue();
+    }
+
+    @Test
     void shouldRejectDuplicateTenantAndUserSubject() {
         Tenant tenant = tenantRepository.saveAndFlush(tenant("membership-duplicate"));
         membershipRepository.saveAndFlush(new TenantMembership(tenant, "subject-duplicate", "TENANT_ADMIN"));

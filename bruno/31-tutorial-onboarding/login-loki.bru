@@ -1,0 +1,38 @@
+meta {
+  name: Login loki
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{keycloakIssuer}}/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: {{clientId}}
+  username: {{username}}
+  password: {{password}}
+}
+
+docs {
+Objetivo: autenticar Loki para executar a pasta 31 de forma isolada.
+Resultado esperado: 200 com access_token e refresh_token.
+Variaveis produzidas: token, refreshToken.
+}
+
+script:post-response {
+  bru.setVar('token', res.body.access_token);
+  bru.setVar('refreshToken', res.body.refresh_token);
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("access_token presente", function() {
+    expect(res.body.access_token).to.be.a("string");
+  });
+}

@@ -2,7 +2,7 @@
 // /select-tenant), Central de Ajuda (abre o FeedbackModal pelo link "Reportar um problema").
 // O FeedbackModal em si (anexo real, persistencia) ja e testado a fundo em feedback-attachment.mjs (Sprint 18).
 // Ver tests/README.md.
-import { launchBrowser, collectPageErrors, report, DEMO_USERS, BASE_URL, goToNav } from "./helpers.mjs";
+import { launchBrowser, collectPageErrors, report, DEMO_USERS, BASE_URL, goToNav, suppressTutorialAutostart } from "./helpers.mjs";
 
 async function main() {
   const browser = await launchBrowser();
@@ -12,6 +12,7 @@ async function main() {
 
   try {
     await page.goto(`${BASE_URL}/login`, { waitUntil: "networkidle" });
+    await suppressTutorialAutostart(page);
     await page.locator('input[type="email"]').fill(DEMO_USERS.superAdmin.email);
     await page.locator('input[type="password"]').fill(DEMO_USERS.superAdmin.password);
     await page.getByRole("button", { name: "Entrar" }).click();

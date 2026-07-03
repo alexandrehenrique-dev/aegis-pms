@@ -25,7 +25,7 @@ export function ProductsList() {
     <>
       <PageHeader title="Produtos" module="Produtos" desc="Administre os produtos digitais deste tenant.">
         <Button onClick={() => setView(view === "grid" ? "list" : "grid")}>{view === "grid" ? "Lista" : "Grid"}</Button>
-        <Button primary onClick={() => navigate("/products/new")}><Plus size={15} />Novo produto</Button>
+        <Button data-tour="products-novo" primary onClick={() => navigate("/products/new")}><Plus size={15} />Novo produto</Button>
       </PageHeader>
       <div className="mb-4 space-y-2">
         <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
@@ -42,7 +42,7 @@ export function ProductsList() {
       {filtered.length === 0 ? (
         <EmptyState title="Busca sem resultado" description="Ajuste filtros por tipo, status ou limpe a busca." />
       ) : view === "grid" ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filtered.map((p) => <ProductCard key={p.name} p={p} />)}</div>
+        <div data-tour="products-list" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{filtered.map((p) => <ProductCard key={p.name} p={p} />)}</div>
       ) : (
         <div className="space-y-2">
           {filtered.map((p) => (

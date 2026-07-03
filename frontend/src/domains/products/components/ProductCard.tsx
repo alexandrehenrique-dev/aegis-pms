@@ -44,7 +44,7 @@ export function ProductCard({ p }: { p: ProductSummary }) {
   };
 
   return (
-    <Card>
+    <Card data-tour="product-card">
       <AnimatePresence>
         {confirmArchive && (
           <ConfirmDialog title="Arquivar este produto?" desc={`${p.name} ficará indisponível para operação até ser restaurado.`} danger loading={archiving} onConfirm={handleArchive} onCancel={() => setConfirmArchive(false)} />

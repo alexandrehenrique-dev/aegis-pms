@@ -59,6 +59,30 @@ public class TenantAccessService implements TenantVisibilityPort {
         return tenantRepository.findById(tenantId).map(Tenant::getName).orElse(null);
     }
 
+    /**
+     * Marca o tutorial de onboarding como concluido em todas as memberships do
+     * usuario (Sprint 22) — "concluido" e uma decisao do usuario, nao do
+     * tenant, entao vale para qualquer tenant ao qual ele pertenca.
+     *
+     * @param userSubject subject do usuario no Keycloak
+     */
+    @Transactional
+    public void markTutorialCompleted(String userSubject) {
+        membershipRepository.findAllByUserSubject(userSubject)
+                .forEach(TenantMembership::completeTutorial);
+    }
+
+    /**
+     * Verifica se o usuario ja concluiu o tutorial de onboarding em algum tenant (Sprint 22).
+     *
+     * @param userSubject subject do usuario no Keycloak
+     * @return {@code true} quando o tutorial ja foi concluido
+     */
+    @Transactional(readOnly = true)
+    public boolean hasCompletedTutorial(String userSubject) {
+        return membershipRepository.existsByUserSubjectAndTutorialCompletedTrue(userSubject);
+    }
+
     private boolean isActiveTenantAdminMembership(TenantMembership membership) {
         return membership.getStatus() == TenantMembershipStatus.ACTIVE && TENANT_ADMIN.equals(membership.getRole());
     }

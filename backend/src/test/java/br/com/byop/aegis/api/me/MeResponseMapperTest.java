@@ -1,19 +1,35 @@
 package br.com.byop.aegis.api.me;
 
 import br.com.byop.aegis.security.AuthenticatedUser;
+import br.com.byop.aegis.tenant.api.TenantAccessService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class MeResponseMapperTest {
 
-    private final MeResponseMapper mapper = new MeResponseMapper();
+    @Mock
+    private TenantAccessService tenantAccessService;
+
+    private MeResponseMapper mapper;
+
+    @BeforeEach
+    void setUp() {
+        mapper = new MeResponseMapper(tenantAccessService);
+    }
 
     @Test
     void shouldMapAuthenticatedUserToMeResponseWithSuperAdminRole() {
         AuthenticatedUser user = userWithAuthorities("ROLE_SUPER_ADMIN");
+        when(tenantAccessService.hasCompletedTutorial("subject-123")).thenReturn(true);
 
         MeResponse response = mapper.toResponse(user);
 
@@ -22,6 +38,15 @@ class MeResponseMapperTest {
         assertThat(response.username()).isEqualTo("loki");
         assertThat(response.name()).isEqualTo("Loki");
         assertThat(response.role()).isEqualTo("super_admin");
+        assertThat(response.tutorialCompleted()).isTrue();
+    }
+
+    @Test
+    void shouldMapTutorialNotCompleted() {
+        AuthenticatedUser user = userWithAuthorities("ROLE_EDITOR");
+        when(tenantAccessService.hasCompletedTutorial("subject-123")).thenReturn(false);
+
+        assertThat(mapper.toResponse(user).tutorialCompleted()).isFalse();
     }
 
     @Test

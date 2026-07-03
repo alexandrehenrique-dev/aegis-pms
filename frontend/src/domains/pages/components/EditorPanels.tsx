@@ -70,7 +70,7 @@ export function ContentStructureTree({ page, selectedId, onSelect, onAddBlock, o
   };
 
   return (
-    <Card className="h-full">
+    <Card data-tour="content-editor-blocks" className="h-full">
       <h2 className="mb-3 text-lg font-semibold">Estrutura</h2>
       <p className="mb-2 text-xs text-muted-foreground">Arraste pelo ícone para reordenar.</p>
       {!page && <p className="text-sm text-muted-foreground">Nenhuma página carregada para este produto.</p>}

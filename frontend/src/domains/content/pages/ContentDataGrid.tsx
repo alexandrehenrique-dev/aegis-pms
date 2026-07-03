@@ -83,7 +83,7 @@ export function ContentDataGrid() {
         <>
           <div className="hidden overflow-hidden rounded-2xl border border-border bg-card lg:block">
             <table className="w-full text-left text-sm">
-              <thead className="bg-muted text-xs text-muted-foreground"><tr>{["", "Título", "Tipo", "Idioma", "Autor", "Status", "Última atualização", "Publicação", "Versão", "Ações"].map((h) => <th key={h} className="p-3 font-medium">{h}</th>)}</tr></thead>
+              <thead data-tour="content-list" className="bg-muted text-xs text-muted-foreground"><tr>{["", "Título", "Tipo", "Idioma", "Autor", "Status", "Última atualização", "Publicação", "Versão", "Ações"].map((h) => <th key={h} className="p-3 font-medium">{h}</th>)}</tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id} className="border-t border-border hover:bg-muted/40">

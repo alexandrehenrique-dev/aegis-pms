@@ -1,6 +1,6 @@
 // Domínio auth — login (válido/inválido/bloqueado), seleção de tenant/produto, logout, esqueci minha senha.
 // Ver tests/README.md.
-import { launchBrowser, collectPageErrors, report, DEMO_USERS, BASE_URL } from "./helpers.mjs";
+import { launchBrowser, collectPageErrors, report, DEMO_USERS, BASE_URL, suppressTutorialAutostart } from "./helpers.mjs";
 
 async function main() {
   const browser = await launchBrowser();
@@ -10,6 +10,7 @@ async function main() {
 
   try {
     await page.goto(`${BASE_URL}/login`, { waitUntil: "networkidle" });
+    await suppressTutorialAutostart(page);
 
     // Credenciais invalidas
     // `handleLogin` tem um delay artificial de 700ms (simula latencia de rede) antes de resolver o erro.

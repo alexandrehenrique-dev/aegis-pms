@@ -9,10 +9,10 @@ const SETTINGS_ROUTES: Record<string, string> = {
   "Auditoria": "/audit", "SEO": "/settings/product", "Domínios futuros": "/settings/product",
 };
 
-export function SettingsCard({ c }: { c: SettingCardType }) {
+export function SettingsCard({ c, "data-tour": dataTour }: { c: SettingCardType; "data-tour"?: string }) {
   const navigate = useNavigate();
   return (
-    <Card>
+    <Card data-tour={dataTour}>
       <div className="flex items-start justify-between">
         <div><h3 className="font-semibold">{c.name}</h3><p className="mt-1 text-sm text-muted-foreground">{c.description}</p></div>
         <RiskBadge risk={c.risk} />

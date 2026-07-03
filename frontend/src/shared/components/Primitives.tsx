@@ -41,7 +41,7 @@ export function SkeletonLines() {
   );
 }
 
-export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "green" | "blue" | "amber" | "red" | "violet" }) {
+export function Badge({ children, tone = "neutral", "data-tour": dataTour }: { children: ReactNode; tone?: "neutral" | "green" | "blue" | "amber" | "red" | "violet"; "data-tour"?: string }) {
   const c = {
     green: "bg-[#dcfce7] text-[#15803d]",
     blue: "bg-[#dbeafe] text-[#1d4ed8]",
@@ -50,15 +50,16 @@ export function Badge({ children, tone = "neutral" }: { children: ReactNode; ton
     violet: "bg-[#ede9fe] text-[#7c3aed]",
     neutral: "bg-muted text-muted-foreground",
   }[tone];
-  return <span className={`rounded-full px-2 py-1 text-[11px] font-medium ${c}`}>{children}</span>;
+  return <span data-tour={dataTour} className={`rounded-full px-2 py-1 text-[11px] font-medium ${c}`}>{children}</span>;
 }
 
-export function Card({ children, className = "", onClick, onContextMenu }: { children: ReactNode; className?: string; onClick?: () => void; onContextMenu?: (e: MouseEvent) => void }) {
+export function Card({ children, className = "", onClick, onContextMenu, "data-tour": dataTour }: { children: ReactNode; className?: string; onClick?: () => void; onContextMenu?: (e: MouseEvent) => void; "data-tour"?: string }) {
   return (
     <motion.div
       {...fade}
       onClick={onClick}
       onContextMenu={onContextMenu}
+      data-tour={dataTour}
       className={`rounded-2xl border border-border bg-card p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.04)] dark:shadow-none ${onClick ? "cursor-pointer hover:border-primary/30 hover:shadow-[0_2px_12px_rgba(124,58,237,0.08)] transition-shadow" : ""} ${className}`}
     >
       {children}
@@ -126,9 +127,9 @@ export function EmptyState({ compact = false, title = "Nenhum item encontrado.",
   );
 }
 
-export function PageHeader({ title, desc, badge = "BYOP", titleBadge, children }: { title: string; desc: string; module?: string; badge?: string; titleBadge?: ReactNode; children?: ReactNode }) {
+export function PageHeader({ title, desc, badge = "BYOP", titleBadge, children, "data-tour": dataTour }: { title: string; desc: string; module?: string; badge?: string; titleBadge?: ReactNode; children?: ReactNode; "data-tour"?: string }) {
   return (
-    <motion.header {...fade} className="mb-6 flex flex-col gap-3 border-b border-border pb-5 md:flex-row md:items-end md:justify-between">
+    <motion.header {...fade} data-tour={dataTour} className="mb-6 flex flex-col gap-3 border-b border-border pb-5 md:flex-row md:items-end md:justify-between">
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-[-.02em] md:text-3xl">{title}</h1>

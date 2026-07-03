@@ -47,6 +47,12 @@ public class TenantMembership {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Column(name = "tutorial_completed", nullable = false)
+    private boolean tutorialCompleted = false;
+
+    @Column(name = "tutorial_completed_at")
+    private OffsetDateTime tutorialCompletedAt;
+
     protected TenantMembership() {
     }
 
@@ -79,6 +85,14 @@ public class TenantMembership {
 
     public void activate() {
         this.status = TenantMembershipStatus.ACTIVE;
+    }
+
+    /** Marca o tutorial de onboarding como concluído (Sprint 22) — sem efeito se já estava concluído, preservando a data original. */
+    public void completeTutorial() {
+        if (!tutorialCompleted) {
+            tutorialCompleted = true;
+            tutorialCompletedAt = OffsetDateTime.now(ZoneOffset.UTC);
+        }
     }
 
     @PrePersist
@@ -119,6 +133,14 @@ public class TenantMembership {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public boolean isTutorialCompleted() {
+        return tutorialCompleted;
+    }
+
+    public OffsetDateTime getTutorialCompletedAt() {
+        return tutorialCompletedAt;
     }
 
 }

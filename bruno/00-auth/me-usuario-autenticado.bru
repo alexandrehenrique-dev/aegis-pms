@@ -26,4 +26,7 @@ tests {
   test("role super_admin", function() {
     expect(res.body.role).to.equal("super_admin");
   });
+  test("tutorialCompleted presente (Sprint 22)", function() {
+    expect(res.body.tutorialCompleted).to.be.a("boolean");
+  });
 }

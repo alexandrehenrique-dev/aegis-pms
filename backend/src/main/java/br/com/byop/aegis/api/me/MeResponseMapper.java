@@ -1,6 +1,7 @@
 package br.com.byop.aegis.api.me;
 
 import br.com.byop.aegis.security.AuthenticatedUser;
+import br.com.byop.aegis.tenant.api.TenantAccessService;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -19,6 +20,12 @@ public class MeResponseMapper {
             new RoleMapping("ROLE_VIEWER", "viewer")
     );
 
+    private final TenantAccessService tenantAccessService;
+
+    public MeResponseMapper(TenantAccessService tenantAccessService) {
+        this.tenantAccessService = tenantAccessService;
+    }
+
     /**
      * Converte o usuário autenticado para a resposta pública.
      *
@@ -31,7 +38,8 @@ public class MeResponseMapper {
                 user.email(),
                 user.username(),
                 user.name(),
-                resolvePublicRole(user)
+                resolvePublicRole(user),
+                tenantAccessService.hasCompletedTutorial(user.subject())
         );
     }
 

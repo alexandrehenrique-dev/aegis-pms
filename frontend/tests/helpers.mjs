@@ -45,6 +45,20 @@ export function collectPageErrors(page) {
 }
 
 /**
+ * Sprint 22 — marca `aegis:tutorial:completed` antes do login: sem isso, o
+ * checkbox "Fazer um tour pela plataforma" do modal de boas-vindas vem
+ * pré-marcado e o tour real (`TutorialProvider`) começaria por cima da tela
+ * logo após o login, bloqueando cliques dos outros scripts que não testam o
+ * tutorial (overlay do `react-joyride-portal` intercepta pointer events).
+ * Chame logo após `page.goto` da tela de login, antes de submeter o form.
+ * Só `tests/tutorial-onboarding.mjs` não chama isto, de propósito, pra
+ * exercitar o fluxo real do checkbox/tour.
+ */
+export async function suppressTutorialAutostart(page) {
+  await page.evaluate(() => localStorage.setItem("aegis:tutorial:completed", "true"));
+}
+
+/**
  * Login + seleção de tenant/produto (fluxo Aegis PMS). Usuários com mais de
  * um tenant/produto (super-admin, tenant-admin) caem na tela de seleção com
  * vários cards — passe `tenantName`/`productName` para escolher um
@@ -57,6 +71,7 @@ export function collectPageErrors(page) {
  */
 export async function loginAndOpenProduct(page, { user = DEMO_USERS.editor, theme, tenantName, productName } = {}) {
   await page.goto(`${BASE_URL}/login`, { waitUntil: "networkidle" });
+  await suppressTutorialAutostart(page);
   if (theme) {
     await page.evaluate((t) => localStorage.setItem("aegis-theme", t), theme);
     await page.reload({ waitUntil: "networkidle" });

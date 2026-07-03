@@ -51,14 +51,14 @@ export function DashboardGlobal() {
           <CreateProductModal tenantId={effectiveTenant.id} tenantName={effectiveTenant.name} onClose={() => setShowCreateProduct(false)} onCreated={handleProductCreated} />
         )}
       </AnimatePresence>
-      <PageHeader title="Dashboard Global" desc="Visão operacional dos produtos digitais deste tenant." badge="Tenant BYOP">
+      <PageHeader data-tour="dashboard-global" title="Dashboard Global" desc="Visão operacional dos produtos digitais deste tenant." badge="Tenant BYOP">
         <Popover>
           <PopoverTrigger asChild><Button>{period}</Button></PopoverTrigger>
           <PopoverContent>
             <div className="flex flex-col gap-1">{PERIODS.map((p) => <Button key={p} onClick={() => setPeriod(p)} primary={period === p}>{p}</Button>)}</div>
           </PopoverContent>
         </Popover>
-        <PermGate allowed={canCreate}><Button primary onClick={() => setShowCreateProduct(true)}><Plus size={15} />Criar produto</Button></PermGate>
+        <PermGate allowed={canCreate}><Button data-tour="dashboard-criar-produto" primary onClick={() => setShowCreateProduct(true)}><Plus size={15} />Criar produto</Button></PermGate>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
@@ -67,7 +67,7 @@ export function DashboardGlobal() {
           ) : error || !summary ? (
             <PartialErrorWidget />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div data-tour="dashboard-kpis" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <PermGate allowed={canCreate}>
                 <KPIWidget label="Produtos ativos" value={String(activeProducts)} detail={`${archivedProducts} produto${archivedProducts === 1 ? "" : "s"} arquivado${archivedProducts === 1 ? "" : "s"}`} onClick={() => navigate("/products")} />
               </PermGate>

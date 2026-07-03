@@ -1,0 +1,27 @@
+meta {
+  name: Completar tutorial sem token - 401
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tutorial/complete
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer invalid-token-for-tutorial-complete-test
+}
+
+docs {
+  Objetivo: confirmar que o endpoint exige autenticacao — diferente dos
+  demais endpoints de auth (login/ativacao/reset), que sao permitAll.
+  Resultado esperado: 401.
+}
+
+tests {
+  test("status 401", function() {
+    expect(res.status).to.equal(401);
+  });
+}
