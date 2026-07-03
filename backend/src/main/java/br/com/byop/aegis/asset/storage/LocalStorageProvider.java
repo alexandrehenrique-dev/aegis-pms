@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
@@ -51,6 +52,15 @@ public class LocalStorageProvider implements StorageProvider {
     }
 
     @Override
+    public InputStream openStream(String storageKey) {
+        try {
+            return Files.newInputStream(resolveAbsolutePath(storageKey));
+        } catch (IOException exception) {
+            throw new AssetStorageException("Failed to open asset file: " + storageKey, exception);
+        }
+    }
+
+    @Override
     public void delete(String storageKey) {
         try {
             Files.deleteIfExists(resolveAbsolutePath(storageKey));
@@ -68,8 +78,8 @@ public class LocalStorageProvider implements StorageProvider {
      * @return bytes do arquivo
      */
     public byte[] loadContent(String storageKey) {
-        try {
-            return Files.readAllBytes(resolveAbsolutePath(storageKey));
+        try (InputStream stream = openStream(storageKey)) {
+            return stream.readAllBytes();
         } catch (IOException exception) {
             throw new AssetStorageException("Failed to read asset file: " + storageKey, exception);
         }

@@ -2,6 +2,7 @@ package br.com.byop.aegis.asset.storage;
 
 import br.com.byop.aegis.asset.domain.AssetCategory;
 
+import java.io.InputStream;
 import java.util.UUID;
 
 /**
@@ -44,6 +45,15 @@ public interface StorageProvider {
      * @return localizacao resolvida, com {@code expiresAt} preenchido apenas quando aplicavel
      */
     ResolvedLocation resolve(UUID assetId, String storageKey);
+
+    /**
+     * Abre o conteudo do asset para leitura em streaming. Chamadores devem
+     * fechar o stream retornado.
+     *
+     * @param storageKey chave de armazenamento retornada por {@link #store}
+     * @return stream de leitura do asset
+     */
+    InputStream openStream(String storageKey);
 
     /**
      * Remove o conteudo associado a um {@code storageKey}.

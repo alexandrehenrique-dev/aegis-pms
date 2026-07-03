@@ -1,0 +1,37 @@
+meta {
+  name: Criar tenant para export/delete
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants
+  body: json
+}
+
+body:json {
+  {
+    "key": "export-delete-tenant-{{graphRefSeed}}",
+    "name": "Export Delete Tenant",
+    "plan": "FREE",
+    "initialAdminEmail": "export-delete-admin-{{graphRefSeed}}@example.com"
+  }
+}
+
+script:post-response {
+  bru.setVar('exportDeleteTenantId', res.body.id);
+}
+
+docs {
+Objetivo: criar tenant descartavel para validar exclusao assíncrona com backup sem afetar dados usados por outras pastas.
+Resultado esperado: 201 e variavel exportDeleteTenantId preenchida.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("tenant id presente", function() {
+    expect(bru.getVar('exportDeleteTenantId')).to.be.a('string');
+  });
+}

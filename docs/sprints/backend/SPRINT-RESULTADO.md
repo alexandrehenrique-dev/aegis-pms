@@ -414,3 +414,49 @@
 **Retrofits pendentes para etapas futuras:** dispatch Telegram fica para a etapa 30, quando os campos de settings de Telegram existirem; o frontend ainda precisa trocar o anexo fake do `FeedbackModal.tsx` por `<input type="file">` real e fazer upload via `POST /products/{productId}/assets` antes do `POST /feedback`.
 
 **Cobertura de testes:** `mvn clean verify` com `BUILD SUCCESS`, **1378 testes**, 0 falhas, 0 erros, 0 ignorados, JaCoCo aprovado (`All coverage checks have been met`) e Spring Modulith aprovado pela suite completa. Bruno da pasta 27 isolada contra a aplicacao local atual: **23 requests, 23 aprovados, 40/40 testes aprovados**. A execucao cumulativa completa continua sujeita as falhas pre-existentes de estado residual em pastas antigas ja registradas na Sprint 26; a pasta 27 passou 100% isoladamente. Evidencias completas: `results/sprint-27.md`.
+
+## Etapa 28 — Backup e exportação de dados na exclusão de produto ou tenant (concluída em 2026-07-03)
+
+**Objetivo:** impedir exclusão irreversível de produto ou tenant antes de gerar backup completo, armazenar o ZIP em área permanente, validar integridade no mesmo caminho usado pelo download e disponibilizar o arquivo por streaming via token temporário.
+
+**Classes criadas:** novo subdomínio `product.export` com `ExportController`, `ProductDeleteController`, `ProductDeleteService`, `ExportAndDeleteService`, `ProductExportSerializer`, `ExportZipBuilder`, `ExportStorageService`, `ExportIntegrityService`, `ProductExportDeletionService`, `ProductExportEmailService`, `ExportCleanupJob`, `ExportToken`, `ExportTokenStatus`, `ExportTokenRepository`, contracts/DTOs e exceções/handler próprios. Portas públicas `ProductExportStoragePort`, `ProductExportStoredFile`, `TenantProductExportPort`, `TenantExportRemovalPort`; adapter `asset.api.ProductExportStorageAdapter`; service público `TenantExportRemovalService`; DTO `TenantDeleteAcceptedResponse`.
+
+**Classes alteradas:** `Product`/`ProductStatus` ganharam ciclo `DELETING`, `DELETED`, `EXPORT_FAILED`, `DELETE_FAILED`; `TenantController`/`TenantService` passaram a retornar `202` no delete e disparar exports; `SecurityConfig` liberou o download público por token; `StorageProvider`, `LocalStorageProvider` e `S3StorageProvider` ganharam abertura/deleção de assets/exports por streaming; testes relacionados de product, tenant, security, storage e settings foram ajustados.
+
+**Arquivos criados/alterados/removidos:** criada a migration `V15__export_tokens.sql`, o template `infra/keycloak/themes/aegis/email/html/productExport.ftl`, a pasta Bruno `28-backup-exportacao-exclusao` e `results/sprint-28.md`. Alterado `backend/pom.xml` para o driver PostgreSQL ficar no escopo padrão, pois `ProductExportSerializer` referencia `PGobject` em produção. Nenhum arquivo removido. `docs/sprints/backend/30_seed_homologacao_e_remocao_seed_java.md` aparece modificado no worktree, mas é alteração preexistente fora do escopo desta sprint.
+
+**Endpoints confirmados:** `DELETE /api/v1/products/{productId}` retorna `202 Accepted`; `GET /api/v1/exports/{tokenId}/download` faz streaming público do ZIP por token temporário; `DELETE /api/v1/tenants/{tenantId}` retorna `202 Accepted` e agenda export/delete por produto.
+
+**Contratos implementados:** `DeleteProductRequest` (`confirmationText`), `DeleteAcceptedResponse`, `TenantDeleteAcceptedResponse`, erros `INVALID_PRODUCT_DELETE_CONFIRMATION`, `EXPORT_ALREADY_IN_PROGRESS`, `PRODUCT_DELETE_FORBIDDEN`, `EXPORT_DOWNLOAD_NOT_FOUND` e `EXPORT_LINK_EXPIRED`.
+
+**Decisões técnicas registradas:** o delete só ocorre depois de serializar dados, montar ZIP, armazenar em área permanente, criar token, reabrir o ZIP por streaming e validar integridade com `ZipInputStream`. O arquivo temporário não é fonte de verdade. Falhas antes do delete marcam `EXPORT_FAILED`; falhas durante delete marcam `DELETE_FAILED`. Integrações entre módulos usam portas públicas para preservar Spring Modulith.
+
+**Estratégia de exportação ZIP e estrutura implementada:** JSON por domínio + arquivos físicos. Entradas: `manifest.json`, `product.json`, `modules.json`, `content/entries.json`, `pages/pages.json`, `forms/forms.json`, `forms/submissions.json`, `assets/metadata.json`, `assets/files/{category}/...`, `knowledge-graph/nodes.json`, `knowledge-graph/edges.json`, `users/assignments.json`, `audit/events.json`. Assets são lidos por streaming do storage local/S3 e gravados no ZIP sem carregar arquivos inteiros em memória.
+
+**Storage dos exports:** local em `exports/{tokenId}/{filename}` e S3 em `aegis/pms/exports/{tokenId}/{filename}`. A validação de integridade reabre exatamente o arquivo armazenado que será servido no download.
+
+**Template de e-mail:** `productExport.ftl` ficou em `infra/keycloak/themes/aegis/email/html`, mantendo os templates do Aegis junto ao tema/e-mails já existentes. O ZIP não é anexado; o e-mail leva link temporário.
+
+**Executor assíncrono:** bean `exportTaskExecutor`, prefixo `aegis-export-`, core pool size `2`, max pool size `4`, queue capacity `25`. Justificativa: limitar concorrência de operação pesada de I/O/banco, permitindo paralelismo moderado para tenants com múltiplos produtos.
+
+**Expiração dos links:** `ExportToken` expira em 7 dias (`createdAt.plus(7, DAYS)`); `manifest.downloadExpiresAt` também usa 7 dias. Cleanup diário às 03:00 (`0 0 3 * * *`) remove ZIP expirado e marca token `EXPIRED`.
+
+**Comportamento em falhas:** falha antes do e-mail pronto preserva dados e marca `EXPORT_FAILED`; falha no e-mail pronto também impede delete e marca `EXPORT_FAILED`; falha no delete depois do export válido marca `DELETE_FAILED` e não faz retry silencioso.
+
+**Funcionamento dos endpoints:** `DELETE /products/{productId}` valida confirmação textual, permissão e idempotência, marca `DELETING`, retorna `202` e dispara o job. `DELETE /tenants/{tenantId}` lista produtos ativos e dispara export/delete por produto antes da remoção final do tenant. `GET /exports/{tokenId}/download` valida token/status/expiração, registra primeiro `downloadedAt` e transmite o ZIP via `StreamingResponseBody`.
+
+**Testes executados e Maven:** teste focado dos arquivos Sonar passou com 21 testes, 0 falhas e 0 erros. `mvn clean verify` passou com **BUILD SUCCESS**, **1454 testes**, 0 falhas, 0 erros, 0 ignorados.
+
+**JaCoCo e Spring Modulith:** JaCoCo aprovado (`All coverage checks have been met`) e Spring Modulith aprovado pela suíte completa, incluindo `ModulithArchitectureTest`.
+
+**Bruno:** pasta `28-backup-exportacao-exclusao` criada e ajustada para execução isolada com login próprio. Validação executada com `npx @usebruno/cli run 28-backup-exportacao-exclusao --env local`: **6 requests, 6 aprovados, 11/11 testes**.
+
+**Validação MailHog:** executada com backend local, Keycloak em `8282` e MailHog em `8025`. E-mail recebido de `noreply@aegis.app` para `alexandre.henrique.dev@gmail.com` com assunto `Exportacao de dados pronta no Aegis PMS`. Link de download retornou `200`, ZIP passou em `unzip -t` sem erros e o produto validado passou a retornar `404 PRODUCT_NOT_FOUND`, confirmando delete após backup íntegro e disponível para streaming.
+
+**SonarQube for IDE:** corrigidos apontamentos reportados sem `@SuppressWarnings`/`NOSONAR`: `throws` desnecessários em testes, import morto, temp dir público em `ExportZipBuilder`, reflexão por nome de classe trocada por `instanceof PGobject`, campo/import mortos, SQL restrito a enums de queries fixas, redução de métodos com parâmetros excessivos e lambdas de `assertThatThrownBy` com uma chamada potencialmente lançadora. Reanálise final do painel da IDE não tem runner CLI neste ambiente.
+
+**Mitigações em AGENTS.md:** nenhuma mitigação nova adicionada nesta execução; os ajustes seguiram os padrões já registrados no `AGENTS.md`, especialmente `@Autowired` em beans com múltiplos construtores, `PathVariable` explícito e lambdas de `assertThatThrownBy`.
+
+**Retrofits pendentes:** formalizar retry/backoff para SMTP/S3 se necessário e avaliar retenção configurável de exports por tenant/plano.
+
+**Critérios de aceite atendidos:** `DELETE /products` 202, `DELETE /tenants` assíncrono com backup por produto, ZIP com JSONs por domínio e assets físicos, download por token temporário, delete somente após ZIP armazenado/reaberto/validado, falhas preservando dados, Maven/Jacoco/Modulith aprovados, Bruno 28 aprovado e MailHog validado. Evidências completas: `results/sprint-28.md`.

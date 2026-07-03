@@ -3,6 +3,7 @@ package br.com.byop.aegis.tenant.controller;
 import br.com.byop.aegis.tenant.contract.CreateTenantRequest;
 import br.com.byop.aegis.tenant.contract.DeleteTenantRequest;
 import br.com.byop.aegis.tenant.contract.UpdateTenantRequest;
+import br.com.byop.aegis.tenant.dto.TenantDeleteAcceptedResponse;
 import br.com.byop.aegis.tenant.dto.TenantSummary;
 import br.com.byop.aegis.tenant.service.TenantService;
 import br.com.byop.aegis.security.AuthenticatedUser;
@@ -55,11 +56,11 @@ public class TenantController {
     }
 
     @DeleteMapping("/api/v1/tenants/{tenantId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteTenant(@PathVariable("tenantId") UUID tenantId,
-                             @Valid @RequestBody DeleteTenantRequest request,
-                             Authentication authentication) {
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public TenantDeleteAcceptedResponse deleteTenant(@PathVariable("tenantId") UUID tenantId,
+                                                     @Valid @RequestBody DeleteTenantRequest request,
+                                                     Authentication authentication) {
         AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
-        tenantService.deleteTenant(caller, tenantId, request);
+        return tenantService.deleteTenant(caller, tenantId, request);
     }
 }

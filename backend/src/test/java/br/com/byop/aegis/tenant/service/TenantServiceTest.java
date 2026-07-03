@@ -4,6 +4,7 @@ import br.com.byop.aegis.audit.api.AuditRecordCommand;
 import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantLifecycleTransition;
+import br.com.byop.aegis.tenant.api.TenantProductExportPort;
 import br.com.byop.aegis.tenant.api.TenantStatusChangedEvent;
 import br.com.byop.aegis.tenant.command.CreateTenantCommand;
 import br.com.byop.aegis.tenant.contract.DeleteTenantRequest;
@@ -12,11 +13,12 @@ import br.com.byop.aegis.tenant.domain.Tenant;
 import br.com.byop.aegis.tenant.domain.TenantMembership;
 import br.com.byop.aegis.tenant.domain.TenantMembershipStatus;
 import br.com.byop.aegis.tenant.domain.TenantStatus;
-import br.com.byop.aegis.tenant.dto.TenantSummary;
 import br.com.byop.aegis.tenant.exception.InvalidTenantConfirmationException;
 import br.com.byop.aegis.tenant.exception.InvalidTenantStatusException;
 import br.com.byop.aegis.tenant.exception.TenantAlreadyExistsException;
 import br.com.byop.aegis.tenant.exception.TenantNotFoundException;
+import br.com.byop.aegis.tenant.dto.TenantDeleteAcceptedResponse;
+import br.com.byop.aegis.tenant.dto.TenantSummary;
 import br.com.byop.aegis.tenant.mapper.TenantMapper;
 import br.com.byop.aegis.tenant.repository.TenantMembershipRepository;
 import br.com.byop.aegis.tenant.repository.TenantRepository;
@@ -58,6 +60,9 @@ class TenantServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private TenantProductExportPort tenantProductExportPort;
 
     @InjectMocks
     private TenantService tenantService;
@@ -336,13 +341,15 @@ class TenantServiceTest {
         ReflectionTestUtils.setField(tenant, "id", tenantId);
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(tenant));
 
-        tenantService.deleteTenant(caller, tenantId, new DeleteTenantRequest("BYOP"));
+        TenantDeleteAcceptedResponse result = tenantService.deleteTenant(caller, tenantId, new DeleteTenantRequest("BYOP"));
 
+        assertThat(result.message()).isEqualTo("Exportação iniciada. Um link de download será enviado por produto em instantes.");
         ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
         verify(auditService).recordEvent(auditCaptor.capture());
         assertThat(auditCaptor.getValue().action()).isEqualTo("TENANT_DELETED");
         assertThat(auditCaptor.getValue().tenantId()).isEqualTo(tenantId);
-        verify(tenantRepository).delete(tenant);
+        verify(tenantProductExportPort).startTenantProductExports(tenantId, caller);
+        verify(tenantRepository, never()).delete(tenant);
     }
 
     @Test
@@ -359,6 +366,7 @@ class TenantServiceTest {
 
         verify(auditService, never()).recordEvent(any());
         verify(tenantRepository, never()).delete(any(Tenant.class));
+        verify(tenantProductExportPort, never()).startTenantProductExports(any(UUID.class), any(AuthenticatedUser.class));
     }
 
     @Test
@@ -374,6 +382,7 @@ class TenantServiceTest {
 
         verify(auditService, never()).recordEvent(any());
         verify(tenantRepository, never()).delete(any(Tenant.class));
+        verify(tenantProductExportPort, never()).startTenantProductExports(any(UUID.class), any(AuthenticatedUser.class));
     }
 
     @Test

@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -109,6 +110,16 @@ class TenantSeedServiceTest {
         assertThat(membership.getRole()).isEqualTo("EDITOR");
         assertThat(membership.getStatus()).isEqualTo(TenantMembershipStatus.ACTIVE);
         verify(membershipRepository).save(membership);
+    }
+
+    @Test
+    void shouldRejectMembershipSeedWhenTenantDoesNotExist() {
+        UUID tenantId = UUID.randomUUID();
+        when(tenantRepository.findById(tenantId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.ensureActiveMembership(tenantId, "user-id", "EDITOR"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Tenant not found for seed: " + tenantId);
     }
 
     private Tenant tenant(String key, String name) {

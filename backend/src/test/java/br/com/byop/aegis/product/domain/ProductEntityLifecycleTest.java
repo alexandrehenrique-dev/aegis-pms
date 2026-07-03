@@ -20,6 +20,23 @@ class ProductEntityLifecycleTest {
     }
 
     @Test
+    void shouldTransitionProductDeletionStatuses() {
+        Product product = new Product();
+
+        product.markDeleting();
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.DELETING);
+
+        product.markDeleted();
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.DELETED);
+
+        product.markExportFailed();
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.EXPORT_FAILED);
+
+        product.markDeleteFailed();
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.DELETE_FAILED);
+    }
+
+    @Test
     void shouldRunProductModuleJpaLifecycleCallbacks() {
         ProductModule module = new ProductModule();
 

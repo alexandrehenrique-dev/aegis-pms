@@ -9,6 +9,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -57,6 +58,11 @@ public class S3StorageProvider implements StorageProvider {
                 .getObjectRequest(getObjectBuilder -> getObjectBuilder.bucket(properties.bucket()).key(storageKey)));
         OffsetDateTime expiresAt = OffsetDateTime.now(ZoneOffset.UTC).plus(ttl);
         return new ResolvedLocation(presigned.url().toString(), expiresAt);
+    }
+
+    @Override
+    public InputStream openStream(String storageKey) {
+        return s3Client.getObject(builder -> builder.bucket(properties.bucket()).key(storageKey));
     }
 
     @Override

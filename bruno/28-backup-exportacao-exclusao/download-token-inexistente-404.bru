@@ -1,0 +1,22 @@
+meta {
+  name: Download export token inexistente
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/exports/99999999-9999-9999-9999-999999999999/download
+  body: none
+  auth: none
+}
+
+docs {
+Objetivo: garantir que o endpoint publico de download por token temporario nao vaza arquivos quando o token nao existe.
+Resultado esperado: 404.
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+}

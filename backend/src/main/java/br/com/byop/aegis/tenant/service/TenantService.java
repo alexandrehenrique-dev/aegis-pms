@@ -3,6 +3,7 @@ package br.com.byop.aegis.tenant.service;
 import br.com.byop.aegis.audit.api.AuditRecordCommand;
 import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.tenant.api.TenantLifecycleTransition;
+import br.com.byop.aegis.tenant.api.TenantProductExportPort;
 import br.com.byop.aegis.tenant.api.TenantStatusChangedEvent;
 import br.com.byop.aegis.tenant.command.CreateTenantCommand;
 import br.com.byop.aegis.tenant.contract.DeleteTenantRequest;
@@ -12,6 +13,7 @@ import br.com.byop.aegis.tenant.domain.TenantMembership;
 import br.com.byop.aegis.tenant.domain.TenantMembershipStatus;
 import br.com.byop.aegis.tenant.domain.TenantStatus;
 import br.com.byop.aegis.tenant.dto.TenantSummary;
+import br.com.byop.aegis.tenant.dto.TenantDeleteAcceptedResponse;
 import br.com.byop.aegis.tenant.exception.TenantAlreadyExistsException;
 import br.com.byop.aegis.tenant.exception.InvalidTenantConfirmationException;
 import br.com.byop.aegis.tenant.exception.InvalidTenantStatusException;
@@ -41,14 +43,17 @@ public class TenantService {
     private final TenantMapper tenantMapper;
     private final AuditService auditService;
     private final ApplicationEventPublisher eventPublisher;
+    private final TenantProductExportPort tenantProductExportPort;
 
     public TenantService(TenantRepository tenantRepository, TenantMembershipRepository membershipRepository,
-                         TenantMapper tenantMapper, AuditService auditService, ApplicationEventPublisher eventPublisher) {
+                         TenantMapper tenantMapper, AuditService auditService, ApplicationEventPublisher eventPublisher,
+                         TenantProductExportPort tenantProductExportPort) {
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
         this.tenantMapper = tenantMapper;
         this.auditService = auditService;
         this.eventPublisher = eventPublisher;
+        this.tenantProductExportPort = tenantProductExportPort;
     }
 
     @Transactional
@@ -129,7 +134,7 @@ public class TenantService {
     }
 
     @Transactional
-    public void deleteTenant(AuthenticatedUser caller, UUID tenantId, DeleteTenantRequest request) {
+    public TenantDeleteAcceptedResponse deleteTenant(AuthenticatedUser caller, UUID tenantId, DeleteTenantRequest request) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
 
@@ -138,7 +143,8 @@ public class TenantService {
         }
 
         recordTenantDeletionAudit(caller, tenant);
-        tenantRepository.delete(tenant);
+        tenantProductExportPort.startTenantProductExports(tenantId, caller);
+        return new TenantDeleteAcceptedResponse("Exportação iniciada. Um link de download será enviado por produto em instantes.");
     }
 
     private void recordTenantCreationAudit(AuthenticatedUser caller, Tenant tenant) {

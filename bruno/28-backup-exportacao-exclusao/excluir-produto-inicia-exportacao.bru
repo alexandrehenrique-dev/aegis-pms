@@ -1,0 +1,30 @@
+meta {
+  name: Excluir produto inicia exportacao
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/products/{{exportDeleteProductId}}
+  body: json
+}
+
+body:json {
+  {
+    "confirmationText": "Export Delete Product"
+  }
+}
+
+docs {
+Objetivo: disparar a exclusao de produto com backup obrigatorio; o request deve retornar antes do job assíncrono concluir.
+Resultado esperado: 202 e mensagem de exportacao iniciada.
+}
+
+tests {
+  test("status 202", function() {
+    expect(res.status).to.equal(202);
+  });
+  test("mensagem informa exportacao", function() {
+    expect(res.body.message).to.include("Exportação iniciada");
+  });
+}
