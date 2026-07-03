@@ -120,7 +120,7 @@ public class ProductAssignmentService {
 
     private ProductAssignmentSummary inviteUser(AuthenticatedUser caller, Product product, String inviteEmail,
                                                 ProductAssignmentRole role) {
-        IdentityUser invitedUser = invitePort.invite(product.getTenantId(), product.getId(), inviteEmail);
+        IdentityUser invitedUser = inviteUserThroughPort(caller, product, inviteEmail, role);
         ProductAssignment assignment = new ProductAssignment(product, invitedUser.id(), role);
         assignment.revoke();
         ProductAssignment saved = assignmentRepository.save(assignment);
@@ -128,6 +128,18 @@ public class ProductAssignmentService {
         recordAssignmentAudit(caller, product, invitedUser, "PRODUCT_ASSIGNMENT_CREATED", null, role.name());
 
         return assignmentMapper.toSummary(saved, invitedUser.displayName(), invitedUser.email());
+    }
+
+    private IdentityUser inviteUserThroughPort(AuthenticatedUser caller, Product product, String inviteEmail,
+                                               ProductAssignmentRole role) {
+        return invitePort.invite(
+                product.getTenantId(),
+                product.getId(),
+                product.getName(),
+                inviteEmail,
+                role.name(),
+                caller.name()
+        );
     }
 
     private void recordAssignmentAudit(AuthenticatedUser caller, Product product, IdentityUser user, String action,

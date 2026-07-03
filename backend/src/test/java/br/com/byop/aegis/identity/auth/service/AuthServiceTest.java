@@ -1,6 +1,5 @@
 package br.com.byop.aegis.identity.auth.service;
 
-import br.com.byop.aegis.identity.auth.client.KeycloakAdminClient;
 import br.com.byop.aegis.identity.auth.client.KeycloakTokenClient;
 import br.com.byop.aegis.identity.auth.client.KeycloakTokenResponse;
 import br.com.byop.aegis.identity.auth.dto.AuthMessageResponse;
@@ -12,13 +11,13 @@ import static org.mockito.Mockito.*;
 
 class AuthServiceTest {
 
-    private final KeycloakAdminClient keycloakAdminClient =
-            mock(KeycloakAdminClient.class);
+    private final AuthActivationService authActivationService =
+            mock(AuthActivationService.class);
     private final KeycloakTokenClient keycloakTokenClient =
             mock(KeycloakTokenClient.class);
 
     private final AuthService service =
-            new AuthService(keycloakTokenClient, keycloakAdminClient);
+            new AuthService(keycloakTokenClient, authActivationService);
 
     @Test
     void shouldLogin() {
@@ -86,8 +85,8 @@ class AuthServiceTest {
                 response.message()
         );
 
-        verify(keycloakAdminClient).sendResetPasswordEmail("loki@byop.dev");
-        verifyNoMoreInteractions(keycloakAdminClient);
+        verify(authActivationService).requestPasswordReset("loki@byop.dev");
+        verifyNoMoreInteractions(authActivationService);
         verifyNoInteractions(keycloakTokenClient);
     }
 }

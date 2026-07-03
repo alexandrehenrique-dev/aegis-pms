@@ -139,7 +139,8 @@ class ProductAssignmentServiceTest {
         saved.revoke();
         ProductAssignmentSummary summary = summary(product, "keycloak-guest-id", "guest@byop.dev", "guest@byop.dev");
         when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
-        when(invitePort.invite(product.getTenantId(), product.getId(), "guest@byop.dev"))
+        when(invitePort.invite(product.getTenantId(), product.getId(), product.getName(),
+                "guest@byop.dev", "EDITOR", "Admin"))
                 .thenReturn(invitedUser);
         when(assignmentRepository.save(any(ProductAssignment.class))).thenReturn(saved);
         when(assignmentMapper.toSummary(saved, "guest@byop.dev", "guest@byop.dev")).thenReturn(summary);

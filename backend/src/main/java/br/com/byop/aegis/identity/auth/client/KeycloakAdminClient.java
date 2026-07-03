@@ -64,8 +64,6 @@ public class KeycloakAdminClient {
             KeycloakUserResponse user = findUserByEmail(email, accessToken)
                     .orElseGet(() -> createUserForInvitation(email, name, accessToken));
 
-            executeResetPasswordEmail(user.id(), accessToken);
-
             return toUserResponse(user);
 
         } catch (RestClientException exception) {
@@ -112,6 +110,24 @@ public class KeycloakAdminClient {
         try {
             String accessToken = adminAccessToken();
             setUserEnabled(userId, enabled, accessToken);
+        } catch (RestClientException exception) {
+            throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
+        }
+    }
+
+    public void resetPassword(String userId, String password) {
+        try {
+            String accessToken = adminAccessToken();
+            resetPassword(userId, password, accessToken);
+        } catch (RestClientException exception) {
+            throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
+        }
+    }
+
+    public void clearRequiredActions(String userId) {
+        try {
+            String accessToken = adminAccessToken();
+            clearRequiredActions(userId, accessToken);
         } catch (RestClientException exception) {
             throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
         }
@@ -224,7 +240,7 @@ public class KeycloakAdminClient {
                         firstName(name),
                         lastName(name),
                         true,
-                        List.of("UPDATE_PASSWORD")
+                        List.of()
                 ))
                 .retrieve()
                 .toBodilessEntity();
@@ -276,6 +292,16 @@ public class KeycloakAdminClient {
                 .headers(headers -> headers.setBearerAuth(accessToken))
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(new KeycloakCredentialRequest(PASSWORD_CREDENTIAL_TYPE, password, false))
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    private void clearRequiredActions(String userId, String accessToken) {
+        restClient.put()
+                .uri(userByIdEndpoint(userId))
+                .headers(headers -> headers.setBearerAuth(accessToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"requiredActions\":[]}")
                 .retrieve()
                 .toBodilessEntity();
     }

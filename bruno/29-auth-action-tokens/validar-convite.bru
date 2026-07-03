@@ -1,0 +1,39 @@
+meta {
+  name: Validar convite por token
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/invite/validate
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "token": "{{inviteActivationToken}}"
+  }
+}
+
+vars:pre-request {
+  inviteActivationToken: 4fcdef0d-4bdd-435c-b643-ccba8242846d
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("contexto do convite presente", function() {
+    expect(res.body.userEmail).to.be.a("string");
+    expect(res.body.tenantName).to.be.a("string");
+    expect(res.body.productNames).to.be.an("array");
+    expect(res.body.expiresAt).to.be.a("string");
+  });
+}
+
+docs {
+  Objetivo: validar o token de convite antes da tela de ativacao exibir contexto ao usuario.
+  Resultado esperado: 200 com nome, e-mail, tenant, produtos, papel, convidador e expiracao.
+  Pre-requisito: executar antes "Gerar convite de tenant" e "Capturar token de convite no MailHog", ou preencher inviteActivationToken manualmente a partir do link recebido no MailHog/tabela auth_action_tokens.
+}

@@ -1,0 +1,37 @@
+meta {
+  name: Ativar convite
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/activate
+  body: json
+}
+
+body:json {
+  {
+    "token": "{{inviteActivationToken}}",
+    "password": "{{inviteActivationPassword}}"
+  }
+}
+
+docs {
+Objetivo: consumir token de convite, definir senha no Keycloak, habilitar usuario e limpar requiredActions.
+Resultado esperado: 200 com mensagem de ativacao. Este request torna o token USED; execute uma vez por token.
+Pre-requisito manual: preencher inviteActivationToken e inviteActivationPassword forte, por exemplo Senha123.
+Variaveis produzidas: resetPasswordEmail.
+}
+
+script:post-response {
+  bru.setVar('resetPasswordEmail', bru.getVar('authActionInviteEmail'));
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("mensagem de ativacao", function() {
+    expect(res.body.message).to.equal("Conta ativada. Faça login para continuar.");
+  });
+}

@@ -11,6 +11,15 @@ script:pre-request {
   if (!bru.getVar('inviteEmail')) { bru.setVar('inviteEmail', 'guest-' + Date.now() + '@example.com'); }
   if (!bru.getVar('tenantUserInviteEmail')) { bru.setVar('tenantUserInviteEmail', 'tenant-user-' + Date.now() + '@example.com'); }
   if (!bru.getVar('notificationInviteEmail')) { bru.setVar('notificationInviteEmail', 'notification-user-' + Date.now() + '@example.com'); }
+  if (!bru.getVar('authActionAdminEmail')) { bru.setVar('authActionAdminEmail', 'auth-action-admin-' + Date.now() + '@example.com'); }
+  if (!bru.getVar('authActionInviteEmail')) { bru.setVar('authActionInviteEmail', 'auth-action-' + Date.now() + '@example.com'); }
+  if (!bru.getVar('authActionTenantKey')) { bru.setVar('authActionTenantKey', 'auth-action-' + Date.now()); }
+  if (!bru.getVar('mailhogBaseUrl')) { bru.setVar('mailhogBaseUrl', 'http://localhost:8025'); }
+  if (!bru.getVar('inviteActivationToken')) { bru.setVar('inviteActivationToken', ''); }
+  if (!bru.getVar('passwordResetToken')) { bru.setVar('passwordResetToken', ''); }
+  if (!bru.getVar('inviteActivationPassword')) { bru.setVar('inviteActivationPassword', 'Senha123'); }
+  if (!bru.getVar('newPassword')) { bru.setVar('newPassword', 'NovaSenha456'); }
+  if (!bru.getVar('resetPasswordEmail')) { bru.setVar('resetPasswordEmail', bru.getVar('username') + '@byop.io'); }
   if (!bru.getVar('tenantName')) { bru.setVar('tenantName', 'BYOP'); }
   if (!bru.getVar('assetTagName')) { bru.setVar('assetTagName', 'institucional-' + Date.now()); }
   if (!bru.getVar('graphRefSeed')) { bru.setVar('graphRefSeed', String(Date.now())); }

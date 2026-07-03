@@ -1,0 +1,37 @@
+meta {
+  name: Solicitar reset de senha
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/reset-password/request
+  body: json
+}
+
+body:json {
+  {
+    "email": "{{resetPasswordEmail}}"
+  }
+}
+
+docs {
+Objetivo: solicitar reset de senha sem revelar se o e-mail existe na plataforma.
+Resultado esperado: 200 generico. Se o e-mail existir, o backend gera token PASSWORD_RESET e envia e-mail para o MailHog.
+Pre-requisito manual: preencher resetPasswordEmail com um usuario existente quando quiser validar recebimento do e-mail.
+}
+
+script:pre-request {
+  if (!bru.getVar('resetPasswordEmail')) {
+    bru.setVar('resetPasswordEmail', bru.getVar('authActionInviteEmail'));
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("mensagem generica anti-enumeracao", function() {
+    expect(res.body.message).to.equal("Se este e-mail existe na plataforma, um link de recuperação será enviado.");
+  });
+}

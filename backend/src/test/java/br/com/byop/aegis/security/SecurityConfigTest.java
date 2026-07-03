@@ -2,6 +2,7 @@ package br.com.byop.aegis.security;
 
 import br.com.byop.aegis.identity.auth.controller.AuthController;
 import br.com.byop.aegis.identity.auth.dto.AuthTokenResponse;
+import br.com.byop.aegis.identity.auth.service.AuthActivationService;
 import br.com.byop.aegis.identity.auth.service.AuthService;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private AuthActivationService authActivationService;
 
     @Nested
     class PublicAuthEndpoints {

@@ -4,6 +4,7 @@ import br.com.byop.aegis.identity.auth.exception.AccountDisabledException;
 import br.com.byop.aegis.identity.auth.exception.InvalidCredentialsException;
 import br.com.byop.aegis.identity.auth.exception.KeycloakAuthenticationException;
 import br.com.byop.aegis.identity.auth.exception.RefreshTokenExpiredException;
+import br.com.byop.aegis.identity.auth.service.AuthActivationService;
 import br.com.byop.aegis.identity.auth.service.AuthService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,9 @@ class AuthExceptionHandlerTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private AuthActivationService authActivationService;
 
     @Test
     void shouldReturnInvalidCredentials() throws Exception {

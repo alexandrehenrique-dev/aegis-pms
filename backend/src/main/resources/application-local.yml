@@ -10,6 +10,8 @@ springdoc:
     enabled: true
 
 aegis:
+  app:
+    base-url: ${AEGIS_APP_BASE_URL:http://localhost:5173}
   seed:
     # Credencial exclusiva para usuarios demo do profile local. Nunca usar em producao.
     demo-user-initial-credential: ${AEGIS_SEED_DEMO_USER_INITIAL_CREDENTIAL:senha123}

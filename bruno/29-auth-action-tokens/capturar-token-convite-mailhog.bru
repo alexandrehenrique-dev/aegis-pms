@@ -1,0 +1,60 @@
+meta {
+  name: Capturar token de convite no MailHog
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{mailhogBaseUrl}}/api/v2/messages?limit=50
+  body: none
+  auth: none
+}
+
+docs {
+Objetivo: buscar no MailHog o e-mail enviado para authActionInviteEmail e extrair o UUID do parametro token da URL /invite.
+Resultado esperado: 200 e variavel inviteActivationToken preenchida.
+Pre-requisito: executar antes "Gerar convite de tenant" e manter MailHog acessivel em mailhogBaseUrl.
+}
+
+script:post-response {
+  const targetEmail = bru.getVar('authActionInviteEmail');
+  const items = res.body.items || res.body.Items || [];
+  const tokenPattern = /\/invite\?token=([0-9a-fA-F-]{36})/;
+
+  function decodeQuotedPrintable(value) {
+    return value
+      .replace(/=\r?\n/g, '')
+      .replace(/=3D/g, '=');
+  }
+
+  function recipientMatches(message) {
+    const to = message.To || message.to || [];
+    if (Array.isArray(to)) {
+      return to.some((recipient) => {
+        const mailbox = recipient.Mailbox || recipient.mailbox || '';
+        const domain = recipient.Domain || recipient.domain || '';
+        const address = domain ? mailbox + '@' + domain : mailbox;
+        return address === targetEmail;
+      });
+    }
+    return false;
+  }
+
+  const message = items.find((item) => recipientMatches(item));
+  const rawBody = message && message.Content ? String(message.Content.Body || '') : '';
+  const body = decodeQuotedPrintable(rawBody);
+  const match = body.match(tokenPattern);
+
+  if (match) {
+    bru.setVar('inviteActivationToken', match[1]);
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("inviteActivationToken capturado", function() {
+    expect(bru.getVar('inviteActivationToken')).to.match(/^[0-9a-fA-F-]{36}$/);
+  });
+}

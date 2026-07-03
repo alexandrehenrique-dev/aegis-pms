@@ -1,0 +1,45 @@
+meta {
+  name: Criar tenant para auth action
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants
+  body: json
+}
+
+body:json {
+  {
+    "key": "{{authActionTenantKey}}",
+    "name": "Auth Action Tenant",
+    "plan": "FREE",
+    "initialAdminEmail": "{{authActionAdminEmail}}"
+  }
+}
+
+docs {
+Objetivo: criar tenant descartavel para validar a Sprint 29 de forma isolada.
+Resultado esperado: 201 com id do tenant.
+Variaveis utilizadas: authActionAdminEmail.
+Variaveis produzidas: authActionTenantId.
+}
+
+script:pre-request {
+  bru.setVar('authActionTenantKey', 'auth-action-' + Date.now());
+  bru.setVar('authActionAdminEmail', 'auth-action-admin-' + Date.now() + '@example.com');
+}
+
+script:post-response {
+  bru.setVar('authActionTenantId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("tenant criado", function() {
+    expect(res.body.id).to.be.a("string");
+    expect(res.body.key).to.equal(bru.getVar('authActionTenantKey'));
+  });
+}

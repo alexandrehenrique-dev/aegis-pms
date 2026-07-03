@@ -460,3 +460,23 @@
 **Retrofits pendentes:** formalizar retry/backoff para SMTP/S3 se necessário e avaliar retenção configurável de exports por tenant/plano.
 
 **Critérios de aceite atendidos:** `DELETE /products` 202, `DELETE /tenants` assíncrono com backup por produto, ZIP com JSONs por domínio e assets físicos, download por token temporário, delete somente após ZIP armazenado/reaberto/validado, falhas preservando dados, Maven/Jacoco/Modulith aprovados, Bruno 28 aprovado e MailHog validado. Evidências completas: `results/sprint-28.md`.
+
+## Etapa 29 — Tokens de ativação de convite e reset de senha via Aegis
+
+**Objetivo:** substituir os links/e-mails de ação do Keycloak por tokens próprios do Aegis, mantendo o usuário final nas telas do frontend Aegis para ativação de convite e redefinição de senha.
+
+**Classes criadas/alteradas:** criado o domínio `identity.auth.domain.AuthActionToken` com `AuthActionType`, `AuthActionStatus`, repository, migration `V16__auth_action_tokens.sql`, `AuthActionTokenService`, `AuthActionEmailService`, `AuthActivationService`, `PasswordPolicy` e `AuthActionTokenCleanupJob`. Criados DTOs/erros públicos para token de ação e service público `identity.api.IdentityActionTokenService` com `IdentityActionInviteCommand`. Criado evento público `IdentityAuthActionAuditEvent` e listener no módulo `audit` para preservar Spring Modulith sem dependência direta `identity -> audit`. Alterados `AuthController`, `AuthExceptionHandler`, `AuthService`, `KeycloakAdminClient`, `IdentityUserLifecycleService`, `TenantUserService`, `ProductAssignmentService`, `ProductAssignmentInvitePort` e `KeycloakProductAssignmentInvitePort`.
+
+**Endpoints confirmados:** `POST /api/v1/auth/invite/validate`, `POST /api/v1/auth/activate`, `POST /api/v1/auth/reset-password/request` e `POST /api/v1/auth/reset-password/confirm`. Todos são públicos sob `/api/v1/auth/**`, sem expor o token por query string em validação.
+
+**Decisões de implementação registradas:** convites expiram em 48h e reset em 1h; token fica `PENDING`, `USED` ou `EXPIRED`; reset invalida links pendentes anteriores do mesmo usuário e aplica rate limit manual de 3 solicitações por e-mail em 15 minutos; `executeActionsEmail` permanece no client apenas como API opcional/legada para debug, mas não é chamado pelos fluxos produtivos de convite/reset. Ao ativar convite, o backend define senha no Keycloak, habilita usuário e limpa `requiredActions`. Falha de política de senha do Keycloak é normalizada para `WEAK_PASSWORD`.
+
+**Templates e configuração:** criados `infra/keycloak/themes/aegis/email/html/inviteActivation.ftl` e `passwordReset.ftl`, com links para `${AEGIS_APP_BASE_URL}/invite?token=...` e `${AEGIS_APP_BASE_URL}/reset-password?token=...`. `docker-compose.yml`, `.env.example` e o profile `local` receberam fallback/configuração `AEGIS_APP_BASE_URL=http://localhost:5173`.
+
+**Bruno:** criada e executada a pasta `29-auth-action-tokens` com fluxo isolado: login Loki, criação de tenant descartável, convite de usuário, captura de `inviteActivationToken` no MailHog via `/api/v2/messages`, validação do convite, rejeição de senha fraca, ativação, solicitação de reset, captura de `passwordResetToken`, confirmação de reset e contrato de erro `TOKEN_NOT_FOUND`. Resultado final: **11/11 requests aprovados e 22/22 testes aprovados** contra backend local, Keycloak e MailHog.
+
+**SonarQube for IDE:** rodada reportada em 2026-07-03 corrigiu 7 apontamentos sem supressão: `java:S2068` em constantes de e-mail/política de senha (`PASSWORD` removido dos nomes internos), `java:S7467` com unnamed variable no `catch`, `java:S1874` trocando `UNPROCESSABLE_ENTITY`/`isUnprocessableEntity` por `UNPROCESSABLE_CONTENT`/`isUnprocessableContent`, `java:S1128` removendo import morto e `java:S1161` adicionando `@Override` no adapter de convite por produto.
+
+**Cobertura e testes:** após a rodada Sonar, o teste focal `mvn -q -Dtest='AuthControllerTest,AuthExceptionHandlerTest,PasswordPolicyTest,AuthActivationServiceTest,KeycloakProductAssignmentInvitePortTest' test` passou. `mvn clean verify` fechou com `BUILD SUCCESS`, **1502 testes**, 0 falhas, 0 erros, JaCoCo aprovado (`All coverage checks have been met`) e Spring Modulith aprovado pela suíte completa. MailHog foi validado com links `http://localhost:5173/invite?token=<uuid>` e `http://localhost:5173/reset-password?token=<uuid>`.
+
+**Retrofits pendentes:** implementar/validar telas frontend reais `/invite` e `/reset-password`; validar login real no frontend após ativação/reset quando as telas existirem; avaliar remoção futura dos wrappers legados `executeActionsEmail` quando não forem mais necessários para debug. Evidências completas: `results/sprint-29.md`.
