@@ -40,7 +40,7 @@ export const roleDescriptions: Record<UserRole, string> = {
 export const roleVisibleNav: Record<UserRole, Set<string>> = {
   // SUPER_ADMIN é operador de plataforma (ADR-0018): gerencia tenants, produtos,
   // usuários e infraestrutura, mas não acessa conteúdo de produtos de clientes (LGPD).
-  super_admin: new Set(["/dashboard", "/products", "/settings", "/audit"]),
+  super_admin: new Set(["/dashboard", "/products", "/settings", "/audit", "/admin/feedback"]),
   tenant_admin: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings", "/audit"]),
   product_manager: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings"]),
   editor: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics"]),
@@ -55,20 +55,20 @@ export const roleBlockedRoutePrefixes: Record<UserRole, string[]> = {
   // ProductAccessResolver — esta restrição de UI é só o caminho feliz; a
   // restrição real é enforçada pelo backend (403 PRODUCT_CONTENT_ACCESS_DENIED).
   super_admin: ["/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge"],
-  tenant_admin: ["/settings/security"],
+  tenant_admin: ["/settings/security", "/admin/feedback"],
   product_manager: [
     "/settings/tenant", "/users", "/settings/permissions", "/settings/roles", "/settings/access-preview",
-    "/audit", "/settings/security", "/products/new", "/content/*/publish",
+    "/audit", "/settings/security", "/products/new", "/content/*/publish", "/admin/feedback",
   ],
   editor: [
     "/settings", "/users",
-    "/audit", "/products/new",
+    "/audit", "/products/new", "/admin/feedback",
   ],
   viewer: [
     "/settings", "/users", "/audit", "/products/new",
     "/content/*/editor", "/pages/*/editor", "/forms/new", "/assets/upload", "/assets/*/metadata", "/assets/*/tags",
     "/content/*/workflow", "/knowledge/graph", "/knowledge/relationships", "/knowledge/entities",
-    "/knowledge/search", "/knowledge/orphans", "/knowledge/insights",
+    "/knowledge/search", "/knowledge/orphans", "/knowledge/insights", "/admin/feedback",
   ],
 };
 
