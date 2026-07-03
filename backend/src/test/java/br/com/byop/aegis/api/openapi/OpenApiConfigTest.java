@@ -105,6 +105,17 @@ class OpenApiConfigTest {
         assertThat(operation.getSummary()).isEqualTo("Consulta submissions");
     }
 
+    @Test
+    void shouldClassifyFeedbackEndpoint() throws NoSuchMethodException {
+
+        Operation operation = customize(new FeedbackSampleController(), "feedbackMethod");
+        Operation tenantOperation = customize(new FeedbackSampleController(), "tenantFeedbackMethod");
+
+        assertThat(operation.getTags()).containsExactly(OpenApiConfig.TAG_FEEDBACK);
+        assertThat(operation.getSummary()).isEqualTo("Consulta feedback");
+        assertThat(tenantOperation.getTags()).containsExactly(OpenApiConfig.TAG_FEEDBACK);
+    }
+
     private AnnotationConfigApplicationContext contextForProfile(String profile) {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
         context.getEnvironment().setActiveProfiles(profile);
@@ -143,6 +154,19 @@ class OpenApiConfigTest {
 
         @GetMapping("/api/v1/products/{productId}/forms/{formId}/submissions")
         void submissionMethod() {
+            // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
+        }
+    }
+
+    private static class FeedbackSampleController {
+
+        @GetMapping("/api/v1/feedback")
+        void feedbackMethod() {
+            // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
+        }
+
+        @GetMapping("/api/v1/tenants/{tenantId}/feedback")
+        void tenantFeedbackMethod() {
             // Metodo usado apenas para expor anotacoes Spring MVC ao HandlerMethod.
         }
     }

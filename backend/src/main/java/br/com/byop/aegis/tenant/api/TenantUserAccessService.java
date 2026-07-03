@@ -16,7 +16,8 @@ import java.util.UUID;
 @Service
 public class TenantUserAccessService {
 
-    private static final List<String> ADMIN_ROLES = List.of("SUPER_ADMIN", "TENANT_ADMIN");
+    private static final String SUPER_ADMIN = "SUPER_ADMIN";
+    private static final List<String> ADMIN_ROLES = List.of(SUPER_ADMIN, "TENANT_ADMIN");
 
     private final TenantRepository tenantRepository;
     private final TenantMembershipRepository membershipRepository;
@@ -49,6 +50,14 @@ public class TenantUserAccessService {
     }
 
     @Transactional(readOnly = true)
+    public List<TenantMembershipReference> listActiveMemberships(String userSubject) {
+        return membershipRepository.findAllByUserSubjectAndStatus(userSubject, TenantMembershipStatus.ACTIVE)
+                .stream()
+                .map(this::toReference)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public boolean hasActiveMembership(UUID tenantId, String userSubject) {
         return membershipRepository.existsByTenantIdAndUserSubjectAndStatus(
                 tenantId,
@@ -71,6 +80,11 @@ public class TenantUserAccessService {
     public List<String> listActiveUserSubjects(UUID tenantId) {
         ensureTenantExists(tenantId);
         return membershipRepository.findDistinctUserSubjectsByTenantIdAndStatus(tenantId, TenantMembershipStatus.ACTIVE);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> listActiveSuperAdminSubjects() {
+        return membershipRepository.findDistinctUserSubjectsByRoleAndStatus(SUPER_ADMIN, TenantMembershipStatus.ACTIVE);
     }
 
     @Transactional(readOnly = true)

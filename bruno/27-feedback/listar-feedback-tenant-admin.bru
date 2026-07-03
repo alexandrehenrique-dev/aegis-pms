@@ -1,0 +1,25 @@
+meta {
+  name: Listar por tenant como TENANT_ADMIN
+  type: http
+  seq: 22
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{seedClientesBetaTenantId}}/feedback
+  body: none
+}
+
+docs {
+Objetivo: validar que TENANT_ADMIN lista feedbacks do proprio tenant.
+Resultado esperado: 200 e inclui feedback criado pelo editor demo sem productId.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("inclui feedback do editor", function() {
+    const ids = res.body.map(function(item) { return item.id; });
+    expect(ids).to.include(bru.getVar('feedbackEditorId'));
+  });
+}

@@ -229,7 +229,47 @@ Motivo: grid de cards (Produto, Tenant, Equipe, Permissões, Integrações, Segu
 
 **`GET /api/v1/tenants/{tenantId}/permission-matrix`**, **`POST .../permission-matrix/restore-defaults`**, **`POST .../permission-matrix/preview`** — Motivo: `PermissionMatrixView.tsx`; `AccessPreviewPanel.tsx` consome **`preview`**, não calcula no client (correção desta revisão — afirmação anterior de "calcula no client" estava errada e contradizia o `logApiCall` real do frontend).
 
-### B.8 `dashboard`
+### B.8 `feedback`
+
+Telas: `FeedbackModal.tsx` e Central de Ajuda.
+
+**`POST /api/v1/feedback`** — cria feedback real reportado por qualquer usuário autenticado.
+```ts
+type CreateFeedbackRequest = {
+  productId?: string;
+  category: string;
+  priority: string;
+  description: string;
+  screenName?: string;
+  attachmentAssetId?: string;
+};
+```
+Response: `FeedbackSummary`, usando `id` legível `AGS-####` como identificador principal.
+
+**`GET /api/v1/feedback`** — lista todos os feedbacks de todos os tenants. Uso exclusivo de `SUPER_ADMIN`.
+
+**`GET /api/v1/tenants/{tenantId}/feedback`** — lista feedbacks de um tenant. Uso por `SUPER_ADMIN` ou `TENANT_ADMIN` do próprio tenant.
+
+**`PUT /api/v1/feedback/{feedbackId}/status`** — atualiza status por `feedbackId` legível (`AGS-####`), exclusivo de `SUPER_ADMIN`.
+```ts
+type UpdateFeedbackStatusRequest = { status: string };
+type FeedbackSummary = {
+  id: string;
+  category: string;
+  priority: string;
+  description: string;
+  status: string;
+  createdBySubject: string;
+  tenantId: string;
+  productId?: string;
+  createdAt: string;
+  attachmentAssetId?: string;
+};
+```
+
+Motivo: o modal de "Reportar problema" deixou de gerar ID fake em memória. O anexo não tem upload próprio: o frontend deve primeiro usar `POST /api/v1/products/{productId}/assets` e depois enviar o `attachmentAssetId` no `POST /feedback`.
+
+### B.9 `dashboard`
 
 Tela: `DashboardGlobal`.
 
@@ -246,7 +286,7 @@ type DashboardSummaryResponse = {
 ```
 Motivo: KPIs do hub do tenant. Provavelmente um agregador que combina `/tenants/{id}`, `/products`, `/products/{id}/modules` e os endpoints de B.1–B.6 em vez de uma tabela própria — decisão de implementação a critério do backend, o frontend só precisa do shape acima.
 
-### B.9 `knowledge` (parcialmente já cobre A, mas o frontend usa shapes mais ricos)
+### B.10 `knowledge` (parcialmente já cobre A, mas o frontend usa shapes mais ricos)
 
 As telas `EntityDetails`, `EntitySearch`, `GraphCanvasView`, `RelationshipExplorer` já usam os endpoints de grafo da Seção A, mas com um shape mais específico do que `nodes`/`edges` genéricos:
 ```ts
@@ -291,7 +331,7 @@ type GraphInsightReviewSummary = { id: string; text: string; reviewed: true };
 ```
 Marca um insight textual como revisado de forma idempotente, usando hash determinístico do texto por produto.
 
-### B.10 Domínios de negócio específicos por produto (Sprint 11 — registrado, não implementar ainda)
+### B.11 Domínios de negócio específicos por produto (Sprint 11 — registrado, não implementar ainda)
 
 Levantamento feito a partir de 6 contratos de negócio reais dos primeiros produtos a serem hospedados no Aegis (Maestro Beton, Conecta Talentos, CMSS, Alexandre Dev, Loki, WikiDev — ver `docs/sprints/11_modelo_paginas_blocos_knowledge_graph_e_mocks_produtos.md`). Diferente do restante da Seção B, estes domínios **não têm etapa criada ainda** na Sprint 02 — ficam registrados aqui para uma extensão futura, numerados como próximas etapas (23+) quando forem implementados:
 

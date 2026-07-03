@@ -1,6 +1,7 @@
 package br.com.byop.aegis.notification.service;
 
 import br.com.byop.aegis.identity.api.IdentityUserDirectory;
+import br.com.byop.aegis.notification.api.CriticalFeedbackNotificationRequest;
 import br.com.byop.aegis.notification.contract.CreateNotificationRequest;
 import br.com.byop.aegis.notification.domain.Notification;
 import br.com.byop.aegis.notification.domain.NotificationPresentationMode;
@@ -47,6 +48,7 @@ public class NotificationService {
             "Este tenant foi suspenso pelo administrador da plataforma. Contate o suporte para mais informações.";
     private static final String TENANT_REACTIVATED_TITLE = "Tenant reativado";
     private static final String TENANT_REACTIVATED_BODY = "Este tenant foi reativado.";
+    private static final int FEEDBACK_DESCRIPTION_LIMIT = 200;
 
     private final NotificationRepository notificationRepository;
     private final UserNotificationStatusRepository statusRepository;
@@ -149,6 +151,23 @@ public class NotificationService {
         doNotifyTenantStatusChange(event.tenantId(), event.transition(), event.actorSubject());
     }
 
+    @Transactional
+    public void notifyCriticalFeedback(CriticalFeedbackNotificationRequest request) {
+        List<String> recipients = distinct(tenantUserAccessService.listActiveSuperAdminSubjects());
+        if (recipients.isEmpty()) {
+            return;
+        }
+        Notification notification = new Notification(
+                NotificationType.WARNING,
+                "Feedback critico recebido",
+                markdownSanitizer.sanitize(criticalFeedbackBody(request)),
+                NotificationPresentationMode.BELL_ONLY,
+                request.createdBySubject()
+        );
+        Notification saved = notificationRepository.save(notification);
+        saveStatuses(saved, recipients);
+    }
+
     /**
      * Logica real de {@link #notifyTenantStatusChange}, extraida para um metodo
      * privado nao-transacional para evitar self-invocation entre o metodo
@@ -166,6 +185,42 @@ public class NotificationService {
                 NotificationPresentationMode.BELL_ONLY, actorSubject);
         Notification saved = notificationRepository.save(notification);
         saveStatuses(saved, recipients);
+    }
+
+    private String criticalFeedbackBody(CriticalFeedbackNotificationRequest request) {
+        return """
+                **%s** — %s / %s
+
+                %s
+
+                Tenant: `%s`
+                Produto: `%s`
+                Usuario: `%s`
+                Tela: `%s`
+                Anexo: `%s`
+                """.formatted(
+                request.publicId(),
+                request.category(),
+                request.priority(),
+                summarize(request.description()),
+                request.tenantId(),
+                nullableValue(request.productId()),
+                request.createdBySubject(),
+                nullableValue(request.screenName()),
+                nullableValue(request.attachmentAssetId())
+        );
+    }
+
+    private String summarize(String description) {
+        String value = String.valueOf(description).trim();
+        if (value.length() <= FEEDBACK_DESCRIPTION_LIMIT) {
+            return value;
+        }
+        return value.substring(0, FEEDBACK_DESCRIPTION_LIMIT);
+    }
+
+    private String nullableValue(Object value) {
+        return value == null ? "n/a" : value.toString();
     }
 
     @Transactional

@@ -1,0 +1,30 @@
+meta {
+  name: Atualizar status como SUPER_ADMIN
+  type: http
+  seq: 15
+}
+
+put {
+  url: {{baseUrl}}/api/v1/feedback/{{feedbackId}}/status
+  body: json
+}
+
+body:json {
+  {
+    "status": "em_analise"
+  }
+}
+
+docs {
+Objetivo: validar que SUPER_ADMIN altera status pelo id legivel AGS-####.
+Resultado esperado: 200, status em_analise.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("status atualizado", function() {
+    expect(res.body.status).to.equal("em_analise");
+  });
+}

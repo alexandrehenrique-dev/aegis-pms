@@ -2,6 +2,7 @@ package br.com.byop.aegis.notification.service;
 
 import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.identity.api.IdentityUserDirectory;
+import br.com.byop.aegis.notification.api.CriticalFeedbackNotificationRequest;
 import br.com.byop.aegis.notification.contract.CreateNotificationRequest;
 import br.com.byop.aegis.notification.domain.Notification;
 import br.com.byop.aegis.notification.domain.NotificationPresentationMode;
@@ -287,6 +288,69 @@ class NotificationServiceTest {
     }
 
     @Test
+    void shouldCreateWarningBellOnlyNotificationForCriticalFeedback() {
+        when(tenantUserAccessService.listActiveSuperAdminSubjects())
+                .thenReturn(List.of("super-admin", "super-admin-2", "super-admin"));
+        when(notificationRepository.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+        when(statusRepository.findUserSubjectsByNotificationId(NOTIFICATION_ID)).thenReturn(List.of());
+        CriticalFeedbackNotificationRequest request = criticalFeedbackRequest();
+
+        service.notifyCriticalFeedback(request);
+
+        ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notificationCaptor.capture());
+        Notification notification = notificationCaptor.getValue();
+        assertThat(notification.getType()).isEqualTo(NotificationType.WARNING);
+        assertThat(notification.getPresentationMode()).isEqualTo(NotificationPresentationMode.BELL_ONLY);
+        assertThat(notification.getCreatedBySubject()).isEqualTo("editor-subject");
+        assertThat(notification.getTitle()).isEqualTo("Feedback critico recebido");
+        assertThat(notification.getBodyMarkdown()).contains("AGS-0043", "Bug", "crítica", "editor-subject");
+        ArgumentCaptor<UserNotificationStatus> statusCaptor = ArgumentCaptor.forClass(UserNotificationStatus.class);
+        verify(statusRepository, org.mockito.Mockito.times(2)).save(statusCaptor.capture());
+        assertThat(statusCaptor.getAllValues()).extracting(UserNotificationStatus::getUserSubject)
+                .containsExactly("super-admin", "super-admin-2");
+    }
+
+    @Test
+    void shouldSkipCriticalFeedbackNotificationWhenNoSuperAdminIsActive() {
+        when(tenantUserAccessService.listActiveSuperAdminSubjects()).thenReturn(List.of());
+        CriticalFeedbackNotificationRequest request = criticalFeedbackRequest();
+
+        service.notifyCriticalFeedback(request);
+
+        verify(notificationRepository, never()).save(any());
+        verify(statusRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldSummarizeCriticalFeedbackNotificationAndRenderMissingOptionalContext() {
+        when(tenantUserAccessService.listActiveSuperAdminSubjects()).thenReturn(List.of("super-admin"));
+        when(notificationRepository.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0)));
+        when(statusRepository.findUserSubjectsByNotificationId(NOTIFICATION_ID)).thenReturn(List.of());
+        String longDescription = "A".repeat(220);
+        CriticalFeedbackNotificationRequest request = new CriticalFeedbackNotificationRequest(
+                "AGS-0044",
+                "UX confusa",
+                "crítica",
+                longDescription,
+                TENANT_ID,
+                null,
+                "editor-subject",
+                null,
+                null
+        );
+
+        service.notifyCriticalFeedback(request);
+
+        ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notificationCaptor.capture());
+        String bodyMarkdown = notificationCaptor.getValue().getBodyMarkdown();
+        assertThat(bodyMarkdown)
+                .contains("A".repeat(200), "Produto: `n/a`", "Tela: `n/a`", "Anexo: `n/a`")
+                .doesNotContain("A".repeat(201));
+    }
+
+    @Test
     void shouldCreateGeneralBellOnlyNotificationOnTenantReactivated() {
         when(tenantUserAccessService.listActiveUserSubjects(TENANT_ID)).thenReturn(List.of("tenant-user"));
         when(notificationRepository.save(any())).thenAnswer(invocation -> withId(invocation.getArgument(0)));
@@ -330,6 +394,20 @@ class NotificationServiceTest {
 
     private CreateNotificationRequest.Target target(String type, UUID tenantId, List<String> userIds) {
         return new CreateNotificationRequest.Target(type, tenantId, userIds);
+    }
+
+    private CriticalFeedbackNotificationRequest criticalFeedbackRequest() {
+        return new CriticalFeedbackNotificationRequest(
+                "AGS-0043",
+                "Bug",
+                "crítica",
+                "Botao X nao responde ao clicar.",
+                TENANT_ID,
+                UUID.fromString("33333333-3333-3333-3333-333333333333"),
+                "editor-subject",
+                "/content/list",
+                UUID.fromString("44444444-4444-4444-4444-444444444444")
+        );
     }
 
     private Notification notification() {

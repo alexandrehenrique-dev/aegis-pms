@@ -1,0 +1,21 @@
+meta {
+  name: Habilitar ASSETS no produto cross
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{feedbackCrossProductId}}/modules/ASSETS/enable
+  body: none
+}
+
+docs {
+Objetivo: habilitar asset no produto cross-tenant.
+Resultado esperado: 200.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

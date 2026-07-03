@@ -1,0 +1,38 @@
+meta {
+  name: Criar feedback sem anexo
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/feedback
+  body: json
+}
+
+body:json {
+  {
+    "productId": "{{feedbackProductId}}",
+    "category": "Bug",
+    "priority": "alta",
+    "description": "Botao X nao responde ao clicar.",
+    "screenName": "/content/list"
+  }
+}
+
+script:post-response {
+  bru.setVar('feedbackId', res.body.id);
+}
+
+docs {
+Objetivo: validar criacao de feedback persistido sem anexo.
+Resultado esperado: 201, id legivel AGS-####.
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("id legivel AGS", function() {
+    expect(res.body.id).to.match(/^AGS-[0-9]{4,}$/);
+  });
+}

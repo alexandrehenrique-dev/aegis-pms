@@ -1,6 +1,6 @@
 # Sprint 18 — Blocos de vídeo, cor de texto no markdown, e correções (preview claro, anexo de feedback)
 
-> Pré-requisito: nenhum específico de outra sprint do frontend — reaproveita `AudioBlockEditor.tsx`/`blockDefaults.ts`/`itemsCrudConfig.ts` (domínio `pages`, já em produção), `MarkdownEditModal.tsx` (Sprint 13/15, já em produção) e `FeedbackModal.tsx` (já em produção, mas decorativo). Companion desta sprint no backend: `docs/sprints/sprint-02-fundacao-backend-gpt/21_dominio_pages_secoes_e_blocos.md` (Seção B/C atualizadas), `11_dominio_assets.md` (limite de tamanho de vídeo) e a nova `25_dominio_feedback.md`.
+> Pré-requisito: nenhum específico de outra sprint do frontend — reaproveita `AudioBlockEditor.tsx`/`blockDefaults.ts`/`itemsCrudConfig.ts` (domínio `pages`, já em produção), `MarkdownEditModal.tsx` (Sprint 13/15, já em produção) e `FeedbackModal.tsx` (já em produção, mas decorativo). Companion desta sprint no backend: `docs/sprints/sprint-02-fundacao-backend-gpt/21_dominio_pages_secoes_e_blocos.md` (Seção B/C atualizadas), `11_dominio_assets.md` (limite de tamanho de vídeo) e a nova `27_dominio_feedback.md`.
 
 ## Contexto
 

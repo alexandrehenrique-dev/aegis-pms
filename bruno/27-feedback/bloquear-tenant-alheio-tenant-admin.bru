@@ -1,0 +1,24 @@
+meta {
+  name: Bloquear tenant alheio como TENANT_ADMIN
+  type: http
+  seq: 23
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants/{{feedbackTenantId}}/feedback
+  body: none
+}
+
+docs {
+Objetivo: validar isolamento — TENANT_ADMIN sem membership no tenant da pasta 27 nao lista seus feedbacks.
+Resultado esperado: 404 FEEDBACK_NOT_FOUND.
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+  test("erro esperado", function() {
+    expect(res.body.error).to.equal("FEEDBACK_NOT_FOUND");
+  });
+}

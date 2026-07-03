@@ -99,12 +99,34 @@ class TenantUserAccessServiceTest {
     }
 
     @Test
+    void shouldListActiveMembershipsByUserSubject() {
+        TenantMembership membership = membership(tenant(TENANT_ID, "BYOP"), "user-1", "EDITOR");
+        when(membershipRepository.findAllByUserSubjectAndStatus("user-1", TenantMembershipStatus.ACTIVE))
+                .thenReturn(List.of(membership));
+
+        assertThat(service.listActiveMemberships("user-1"))
+                .singleElement()
+                .satisfies(reference -> {
+                    assertThat(reference.tenantId()).isEqualTo(TENANT_ID);
+                    assertThat(reference.status()).isEqualTo("ativo");
+                });
+    }
+
+    @Test
     void shouldListActiveUserSubjects() {
         when(membershipRepository.findDistinctUserSubjectsByStatus(TenantMembershipStatus.ACTIVE))
                 .thenReturn(List.of("user-1", "user-2"));
 
         assertThat(service.listActiveUserSubjects())
                 .containsExactly("user-1", "user-2");
+    }
+
+    @Test
+    void shouldListActiveSuperAdminSubjects() {
+        when(membershipRepository.findDistinctUserSubjectsByRoleAndStatus("SUPER_ADMIN", TenantMembershipStatus.ACTIVE))
+                .thenReturn(List.of("super-admin"));
+
+        assertThat(service.listActiveSuperAdminSubjects()).containsExactly("super-admin");
     }
 
     @Test
