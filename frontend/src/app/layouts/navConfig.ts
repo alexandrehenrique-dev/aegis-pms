@@ -1,4 +1,4 @@
-import { BarChart3, FileText, Image, LayoutDashboard, Layers, Settings, ShieldCheck, Sparkles, Workflow, type LucideIcon } from "lucide-react";
+import { BarChart3, Bug, FileText, Image, LayoutDashboard, Layers, Settings, ShieldCheck, Sparkles, Workflow, type LucideIcon } from "lucide-react";
 
 export type NavItem = { path: string; icon: LucideIcon; label: string; moduleKey?: string };
 
@@ -39,6 +39,9 @@ export const nav: NavItem[] = [
   { path: "/knowledge", icon: Sparkles, label: "Knowledge Graph", moduleKey: "Knowledge Graph" },
   { path: "/settings", icon: Settings, label: "Configurações" },
   { path: "/audit", icon: ShieldCheck, label: "Auditoria" },
+  // Sprint 23 — visível só para super_admin (roleVisibleNav), badge de
+  // contagem de feedbacks "aberto" renderizado à parte em AppShell.
+  { path: "/admin/feedback", icon: Bug, label: "Feedbacks" },
 ];
 
 /** Module tabs shown under the breadcrumb for each top-level section. */

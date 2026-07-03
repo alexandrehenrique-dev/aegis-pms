@@ -143,7 +143,7 @@ export function PageHeader({ title, desc, badge = "BYOP", titleBadge, children, 
   );
 }
 
-export function Field({ label, value, onChange, onBlur, textarea = false, locked = false, type = "text", error }: { label: string; value: string; onChange?: (v: string) => void; onBlur?: () => void; textarea?: boolean; locked?: boolean; type?: "text" | "date" | "datetime-local"; error?: string }) {
+export function Field({ label, value, onChange, onBlur, textarea = false, locked = false, type = "text", error }: { label: string; value: string; onChange?: (v: string) => void; onBlur?: () => void; textarea?: boolean; locked?: boolean; type?: "text" | "date" | "datetime-local" | "password"; error?: string }) {
   const className = `w-full rounded-lg border bg-card p-3 text-sm outline-primary ${error ? "border-destructive" : "border-border"} ${textarea ? "min-h-28" : ""} ${locked ? "cursor-not-allowed opacity-60" : ""}`;
   return (
     <label className="block">

@@ -34,11 +34,21 @@ export function ContextActionMenu({ position, items, onClose }: { position: Cont
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); };
+    // "mousedown", não "click" (Sprint 23) — mesmo padrão de AppShell.tsx
+    // (dropdown do usuário). Quando o gatilho do menu também é um `<button
+    // onClick>` (caso do "⋮" mobile e do novo botão "Mais ações" da inbox de
+    // feedback, diferente do botão direito/`onContextMenu`, que dispara
+    // "contextmenu" e nunca colidia), o evento "click" que abre o menu é o
+    // MESMO tipo que este listener escuta — React 18 flush síncrono de
+    // updates discretas faz este efeito já estar montado a tempo de capturar
+    // esse clique inicial como "fora", fechando o menu no mesmo instante em
+    // que abre. "mousedown" dispara antes do "click" do gatilho terminar de
+    // se propagar, então nunca compete com o próprio clique que abriu o menu.
+    const handleOutsideMouseDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); };
     const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("click", handleClick);
+    window.addEventListener("mousedown", handleOutsideMouseDown);
     window.addEventListener("keydown", handleEsc);
-    return () => { window.removeEventListener("click", handleClick); window.removeEventListener("keydown", handleEsc); };
+    return () => { window.removeEventListener("mousedown", handleOutsideMouseDown); window.removeEventListener("keydown", handleEsc); };
   }, [onClose]);
 
   return createPortal(

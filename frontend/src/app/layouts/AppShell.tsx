@@ -14,12 +14,14 @@ import { ToasterHost } from "../../core/notifications/components/ToasterHost";
 import { FeedbackModal } from "../../core/notifications/components/FeedbackModal";
 import { useFeedbackModal } from "../../core/notifications/useFeedbackModal";
 import { PendingNotificationGate } from "../../core/notifications/PendingNotificationGate";
+import { feedbackService } from "../../core/notifications/services/feedbackService";
 
 import { AegisLogo } from "../../shared/components/AegisLogo";
 import { Switcher, type SwitcherItem } from "../../shared/components/Switcher";
 import { GlobalSearch } from "../../shared/components/GlobalSearch";
 import { Notifications } from "../../shared/components/Notifications";
 import { useTheme } from "../providers/useTheme";
+import { useAsyncData } from "../../shared/hooks/useAsyncData";
 
 import { nav, tabsForPath } from "./navConfig";
 import { AppNav } from "./AppNav";
@@ -76,6 +78,19 @@ export function AppShell() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showUserMenu]);
 
+  // Sprint 23 — badge de contagem no item "Feedbacks" da sidebar, só
+  // relevante para super_admin (único papel com o item visível, ver roles.ts).
+  // `location.pathname` entra nas deps para refletir feedbacks criados via
+  // FeedbackModal durante a sessão — o store mock é um array em memória sem
+  // pub/sub, então cada navegação é o gatilho barato de recontagem (mesmo
+  // comportamento "eventualmente consistente" que a UI já assume em outros
+  // badges deste app).
+  const { data: feedbackList } = useAsyncData(
+    () => (viewAsRole === "super_admin" ? feedbackService.listAll() : Promise.resolve([])),
+    [viewAsRole, location.pathname],
+  );
+  const openFeedbackCount = (feedbackList ?? []).filter((f) => f.status === "aberto").length;
+
   if (!authUser || !effectiveTenant || !effectiveProduct) return null;
 
   const handleLogout = () => { logout(); navigate("/login"); };
@@ -109,9 +124,11 @@ export function AppShell() {
         {visibleNav.map((item) => {
           const Icon = item.icon;
           const active = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
+          const badge = item.path === "/admin/feedback" ? openFeedbackCount : 0;
           return (
             <button key={item.path} onClick={() => { navigate(item.path); setMobile(false); }} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
               <Icon size={17} /><span>{item.label}</span>
+              {badge > 0 && <span className="ml-auto grid h-[18px] min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{badge}</span>}
             </button>
           );
         })}

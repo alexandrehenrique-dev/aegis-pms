@@ -43,14 +43,17 @@ export function FeedbackModal({ screenName, onClose }: { screenName: string; onC
     if (!desc.trim()) return;
     setLoading(true);
     try {
-      const { id } = await feedbackService.create({
-        productId: effectiveProduct?.id,
-        category: cat,
-        priority: pri,
-        description: desc,
-        screenName: ctx ? screenName : undefined,
-        attachmentAssetId: attachment?.assetId,
-      });
+      const { id } = await feedbackService.create(
+        {
+          productId: effectiveProduct?.id,
+          category: cat,
+          priority: pri,
+          description: desc,
+          screenName: ctx ? screenName : undefined,
+          attachmentAssetId: attachment?.assetId,
+        },
+        { tenantId: effectiveTenant?.id ?? "", createdBySubject: authUser?.email ?? "" },
+      );
       setIssueId(id);
       toast.success(`Feedback registrado · ${id}`, { description: "Será revisado em breve.", duration: 5000 });
     } finally {

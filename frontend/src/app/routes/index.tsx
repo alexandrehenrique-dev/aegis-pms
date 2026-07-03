@@ -99,6 +99,9 @@ const UserDetailPanel = lazy(() => import("../../domains/users/pages/UserDetailP
 const AuditTimeline = lazy(() => import("../../domains/audit/pages/AuditTimeline").then((m) => ({ default: m.AuditTimeline })));
 const AuditEventDetail = lazy(() => import("../../domains/audit/pages/AuditEventDetail").then((m) => ({ default: m.AuditEventDetail })));
 
+// --- domains/feedback ---
+const FeedbackInboxPage = lazy(() => import("../../domains/feedback/pages/FeedbackInboxPage").then((m) => ({ default: m.FeedbackInboxPage })));
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -188,6 +191,8 @@ export function AppRoutes() {
 
             <Route path="/audit" element={<AuditTimeline />} />
             <Route path="/audit/:id" element={<AuditEventDetail />} />
+
+            <Route path="/admin/feedback" element={<FeedbackInboxPage />} />
           </Route>
         </Route>
       </Route>
