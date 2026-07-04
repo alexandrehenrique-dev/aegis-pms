@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { Loader2 } from "lucide-react";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 function DiffList({ old = false }: { old?: boolean }) {
   return (
@@ -17,12 +18,15 @@ function DiffList({ old = false }: { old?: boolean }) {
 
 export function VersionCompareView() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
   const [restoring, setRestoring] = useState(false);
 
   const handleRestore = async () => {
     setRestoring(true);
     try {
-      await contentService.restoreVersion("v17");
+      await contentService.restoreVersion("v17", id, productId);
       toast.success("Versão v17 restaurada!");
     } finally {
       setRestoring(false);

@@ -5,6 +5,7 @@ import { Button, Card, Field, SelectLike } from "../../../shared/components/Prim
 import { UnsavedChangesBanner } from "../../../shared/components/Banners";
 import { toast } from "../../../core/notifications/toast";
 import { assetsService } from "../services/assetsService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 const FOLDERS = ["Campanha institucional", "Campanha de evento", "Branding", "Sem grupo"];
 const VISIBILITY = ["Público", "Interno", "Restrito"];
@@ -12,6 +13,8 @@ const SEO_USAGE = ["OG Image", "Hero", "Thumbnail", "Não aplicável"];
 
 export function AssetMetadataFormCard() {
   const navigate = useNavigate();
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
   const [friendlyName, setFriendlyName] = useState("Hero Maestro Beton");
   const [altText, setAltText] = useState("Maestro Beton em apresentação ao vivo");
   const [caption, setCaption] = useState("Apresentação institucional");
@@ -29,7 +32,7 @@ export function AssetMetadataFormCard() {
       // Tela ainda não recebe o asset real por rota (mockup estático desde a
       // criação — Sprint de Integração 05 conecta a um `AssetSummary` real);
       // `friendlyName` é o único identificador disponível aqui hoje.
-      await assetsService.saveMetadata(friendlyName, { friendlyName, altText, caption, credit, tags, folder, visibility, seoUsage, notes });
+      await assetsService.saveMetadata(productId, friendlyName, { friendlyName, altText, caption, credit, tags, folder, visibility, seoUsage, notes });
       toast.success("Metadados salvos!");
     } finally {
       setSaving(false);

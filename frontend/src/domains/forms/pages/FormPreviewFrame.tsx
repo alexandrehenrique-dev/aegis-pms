@@ -3,13 +3,16 @@ import { useNavigate } from "react-router";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
 import { toast } from "../../../core/notifications/toast";
 import { formsService } from "../services/formsService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 export function FormPreviewFrame() {
   const navigate = useNavigate();
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
   const [state, setState] = useState("desktop");
 
   const handleTestSubmit = async () => {
-    await formsService.submitTest();
+    await formsService.submitTest(productId);
     toast.success("Envio de teste registrado");
   };
 

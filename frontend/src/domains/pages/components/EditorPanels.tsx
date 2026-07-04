@@ -7,8 +7,6 @@ import { MarkdownField } from "../../../shared/components/MarkdownField";
 import { ImageFieldEditor, MediaField } from "../../../shared/components/MediaField";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { toast } from "../../../core/notifications/toast";
-import { contentService } from "../../content/services/contentService";
-import { ContentStatusBadge } from "../../content/components/ContentStatusBadge";
 import { VersionTimeline } from "../../content/components/VersionTimeline";
 import type { BlockType, Page, Section } from "../contracts/responses";
 import { EntityPicker } from "../../knowledge/components/EntityPicker";
@@ -341,14 +339,19 @@ function SEOPanel({ page }: { page: Page | null }) {
   );
 }
 
-function WorkflowPanel() {
-  const [status, setStatus] = useState<"Draft" | "In Review" | "Published" | "Archived">("Draft");
+function WorkflowPanel({ page }: { page: Page | null }) {
+  const [status, setStatus] = useState<Page["status"]>(page?.status ?? "draft");
   const [busy, setBusy] = useState<string | null>(null);
 
-  const run = async (label: string, action: () => Promise<void>, nextStatus: typeof status) => {
+  useEffect(() => {
+    if (page) setStatus(page.status);
+  }, [page]);
+
+  const run = async (label: string, nextStatus: Page["status"]) => {
+    if (!page) return;
     setBusy(label);
     try {
-      await action();
+      await pagesService.updatePage(page.productSlug, page.id, { status: nextStatus });
       setStatus(nextStatus);
       toast.success(`${label}!`);
     } finally {
@@ -358,14 +361,14 @@ function WorkflowPanel() {
 
   return (
     <div className="space-y-2 text-sm">
-      <ContentStatusBadge status={status} />
-      <Button onClick={() => run("Enviado para revisão", contentService.submitForReview, "In Review")} disabled={busy !== null}>
+      <Badge>{status}</Badge>
+      <Button onClick={() => run("Enviado para revisão", "review")} disabled={busy !== null || !page}>
         {busy === "Enviado para revisão" ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}Enviar para revisão
       </Button>
-      <Button primary onClick={() => run("Publicado", contentService.publish, "Published")} disabled={busy !== null}>
+      <Button primary onClick={() => run("Publicado", "published")} disabled={busy !== null || !page}>
         {busy === "Publicado" && <Loader2 size={15} className="animate-spin" />}Publicar
       </Button>
-      <Button onClick={() => run("Arquivado", contentService.archive, "Archived")} disabled={busy !== null}>
+      <Button onClick={() => run("Arquivado", "archived")} disabled={busy !== null || !page}>
         {busy === "Arquivado" && <Loader2 size={15} className="animate-spin" />}Arquivar
       </Button>
       <PermissionHint />
@@ -399,7 +402,7 @@ export function PropertiesPanel({ page, section }: { page: Page | null; section:
           <button key={t} onClick={() => setTab(t)} className={`rounded-lg px-2 py-1 text-xs ${tab === t ? "bg-primary text-white" : "bg-muted"}`}>{t}</button>
         ))}
       </div>
-      {tab === "SEO" ? <SEOPanel page={page} /> : tab === "Workflow" ? <WorkflowPanel /> : tab === "Histórico" ? <VersionTimeline compact /> : tab === "JSON" ? <PageJsonViewer page={page} /> : (
+      {tab === "SEO" ? <SEOPanel page={page} /> : tab === "Workflow" ? <WorkflowPanel page={page} /> : tab === "Histórico" ? <VersionTimeline compact /> : tab === "JSON" ? <PageJsonViewer page={page} /> : (
         <div className="space-y-2 text-sm">
           {[
             ["página", page?.slug ?? "—"],

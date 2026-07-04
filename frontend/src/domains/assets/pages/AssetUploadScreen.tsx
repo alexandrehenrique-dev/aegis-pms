@@ -5,6 +5,7 @@ import { Button, Card, PageHeader } from "../../../shared/components/Primitives"
 import { AssetMetadataFormCard } from "../components/AssetMetadataFormCard";
 import { toast } from "../../../core/notifications/toast";
 import { assetsService } from "../services/assetsService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 function UploadProgressItem({ name, p }: { name: string; p: number }) {
   return (
@@ -32,12 +33,15 @@ function AssetUploadZone({ onSelect }: { onSelect: () => void }) {
 
 export function AssetUploadScreen() {
   const navigate = useNavigate();
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState([
     { name: "hero-maestro-beton.jpg", p: 72 },
     { name: "release-institucional.pdf", p: 100 },
     { name: "video-depoimento.mov", p: 38 },
   ]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [completing, setCompleting] = useState(false);
 
   const handleSelectFiles = () => fileInputRef.current?.click();
@@ -45,15 +49,17 @@ export function AssetUploadScreen() {
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files;
     if (!selected || selected.length === 0) return;
-    setFiles((prev) => [...prev, ...Array.from(selected).map((f) => ({ name: f.name, p: 0 }))]);
+    const nextFiles = Array.from(selected);
+    setSelectedFiles((prev) => [...prev, ...nextFiles]);
+    setFiles((prev) => [...prev, ...nextFiles.map((f) => ({ name: f.name, p: 0 }))]);
     e.target.value = "";
   };
 
   const handleCompleteUpload = async () => {
     setCompleting(true);
     try {
-      await assetsService.uploadFiles();
-      toast.success("Upload concluído!", { description: `${files.length} arquivo(s) vinculado(s) ao produto.` });
+      await assetsService.uploadFiles(productId, selectedFiles);
+      toast.success("Upload concluído!", { description: `${selectedFiles.length} arquivo(s) vinculado(s) ao produto.` });
       navigate("/assets");
     } finally {
       setCompleting(false);

@@ -29,7 +29,7 @@ export function FeedbackModal({ screenName, onClose }: { screenName: string; onC
     if (!file) return;
     setAttachmentUploading(true);
     try {
-      const { assetId } = await assetsService.upload(file);
+      const { assetId } = await assetsService.upload(file, effectiveProduct?.id ?? "");
       setAttachment({ name: file.name, assetId });
     } catch {
       setAttachment(null);

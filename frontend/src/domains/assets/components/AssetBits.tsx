@@ -16,9 +16,10 @@ export function AssetTypeIcon({ type }: { type: string }) {
   return <div className="grid h-10 w-10 place-items-center rounded-xl bg-muted text-primary">{icon}</div>;
 }
 
-export function AssetCard({ a }: { a: AssetSummary }) {
+export function AssetCard({ a, productId }: { a: AssetSummary; productId: string }) {
   const navigate = useNavigate();
   const slug = a.name.replace(/\.[a-z0-9]+$/i, "");
+  const assetId = a.id ?? a.name;
 
   const handleCopyReference = async () => {
     await navigator.clipboard.writeText(`/assets/${a.name}`);
@@ -26,7 +27,7 @@ export function AssetCard({ a }: { a: AssetSummary }) {
   };
 
   const handleArchive = async () => {
-    await assetsService.archiveAsset(a.name);
+    await assetsService.archiveAsset(productId, assetId);
     toast.success("Asset arquivado.", { description: a.name });
   };
 
@@ -54,6 +55,9 @@ export function AssetCard({ a }: { a: AssetSummary }) {
       <p className="mt-3 text-sm text-muted-foreground">Uso: {a.usage}</p>
       <div className="mt-4 flex gap-2">
         <Button onClick={() => navigate(`/assets/${slug}`)}>Abrir</Button>
+        <a href={assetsService.getDownloadUrl(assetId)} target="_blank" rel="noreferrer">
+          <Button>Baixar</Button>
+        </a>
         <Button onClick={() => navigate("/assets/picker")}>Selecionar</Button>
       </div>
     </Card>

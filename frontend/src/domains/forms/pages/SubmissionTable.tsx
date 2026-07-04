@@ -7,9 +7,11 @@ import { formsService } from "../services/formsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { LeadStatusBadge } from "../components/FormBadges";
 import { toast } from "../../../core/notifications/toast";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import type { SubmissionSummary } from "../contracts/responses";
 
 const OWNERS = ["Marina Costa", "João Alves", "Camila Rocha", "Pedro Lima"];
+const FORM_ID = "form-contato-comercial";
 
 function exportSubmissionsCsv(rows: SubmissionSummary[]) {
   const header = ["Data", "Nome", "Email", "Origem", "Status", "Responsável", "Score"];
@@ -26,7 +28,9 @@ function exportSubmissionsCsv(rows: SubmissionSummary[]) {
 
 export function SubmissionTable() {
   const navigate = useNavigate();
-  const { data: submissionsData, loading, error } = useAsyncData(() => formsService.listSubmissions(), []);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
+  const { data: submissionsData, loading, error } = useAsyncData(() => (productId ? formsService.listSubmissions(productId, FORM_ID) : Promise.resolve([])), [productId]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignee, setAssignee] = useState(OWNERS[0]);

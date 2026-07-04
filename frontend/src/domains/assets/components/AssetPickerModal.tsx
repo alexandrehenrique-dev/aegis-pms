@@ -7,6 +7,7 @@ import { assetsService } from "../services/assetsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AssetTypeIcon } from "./AssetBits";
 import { toast } from "../../../core/notifications/toast";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import type { AssetSummary } from "../contracts/responses";
 
 export type AssetTypeFilter = "imagem" | "PDF" | "áudio" | "vídeo" | "qualquer";
@@ -27,7 +28,9 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
   onSelect: (asset: AssetSummary) => void;
   onClose: () => void;
 }) {
-  const { data: assets, loading, error } = useAsyncData(() => assetsService.listAssets(), []);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
+  const { data: assets, loading, error } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId]);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<AssetTypeFilter>(typeFilter);
   const [selectedName, setSelectedName] = useState<string | null>(null);
@@ -47,7 +50,7 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
   const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    await assetsService.uploadFiles();
+    await assetsService.uploadFiles(productId, Array.from(files));
     toast.success(`${files.length} arquivo(s) enviado(s)!`);
     setSelectedName(files[0].name);
     e.target.value = "";

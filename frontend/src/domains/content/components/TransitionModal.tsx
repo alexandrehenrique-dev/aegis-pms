@@ -7,12 +7,22 @@ import type { UserRole } from "../../../shared/types";
 import { wfBadgeTone, wfImpact, type PendingDrop, type WFStatus } from "../mocks/content.mocks";
 import { wfCanTransition } from "./wfRules";
 
-export function TransitionModal({ drop, onConfirm, onCancel, viewAsRole }: { drop: PendingDrop; onConfirm: (c: string) => void; onCancel: () => void; viewAsRole: UserRole }) {
+export function TransitionModal({ drop, onConfirm, onCancel, viewAsRole }: { drop: PendingDrop; onConfirm: (c: string) => void | Promise<void>; onCancel: () => void; viewAsRole: UserRole }) {
   const [comment, setComment] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const { ok, reason } = wfCanTransition(drop.from, drop.to, viewAsRole);
   const required = drop.to === "Archived";
-  const canConfirm = ok && (!required || comment.trim().length > 0);
+  const canConfirm = ok && !confirming && (!required || comment.trim().length > 0);
   const toneOf = (s: WFStatus) => wfBadgeTone[s];
+  const handleConfirm = async () => {
+    if (!canConfirm) return;
+    setConfirming(true);
+    try {
+      await onConfirm(comment);
+    } finally {
+      setConfirming(false);
+    }
+  };
   return (
     <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCancel}>
       <motion.div {...fade} className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
@@ -37,7 +47,7 @@ export function TransitionModal({ drop, onConfirm, onCancel, viewAsRole }: { dro
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <Button onClick={onCancel}>Cancelar</Button>
-          <Button primary onClick={() => canConfirm && onConfirm(comment)} disabled={!canConfirm}>{ok ? "Confirmar" : "Sem permissão"}</Button>
+          <Button primary onClick={handleConfirm} disabled={!canConfirm}>{confirming ? "Confirmando..." : ok ? "Confirmar" : "Sem permissão"}</Button>
         </div>
       </motion.div>
     </motion.div>

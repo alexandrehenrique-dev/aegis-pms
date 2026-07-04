@@ -7,14 +7,17 @@ import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { assetsService } from "../services/assetsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AssetCard, AssetStatusBadge } from "../components/AssetBits";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 export function AssetLibrary() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
   const canEdit = viewAsRole !== "viewer";
   const [view, setView] = useState<"grid" | "list">("grid");
   const [q, setQ] = useState("");
-  const { data: assets, loading, error } = useAsyncData(() => assetsService.listAssets(), []);
+  const { data: assets, loading, error } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId]);
 
   if (loading) return <SkeletonLines />;
   if (error || !assets) return <PartialErrorWidget />;
@@ -47,7 +50,7 @@ export function AssetLibrary() {
         <PermissionHint />
       </div>
       {rows.length === 0 ? <EmptyState title="Busca sem resultado" description="Nenhum asset corresponde aos filtros atuais." /> : view === "grid" ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{rows.map((a) => <AssetCard key={a.name} a={a} />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{rows.map((a) => <AssetCard key={a.name} a={a} productId={productId} />)}</div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <table className="hidden w-full text-left text-sm lg:table">
@@ -67,7 +70,7 @@ export function AssetLibrary() {
               ))}
             </tbody>
           </table>
-          <div className="grid gap-2 p-3 lg:hidden">{rows.map((a) => <AssetCard key={a.name} a={a} />)}</div>
+          <div className="grid gap-2 p-3 lg:hidden">{rows.map((a) => <AssetCard key={a.name} a={a} productId={productId} />)}</div>
         </div>
       )}
     </>

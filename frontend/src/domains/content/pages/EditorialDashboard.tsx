@@ -6,6 +6,7 @@ import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, Pe
 import { PermGate } from "../../../app/guards/PermGate";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { contentService } from "../services/contentService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { NewContentModal } from "../components/NewContentModal";
 
@@ -22,7 +23,9 @@ function EditorialAttentionCard() {
 }
 
 function EditorialTimeline() {
-  const { data: editEvents } = useAsyncData(() => contentService.listEditEvents(), []);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
+  const { data: editEvents } = useAsyncData(() => contentService.listEditEvents(productId), [productId]);
   return (
     <div className="space-y-1">
       {(editEvents ?? []).map((t, i) => (

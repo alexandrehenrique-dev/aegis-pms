@@ -7,9 +7,12 @@ import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { toast } from "../../../core/notifications/toast";
 import { assetsService } from "../services/assetsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 export function AssetTagManager() {
-  const { data: loadedTags, loading, error } = useAsyncData(() => assetsService.listTags(), []);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
+  const { data: loadedTags, loading, error } = useAsyncData(() => (productId ? assetsService.listTags(productId) : Promise.resolve([])), [productId]);
   const [tags, setTags] = useState<string[] | null>(null);
   const assetTags = tags ?? loadedTags;
 
@@ -29,12 +32,12 @@ export function AssetTagManager() {
   const [removingTag, setRemovingTag] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
 
-  const refresh = async () => setTags(await assetsService.listTags());
+  const refresh = async () => setTags(await assetsService.listTags(productId));
 
   const handleCreate = async () => {
     setCreating(true);
     try {
-      await assetsService.createTag(name);
+      await assetsService.createTag(productId, name);
       toast.success("Tag criada!", { description: `#${name} já está disponível para uso.` });
       setCreateOpen(false);
       setName("");
@@ -55,7 +58,7 @@ export function AssetTagManager() {
   const handleMerge = async () => {
     setMerging(true);
     try {
-      await assetsService.mergeTags(Array.from(mergeSelected), mergeInto);
+      await assetsService.mergeTags(productId, Array.from(mergeSelected), mergeInto);
       toast.success("Tags mescladas!", { description: `Unificadas em #${mergeInto}.` });
       setMergeOpen(false);
       setMergeSelected(new Set());
@@ -70,7 +73,7 @@ export function AssetTagManager() {
     if (!editingTag) return;
     setSavingEdit(true);
     try {
-      await assetsService.renameTag(editingTag, editValue);
+      await assetsService.renameTag(productId, editingTag, editValue);
       toast.success("Tag renomeada!");
       setEditingTag(null);
       await refresh();
@@ -83,7 +86,7 @@ export function AssetTagManager() {
     if (!removingTag) return;
     setRemoving(true);
     try {
-      await assetsService.removeTag(removingTag);
+      await assetsService.removeTag(productId, removingTag);
       toast.success("Tag removida.", { description: `#${removingTag}` });
       setRemovingTag(null);
       await refresh();

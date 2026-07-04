@@ -26,9 +26,9 @@ export function ContentEditor() {
   const { id } = useParams<{ id: string }>();
   const { product } = useCurrentProduct();
   const knowledgeGraphEnabled = resolveEnabledModules(product).includes("Knowledge Graph");
-  const productSlug = product ? product.id : "maestro-beton";
+  const productId = product ? product.id : "p1";
 
-  const { data: foundContent, loading } = useAsyncData(() => (id ? contentService.getContent(id) : Promise.resolve(undefined)), [id]);
+  const { data: foundContent, loading } = useAsyncData(() => (id ? contentService.getContent(productId, id) : Promise.resolve(undefined)), [productId, id]);
   const [content, setContent] = useState<ContentRow | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const pendingPatch = useRef<Partial<ContentRow> | null>(null);
@@ -49,7 +49,7 @@ export function ContentEditor() {
       pendingPatch.current = null;
       if (!patchToSave) return;
       setSaveStatus("saving");
-      await contentService.updateContent(id, patchToSave, product);
+      await contentService.updateContent(productId, id, patchToSave, product);
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 3000);
     }, CONTENT_SAVE_DEBOUNCE_MS);
@@ -57,7 +57,7 @@ export function ContentEditor() {
 
   const handleSubmitForReview = async () => {
     if (!id) return;
-    await contentService.submitForReview(id);
+    await contentService.submitForReview(id, productId);
     setContent((prev) => (prev ? { ...prev, status: "In Review" } : prev));
     toast.success("Enviado para revisão.", { description: "A equipe editorial será notificada." });
     // Tarefa C.1 — antes ficava preso na tela de edição de um conteúdo que já
@@ -84,7 +84,7 @@ export function ContentEditor() {
         <Button onClick={() => navigate(`/content/${content.id}/preview`)}>Preview</Button>
         <Button primary onClick={handleSubmitForReview}>Enviar para revisão</Button>
       </PageHeader>
-      <ContentArticleEditor content={content} knowledgeGraphEnabled={knowledgeGraphEnabled} productSlug={productSlug} onChange={handleChange} />
+      <ContentArticleEditor content={content} knowledgeGraphEnabled={knowledgeGraphEnabled} productSlug={productId} onChange={handleChange} />
     </>
   );
 }

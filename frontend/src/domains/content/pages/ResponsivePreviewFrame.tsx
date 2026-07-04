@@ -48,19 +48,19 @@ export function ResponsivePreviewFrame() {
   const [lang, setLang] = useState(LANGUAGES[0]);
   const [submitting, setSubmitting] = useState(false);
   const { product } = useCurrentProduct();
-  const productSlug = product ? product.id : "maestro-beton";
-  const { data: productContent } = useAsyncData(() => contentService.listContentByProduct(productSlug), [productSlug]);
-  const wikidevArticle = productSlug === "wikidev" ? productContent?.find((c) => c.body) : undefined;
+  const productId = product ? product.id : "p1";
+  const { data: productContent } = useAsyncData(() => contentService.listContentByProduct(productId), [productId]);
+  const wikidevArticle = product?.name === "WikiDev" ? productContent?.find((c) => c.body) : undefined;
   const { data: page, loading: loadingPage } = useAsyncData(
-    () => (pageSlug ? pagesService.getPageBySlug(productSlug, pageSlug) : Promise.resolve(undefined)),
-    [productSlug, pageSlug],
+    () => (pageSlug ? pagesService.getPageBySlug(productId, pageSlug) : Promise.resolve(undefined)),
+    [productId, pageSlug],
   );
-  const { data: globals } = useAsyncData(() => globalsService.getGlobals(productSlug), [productSlug]);
+  const { data: globals } = useAsyncData(() => globalsService.getGlobals(productId), [productId]);
 
   const handleSubmitForReview = async () => {
     setSubmitting(true);
     try {
-      await contentService.submitForReview();
+      if (page) await pagesService.updatePage(productId, page.id, { status: "review" });
       toast.success("Enviado para revisão!");
     } finally {
       setSubmitting(false);
@@ -91,7 +91,7 @@ export function ResponsivePreviewFrame() {
               {globals && <GlobalFooter globals={globals} />}
             </div>
           ) : (
-            <EmptyState title="Preview indisponível" description={`Nenhuma página com slug "${pageSlug}" encontrada em ${productSlug}.`} />
+            <EmptyState title="Preview indisponível" description={`Nenhuma página com slug "${pageSlug}" encontrada neste produto.`} />
           )}
         </div>
       </Card>

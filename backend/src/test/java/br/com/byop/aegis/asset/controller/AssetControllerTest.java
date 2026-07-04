@@ -47,6 +47,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = AssetController.class)
@@ -328,6 +329,18 @@ class AssetControllerTest {
                 .andExpect(jsonPath("$.contentType").value("image/png"));
 
         verify(productAccessPort, org.mockito.Mockito.never()).assertAccessible(any(), any());
+    }
+
+    @Test
+    void shouldRedirectAssetDownloadToResolvedUrl() throws Exception {
+        AuthenticatedUser caller = user();
+        String fileUrl = "/api/v1/assets/" + ASSET_ID + "/file";
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(assetService.resolveAsset(ASSET_ID, caller)).thenReturn(new ResolvedAsset(ASSET_ID, fileUrl, null, "image/png"));
+
+        mockMvc.perform(get("/api/v1/assets/{assetId}/download", ASSET_ID).with(jwt()))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl(fileUrl));
     }
 
     @Test

@@ -10,6 +10,7 @@ import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { toast } from "../../../core/notifications/toast";
 import { formsService } from "../services/formsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { FormStatusBadge } from "../components/FormBadges";
 import type { FormSummary } from "../contracts/responses";
 
@@ -30,8 +31,10 @@ function exportFormsCsv(forms: FormSummary[]) {
 export function FormsList() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
   const canEdit = viewAsRole !== "viewer";
-  const { data: loadedForms, loading, error } = useAsyncData(() => formsService.listForms(), []);
+  const { data: loadedForms, loading, error } = useAsyncData(() => (productId ? formsService.listForms(productId) : Promise.resolve([])), [productId]);
   const [forms, setForms] = useState<FormSummary[]>([]);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -51,7 +54,7 @@ export function FormsList() {
     setDeleting(true);
     setDeleteError(null);
     try {
-      await formsService.removeForm(pendingDeleteForm.id, pendingDeleteForm.productSlug);
+      await formsService.removeForm(productId, pendingDeleteForm.id);
       setForms((prev) => prev.filter((f) => f.id !== pendingDeleteForm.id));
       toast.success("Formulário removido", { description: pendingDeleteForm.name });
       setPendingDeleteId(null);

@@ -7,6 +7,7 @@ import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { formsService } from "../services/formsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { toast } from "../../../core/notifications/toast";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import type { FormField } from "../contracts/responses";
 
 const UPLOAD_FORMAT_OPTIONS = ["PDF", "Imagem", "DOCX", "ZIP"];
@@ -102,8 +103,10 @@ function FormPropertiesPanel({ field, onChange }: { field: FormField | undefined
 export function FormBuilder() {
   const navigate = useNavigate();
   const { slug: formId } = useParams<{ slug: string }>();
-  const { data: form } = useAsyncData(() => (formId ? formsService.getForm(formId) : Promise.resolve(undefined)), [formId]);
-  const { data: loadedFields } = useAsyncData(() => (formId ? formsService.getFormFields(formId) : Promise.resolve([])), [formId]);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
+  const { data: form } = useAsyncData(() => (formId && productId ? formsService.getForm(productId, formId) : Promise.resolve(undefined)), [productId, formId]);
+  const { data: loadedFields } = useAsyncData(() => (formId && productId ? formsService.getFormFields(productId, formId) : Promise.resolve([])), [productId, formId]);
 
   const [fields, setFields] = useState<FormField[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -140,8 +143,8 @@ export function FormBuilder() {
   const handleSaveDraft = async () => {
     setSaving(true);
     try {
-      if (formId) await formsService.saveFormFields(formId, fields);
-      await formsService.saveDraft(formId);
+      if (formId && productId) await formsService.saveFormFields(productId, formId, fields);
+      await formsService.saveDraft(productId, formId);
       toast.success("Rascunho salvo!");
     } finally {
       setSaving(false);
@@ -151,7 +154,7 @@ export function FormBuilder() {
   const handlePublish = async () => {
     setPublishing(true);
     try {
-      await formsService.publish(formId);
+      await formsService.publish(productId, formId);
       toast.success("Formulário publicado!");
     } finally {
       setPublishing(false);

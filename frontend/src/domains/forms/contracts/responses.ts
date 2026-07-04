@@ -1,5 +1,5 @@
 export type FormSummary = {
-  id: string; productSlug: string;
+  id: string; productSlug?: string;
   name: string; type: string; status: string; responses: string;
   conversion: string; lastActivity: string; publication: string;
 };
@@ -28,6 +28,15 @@ export type SubmissionSummary = {
 export type ListFormsResponse = FormSummary[];
 export type ListSubmissionsResponse = SubmissionSummary[];
 export type ListFieldTypesResponse = string[];
+export type FormDetail = {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  publication: string;
+  fields: FormField[];
+  deliveryChannels?: DeliveryChannel[];
+};
 
 /**
  * Entrega de respostas (Sprint 13, Tarefa J) — antes, uma submissão só

@@ -40,7 +40,7 @@ export function PageEditor() {
   const pendingContentPatch = useRef<{ sectionId: string; patch: Record<string, unknown> } | null>(null);
   const contentDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { product } = useCurrentProduct();
-  const productSlug = product ? product.id : "maestro-beton";
+  const productSlug = product ? product.id : "p1";
 
   const { data: foundPage, loading: loadingPage } = useAsyncData(
     () => (pageSlug ? pagesService.getPageBySlug(productSlug, pageSlug) : Promise.resolve(undefined)),
