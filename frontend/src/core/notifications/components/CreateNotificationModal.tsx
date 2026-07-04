@@ -29,7 +29,10 @@ function labelToKey<T extends string>(labels: Record<T, string>, label: string):
 
 type RecipientMode = "all" | "tenant" | "users";
 
-const PLATFORM_USERS = Object.values(mockUsers).map((m) => m.user);
+// Guarda literal `import.meta.env.PROD` (ver mesma nota em
+// `notificationsService.ts`) — garante que `mockUsers` (senhas em texto
+// puro) seja eliminado do bundle de produção pelo tree-shaking.
+const PLATFORM_USERS = import.meta.env.PROD ? [] : Object.values(mockUsers).map((m) => m.user);
 
 /**
  * Criar notificação direcionada (Sprint 14, Tarefa D) — acionado a partir de

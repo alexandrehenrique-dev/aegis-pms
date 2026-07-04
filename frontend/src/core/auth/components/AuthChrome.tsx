@@ -25,9 +25,11 @@ export function AuthLogo() {
 }
 
 export function AuthEnvBadge() {
+  if (import.meta.env.PROD) return null;
+  const label = import.meta.env.VITE_API_MODE === "api" ? "api" : "mock";
   return (
     <div className="fixed left-4 top-4 z-50 rounded-full border border-[var(--byop-violet-soft)] bg-[var(--byop-violet-soft)] px-3 py-1 text-xs text-[var(--byop-violet-dark)]">
-      staging
+      {label}
     </div>
   );
 }

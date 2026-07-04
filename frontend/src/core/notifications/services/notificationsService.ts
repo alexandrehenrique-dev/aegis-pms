@@ -39,11 +39,22 @@ function byCreatedAtDesc(a: Notification, b: Notification): number {
   return a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0;
 }
 
+// Guarda literal `import.meta.env.PROD` (não `IS_API_MODE`, um booleano
+// importado que o esbuild não consegue provar morto entre módulos) — só
+// assim `mockUsers`/`mockTenantsByUser` são eliminados do bundle de
+// produção pelo tree-shaking. Em modo api, `create()` nunca chama estas
+// funções (retorna antes, via `apiClient`); em build de produção "mock"
+// (fora do fluxo suportado — mock só roda via `vite dev`), o fallback vazio
+// é aceitável.
 function allUserIds(): string[] {
+  /* v8 ignore next */
+  if (import.meta.env.PROD) return [];
   return Object.values(mockUsers).map((m) => m.user.id);
 }
 
 function userIdsForTenant(tenantId: string): string[] {
+  /* v8 ignore next */
+  if (import.meta.env.PROD) return [];
   return Object.entries(mockTenantsByUser)
     .filter(([, tenants]) => tenants.some((t) => t.id === tenantId))
     .map(([userId]) => userId);

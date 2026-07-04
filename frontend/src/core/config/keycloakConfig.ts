@@ -19,5 +19,8 @@ export function getKeycloakConfig(): KeycloakConfig {
 }
 
 export function getApiMode(): "mock" | "real" {
-  return import.meta.env.VITE_API_MODE === "real" ? "real" : "mock";
+  // "api" e' o valor canonico de infra/apiMode.ts (IS_API_MODE) — antes este
+  // getter comparava com "real", nunca batendo com VITE_API_MODE=api (valor
+  // de producao), o que fazia o painel de contas demo aparecer em producao.
+  return import.meta.env.VITE_API_MODE === "api" ? "real" : "mock";
 }
