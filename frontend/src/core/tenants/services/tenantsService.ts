@@ -3,6 +3,7 @@ import { logApiCall } from "../../../shared/services/devLog";
 import { notificationsService } from "../../notifications/services/notificationsService";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
+import { mapTenantSummaries, mapTenantSummary, type TenantSummaryDto } from "../mappers/tenantMapper";
 import type { TenantOption } from "../../../shared/types";
 import type { CreateTenantRequest, DeleteTenantRequest, UpdateTenantRequest } from "../contracts/requests";
 import type { ListTenantsResponse, TenantDetailResponse } from "../contracts/responses";
@@ -13,17 +14,31 @@ const tenantsStore: TenantOption[] = [...allTenants];
 
 export const tenantsService = {
   async listTenants(): Promise<ListTenantsResponse> {
-    if (IS_API_MODE) return apiClient.get<ListTenantsResponse>("/tenants");
+    if (IS_API_MODE) {
+      const dtos = await apiClient.get<TenantSummaryDto[]>("/tenants");
+      return mapTenantSummaries(dtos);
+    }
     return tenantsStore;
   },
 
   async getTenant(id: string): Promise<TenantDetailResponse | undefined> {
-    if (IS_API_MODE) return apiClient.get<TenantDetailResponse>(`/tenants/${id}`);
+    if (IS_API_MODE) {
+      const tenants = await this.listTenants();
+      return tenants.find((tenant) => tenant.id === id);
+    }
     return tenantsStore.find((t) => t.id === id);
   },
 
   async create(req: CreateTenantRequest): Promise<TenantOption> {
-    if (IS_API_MODE) return apiClient.post<TenantOption>("/tenants", req);
+    if (IS_API_MODE) {
+      const dto = await apiClient.post<TenantSummaryDto>("/tenants", {
+        key: req.slug,
+        name: req.name,
+        plan: req.plan,
+        initialAdminEmail: req.initialAdminEmail,
+      });
+      return mapTenantSummary(dto);
+    }
     logApiCall("POST", "/api/v1/admin/tenants", req);
     const created: TenantOption = {
       id: req.slug,
@@ -38,7 +53,14 @@ export const tenantsService = {
   },
 
   async update(id: string, req: UpdateTenantRequest): Promise<TenantOption> {
-    if (IS_API_MODE) return apiClient.put<TenantOption>(`/tenants/${id}`, req);
+    if (IS_API_MODE) {
+      const dto = await apiClient.put<TenantSummaryDto>(`/tenants/${id}`, {
+        name: req.name,
+        plan: req.plan,
+        status: req.status === "ativo" ? "ACTIVE" : "SUSPENDED",
+      });
+      return mapTenantSummary(dto);
+    }
     const tenant = tenantsStore.find((t) => t.id === id);
     if (!tenant) throw { status: 404, message: `Tenant ${id} não encontrado.` };
     const previousStatus = tenant.status;

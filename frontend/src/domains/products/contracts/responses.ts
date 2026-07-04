@@ -3,6 +3,7 @@ import type { ModuleState, ProductStatus } from "../../../shared/types";
 
 export type ProductSummary = {
   id?: string;
+  key?: string;
   name: string;
   type: string;
   status: ProductStatus;

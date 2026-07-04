@@ -9,6 +9,7 @@ import { AuthContext, type AuthContextValue } from "./authContextDefinition";
 import { authService, type LoginResult } from "./services/authService";
 import { meService } from "./services/meService";
 import { tenantsService } from "../tenants/services/tenantsService";
+import { productsService } from "../../domains/products/services/productsService";
 import { toUserRole } from "./utils/roleMapper";
 import { setCurrentProductId } from "../products/currentProductContext";
 
@@ -65,11 +66,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const me = await meService.getMe();
       setAuthUser({ id: me.subject, name: me.name, email: me.email, role: toUserRole(me.role), initials: initialsOf(me.name) });
       const tenants = await tenantsService.listTenants();
+      const products = await productsService.listProducts();
+      const visibleTenantIds = new Set(tenants.map((tenant) => tenant.id));
+      const productsByTenant = products.reduce<Record<string, ProductOption[]>>((acc, product) => {
+        if (!product.id || !product.tenantId) return acc;
+        // O escopo real vem do backend (`GET /products`, ADR-0019). Este
+        // guard impede que o estado de navegação amplie escopo caso uma
+        // resposta inconsistente traga produto de tenant invisível ao usuário.
+        if (!visibleTenantIds.has(product.tenantId)) return acc;
+        const tenantProducts = acc[product.tenantId] ?? (acc[product.tenantId] = []);
+        tenantProducts.push({
+          id: product.id,
+          name: product.name,
+          type: product.type,
+          status: product.status,
+          modules: product.modules,
+          modulesList: product.modulesList,
+        });
+        return acc;
+      }, {});
       setUserTenants(tenants);
-      // `/me` e `/tenants` não devolvem produtos — GET /api/v1/products por
-      // tenant é responsabilidade da Sprint de Integração 03 (núcleo de
-      // navegação); até lá, ProductSelectScreen mostra "sem produtos" em modo api.
-      setUserProducts({});
+      setUserProducts(productsByTenant);
     } else {
       setAuthUser(result.user ?? null);
       setUserTenants(result.tenants ?? []);

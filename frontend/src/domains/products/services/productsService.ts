@@ -7,6 +7,7 @@ import { DEFAULT_BLOCK_CONTENT } from "../../pages/blockDefaults";
 import { PRODUCT_PAGE_SKELETONS } from "../../../core/products/productTemplates";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
+import { mapProductSummaries, mapProductSummary, type ProductSummaryDto } from "../mappers/productMapper";
 import type { ProductTypeKey } from "../../../core/products/moduleDefaults";
 import type { ComponentType } from "react";
 import type { ModuleState } from "../../../shared/types";
@@ -30,7 +31,10 @@ const moduleCatalogStore: ListModulesResponse = moduleCatalogMocks.map(([Icon, n
 
 export const productsService = {
   async listProducts(): Promise<ListProductsResponse> {
-    if (IS_API_MODE) return apiClient.get<ListProductsResponse>("/products");
+    if (IS_API_MODE) {
+      const dtos = await apiClient.get<ProductSummaryDto[]>("/products");
+      return mapProductSummaries(dtos);
+    }
     return productsStore;
   },
 
@@ -126,7 +130,15 @@ export const productsService = {
 
   /** Editar Produto (docs/implementation/004_aegis_pms_screen_inventory.md, 05.04) — nome/tipo/status; gating de role fica na UI (ver core/permissions/roles.ts). */
   async update(idOrName: string, req: UpdateProductRequest): Promise<ProductSummary> {
-    if (IS_API_MODE) return apiClient.put<ProductSummary>(`/products/${idOrName}`, req);
+    if (IS_API_MODE) {
+      const dto = await apiClient.put<ProductSummaryDto>(`/products/${idOrName}`, {
+        name: req.name,
+        type: req.type,
+        status: toProductStatusDto(req.status),
+        modules: req.modules,
+      });
+      return mapProductSummary(dto);
+    }
     const p = productsStore.find((x) => x.id === idOrName || x.name === idOrName);
     if (!p) throw { status: 404, message: `Produto ${idOrName} não encontrado.` };
     logApiCall("PATCH", `/api/v1/admin/products/${p.id ?? p.name}`, req);
@@ -154,7 +166,17 @@ export const productsService = {
 
   /** docs/AEGIS_PMS_V1.md §8.4: `POST /api/v1/admin/products`. */
   async create(req: CreateProductRequest): Promise<ProductSummary> {
-    if (IS_API_MODE) return apiClient.post<ProductSummary>("/products", req);
+    if (IS_API_MODE) {
+      const dto = await apiClient.post<ProductSummaryDto>("/products", {
+        tenantId: req.tenantId,
+        key: req.slug,
+        name: req.name,
+        type: req.type,
+        defaultLocale: req.language,
+        assetStorageStrategy: req.assetStorageStrategy.toUpperCase(),
+      });
+      return mapProductSummary(dto);
+    }
     logApiCall("POST", "/api/v1/admin/products", req);
     const created: ProductSummary = {
       id: slugify(req.name) || slugify(req.slug),
@@ -182,3 +204,13 @@ export const productsService = {
     return created;
   },
 };
+
+function toProductStatusDto(status: ProductSummary["status"]): string {
+  const map: Record<ProductSummary["status"], string> = {
+    Ativo: "ACTIVE",
+    Pendente: "PENDING",
+    Arquivado: "ARCHIVED",
+    "Sem módulos": "INACTIVE",
+  };
+  return map[status];
+}
