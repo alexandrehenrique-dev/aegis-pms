@@ -4,6 +4,7 @@ import { CheckCircle2 } from "lucide-react";
 import { Badge, Button, Card, PageHeader } from "../../../shared/components/Primitives";
 import { toast } from "../../../core/notifications/toast";
 import { analyticsService } from "../services/analyticsService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 function TrendCard({ type, text, metric, severity, reviewed, onReview }: { type: string; text: string; metric: string; severity: string; reviewed: boolean; onReview: () => void }) {
   const navigate = useNavigate();
@@ -22,6 +23,8 @@ function TrendCard({ type, text, metric, severity, reviewed, onReview }: { type:
 }
 
 export function TrendCards() {
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
   const cards = [
     ["Crescimento", "Página Galeria gerou 42% mais interação esta semana.", "+42%", "positiva"],
     ["Queda", "Formulário de orçamento teve queda de conversão.", "-6%", "alta"],
@@ -33,7 +36,7 @@ export function TrendCards() {
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
 
   const handleReview = async (label: string) => {
-    await analyticsService.markTrendReviewed(label);
+    await analyticsService.markTrendReviewed(productId, label);
     setReviewed((prev) => new Set(prev).add(label));
     toast.success("Tendência marcada como revisada.");
   };

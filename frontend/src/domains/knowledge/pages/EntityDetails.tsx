@@ -6,6 +6,7 @@ import { kgColor, type KGEntityType, type KGNode } from "../mocks/knowledge.mock
 import { knowledgeService } from "../services/knowledgeService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { KGBadge } from "../components/KGBadge";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 const RESOURCE_ROUTES: Record<KGEntityType, string> = {
   Tenant: "/settings/tenant", Produto: "/products", Página: "/content/list", Asset: "/assets",
@@ -18,8 +19,10 @@ const RESOURCE_ROUTES: Record<KGEntityType, string> = {
 export function EntityDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(), []);
-  const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(), []);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
+  const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(productId), [productId]);
+  const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(productId), [productId]);
   const [sel, setSel] = useState<KGNode | null>(null);
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import { CheckCircle2, Sparkles } from "lucide-react";
 import { Badge, Button, Card, PageHeader } from "../../../shared/components/Primitives";
 import { toast } from "../../../core/notifications/toast";
 import { knowledgeService } from "../services/knowledgeService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 function KnowledgeInsightCard({ text, severity, reviewed, onReview }: { text: string; severity: string; reviewed: boolean; onReview: () => void }) {
   const navigate = useNavigate();
@@ -21,6 +22,8 @@ function KnowledgeInsightCard({ text, severity, reviewed, onReview }: { text: st
 }
 
 export function KnowledgeInsights() {
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
   const insights: [string, string][] = [
     ["5 assets não estão sendo utilizados.", "média"],
     ["Página Home possui 12 dependências.", "alta"],
@@ -32,7 +35,7 @@ export function KnowledgeInsights() {
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
 
   const handleReview = async (text: string) => {
-    await knowledgeService.markInsightReviewed(text);
+    await knowledgeService.markInsightReviewed(productId, text);
     setReviewed((prev) => new Set(prev).add(text));
     toast.success("Insight marcado como revisado.");
   };

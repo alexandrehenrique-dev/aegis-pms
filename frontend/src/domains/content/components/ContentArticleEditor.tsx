@@ -44,7 +44,7 @@ function MetadataPanel({ content, knowledgeGraphEnabled, productSlug, onPatchMet
             ) : productSlug ? (
               <Popover>
                 <PopoverTrigger asChild><Button><Link2 size={14} />Buscar entidade musical</Button></PopoverTrigger>
-                <PopoverContent><EntityPicker productSlug={productSlug} onSelect={handleLinkMusic} /></PopoverContent>
+                <PopoverContent><EntityPicker productId={productSlug} onSelect={handleLinkMusic} /></PopoverContent>
               </Popover>
             ) : null}
           </div>

@@ -4,11 +4,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/compone
 import { ChartContainer, ComparisonBadge } from "../components/AnalyticsBits";
 import { analyticsService } from "../services/analyticsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 const PERIODS = ["Últimos 7 dias", "Últimos 30 dias", "Últimos 90 dias"];
 
 export function ChannelBreakdown() {
-  const { data: channels, loading, error } = useAsyncData(() => analyticsService.listChannels(), []);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
+  const { data: channels, loading, error } = useAsyncData(() => analyticsService.listChannels(productId), [productId]);
   const [period, setPeriod] = useState(PERIODS[1]);
 
   return (

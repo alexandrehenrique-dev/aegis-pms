@@ -216,7 +216,7 @@ export function MarkdownEditModal({ title = "Editar texto", value, onSave, onClo
             <button onClick={() => setShowEntityPicker(false)} aria-label="Fechar" className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted"><X size={16} /></button>
           </div>
           <div className="mt-3">
-            <EntityPicker productSlug={productSlug} onSelect={handleSelectEntity} />
+            <EntityPicker productId={productSlug} onSelect={handleSelectEntity} />
           </div>
         </ModalShell>
       )}
