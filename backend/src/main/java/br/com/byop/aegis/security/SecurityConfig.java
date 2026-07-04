@@ -1,5 +1,6 @@
 package br.com.byop.aegis.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,6 +21,12 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private final List<String> corsAllowedOrigins;
+
+    public SecurityConfig(@Value("${aegis.app.cors-allowed-origins:http://localhost:5173}") List<String> corsAllowedOrigins) {
+        this.corsAllowedOrigins = List.copyOf(corsAllowedOrigins);
+    }
+
     /**
      * Define as regras HTTP da API.
      *
@@ -27,14 +34,13 @@ public class SecurityConfig {
      * @return cadeia de filtros de segurança
      * @throws Exception caso a configuração falhe
      */
-    @SuppressWarnings({"java:S4502", "java:S112"})
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration configuration = new CorsConfiguration();
-                    configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+                    configuration.setAllowedOrigins(corsAllowedOrigins);
                     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                     configuration.setAllowedHeaders(List.of("*"));
                     configuration.setAllowCredentials(true);

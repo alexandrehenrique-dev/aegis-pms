@@ -1,0 +1,65 @@
+# Uso: docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod up -d
+# Banco e Keycloak sao externos em producao. Nao editar docker-compose.yml local.
+
+services:
+  aegis-backend:
+    image: aegis-pms:${IMAGE_TAG:-latest}
+    container_name: aegis-pms-prod
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+
+      AEGIS_DB_HOST: ${AEGIS_DB_HOST}
+      AEGIS_DB_PORT: ${AEGIS_DB_PORT:-5432}
+      AEGIS_DB_NAME: ${AEGIS_DB_NAME}
+      AEGIS_DB_USER: ${AEGIS_DB_USER}
+      AEGIS_DB_PASSWORD: ${AEGIS_DB_PASSWORD}
+
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${KEYCLOAK_JWK_SET_URI}
+      KEYCLOAK_INTERNAL_BASE_URL: ${KEYCLOAK_INTERNAL_BASE_URL}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-aegis}
+      KEYCLOAK_WEB_CLIENT_ID: ${KEYCLOAK_WEB_CLIENT_ID:-aegis-web}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_ADMIN_REALMS_PATH: ${KEYCLOAK_ADMIN_REALMS_PATH:-/admin/realms/}
+
+      AEGIS_APP_BASE_URL: ${AEGIS_APP_BASE_URL:-https://aegis.byop.dev}
+      AEGIS_STORAGE_LOCAL_PATH: /data/assets
+      AEGIS_PRODUCT_EMAIL_TEMPLATE_PATH: /app/email-templates/product
+
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:-noreply@byop.dev}
+      SMTP_FROM_DISPLAY_NAME: ${SMTP_FROM_DISPLAY_NAME:-Aegis PMS}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_SSL: ${SMTP_SSL:-false}
+
+      AEGIS_ASSETS_MULTIPART_MAX_FILE_SIZE: ${AEGIS_ASSETS_MULTIPART_MAX_FILE_SIZE:-260MB}
+      AEGIS_ASSETS_MULTIPART_MAX_REQUEST_SIZE: ${AEGIS_ASSETS_MULTIPART_MAX_REQUEST_SIZE:-260MB}
+
+      AEGIS_TELEGRAM_ALERT_ENABLED: ${AEGIS_TELEGRAM_ALERT_ENABLED:-false}
+      AEGIS_TELEGRAM_ALERT_BOT_TOKEN: ${AEGIS_TELEGRAM_ALERT_BOT_TOKEN:-}
+      AEGIS_TELEGRAM_ALERT_CHAT_ID: ${AEGIS_TELEGRAM_ALERT_CHAT_ID:-}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - aegis_assets_data:/data/assets
+      - ./infra/keycloak/themes/aegis/email/html:/app/email-templates/product:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health >/dev/null || wget -qO- http://localhost:8080/actuator/health >/dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  aegis_assets_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/aegis/assets

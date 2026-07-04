@@ -78,6 +78,8 @@ springdoc:
 aegis:
   app:
     base-url: ${AEGIS_APP_BASE_URL:http://localhost:8080}
+    cors-allowed-origins:
+      - "http://localhost:5173"
   email:
     from: ${SMTP_FROM:noreply@aegis.app}
     product-template-path: ${AEGIS_PRODUCT_EMAIL_TEMPLATE_PATH:../infra/keycloak/themes/aegis/email/html}

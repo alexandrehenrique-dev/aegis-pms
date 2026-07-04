@@ -35,6 +35,9 @@ Desktop.ini
 .env
 .env.*
 !.env.example
+!*.env.example
+infra/.env.prod
+!infra/.env.prod.example
 *.pem
 *.key
 *.p12

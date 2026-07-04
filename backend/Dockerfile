@@ -25,8 +25,14 @@ FROM eclipse-temurin:25-jre
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=backend-build /workspace/backend/target/aegis-pms-backend-0.0.1-SNAPSHOT.jar /app/aegis-pms-backend.jar
+
+VOLUME ["/data/assets", "/app/email-templates"]
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "/app/aegis-pms-backend.jar"]
+ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/aegis-pms-backend.jar"]
