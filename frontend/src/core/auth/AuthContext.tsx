@@ -1,10 +1,25 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { AuthUser, ProductOption, TenantOption } from "../../shared/types";
-import { setAuthTokenProvider } from "../../shared/services/apiClient";
+import { setAuthTokenProvider, setRefreshHandler } from "../../shared/services/apiClient";
 import { logApiCall } from "../../shared/services/devLog";
 import { setNotificationsCurrentUser } from "../notifications/services/notificationsService";
 import type { DeleteProductRequest, UpdateProductRequest } from "../../domains/products/contracts/requests";
+import { IS_API_MODE } from "../../infra/apiMode";
 import { AuthContext, type AuthContextValue } from "./authContextDefinition";
+import { authService, type LoginResult } from "./services/authService";
+import { meService } from "./services/meService";
+import { tenantsService } from "../tenants/services/tenantsService";
+import { toUserRole } from "./utils/roleMapper";
+
+const ACCESS_TOKEN_KEY = "access_token";
+const REFRESH_TOKEN_KEY = "refresh_token";
+
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase();
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -13,20 +28,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userTenants, setUserTenants] = useState<TenantOption[]>([]);
   const [userProducts, setUserProducts] = useState<Record<string, ProductOption[]>>({});
 
-  // Registra a fonte do token do apiClient. Hoje e' um token mock derivado do
-  // usuario logado; na Sprint 06 (Keycloak real) so' esta funcao muda.
+  // Registra a fonte do token do apiClient a partir do sessionStorage —
+  // preenchido por `initSession`/limpo por `logout`, independente do modo
+  // (mock ou api). Registrado uma única vez: o valor é sempre lido em tempo
+  // de chamada, não capturado no fechamento do efeito.
   useEffect(() => {
-    setAuthTokenProvider(() => (authUser ? `mock-token-${authUser.id}` : null));
+    setAuthTokenProvider(() => sessionStorage.getItem(ACCESS_TOKEN_KEY));
+    setRefreshHandler(async () => {
+      const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
+      if (!refreshToken) return false;
+      try {
+        const tokens = await authService.refresh(refreshToken);
+        sessionStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
+        sessionStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+        return true;
+      } catch {
+        sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+        sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+        setAuthUser(null);
+        window.location.href = "/login";
+        return false;
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     setNotificationsCurrentUser(authUser?.id ?? null);
   }, [authUser]);
 
-  const login = useCallback((user: AuthUser, tenants: TenantOption[], products: Record<string, ProductOption[]>) => {
-    setAuthUser(user);
-    setUserTenants(tenants);
-    setUserProducts(products);
+  const initSession = useCallback(async (result: LoginResult) => {
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, result.accessToken);
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, result.refreshToken);
+
+    if (IS_API_MODE) {
+      const me = await meService.getMe();
+      setAuthUser({ id: me.subject, name: me.name, email: me.email, role: toUserRole(me.role), initials: initialsOf(me.name) });
+      const tenants = await tenantsService.listTenants();
+      setUserTenants(tenants);
+      // `/me` e `/tenants` não devolvem produtos — GET /api/v1/products por
+      // tenant é responsabilidade da Sprint de Integração 03 (núcleo de
+      // navegação); até lá, ProductSelectScreen mostra "sem produtos" em modo api.
+      setUserProducts({});
+    } else {
+      setAuthUser(result.user ?? null);
+      setUserTenants(result.tenants ?? []);
+      setUserProducts(result.products ?? {});
+    }
   }, []);
 
   const logout = useCallback(() => {
+    const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
+    authService.logout(refreshToken).catch(() => { /* best-effort — limpa a sessão local de qualquer forma */ });
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     setAuthUser(null);
     setSelectedTenant(null);
     setSelectedProduct(null);
@@ -103,11 +157,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(() => ({
     authUser, selectedTenant, selectedProduct, userTenants, userProducts,
     effectiveTenant, tenantProducts, effectiveProduct,
-    login, logout, selectTenant: setSelectedTenant, selectProduct: setSelectedProduct,
+    initSession, logout, selectTenant: setSelectedTenant, selectProduct: setSelectedProduct,
     switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite,
   }), [
     authUser, selectedTenant, selectedProduct, userTenants, userProducts, effectiveTenant, tenantProducts, effectiveProduct,
-    login, logout, switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite,
+    initSession, logout, switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite,
   ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

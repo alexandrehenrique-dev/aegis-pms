@@ -19,8 +19,10 @@ export type ApiError = {
 };
 
 type TokenProvider = () => string | null;
+type RefreshHandler = () => Promise<boolean>;
 
 let tokenProvider: TokenProvider = () => null;
+let refreshHandler: RefreshHandler = async () => false;
 
 /**
  * Chamado pelo AuthProvider para informar de onde vem o token atual.
@@ -31,12 +33,23 @@ export function setAuthTokenProvider(provider: TokenProvider) {
   tokenProvider = provider;
 }
 
+/**
+ * Chamado pelo AuthProvider (Sprint de Integração 01) para tentar renovar o
+ * token quando uma chamada volta 401. Deve devolver `true` se o refresh deu
+ * certo (o `tokenProvider` já vai ler o novo token na retentativa) e `false`
+ * caso o refresh também tenha falhado — nesse caso o AuthProvider já cuidou
+ * de limpar a sessão e redirecionar para /login.
+ */
+export function setRefreshHandler(handler: RefreshHandler) {
+  refreshHandler = handler;
+}
+
 /** Exportado (Sprint 23) para montar links diretos fora do `apiClient` — ex.: `href` de download de anexo, que abre em nova aba em vez de passar por `request()`. */
 export function resolveBaseUrl(): string {
   return import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {
   const token = tokenProvider();
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
@@ -52,6 +65,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw networkError;
   }
 
+  // Renovação automática de token (Sprint de Integração 01, Seção E): uma
+  // única retentativa por chamada, nunca para /auth/refresh em si (evita
+  // loop infinito caso o próprio refresh volte 401).
+  if (response.status === 401 && !isRetry && path !== "/auth/refresh") {
+    const refreshed = await refreshHandler();
+    if (refreshed) return request<T>(path, init, true);
+  }
+
   if (!response.ok) {
     let message = `Erro ${response.status} ao chamar ${path}`;
     let fieldErrors: Record<string, string> | undefined;
@@ -60,7 +81,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       const body = await response.json();
       message = body?.message ?? message;
       fieldErrors = body?.fieldErrors;
-      code = body?.error;
+      // AuthController devolve `{ code }` (login/refresh/logout); os fluxos
+      // de convite/reset devolvem `{ error, message }` — aceita os dois.
+      code = body?.code ?? body?.error;
     } catch {
       /* corpo de erro não é JSON; mantém a mensagem padrão */
     }

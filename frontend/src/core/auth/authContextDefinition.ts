@@ -1,6 +1,7 @@
 import { createContext } from "react";
 import type { AuthUser, ProductOption, TenantOption } from "../../shared/types";
 import type { DeleteProductRequest, UpdateProductRequest } from "../../domains/products/contracts/requests";
+import type { LoginResult } from "./services/authService";
 
 export type AuthContextValue = {
   authUser: AuthUser | null;
@@ -11,7 +12,8 @@ export type AuthContextValue = {
   effectiveTenant: TenantOption | null;
   tenantProducts: ProductOption[];
   effectiveProduct: ProductOption | null;
-  login: (user: AuthUser, tenants: TenantOption[], products: Record<string, ProductOption[]>) => void;
+  /** Chamado pelo `LoginScreen` após `authService.login()` — em modo api busca `/me` + `/tenants`; em modo mock usa os dados já resolvidos em `LoginResult`. */
+  initSession: (result: LoginResult) => Promise<void>;
   logout: () => void;
   selectTenant: (tenant: TenantOption | null) => void;
   selectProduct: (product: ProductOption | null) => void;

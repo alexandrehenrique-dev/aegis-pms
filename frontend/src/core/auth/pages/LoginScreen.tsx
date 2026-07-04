@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "../useAuth";
-import { mockUsers, mockTenantsByUser, mockProductsByUser } from "../mocks/users";
 import { AuthCard, AuthEnvBadge, AuthLogo } from "../components/AuthChrome";
+import { authService, loginErrorFromException } from "../services/authService";
 import { getApiMode } from "../../config/keycloakConfig";
 import { toast } from "../../notifications/toast";
 import type { LoginError } from "../../../shared/types";
@@ -12,7 +12,7 @@ import type { LoginError } from "../../../shared/types";
 export function LoginScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { initSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -27,18 +27,18 @@ export function LoginScreen() {
     }
   }, [location.state, location.pathname]);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError("");
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      const e = mockUsers[email.toLowerCase().trim()];
-      if (!e) { setError("invalid"); return; }
-      if (e.error) { setError(e.error); return; }
-      if (e.password !== password) { setError("invalid"); return; }
-      login(e.user, mockTenantsByUser[e.user.id] || [], mockProductsByUser[e.user.id] || {});
+    try {
+      const result = await authService.login({ username: email, password });
+      await initSession(result);
       navigate("/select-tenant");
-    }, 700);
+    } catch (err) {
+      setError(loginErrorFromException(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const msgs: Record<LoginError, string> = {
@@ -79,7 +79,7 @@ export function LoginScreen() {
         <div className="mt-6 border-t border-border pt-4 text-center text-sm text-muted-foreground">
           Primeiro acesso? <button onClick={() => navigate("/invite")} className="text-primary transition hover:underline">Ativar convite</button>
         </div>
-        {getApiMode() === "mock" && (
+        {import.meta.env.DEV && getApiMode() === "mock" && (
           <div className="mt-4 rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
             <p className="mb-1 font-medium">Contas de demonstração</p>
             <p>super-admin@byop.io · Super Admin</p>
