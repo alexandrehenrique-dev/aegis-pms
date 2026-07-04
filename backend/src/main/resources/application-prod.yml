@@ -13,6 +13,14 @@ springdoc:
   swagger-ui:
     enabled: false
 
+aegis:
+  app:
+    base-url: ${AEGIS_APP_BASE_URL:https://aegis.byop.dev}
+    cors-allowed-origins:
+      - "https://aegis.byop.dev"
+  seed:
+    demo-user-initial-credential: ""
+
 logging:
   level:
     br.com.byop.aegis: INFO

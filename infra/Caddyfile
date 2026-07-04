@@ -1,0 +1,12 @@
+aegis.byop.dev {
+    reverse_proxy localhost:8080
+
+    encode gzip
+
+    log {
+        output file /var/log/caddy/aegis-access.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+    }
+}
