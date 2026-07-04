@@ -604,14 +604,249 @@ Ou, preferível: configurar o `SecurityConfig` para aceitar `@WithMockUser` em t
 
 ---
 
+## N. Keycloak realm — hardening para produção
+
+> Esta seção deve ser aplicada **antes** do primeiro deploy em produção. As mudanças no `aegis-realm.json` valem para import inicial; se o Keycloak já estiver rodando, aplicar via Admin Console ou CLI (`kcadm.sh`).
+
+### N.1 — Usuários mock
+
+O realm JSON já está vazio de usuários (`"users": []`). Os usuários de demonstração (`admin@byop.io`, `editor@byop.io` etc.) são criados programaticamente pelo `IdentityDemoUserService` / `DemoSeedRunner`, que a **etapa 30 do backend remove**. Verificar que após o deploy da etapa 30 **nenhum usuário demo existe** no Keycloak de produção:
+
+```bash
+# Verificar via kcadm no servidor do Keycloak:
+kcadm.sh get users -r aegis --fields username,email,enabled | grep -E "byop\.io|admin@|editor@|dev@"
+# Esperado: sem resultados
+```
+
+Se algum usuário demo existir (de imports anteriores), remover:
+```bash
+kcadm.sh delete users/<user-id> -r aegis
+```
+
+### N.2 — Tempos de token — padrão de mercado para PMS/SaaS editorial
+
+Para uma aplicação B2B de gestão de conteúdo onde editores trabalham em sessões longas, os valores atuais são desbalanceados: `accessTokenLifespan: 5min` causa refresh constante sem benefício perceptível de segurança, enquanto `ssoSessionMaxLifespan: 10h` é generoso demais sem refresh token rotation.
+
+**Valores recomendados para o perfil do Aegis (PMS editorial, B2B, sessões de trabalho de 4–8h):**
+
+| Campo | Atual | Recomendado | Justificativa |
+|---|---|---|---|
+| `accessTokenLifespan` | 5 min | **15 min** | Padrão de mercado para SaaS; balance segurança/UX — refresh automático a cada 15 min é imperceptível ao usuário |
+| `ssoSessionIdleTimeout` | 30 min | **4 h (14400s)** | Editores ficam 4–6h na mesma sessão; 30 min deslogaria no meio do trabalho |
+| `ssoSessionMaxLifespan` | 10 h | **8 h (28800s)** | Uma jornada de trabalho — forçar novo login no dia seguinte |
+| `offlineSessionIdleTimeout` | 30 dias | **7 dias (604800s)** | Tokens offline (remember-me) não devem durar mais que uma semana sem uso |
+| `offlineSessionMaxLifespan` | 60 dias | **30 dias (2592000s)** | Máximo absoluto de sessão persistida |
+| `actionTokenGeneratedByUserLifespan` | 5 min | **15 min (900s)** | Link de confirmação de email — 5 min é muito curto se o usuário demora para abrir o email |
+| `refreshTokenMaxReuse` | 0 | **0** | Manter — rotation on every use (mais seguro) |
+
+Aplicar no `aegis-realm.json`:
+
+```json
+{
+  "accessTokenLifespan": 900,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 14400,
+  "ssoSessionMaxLifespan": 28800,
+  "offlineSessionIdleTimeout": 604800,
+  "offlineSessionMaxLifespan": 2592000,
+  "clientSessionIdleTimeout": 0,
+  "clientSessionMaxLifespan": 0,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanLogin": 1800,
+  "actionTokenGeneratedByUserLifespan": 900,
+  "actionTokenGeneratedByAdminLifespan": 43200,
+  "refreshTokenMaxReuse": 0
+}
+```
+
+Via `kcadm.sh` (se Keycloak já estiver rodando):
+```bash
+kcadm.sh update realms/aegis -r aegis \
+  -s accessTokenLifespan=900 \
+  -s ssoSessionIdleTimeout=14400 \
+  -s ssoSessionMaxLifespan=28800 \
+  -s offlineSessionIdleTimeout=604800 \
+  -s offlineSessionMaxLifespan=2592000 \
+  -s actionTokenGeneratedByUserLifespan=900
+```
+
+### N.3 — Brute force protection
+
+`bruteForceProtected: false` e `failureFactor: 30` são configurações de desenvolvimento. Para produção:
+
+```json
+{
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 5
+}
+```
+
+| Campo | Significado | Valor |
+|---|---|---|
+| `failureFactor` | Tentativas antes do lockout | **5** (era 30) |
+| `maxFailureWaitSeconds` | Tempo de lockout máximo | 900s = 15 min |
+| `waitIncrementSeconds` | Incremento de espera por tentativa | 60s |
+| `permanentLockout` | Bloquear permanentemente | false (só temporário) |
+| `maxDeltaTimeSeconds` | Janela de contagem de falhas | 12h |
+
+### N.4 — Password policy
+
+Sem `passwordPolicy` definida, qualquer senha é aceita no Keycloak. Para produção:
+
+```json
+{
+  "passwordPolicy": "length(10) and upperCase(1) and lowerCase(1) and digits(1) and notUsername(undefined) and passwordHistory(5)"
+}
+```
+
+| Regra | Significado |
+|---|---|
+| `length(10)` | Mínimo 10 caracteres |
+| `upperCase(1)` | Ao menos 1 maiúscula |
+| `lowerCase(1)` | Ao menos 1 minúscula |
+| `digits(1)` | Ao menos 1 dígito |
+| `notUsername` | Senha não pode ser igual ao username |
+| `passwordHistory(5)` | Não reutilizar as últimas 5 senhas |
+
+Via Admin Console: Realm Settings → Authentication → Password Policy.
+
+### N.5 — Cliente `aegis-web` — desabilitar Direct Access Grants
+
+`directAccessGrantsEnabled: true` no `aegis-web` permite o fluxo Resource Owner Password Credentials (username + password direto na API). Esse fluxo é um risco de segurança para SPAs públicas — não é usado pelo frontend real (que usa Authorization Code + PKCE). Desabilitar:
+
+```json
+{
+  "clientId": "aegis-web",
+  "directAccessGrantsEnabled": false,
+  "standardFlowEnabled": true,
+  "implicitFlowEnabled": false,
+  "publicClient": true
+}
+```
+
+**Atenção:** verificar que nenhuma chamada do backend (ex.: `AuthService.login()` via proxy BFF) usa o Direct Access Grant. Se usar, manter `true` apenas no cliente `aegis-backend` (confidential client), nunca no `aegis-web` (public client).
+
+### N.6 — SMTP do realm — parametrizar para produção
+
+O `smtpServer` do realm atual tem o mailhog hardcoded e o email pessoal do desenvolvedor (`alexandre.henrique.dev@gmail.com`). Para produção, o Keycloak deve usar o SMTP real do projeto.
+
+Via `kcadm.sh` (aplicar no Keycloak de produção após subir):
+```bash
+kcadm.sh update realms/aegis \
+  -s 'smtpServer.host='${SMTP_HOST} \
+  -s 'smtpServer.port='${SMTP_PORT} \
+  -s 'smtpServer.from=noreply@byop.dev' \
+  -s 'smtpServer.fromDisplayName=Aegis PMS' \
+  -s 'smtpServer.replyTo=suporte@byop.dev' \
+  -s 'smtpServer.auth=true' \
+  -s 'smtpServer.user='${SMTP_USER} \
+  -s 'smtpServer.password='${SMTP_PASSWORD} \
+  -s 'smtpServer.starttls=true' \
+  -s 'smtpServer.ssl=false'
+```
+
+**Nunca commitar o `aegis-realm.json` com credenciais SMTP reais.** O realm JSON de produção só deve ser gerado com `kcadm.sh export` após configurar o SMTP via CLI ou Admin Console, e deve ficar fora do repositório.
+
+### N.7 — Script de hardening automatizado
+
+Criar `/infra/keycloak/scripts/harden-realm-prod.sh` para automatizar as seções N.2–N.6:
+
+```bash
+#!/usr/bin/env bash
+# harden-realm-prod.sh
+# Aplica configurações de produção no realm Keycloak.
+# Uso: KEYCLOAK_URL=https://auth.byop.dev KEYCLOAK_ADMIN=admin KEYCLOAK_ADMIN_PASSWORD=xxx bash harden-realm-prod.sh
+set -euo pipefail
+
+REALM=aegis
+KCADM="/opt/keycloak/bin/kcadm.sh"
+
+echo "==> Autenticando no Keycloak..."
+$KCADM config credentials \
+  --server "$KEYCLOAK_URL" \
+  --realm master \
+  --user "$KEYCLOAK_ADMIN" \
+  --password "$KEYCLOAK_ADMIN_PASSWORD"
+
+echo "==> Aplicando timeouts de token..."
+$KCADM update realms/$REALM \
+  -s accessTokenLifespan=900 \
+  -s ssoSessionIdleTimeout=14400 \
+  -s ssoSessionMaxLifespan=28800 \
+  -s offlineSessionIdleTimeout=604800 \
+  -s offlineSessionMaxLifespan=2592000 \
+  -s actionTokenGeneratedByUserLifespan=900
+
+echo "==> Ativando brute force protection..."
+$KCADM update realms/$REALM \
+  -s bruteForceProtected=true \
+  -s failureFactor=5 \
+  -s maxFailureWaitSeconds=900 \
+  -s waitIncrementSeconds=60 \
+  -s permanentLockout=false
+
+echo "==> Aplicando password policy..."
+$KCADM update realms/$REALM \
+  -s 'passwordPolicy=length(10) and upperCase(1) and lowerCase(1) and digits(1) and notUsername(undefined) and passwordHistory(5)'
+
+echo "==> Desabilitando Direct Access Grants no aegis-web..."
+CLIENT_ID=$($KCADM get clients -r $REALM --fields id,clientId | python3 -c "
+import json,sys
+clients = json.load(sys.stdin)
+print(next(c['id'] for c in clients if c['clientId'] == 'aegis-web'))
+")
+$KCADM update clients/$CLIENT_ID -r $REALM -s directAccessGrantsEnabled=false
+
+echo "==> Configurando SMTP..."
+$KCADM update realms/$REALM \
+  -s "smtpServer.host=$SMTP_HOST" \
+  -s "smtpServer.port=$SMTP_PORT" \
+  -s "smtpServer.from=noreply@byop.dev" \
+  -s "smtpServer.fromDisplayName=Aegis PMS" \
+  -s "smtpServer.replyTo=suporte@byop.dev" \
+  -s "smtpServer.auth=true" \
+  -s "smtpServer.user=$SMTP_USER" \
+  -s "smtpServer.password=$SMTP_PASSWORD" \
+  -s "smtpServer.starttls=true" \
+  -s "smtpServer.ssl=false"
+
+echo "==> Hardening concluido com sucesso."
+```
+
+Adicionar ao pipeline de deploy (`.github/workflows/ci.yml`, job `deploy`, após health check):
+
+```yaml
+- name: Hardening do Keycloak
+  run: |
+    KEYCLOAK_URL="${{ secrets.KEYCLOAK_URL }}" \
+    KEYCLOAK_ADMIN="${{ secrets.KEYCLOAK_ADMIN }}" \
+    KEYCLOAK_ADMIN_PASSWORD="${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}" \
+    SMTP_HOST="${{ secrets.SMTP_HOST }}" \
+    SMTP_PORT="${{ secrets.SMTP_PORT }}" \
+    SMTP_USER="${{ secrets.SMTP_USER }}" \
+    SMTP_PASSWORD="${{ secrets.SMTP_PASSWORD }}" \
+    bash infra/keycloak/scripts/harden-realm-prod.sh
+  # Idempotente: pode rodar em todo deploy sem efeito colateral
+```
+
+---
+
 ## L. Critérios de aceite
 
+**Infra / Docker:**
 - [ ] `infra/docker-compose.prod.yml` existe e sobe o backend sem Postgres ou Keycloak locais.
 - [ ] `infra/Caddyfile` existe e Caddy responde HTTPS em `aegis.byop.dev` com certificado válido.
 - [ ] `infra/.env.prod.example` commitado; `infra/.env.prod` (com segredos reais) está no `.gitignore`.
 - [ ] `application-prod.yml` existe; Swagger desabilitado em produção.
 - [ ] CORS parametrizado via `${aegis.app.cors-allowed-origins}` — prod permite `https://aegis.byop.dev`.
-- [ ] Keycloak `aegis-web` tem `https://aegis.byop.dev/*` como redirect URI permitida.
+
+**CI/CD:**
 - [ ] `.github/workflows/ci.yml` existe e passa no GitHub Actions (runner `genesis-lab`).
 - [ ] Pipeline bloqueia deploy se `npm run typecheck` falhar.
 - [ ] Pipeline bloqueia deploy se qualquer teste backend falhar.
@@ -620,11 +855,26 @@ Ou, preferível: configurar o `SecurityConfig` para aceitar `@WithMockUser` em t
 - [ ] `curl https://aegis.byop.dev/actuator/health` retorna `{"status":"UP"}` após o deploy.
 - [ ] `curl https://aegis.byop.dev/` carrega a SPA React (index.html servido pelo Spring Boot).
 
+**Keycloak — hardening:**
+- [ ] Nenhum usuário demo existe no Keycloak de produção após o deploy da etapa 30.
+  ```bash
+  kcadm.sh get users -r aegis | grep -E "byop\.io|demo" | wc -l  # deve retornar 0
+  ```
+- [ ] `accessTokenLifespan` é **900s (15 min)** — não mais 300s.
+- [ ] `ssoSessionIdleTimeout` é **14400s (4h)** — não mais 1800s.
+- [ ] `ssoSessionMaxLifespan` é **28800s (8h)** — não mais 36000s.
+- [ ] `bruteForceProtected: true` e `failureFactor: 5` — não mais `false` e `30`.
+- [ ] `passwordPolicy` definida com `length(10) and upperCase(1) and lowerCase(1) and digits(1)`.
+- [ ] `aegis-web.directAccessGrantsEnabled: false` — Direct Access Grant desabilitado no cliente público.
+- [ ] SMTP do realm aponta para o provedor real (`byop.dev`), não para mailhog ou email pessoal.
+- [ ] `infra/keycloak/scripts/harden-realm-prod.sh` existe, é executável e idempotente.
+- [ ] Keycloak `aegis-web` tem `https://aegis.byop.dev/*` como redirect URI permitida.
+
 ---
 
 ## M. Commit sugerido
 
 ```bash
 git add infra/ .github/ backend/src/main/resources/application-prod.yml backend/Dockerfile
-git commit -m "feat(infra): docker-compose.prod, Caddyfile, GitHub Actions CI/CD e profile prod"
+git commit -m "feat(infra): docker-compose.prod, Caddyfile, GitHub Actions CI/CD, profile prod e hardening Keycloak"
 ```
