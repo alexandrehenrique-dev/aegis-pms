@@ -41,8 +41,10 @@ export const productsService = {
    */
   async checkSlugAvailable(slug: string): Promise<boolean> {
     if (IS_API_MODE) {
-      const response = await apiClient.get<{ available: boolean }>(`/products/check-slug?slug=${encodeURIComponent(slug)}`);
-      return response.available;
+      // Endpoint dedicado não existe no backend (`ProductController`) — a
+      // unicidade de slug é validada só no `POST /products` (400 se
+      // duplicado). Retorna otimista aqui; o erro real aparece ao criar.
+      return true;
     }
     logApiCall("GET", `/api/v1/admin/products/check-slug?slug=${slug}`);
     // Compara pelo nome slugificado, não pelo `id` — produtos seed (`products.mocks.ts`)
@@ -104,18 +106,22 @@ export const productsService = {
     }
   },
 
-  /** docs/AEGIS_PMS_V1.md §8.4: `POST /api/v1/admin/products/{productId}/archive`. */
-  async archiveProduct(idOrName: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.post(`/products/${idOrName}/archive`);
-    const p = productsStore.find((x) => x.id === idOrName || x.name === idOrName);
+  /** Backend não tem endpoint de archive dedicado — `PUT /products/{id}` com `status: "ARCHIVED"` (mesmo `update()` usado pela tela de edição), preservando os demais campos do produto. */
+  async archiveProduct(product: ProductSummary): Promise<void> {
+    if (IS_API_MODE) {
+      await this.update(product.id ?? product.name, { name: product.name, type: product.type, status: "Arquivado", modules: product.modulesList ?? [] });
+      return;
+    }
+    const p = productsStore.find((x) => x.id === product.id || x.name === product.name);
     if (!p) return;
     logApiCall("POST", `/api/v1/admin/products/${p.id ?? p.name}/archive`);
     p.status = "Arquivado";
   },
 
-  async saveSettings(): Promise<void> {
-    if (IS_API_MODE) return apiClient.put("/products/{productId}/settings");
-    logApiCall("PATCH", "/api/v1/admin/products/{productId} (settings)");
+  /** `PUT /products/{id}/settings` (`SettingsController`) — settings de produto (branding/SEO/publicação), distinto do `update()` (nome/tipo/status/módulos). */
+  async saveSettings(productId: string, settings: Record<string, unknown> = {}): Promise<void> {
+    if (IS_API_MODE) return apiClient.put(`/products/${productId}/settings`, settings);
+    logApiCall("PATCH", `/api/v1/admin/products/${productId} (settings)`, settings);
   },
 
   /** Editar Produto (docs/implementation/004_aegis_pms_screen_inventory.md, 05.04) — nome/tipo/status; gating de role fica na UI (ver core/permissions/roles.ts). */

@@ -62,14 +62,14 @@ function userIdsForTenant(tenantId: string): string[] {
 
 export const notificationsService = {
   async listMine(): Promise<NotificationWithStatus[]> {
-    if (IS_API_MODE) return apiClient.get<NotificationWithStatus[]>("/notifications/me");
+    if (IS_API_MODE) return apiClient.get<NotificationWithStatus[]>("/notifications/mine");
     if (!currentUserId) return [];
     return notificationsFor(currentUserId).sort(byCreatedAtDesc);
   },
 
   /** A mais antiga ainda não mostrada automaticamente — fila de "primeiro acesso", uma por vez (Sprint 14, Tarefa C). */
   async getPendingModal(): Promise<NotificationWithStatus | null> {
-    if (IS_API_MODE) return apiClient.get<NotificationWithStatus | null>("/notifications/me/pending-modal");
+    if (IS_API_MODE) return apiClient.get<NotificationWithStatus | null>("/notifications/mine/pending-modal");
     if (!currentUserId) return null;
     const pending = notificationsFor(currentUserId)
       .filter((n) => n.presentationMode === "MODAL_ONCE" && !n.autoShown)

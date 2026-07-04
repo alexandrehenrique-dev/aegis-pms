@@ -4,6 +4,7 @@ import { pagesService } from "../../pages/services/pagesService";
 import { slugify } from "../../../shared/utils/slugify";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
+import { requireCurrentProductId } from "../../../core/products/currentProductContext";
 import type { FormDelivery, FormField, FormSummary, ListFieldTypesResponse, ListFormsResponse, ListSubmissionsResponse, SubmissionSummary } from "../contracts/responses";
 
 const formsStore: FormSummary[] = forms.map(([id, productSlug, name, type, status, responses, conversion, lastActivity, publication]) => ({
@@ -48,15 +49,12 @@ function emptyDelivery(): FormDelivery {
 
 export const formsService = {
   async listForms(productSlug?: string): Promise<ListFormsResponse> {
-    if (IS_API_MODE) {
-      const path = productSlug ? `/products/${productSlug}/forms` : "/forms";
-      return apiClient.get<ListFormsResponse>(path);
-    }
+    if (IS_API_MODE) return apiClient.get<ListFormsResponse>(`/products/${productSlug ?? requireCurrentProductId()}/forms`);
     return productSlug ? formsStore.filter((f) => f.productSlug === productSlug) : formsStore;
   },
 
   async getForm(id: string): Promise<FormSummary | undefined> {
-    if (IS_API_MODE) return apiClient.get<FormSummary>(`/forms/${id}`);
+    if (IS_API_MODE) return apiClient.get<FormSummary>(`/products/${requireCurrentProductId()}/forms/${id}`);
     return formsStore.find((f) => f.id === id);
   },
 
@@ -75,12 +73,12 @@ export const formsService = {
   },
 
   async getFormFields(id: string): Promise<FormField[]> {
-    if (IS_API_MODE) return apiClient.get<FormField[]>(`/forms/${id}/fields`);
+    if (IS_API_MODE) return apiClient.get<FormField[]>(`/products/${requireCurrentProductId()}/forms/${id}/fields`);
     return fieldsByFormId[id] ?? [];
   },
 
   async saveFormFields(id: string, fields: FormField[]): Promise<void> {
-    if (IS_API_MODE) return apiClient.put(`/forms/${id}/fields`, { fields });
+    if (IS_API_MODE) return apiClient.put(`/products/${requireCurrentProductId()}/forms/${id}/fields`, { fields });
     logApiCall("PUT", `/api/v1/products/{productId}/forms/${id}/fields`, { fields });
     fieldsByFormId[id] = fields;
   },
@@ -89,7 +87,8 @@ export const formsService = {
 
   async listSubmissions(formId?: string): Promise<ListSubmissionsResponse> {
     if (IS_API_MODE) {
-      const path = formId ? `/forms/${formId}/submissions` : "/submissions";
+      const productId = requireCurrentProductId();
+      const path = formId ? `/products/${productId}/forms/${formId}/submissions` : `/products/${productId}/forms/submissions`;
       return apiClient.get<ListSubmissionsResponse>(path);
     }
     return submissionsStore;
@@ -131,20 +130,20 @@ export const formsService = {
   },
 
   async getDelivery(formId: string): Promise<FormDelivery> {
-    if (IS_API_MODE) return apiClient.get<FormDelivery>(`/forms/${formId}/delivery`);
+    if (IS_API_MODE) return apiClient.get<FormDelivery>(`/products/${requireCurrentProductId()}/forms/${formId}/delivery`);
     if (!deliveryByFormId[formId]) deliveryByFormId[formId] = emptyDelivery();
     return deliveryByFormId[formId];
   },
 
   async saveDelivery(formId: string, delivery: FormDelivery): Promise<void> {
-    if (IS_API_MODE) return apiClient.put(`/forms/${formId}/delivery`, delivery);
+    if (IS_API_MODE) return apiClient.put(`/products/${requireCurrentProductId()}/forms/${formId}/delivery`, delivery);
     logApiCall("PUT", `/api/v1/products/{productId}/forms/${formId}/delivery`, delivery);
     deliveryByFormId[formId] = delivery;
   },
 
   /** Publicar/salvar rascunho deve mudar o `publication` no store (bug fix Sprint 20, Tarefa D.1) — antes só logava a chamada, sem refletir na coluna "Publicação" da lista. `publication` (não `status`) é o campo certo: `status` carrega nuances extras (ex.: "sem respostas") que um simples publicar/salvar rascunho não deve sobrescrever. */
   async saveDraft(formId?: string): Promise<void> {
-    if (IS_API_MODE && formId) return apiClient.put(`/forms/${formId}`);
+    if (IS_API_MODE && formId) return apiClient.put(`/products/${requireCurrentProductId()}/forms/${formId}`);
     logApiCall("PUT", `/api/v1/products/{productId}/forms/${formId ?? "{formId}"}`);
     if (formId) {
       const f = formsStore.find((x) => x.id === formId);
@@ -152,15 +151,16 @@ export const formsService = {
     }
   },
   async publish(formId?: string): Promise<void> {
-    if (IS_API_MODE && formId) return apiClient.post(`/forms/${formId}/publish`);
+    if (IS_API_MODE && formId) return apiClient.post(`/products/${requireCurrentProductId()}/forms/${formId}/publish`);
     logApiCall("POST", `/api/v1/products/{productId}/forms/${formId ?? "{formId}"}/publish`);
     if (formId) {
       const f = formsStore.find((x) => x.id === formId);
       if (f) f.publication = "Publicado";
     }
   },
-  async submitTest(): Promise<void> {
-    if (IS_API_MODE) return apiClient.post("/forms/{formId}/test-submit");
-    logApiCall("POST", "/api/v1/products/{productId}/forms/{formId}/test-submit");
+  /** `formId = "form-contato-comercial"` — `FormPreviewFrame` (tela de preview estático) ainda não recebe o form real por rota; esse é o único form com fixtures em `fieldsByFormId` hoje (ver topo do arquivo). */
+  async submitTest(formId = "form-contato-comercial"): Promise<void> {
+    if (IS_API_MODE) return apiClient.post(`/products/${requireCurrentProductId()}/forms/${formId}/test-submit`);
+    logApiCall("POST", `/api/v1/products/{productId}/forms/${formId}/test-submit`);
   },
 };

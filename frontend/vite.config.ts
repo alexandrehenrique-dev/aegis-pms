@@ -3,7 +3,7 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
@@ -17,6 +17,13 @@ export default defineConfig({
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
+
+  // Remove toda chamada console.* e debugger do bundle de producao (Sprint
+  // de Integracao 02, Secao J) — esbuild faz isso em tempo de transformacao,
+  // antes do bundling, sem afetar tree-shaking nem source maps de dev.
+  esbuild: {
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
+  },
 
   build: {
     /**
@@ -48,4 +55,4 @@ export default defineConfig({
     },
     port: 5173,
   },
-})
+}))

@@ -6,6 +6,7 @@ import { AuditEventCard } from "../components/AuditEventCard";
 import { auditService } from "../services/auditService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { toast } from "../../../core/notifications/toast";
+import { useAuth } from "../../../core/auth/useAuth";
 import type { AuditEvent } from "../contracts/responses";
 
 function FilterGroup({ label, options, value, onChange }: { label: string; options: string[]; value: string | null; onChange: (v: string | null) => void }) {
@@ -34,7 +35,8 @@ function exportTimelineCsv(events: AuditEvent[]) {
 }
 
 export function AuditTimeline({ compact = false }: { compact?: boolean }) {
-  const { data: auditEvents, loading, error } = useAsyncData(() => auditService.listEvents(), []);
+  const { effectiveTenant } = useAuth();
+  const { data: auditEvents, loading, error } = useAsyncData(() => auditService.listEvents(effectiveTenant?.id), [effectiveTenant?.id]);
   const [actor, setActor] = useState<string | null>(null);
   const [module, setModule] = useState<string | null>(null);
   const [risk, setRisk] = useState<string | null>(null);

@@ -13,7 +13,11 @@ export function AssetMetadataForm() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await assetsService.saveMetadata();
+      // Botão duplicado do "Salvar metadados" de `AssetMetadataFormCard`
+      // (que tem acesso aos campos reais do formulário) — pré-existente,
+      // fora do escopo desta sprint. Sem `assetId`/campos aqui, não há como
+      // montar um payload real; mantido só para não quebrar o botão do header.
+      await assetsService.saveMetadata("", {});
       toast.success("Metadados salvos!");
     } finally {
       setSaving(false);

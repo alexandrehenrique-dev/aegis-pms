@@ -9,12 +9,12 @@ const assignmentsStore: ProductAssignmentSummary[] = [];
 
 export const productAssignmentsService = {
   async listForProduct(productId: string): Promise<ProductAssignmentSummary[]> {
-    if (IS_API_MODE) return apiClient.get<ProductAssignmentSummary[]>(`/products/${productId}/assignments`);
+    if (IS_API_MODE) return apiClient.get<ProductAssignmentSummary[]>(`/products/${productId}/users`);
     return assignmentsStore.filter((a) => a.productId === productId);
   },
 
   async assign(req: AssignProductUserRequest): Promise<ProductAssignmentSummary> {
-    if (IS_API_MODE) return apiClient.post<ProductAssignmentSummary>(`/products/${req.productId}/assignments`, req);
+    if (IS_API_MODE) return apiClient.post<ProductAssignmentSummary>(`/products/${req.productId}/users`, req);
     logApiCall("POST", `/api/v1/admin/products/${req.productId}/assignments`, req);
     const products = await productsService.listProducts();
     const product = products.find((p) => p.id === req.productId);

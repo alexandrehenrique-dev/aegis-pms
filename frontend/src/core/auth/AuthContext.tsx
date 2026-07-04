@@ -10,6 +10,7 @@ import { authService, type LoginResult } from "./services/authService";
 import { meService } from "./services/meService";
 import { tenantsService } from "../tenants/services/tenantsService";
 import { toUserRole } from "./utils/roleMapper";
+import { setCurrentProductId } from "../products/currentProductContext";
 
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
@@ -100,6 +101,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const activeProducts = tenantProducts.filter((p) => p.status !== "Arquivado" && p.modules > 0);
     return selectedProduct ?? (activeProducts.length === 1 ? activeProducts[0] : null);
   }, [selectedProduct, tenantProducts]);
+
+  // Espelha `effectiveProduct.id` para services de baixo nível que hoje não
+  // recebem `productId` como argumento (analyticsService, boa parte de
+  // assetsService/knowledgeService) — ver core/products/currentProductContext.ts.
+  useEffect(() => {
+    setCurrentProductId(effectiveProduct?.id ?? null);
+  }, [effectiveProduct]);
 
   const switchTenant = useCallback((tenantId: string) => {
     const t = userTenants.find((t) => t.id === tenantId);

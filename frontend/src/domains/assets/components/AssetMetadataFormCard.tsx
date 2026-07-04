@@ -26,7 +26,10 @@ export function AssetMetadataFormCard() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await assetsService.saveMetadata();
+      // Tela ainda não recebe o asset real por rota (mockup estático desde a
+      // criação — Sprint de Integração 05 conecta a um `AssetSummary` real);
+      // `friendlyName` é o único identificador disponível aqui hoje.
+      await assetsService.saveMetadata(friendlyName, { friendlyName, altText, caption, credit, tags, folder, visibility, seoUsage, notes });
       toast.success("Metadados salvos!");
     } finally {
       setSaving(false);
