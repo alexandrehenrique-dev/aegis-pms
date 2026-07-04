@@ -5,9 +5,12 @@ import { Button, Card, PageHeader } from "../../../shared/components/Primitives"
 import { AssetMetadataFormCard } from "../components/AssetMetadataFormCard";
 import { toast } from "../../../core/notifications/toast";
 import { assetsService } from "../services/assetsService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 export function AssetMetadataForm() {
   const navigate = useNavigate();
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -17,7 +20,7 @@ export function AssetMetadataForm() {
       // (que tem acesso aos campos reais do formulário) — pré-existente,
       // fora do escopo desta sprint. Sem `assetId`/campos aqui, não há como
       // montar um payload real; mantido só para não quebrar o botão do header.
-      await assetsService.saveMetadata("", {});
+      await assetsService.saveMetadata(productId, "asset-sem-rota", {});
       toast.success("Metadados salvos!");
     } finally {
       setSaving(false);

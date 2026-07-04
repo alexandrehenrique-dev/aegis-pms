@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { Button } from "../../../shared/components/Primitives";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { formsService } from "../../forms/services/formsService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 /**
  * Seletor de `formId` para os blocos `contact`/`form` (Sprint 12, Tarefa K.4)
@@ -12,7 +13,9 @@ import { formsService } from "../../forms/services/formsService";
  */
 export function FormIdSelector({ productSlug, value, onChange }: { productSlug: string; value: string; onChange: (formId: string) => void }) {
   const navigate = useNavigate();
-  const { data: forms } = useAsyncData(() => formsService.listForms(productSlug), [productSlug]);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? productSlug;
+  const { data: forms } = useAsyncData(() => formsService.listForms(productId), [productId]);
 
   return (
     <div className="md:col-span-2">

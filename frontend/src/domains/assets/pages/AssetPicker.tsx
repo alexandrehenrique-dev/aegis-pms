@@ -5,10 +5,13 @@ import { assetsService } from "../services/assetsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AssetTypeIcon } from "../components/AssetBits";
 import { toast } from "../../../core/notifications/toast";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 export function AssetPicker() {
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
   const [selected, setSelected] = useState("hero-maestro-beton.jpg");
-  const { data: assets, loading, error } = useAsyncData(() => assetsService.listAssets(), []);
+  const { data: assets, loading, error } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedAsset = assets?.find((a) => a.name === selected);
 
@@ -17,7 +20,7 @@ export function AssetPicker() {
   const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    await assetsService.uploadFiles();
+    await assetsService.uploadFiles(productId, Array.from(files));
     toast.success(`${files.length} arquivo(s) enviado(s)!`);
     setSelected(files[0].name);
     e.target.value = "";

@@ -8,6 +8,7 @@ import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { AssetUsagePanel } from "../components/AssetUsagePanel";
 import { toast } from "../../../core/notifications/toast";
 import { assetsService } from "../services/assetsService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 function AssetPreviewPanel() {
   return (
@@ -25,6 +26,8 @@ function AssetPreviewPanel() {
 export function AssetDetail() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
   const canEdit = viewAsRole !== "viewer";
   const assetName = "hero-maestro-beton.jpg";
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -36,16 +39,11 @@ export function AssetDetail() {
     toast.success("Copiado");
   };
 
-  const handleDownload = async () => {
-    await assetsService.downloadAsset(assetName);
-    toast.success("Download iniciado", { description: assetName });
-  };
-
   const handleReplaceFile = () => replaceInputRef.current?.click();
 
   const handleFileReplaced = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    await assetsService.uploadFiles();
+    await assetsService.upload(e.target.files[0], productId);
     toast.success("Arquivo substituído!", { description: e.target.files[0].name });
     e.target.value = "";
   };
@@ -53,7 +51,7 @@ export function AssetDetail() {
   const handleArchive = async () => {
     setArchiving(true);
     try {
-      await assetsService.archiveAsset(assetName);
+      await assetsService.archiveAsset(productId, assetName);
       toast.success("Asset arquivado.", { description: assetName });
       setConfirmArchive(false);
     } finally {
@@ -70,7 +68,9 @@ export function AssetDetail() {
       <PageHeader title="hero-maestro-beton.jpg" module="Assets" desc="Preview, metadados, tags, uso no sistema e ações do asset." badge="Ativo">
         <PermGate allowed={canEdit}><Button onClick={() => navigate("/assets/hero-maestro-beton/metadata")}>Editar metadados</Button></PermGate>
         <Button onClick={handleCopyReference}>Copiar referência</Button>
-        <Button primary onClick={handleDownload}>Baixar</Button>
+        <a href={assetsService.getDownloadUrl(assetName)} target="_blank" rel="noreferrer">
+          <Button primary>Baixar</Button>
+        </a>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
         <div className="space-y-4"><AssetPreviewPanel /><AssetUsagePanel /></div>

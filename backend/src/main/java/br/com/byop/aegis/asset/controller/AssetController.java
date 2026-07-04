@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.ObjectMapper;
 
+import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
@@ -137,6 +138,15 @@ public class AssetController {
     public ResolvedAsset resolveAsset(@PathVariable("assetId") UUID assetId, Authentication authentication) {
         AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
         return assetService.resolveAsset(assetId, caller);
+    }
+
+    @GetMapping("/api/v1/assets/{assetId}/download")
+    public ResponseEntity<Void> downloadAsset(@PathVariable("assetId") UUID assetId, Authentication authentication) {
+        AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
+        ResolvedAsset resolved = assetService.resolveAsset(assetId, caller);
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(resolved.url()))
+                .build();
     }
 
     @GetMapping("/api/v1/assets/{assetId}/file")

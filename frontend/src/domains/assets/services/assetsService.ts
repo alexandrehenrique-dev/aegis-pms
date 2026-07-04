@@ -1,8 +1,7 @@
 import { assets, assetTags } from "../mocks/assets.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
 import { IS_API_MODE } from "../../../infra/apiMode";
-import { apiClient } from "../../../shared/services/apiClient";
-import { requireCurrentProductId } from "../../../core/products/currentProductContext";
+import { apiClient, resolveBaseUrl } from "../../../shared/services/apiClient";
 import type { AssetSummary, ListAssetsResponse, ListAssetTagsResponse } from "../contracts/responses";
 
 const assetsStore: AssetSummary[] = assets.map(([name, type, size, status, tags, usage, uploadedAt]) => ({
@@ -24,34 +23,42 @@ function formatSize(bytes: number): string {
 }
 
 export const assetsService = {
-  async listAssets(productId?: string): Promise<ListAssetsResponse> {
-    if (IS_API_MODE) return apiClient.get<ListAssetsResponse>(`/products/${productId ?? requireCurrentProductId()}/assets`);
+  async listAssets(productId: string): Promise<ListAssetsResponse> {
+    if (IS_API_MODE) return apiClient.get<ListAssetsResponse>(`/products/${productId}/assets`);
     return assetsStore;
   },
-  async listTags(): Promise<ListAssetTagsResponse> {
-    if (IS_API_MODE) return apiClient.get<ListAssetTagsResponse>(`/products/${requireCurrentProductId()}/asset-tags`);
+  async listTags(productId: string): Promise<ListAssetTagsResponse> {
+    if (IS_API_MODE) return apiClient.get<ListAssetTagsResponse>(`/products/${productId}/asset-tags`);
     return assetTagsStore;
   },
-  async createTag(name: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.post(`/products/${requireCurrentProductId()}/asset-tags`, { name });
-    logApiCall("POST", "/api/v1/products/{productId}/asset-tags", { name });
+  async createTag(productId: string, name: string): Promise<void> {
+    if (IS_API_MODE) return apiClient.post(`/products/${productId}/asset-tags`, name);
+    logApiCall("POST", `/api/v1/products/${productId}/asset-tags`, { name });
     if (!assetTagsStore.includes(name)) assetTagsStore.push(name);
   },
-  async renameTag(oldName: string, newName: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.put(`/products/${requireCurrentProductId()}/asset-tags/${oldName}`, { newName });
-    logApiCall("PUT", `/api/v1/products/{productId}/asset-tags/${oldName}`, { newName });
+  async renameTag(productId: string, oldName: string, newName: string): Promise<void> {
+    if (IS_API_MODE) {
+      await apiClient.delete(`/products/${productId}/asset-tags/${encodeURIComponent(oldName)}`);
+      await apiClient.post(`/products/${productId}/asset-tags`, newName);
+      return;
+    }
+    logApiCall("PUT", `/api/v1/products/${productId}/asset-tags/${oldName}`, { newName });
     const i = assetTagsStore.indexOf(oldName);
     if (i >= 0) assetTagsStore[i] = newName;
   },
-  async removeTag(name: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.delete(`/products/${requireCurrentProductId()}/asset-tags/${name}`);
-    logApiCall("DELETE", `/api/v1/products/{productId}/asset-tags/${name}`);
+  async removeTag(productId: string, name: string): Promise<void> {
+    if (IS_API_MODE) return apiClient.delete(`/products/${productId}/asset-tags/${encodeURIComponent(name)}`);
+    logApiCall("DELETE", `/api/v1/products/${productId}/asset-tags/${name}`);
     const i = assetTagsStore.indexOf(name);
     if (i >= 0) assetTagsStore.splice(i, 1);
   },
-  async mergeTags(tagsToMerge: string[], into: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.post(`/products/${requireCurrentProductId()}/asset-tags/merge`, { tagsToMerge, into });
-    logApiCall("POST", "/api/v1/products/{productId}/asset-tags/merge", { tagsToMerge, into });
+  async mergeTags(productId: string, tagsToMerge: string[], into: string): Promise<void> {
+    if (IS_API_MODE) {
+      await Promise.all(tagsToMerge.filter((tag) => tag !== into).map((tag) => apiClient.delete(`/products/${productId}/asset-tags/${encodeURIComponent(tag)}`)));
+      await apiClient.post(`/products/${productId}/asset-tags`, into);
+      return;
+    }
+    logApiCall("POST", `/api/v1/products/${productId}/asset-tags/merge`, { tagsToMerge, into });
     tagsToMerge.forEach((t) => {
       if (t !== into) {
         const i = assetTagsStore.indexOf(t);
@@ -60,36 +67,44 @@ export const assetsService = {
     });
     if (!assetTagsStore.includes(into)) assetTagsStore.push(into);
   },
-  async saveMetadata(assetId: string, metadata: Record<string, unknown>): Promise<void> {
-    if (IS_API_MODE) return apiClient.put(`/products/${requireCurrentProductId()}/assets/${assetId}/metadata`, metadata);
-    logApiCall("PUT", `/api/v1/products/{productId}/assets/${assetId}/metadata`, metadata);
+  async saveMetadata(productId: string, assetId: string, metadata: Record<string, unknown>): Promise<void> {
+    if (IS_API_MODE) return apiClient.put(`/products/${productId}/assets/${assetId}/metadata`, metadata);
+    logApiCall("PUT", `/api/v1/products/${productId}/assets/${assetId}/metadata`, metadata);
   },
-  async archiveAsset(name: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.post(`/products/${requireCurrentProductId()}/assets/${name}/archive`);
-    const a = assetsStore.find((x) => x.name === name);
+  async archiveAsset(productId: string, assetId: string): Promise<void> {
+    if (IS_API_MODE) return apiClient.delete(`/products/${productId}/assets/${assetId}`);
+    const a = assetsStore.find((x) => x.name === assetId || x.id === assetId);
     if (!a) return;
-    logApiCall("POST", `/api/v1/products/{productId}/assets/${name}/archive`);
+    logApiCall("DELETE", `/api/v1/products/${productId}/assets/${assetId}`);
     a.status = "arquivado";
   },
-  /** Noop intencional: usar `upload(file: File)` para upload unitário com persistência no store. `uploadFiles()` é o endpoint batch que o backend implementará na etapa 11. */
-  async uploadFiles(): Promise<void> {
-    if (IS_API_MODE) return apiClient.post(`/products/${requireCurrentProductId()}/assets/upload`);
-    logApiCall("POST", "/api/v1/products/{productId}/assets/upload (batch — sem persistência no mock)");
+  async uploadFiles(productId: string, files: File[]): Promise<void> {
+    await Promise.all(files.map(async (file) => {
+      if (IS_API_MODE) {
+        const fd = new FormData();
+        fd.append("file", file);
+        await apiClient.upload(`/products/${productId}/assets`, fd);
+        return;
+      }
+      const assetId = `mock-asset-${Date.now()}`;
+      logApiCall("POST", `/api/v1/products/${productId}/assets`, { name: file.name, size: file.size });
+      assetsStore.push({ id: assetId, name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
+    }));
   },
   /** Upload de um arquivo real do sistema do usuário (Sprint 18, Tarefa D.2) — reaproveitado por qualquer picker fora do contexto de assets (ex.: anexo do `FeedbackModal`), nunca um endpoint de upload próprio por domínio. Devolve o `assetId` (mock: o próprio `name`) para referenciar o asset criado. */
-  async upload(file: File): Promise<{ assetId: string }> {
+  async upload(file: File, productId: string): Promise<{ assetId: string }> {
     if (IS_API_MODE) {
       const fd = new FormData();
       fd.append("file", file);
-      const created = await apiClient.upload<{ id: string }>(`/products/${requireCurrentProductId()}/assets`, fd);
+      const created = await apiClient.upload<{ id: string }>(`/products/${productId}/assets`, fd);
       return { assetId: created.id };
     }
-    logApiCall("POST", "/api/v1/products/{productId}/assets", { name: file.name, size: file.size });
-    assetsStore.push({ name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
-    return { assetId: file.name };
+    const assetId = `mock-asset-${Date.now()}`;
+    logApiCall("POST", `/api/v1/products/${productId}/assets`, { name: file.name, size: file.size });
+    assetsStore.push({ id: assetId, name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
+    return { assetId };
   },
-  async downloadAsset(name: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.get(`/products/${requireCurrentProductId()}/assets/${name}/download`);
-    logApiCall("GET", `/api/v1/products/{productId}/assets/${name}/download`);
+  getDownloadUrl(assetId: string): string {
+    return `${resolveBaseUrl()}/assets/${assetId}/download`;
   },
 };

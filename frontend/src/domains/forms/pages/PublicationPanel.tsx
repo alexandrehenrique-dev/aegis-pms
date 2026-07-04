@@ -6,14 +6,18 @@ import { DeliveryChannelsCard } from "../components/DeliveryChannelsCard";
 import { toast } from "../../../core/notifications/toast";
 import { formsService } from "../services/formsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
+import type { ApiError } from "../../../shared/services/apiClient";
 import type { FormDelivery } from "../contracts/responses";
 
 const EMBED_SNIPPET = "<aegis-form id=contato-comercial />";
 const FORM_ID = "form-contato-comercial";
 
 export function PublicationPanel() {
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
   const [publishing, setPublishing] = useState(false);
-  const { data: loadedDelivery } = useAsyncData(() => formsService.getDelivery(FORM_ID), []);
+  const { data: loadedDelivery } = useAsyncData(() => (productId ? formsService.getDelivery(productId, FORM_ID) : Promise.resolve(null)), [productId]);
   const [delivery, setDelivery] = useState<FormDelivery | null>(null);
   const [savingDelivery, setSavingDelivery] = useState(false);
 
@@ -23,8 +27,15 @@ export function PublicationPanel() {
     if (!delivery) return;
     setSavingDelivery(true);
     try {
-      await formsService.saveDelivery(FORM_ID, delivery);
+      await formsService.saveDelivery(productId, FORM_ID, delivery);
       toast.success("Configuração de entrega salva.");
+    } catch (error) {
+      const apiError = error as ApiError;
+      if (apiError.status === 400 && apiError.code === "telegram_invalid_credentials") {
+        toast.error("Não foi possível validar o Telegram.", { description: "Revise o chat ID e o token do bot antes de salvar." });
+      } else {
+        toast.error("Não foi possível salvar a configuração de entrega.");
+      }
     } finally {
       setSavingDelivery(false);
     }
@@ -38,7 +49,7 @@ export function PublicationPanel() {
   const handlePublish = async () => {
     setPublishing(true);
     try {
-      await formsService.publish(FORM_ID);
+      await formsService.publish(productId, FORM_ID);
       toast.success("Alterações publicadas!");
     } finally {
       setPublishing(false);

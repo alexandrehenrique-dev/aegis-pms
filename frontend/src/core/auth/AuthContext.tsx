@@ -11,7 +11,8 @@ import { meService } from "./services/meService";
 import { tenantsService } from "../tenants/services/tenantsService";
 import { productsService } from "../../domains/products/services/productsService";
 import { toUserRole } from "./utils/roleMapper";
-import { setCurrentProductId } from "../products/currentProductContext";
+import { setCurrentProductId, setCurrentProductSlug } from "../products/currentProductContext";
+import { slugify } from "../../shared/utils/slugify";
 
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
@@ -124,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // assetsService/knowledgeService) — ver core/products/currentProductContext.ts.
   useEffect(() => {
     setCurrentProductId(effectiveProduct?.id ?? null);
+    setCurrentProductSlug(effectiveProduct ? slugify(effectiveProduct.name) : null);
   }, [effectiveProduct]);
 
   const switchTenant = useCallback((tenantId: string) => {
