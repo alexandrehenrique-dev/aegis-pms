@@ -13,6 +13,7 @@ import br.com.byop.aegis.product.mapper.ProductModuleMapper;
 import br.com.byop.aegis.product.repository.ProductModuleRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ProductModuleService {
 
@@ -44,11 +46,13 @@ public class ProductModuleService {
 
     @Transactional
     public ProductModuleSummary enableModule(UUID productId, String moduleKeyValue) {
+        log.debug("enableModule: productId='{}', moduleKey='{}'", productId, moduleKeyValue);
         return enableModuleInternal(productId, moduleKeyValue, null);
     }
 
     @Transactional
     public ProductModuleSummary enableModule(UUID productId, String moduleKeyValue, AuthenticatedUser caller) {
+        log.debug("enableModule: productId='{}', moduleKey='{}', caller='{}'", productId, moduleKeyValue, caller.subject());
         return enableModuleInternal(productId, moduleKeyValue, caller);
     }
 
@@ -59,6 +63,7 @@ public class ProductModuleService {
         ModuleKey dependency = DEPENDENCIES.get(moduleKey);
 
         if (dependency != null && !moduleRepository.existsByProductIdAndModuleKeyAndEnabledTrue(productId, dependency)) {
+            log.warn("enableModule: dependencia ausente productId='{}', moduleKey='{}', dependency='{}'", productId, moduleKey, dependency);
             throw new ModuleDependencyMissingException(moduleKey, dependency);
         }
 
@@ -68,16 +73,19 @@ public class ProductModuleService {
 
         ProductModule saved = moduleRepository.save(module);
         recordModuleAudit(product, moduleKey, true, caller);
+        log.info("enableModule: modulo habilitado productId='{}', moduleKey='{}'", productId, moduleKey);
         return moduleMapper.toSummary(saved);
     }
 
     @Transactional
     public ProductModuleSummary disableModule(UUID productId, String moduleKeyValue) {
+        log.debug("disableModule: productId='{}', moduleKey='{}'", productId, moduleKeyValue);
         return disableModuleInternal(productId, moduleKeyValue, null);
     }
 
     @Transactional
     public ProductModuleSummary disableModule(UUID productId, String moduleKeyValue, AuthenticatedUser caller) {
+        log.debug("disableModule: productId='{}', moduleKey='{}', caller='{}'", productId, moduleKeyValue, caller.subject());
         return disableModuleInternal(productId, moduleKeyValue, caller);
     }
 
@@ -93,6 +101,7 @@ public class ProductModuleService {
 
         ProductModule saved = moduleRepository.save(module);
         recordModuleAudit(product, moduleKey, false, caller);
+        log.info("disableModule: modulo desabilitado productId='{}', moduleKey='{}'", productId, moduleKey);
         return moduleMapper.toSummary(saved);
     }
 
@@ -103,6 +112,7 @@ public class ProductModuleService {
                 .filter(entry -> moduleRepository.existsByProductIdAndModuleKeyAndEnabledTrue(productId, entry.getKey()))
                 .findFirst()
                 .ifPresent(entry -> {
+                    log.warn("disableModule: modulo dependente habilitado productId='{}', moduleKey='{}', dependent='{}'", productId, moduleKey, entry.getKey());
                     throw new ModuleDependencyMissingException(entry.getKey(), moduleKey);
                 });
     }

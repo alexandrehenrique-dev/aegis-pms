@@ -5,6 +5,7 @@ import br.com.byop.aegis.audit.context.AuditContextHolder;
 import br.com.byop.aegis.audit.domain.AuditEvent;
 import br.com.byop.aegis.audit.repository.AuditEventRepository;
 import br.com.byop.aegis.audit.service.AuditRiskCatalog;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -21,6 +22,7 @@ import java.util.Map;
  * calculados aqui, nunca pelo chamador, para que a logica de auditoria nunca
  * fique duplicada.
  */
+@Slf4j
 @Service
 public class AuditService {
 
@@ -47,6 +49,7 @@ public class AuditService {
      */
     @Transactional
     public AuditEvent recordEvent(AuditRecordCommand command) {
+        log.debug("recordEvent: action='{}', targetType='{}', targetId='{}'", command.action(), command.targetType(), command.targetId());
         AuditContext context = AuditContextHolder.current().orElse(null);
         AuditEvent event = new AuditEvent(new AuditEvent.Creation(
                 command.tenantId(),
@@ -63,7 +66,9 @@ public class AuditService {
                 context == null ? null : context.ip(),
                 context == null ? null : context.userAgent()
         ));
-        return auditEventRepository.save(event);
+        AuditEvent savedEvent = auditEventRepository.save(event);
+        log.info("recordEvent: evento de auditoria gravado id='{}', action='{}'", savedEvent.getId(), savedEvent.getAction());
+        return savedEvent;
     }
 
     private String writeDiffJson(Map<String, Object> before, Map<String, Object> after) {

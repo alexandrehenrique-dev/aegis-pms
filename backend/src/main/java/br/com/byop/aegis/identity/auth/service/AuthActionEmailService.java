@@ -6,6 +6,7 @@ import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -20,6 +21,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Map;
 
+@Slf4j
 @Component
 public class AuthActionEmailService {
 
@@ -51,11 +53,15 @@ public class AuthActionEmailService {
     }
 
     public void sendInviteActivation(AuthActionToken token) {
+        log.debug("sendInviteActivation: keycloakId='{}'", token.getKeycloakId());
         send(token, INVITE_TEMPLATE, INVITE_SUBJECT, inviteModel(token));
+        log.info("sendInviteActivation: e-mail de convite enviado para keycloakId='{}'", token.getKeycloakId());
     }
 
     public void sendPasswordReset(AuthActionToken token) {
+        log.debug("sendPasswordReset: keycloakId='{}'", token.getKeycloakId());
         send(token, ACCOUNT_RECOVERY_TEMPLATE, ACCOUNT_RECOVERY_SUBJECT, passwordResetModel(token));
+        log.info("sendPasswordReset: e-mail de redefinicao enviado para keycloakId='{}'", token.getKeycloakId());
     }
 
     private void send(AuthActionToken token, String templateName, String subject, Map<String, Object> model) {
@@ -70,6 +76,7 @@ public class AuthActionEmailService {
             helper.setText(html, true);
             mailSender.send(message);
         } catch (IOException | MessagingException | TemplateException exception) {
+            log.warn("send: falha ao enviar e-mail, template='{}'", templateName);
             throw new IllegalStateException("Unable to send auth action e-mail", exception);
         }
     }
@@ -79,6 +86,7 @@ public class AuthActionEmailService {
             freemarker.setDirectoryForTemplateLoading(new File(templatePath));
             freemarker.setDefaultEncoding(StandardCharsets.UTF_8.name());
         } catch (IOException exception) {
+            log.warn("configureTemplates: falha ao configurar templates de e-mail em '{}'", templatePath);
             throw new IllegalStateException("Unable to configure auth action e-mail templates", exception);
         }
     }

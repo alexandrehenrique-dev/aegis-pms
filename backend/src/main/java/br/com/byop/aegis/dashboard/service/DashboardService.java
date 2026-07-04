@@ -11,6 +11,7 @@ import br.com.byop.aegis.product.api.ProductVisibilityService;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.submission.api.SubmissionAnalyticsResponse;
 import br.com.byop.aegis.submission.api.SubmissionAnalyticsService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ import java.util.UUID;
  * (decisao explicita da propria etapa), os demais papeis agregam apenas os
  * produtos que conseguem ver.
  */
+@Slf4j
 @Service
 public class DashboardService {
 
@@ -54,6 +56,7 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardSummaryResponse getSummary(AuthenticatedUser caller) {
+        log.debug("getSummary: caller='{}'", caller.subject());
         List<ProductAccessScope> scopes = productVisibilityService.listVisibleProducts(caller);
         List<UUID> productIds = scopes.stream().map(ProductAccessScope::productId).toList();
 

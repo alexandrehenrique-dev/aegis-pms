@@ -1,7 +1,6 @@
 package br.com.byop.aegis.shared.storage;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,10 +10,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+@Slf4j
 @Component
 public class LocalStorageBootstrap implements ApplicationRunner {
-
-    private static final Logger log = LoggerFactory.getLogger(LocalStorageBootstrap.class);
 
     private final String localStoragePath;
 

@@ -12,3 +12,11 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+logging:
+  level:
+    br.com.byop.aegis: INFO
+    br.com.byop.aegis.security: WARN
+    org.springframework: WARN
+  pattern:
+    console: '{"timestamp":"%d{ISO8601}","level":"%level","logger":"%logger","message":"%message"}%n'

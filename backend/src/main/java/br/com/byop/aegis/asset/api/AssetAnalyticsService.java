@@ -2,6 +2,7 @@ package br.com.byop.aegis.asset.api;
 
 import br.com.byop.aegis.asset.domain.Asset;
 import br.com.byop.aegis.asset.repository.AssetRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class AssetAnalyticsService {
 
@@ -27,6 +29,7 @@ public class AssetAnalyticsService {
 
     @Transactional(readOnly = true)
     public AssetAnalyticsResponse summarize(UUID productId) {
+        log.debug("summarize: productId='{}'", productId);
         List<Asset> assets = assetRepository.findAllByProductId(productId);
         OffsetDateTime recentLimit = OffsetDateTime.now(clock).minusDays(RECENT_ASSET_DAYS);
         long recent = assets.stream()

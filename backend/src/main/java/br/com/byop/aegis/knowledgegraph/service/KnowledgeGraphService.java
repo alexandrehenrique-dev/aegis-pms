@@ -32,8 +32,7 @@ import br.com.byop.aegis.knowledgegraph.repository.GraphNodeRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,10 +43,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class KnowledgeGraphService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(KnowledgeGraphService.class);
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> METADATA_TYPE = new TypeReference<>() {
     };
@@ -97,22 +96,28 @@ public class KnowledgeGraphService {
 
     @Transactional
     public GraphNodeDetail createNode(UUID productId, CreateGraphNodeRequest request) {
+        log.debug("createNode: productId='{}', refType='{}', refId='{}'", productId, request.refType(), request.refId());
         ProductReference product = productReferenceService.getRequiredReference(productId);
         if (nodeRepository.existsByProductIdAndRefTypeAndRefId(productId, request.refType(), request.refId())) {
+            log.warn("createNode: node duplicado para productId='{}', refType='{}', refId='{}'", productId, request.refType(), request.refId());
             throw new DuplicateGraphNodeException(productId, request.refType(), request.refId());
         }
 
         GraphNode node = nodeMapper.toEntity(request, product.tenantId(), productId);
-        return nodeMapper.toDetail(nodeRepository.save(node));
+        GraphNode saved = nodeRepository.save(node);
+        log.info("createNode: node criado id='{}'", saved.getId());
+        return nodeMapper.toDetail(saved);
     }
 
     @Transactional(readOnly = true)
     public GraphNodeDetail findNode(UUID productId, UUID nodeId) {
+        log.debug("findNode: productId='{}', nodeId='{}'", productId, nodeId);
         return nodeMapper.toDetail(findNodeInProduct(productId, nodeId));
     }
 
     @Transactional
     public GraphNodeDetail updatePosition(UUID productId, UUID nodeId, UpdateGraphNodePositionRequest request) {
+        log.debug("updatePosition: productId='{}', nodeId='{}'", productId, nodeId);
         GraphNode node = findNodeInProduct(productId, nodeId);
         node.reposition(request.x(), request.y());
         return nodeMapper.toDetail(nodeRepository.save(node));
@@ -120,6 +125,7 @@ public class KnowledgeGraphService {
 
     @Transactional(readOnly = true)
     public List<GraphNodeSummary> searchNodes(UUID productId, String q) {
+        log.debug("searchNodes: productId='{}', q='{}'", productId, q);
         productReferenceService.getRequiredReference(productId);
         List<GraphNode> nodes = nodeRepository.findAllByProductId(productId);
         if (!isBlank(q)) {
@@ -136,6 +142,7 @@ public class KnowledgeGraphService {
 
     @Transactional(readOnly = true)
     public List<GraphNodeSummary> findOrphans(UUID productId) {
+        log.debug("findOrphans: productId='{}'", productId);
         productReferenceService.getRequiredReference(productId);
         return nodeRepository.findOrphansByProductId(productId)
                 .stream()
@@ -146,22 +153,29 @@ public class KnowledgeGraphService {
 
     @Transactional
     public GraphNodeDetail resolveOrphan(UUID productId, UUID nodeId, ResolveGraphOrphanRequest request) {
+        log.debug("resolveOrphan: productId='{}', nodeId='{}', action='{}'", productId, nodeId, request.action());
         String action = normalizedAction(request.action());
-        return resolveOrphanNode(productId, nodeId, action);
+        GraphNodeDetail resolved = resolveOrphanNode(productId, nodeId, action);
+        log.info("resolveOrphan: node id='{}' resolvido com acao='{}'", nodeId, action);
+        return resolved;
     }
 
     @Transactional
     public List<GraphNodeDetail> resolveOrphans(UUID productId, ResolveGraphOrphansRequest request) {
+        log.debug("resolveOrphans: productId='{}', ids={}", productId, request.ids().size());
         String action = request.action() == null || request.action().isBlank() ? ACTION_REVIEW : request.action();
         String normalizedAction = normalizedAction(action);
-        return request.ids()
+        List<GraphNodeDetail> resolved = request.ids()
                 .stream()
                 .map(nodeId -> resolveOrphanNode(productId, nodeId, normalizedAction))
                 .toList();
+        log.info("resolveOrphans: {} nodes resolvidos com acao='{}'", resolved.size(), normalizedAction);
+        return resolved;
     }
 
     @Transactional(readOnly = true)
     public GraphNodePreview previewNode(UUID productId, UUID nodeId) {
+        log.debug("previewNode: productId='{}', nodeId='{}'", productId, nodeId);
         GraphNode node = findNodeInProduct(productId, nodeId);
         Optional<GraphNodeContentPreview> contentPreview = contentPreviewPort.findPreview(
                 productId,
@@ -192,6 +206,7 @@ public class KnowledgeGraphService {
 
     @Transactional
     public GraphInsightReviewSummary reviewInsight(UUID productId, ReviewGraphInsightRequest request) {
+        log.debug("reviewInsight: productId='{}'", productId);
         ProductReference product = productReferenceService.getRequiredReference(productId);
         String text = request.text().trim();
         String textHash = deterministicTextHash(text);
@@ -204,6 +219,8 @@ public class KnowledgeGraphService {
 
     @Transactional
     public GraphEdgeDetail createEdge(UUID productId, CreateGraphEdgeRequest request) {
+        log.debug("createEdge: productId='{}', sourceNodeId='{}', targetNodeId='{}', edgeType='{}'",
+                productId, request.sourceNodeId(), request.targetNodeId(), request.edgeType());
         productReferenceService.getRequiredReference(productId);
         GraphNode sourceNode = nodeRepository.findById(request.sourceNodeId())
                 .orElseThrow(() -> new GraphNodeNotFoundException(request.sourceNodeId()));
@@ -216,15 +233,20 @@ public class KnowledgeGraphService {
                 request.targetNodeId(),
                 request.edgeType()
         )) {
+            log.warn("createEdge: edge duplicada sourceNodeId='{}', targetNodeId='{}', edgeType='{}'",
+                    request.sourceNodeId(), request.targetNodeId(), request.edgeType());
             throw new DuplicateGraphEdgeException(request.sourceNodeId(), request.targetNodeId(), request.edgeType());
         }
 
         GraphEdge edge = edgeMapper.toEntity(request, sourceNode.getTenantId(), productId);
-        return edgeMapper.toDetail(edgeRepository.save(edge));
+        GraphEdge saved = edgeRepository.save(edge);
+        log.info("createEdge: edge criada id='{}'", saved.getId());
+        return edgeMapper.toDetail(saved);
     }
 
     @Transactional(readOnly = true)
     public List<GraphNeighborSummary> findNeighbors(UUID productId, UUID nodeId) {
+        log.debug("findNeighbors: productId='{}', nodeId='{}'", productId, nodeId);
         findNodeInProduct(productId, nodeId);
 
         return edgeRepository.findAllByProductIdAndSourceNodeId(productId, nodeId)
@@ -238,6 +260,7 @@ public class KnowledgeGraphService {
 
     @Transactional(readOnly = true)
     public List<GraphRelatedSummary> findRelated(UUID productId, UUID nodeId) {
+        log.debug("findRelated: productId='{}', nodeId='{}'", productId, nodeId);
         findNodeInProduct(productId, nodeId);
 
         return edgeRepository.findAllByProductIdAndTargetNodeId(productId, nodeId)
@@ -305,7 +328,7 @@ public class KnowledgeGraphService {
         try {
             return new java.util.LinkedHashMap<>(JSON_MAPPER.readValue(metadataJson, METADATA_TYPE));
         } catch (JsonProcessingException exception) {
-            LOGGER.debug("Ignoring invalid graph node metadata JSON while applying graph rule", exception);
+            log.debug("Ignoring invalid graph node metadata JSON while applying graph rule", exception);
             return new java.util.LinkedHashMap<>();
         }
     }
@@ -314,7 +337,7 @@ public class KnowledgeGraphService {
         try {
             return JSON_MAPPER.writeValueAsString(metadata);
         } catch (JsonProcessingException exception) {
-            LOGGER.debug("Falling back to empty graph node metadata JSON after serialization failure", exception);
+            log.debug("Falling back to empty graph node metadata JSON after serialization failure", exception);
             return EMPTY_JSON;
         }
     }

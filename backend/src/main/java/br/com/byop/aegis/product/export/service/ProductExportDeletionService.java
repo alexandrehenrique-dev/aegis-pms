@@ -3,12 +3,14 @@ package br.com.byop.aegis.product.export.service;
 import br.com.byop.aegis.product.api.ProductExportStoragePort;
 import br.com.byop.aegis.product.export.dto.ExportAssetFile;
 import br.com.byop.aegis.product.export.dto.ProductExportData;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ProductExportDeletionService {
 
@@ -24,6 +26,7 @@ public class ProductExportDeletionService {
 
     @Transactional
     public void deleteExportedProduct(ProductExportData data) {
+        log.debug("deleteExportedProduct: productId='{}'", data.productId());
         data.assets().forEach(this::deleteAssetFile);
         UUID productId = data.productId();
         delete("delete from audit_events where product_id = :productId", productId);
@@ -45,6 +48,7 @@ public class ProductExportDeletionService {
         delete("delete from product_modules where product_id = :productId", productId);
         delete("delete from product_assignments where product_id = :productId", productId);
         delete("delete from products where id = :productId", productId);
+        log.info("deleteExportedProduct: produto excluido apos exportacao productId='{}'", productId);
     }
 
     private void deleteAssetFile(ExportAssetFile asset) {

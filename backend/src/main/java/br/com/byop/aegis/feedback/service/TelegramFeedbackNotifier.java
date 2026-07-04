@@ -1,8 +1,7 @@
 package br.com.byop.aegis.feedback.service;
 
 import br.com.byop.aegis.feedback.domain.Feedback;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -11,10 +10,10 @@ import org.springframework.web.util.HtmlUtils;
 
 import java.util.Map;
 
+@Slf4j
 @Component
 public class TelegramFeedbackNotifier {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TelegramFeedbackNotifier.class);
     private static final String TELEGRAM_SEND_MESSAGE_URL = "https://api.telegram.org/bot{botToken}/sendMessage";
     private static final int DESCRIPTION_PREVIEW_LIMIT = 200;
 
@@ -35,12 +34,14 @@ public class TelegramFeedbackNotifier {
 
     public void notify(Feedback feedback) {
         if (!aegisTelegramEnabled || !hasText(aegisTelegramChatId) || !hasText(aegisTelegramBotToken)) {
+            log.debug("notify: Telegram desabilitado ou nao configurado — feedback publicId='{}' nao notificado", feedback.getPublicId());
             return;
         }
         sendBestEffort(feedback);
     }
 
     private void sendBestEffort(Feedback feedback) {
+        log.debug("sendBestEffort: tentando envio Telegram para feedback publicId='{}'", feedback.getPublicId());
         try {
             restClient.post()
                     .uri(TELEGRAM_SEND_MESSAGE_URL, aegisTelegramBotToken)
@@ -52,8 +53,9 @@ public class TelegramFeedbackNotifier {
                     ))
                     .retrieve()
                     .toBodilessEntity();
+            log.info("sendBestEffort: notificacao Telegram enviada para feedback publicId='{}'", feedback.getPublicId());
         } catch (RuntimeException exception) {
-            LOGGER.warn("Telegram dispatch failed for feedback {}", feedback.getPublicId(), exception);
+            log.warn("Telegram dispatch failed for feedback {}", feedback.getPublicId(), exception);
         }
     }
 

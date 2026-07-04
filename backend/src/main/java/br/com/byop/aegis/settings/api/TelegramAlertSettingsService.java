@@ -1,12 +1,14 @@
 package br.com.byop.aegis.settings.api;
 
 import br.com.byop.aegis.settings.repository.ProductSecuritySettingsRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class TelegramAlertSettingsService {
 
@@ -18,6 +20,7 @@ public class TelegramAlertSettingsService {
 
     @Transactional(readOnly = true)
     public Optional<TelegramAlertSettings> findConfiguredProductAlert(UUID productId) {
+        log.debug("findConfiguredProductAlert: productId='{}'", productId);
         if (productId == null) {
             return Optional.empty();
         }

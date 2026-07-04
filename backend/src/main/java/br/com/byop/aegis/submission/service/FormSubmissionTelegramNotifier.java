@@ -2,8 +2,7 @@ package br.com.byop.aegis.submission.service;
 
 import br.com.byop.aegis.form.api.FormReference;
 import br.com.byop.aegis.submission.domain.Submission;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -14,10 +13,10 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Component
 public class FormSubmissionTelegramNotifier {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FormSubmissionTelegramNotifier.class);
     private static final String TELEGRAM_TYPE = "telegram";
     private static final String TELEGRAM_SEND_MESSAGE_URL = "https://api.telegram.org/bot{botToken}/sendMessage";
 
@@ -30,6 +29,7 @@ public class FormSubmissionTelegramNotifier {
     }
 
     public void notify(FormReference form, Submission submission) {
+        log.debug("notify: formId='{}', submissionId='{}'", form.id(), submission.getId());
         for (Map<String, Object> channel : readChannels(form.deliveryChannelsJson())) {
             if (telegramEnabled(channel)) {
                 sendBestEffort(form, submission, config(channel));
@@ -41,6 +41,7 @@ public class FormSubmissionTelegramNotifier {
         String botToken = config.get("botToken");
         String chatId = config.get("chatId");
         if (!hasText(botToken) || !hasText(chatId)) {
+            log.debug("sendBestEffort: canal Telegram sem botToken/chatId configurado — submissionId='{}' nao notificada", submission.getId());
             return;
         }
         try {
@@ -54,8 +55,9 @@ public class FormSubmissionTelegramNotifier {
                     ))
                     .retrieve()
                     .toBodilessEntity();
+            log.info("sendBestEffort: notificacao Telegram enviada para submissionId='{}'", submission.getId());
         } catch (RuntimeException exception) {
-            LOGGER.warn("Telegram form delivery failed for submission {}", submission.getId(), exception);
+            log.warn("Telegram form delivery failed for submission {}", submission.getId(), exception);
         }
     }
 
@@ -84,7 +86,7 @@ public class FormSubmissionTelegramNotifier {
                     .map(item -> toObjectMap((Map<?, ?>) item))
                     .toList();
         } catch (JacksonException exception) {
-            LOGGER.warn("Ignoring invalid form delivery JSON while notifying Telegram", exception);
+            log.warn("Ignoring invalid form delivery JSON while notifying Telegram", exception);
             return List.of();
         }
     }

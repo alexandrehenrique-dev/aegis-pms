@@ -4,6 +4,7 @@ import br.com.byop.aegis.product.domain.ProductAssignment;
 import br.com.byop.aegis.product.domain.ProductAssignmentRole;
 import br.com.byop.aegis.product.domain.ProductAssignmentStatus;
 import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ProductUserAccessService {
 
@@ -24,6 +26,7 @@ public class ProductUserAccessService {
 
     @Transactional(readOnly = true)
     public List<ProductUserAccess> listTenantAssignments(UUID tenantId, String userSubject) {
+        log.debug("listTenantAssignments: tenantId='{}', userSubject='{}'", tenantId, userSubject);
         return assignmentRepository.findAllByTenantIdAndUserSubject(tenantId, userSubject)
                 .stream()
                 .map(this::toAccess)
@@ -32,6 +35,7 @@ public class ProductUserAccessService {
 
     @Transactional(readOnly = true)
     public Set<String> listSharedUserSubjects(UUID tenantId, String callerSubject) {
+        log.debug("listSharedUserSubjects: tenantId='{}', callerSubject='{}'", tenantId, callerSubject);
         Set<UUID> callerProductIds = new HashSet<>();
         assignmentRepository.findAllByTenantIdAndUserSubjectAndStatus(
                         tenantId,
@@ -50,6 +54,7 @@ public class ProductUserAccessService {
 
     @Transactional(readOnly = true)
     public long countDistinctAssignedUsers(Collection<UUID> productIds) {
+        log.debug("countDistinctAssignedUsers: productCount='{}'", productIds.size());
         if (productIds.isEmpty()) {
             return 0;
         }
@@ -62,6 +67,7 @@ public class ProductUserAccessService {
 
     @Transactional(readOnly = true)
     public long countDistinctProductManagers(Collection<UUID> productIds) {
+        log.debug("countDistinctProductManagers: productCount='{}'", productIds.size());
         if (productIds.isEmpty()) {
             return 0;
         }
@@ -75,12 +81,15 @@ public class ProductUserAccessService {
 
     @Transactional
     public void removeTenantAssignments(UUID tenantId, String userSubject) {
-        assignmentRepository.findAllByTenantIdAndUserSubjectAndStatus(
+        log.debug("removeTenantAssignments: tenantId='{}', userSubject='{}'", tenantId, userSubject);
+        List<ProductAssignment> assignments = assignmentRepository.findAllByTenantIdAndUserSubjectAndStatus(
                         tenantId,
                         userSubject,
                         ProductAssignmentStatus.ASSIGNED
-                )
-                .forEach(ProductAssignment::remove);
+                );
+        assignments.forEach(ProductAssignment::remove);
+        log.info("removeTenantAssignments: assignments removidos tenantId='{}', userSubject='{}', count='{}'",
+                tenantId, userSubject, assignments.size());
     }
 
     private ProductUserAccess toAccess(ProductAssignment assignment) {

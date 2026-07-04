@@ -20,6 +20,7 @@ import br.com.byop.aegis.product.user.mapper.TenantUserMapper;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantMembershipReference;
 import br.com.byop.aegis.tenant.api.TenantUserAccessService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class TenantUserService {
 
@@ -73,6 +75,7 @@ public class TenantUserService {
 
     @Transactional(readOnly = true)
     public List<TenantUserSummary> listUsers(AuthenticatedUser caller, UUID tenantId) {
+        log.debug("listUsers: tenantId='{}'", tenantId);
         assertTenantVisible(caller, tenantId);
         Set<String> visibleSubjects = visibleSubjects(caller, tenantId);
         return tenantUserAccessService.listMemberships(tenantId)
@@ -84,16 +87,19 @@ public class TenantUserService {
 
     @Transactional
     public TenantUserSummary inviteUser(AuthenticatedUser caller, UUID tenantId, InviteTenantUserRequest request) {
+        log.debug("inviteUser: tenantId='{}', role='{}'", tenantId, request.role());
         assertTenantVisible(caller, tenantId);
         assertCanInvite(caller, tenantId);
         identityUserLifecycleService.findByEmail(request.email())
                 .filter(user -> tenantUserAccessService.hasAnyMembership(tenantId, user.id()))
                 .ifPresent(_ -> {
+                    log.warn("inviteUser: usuario ja possui membership no tenant tenantId='{}'", tenantId);
                     throw new TenantUserAlreadyExistsException();
                 });
 
         IdentityUser user = identityUserLifecycleService.invite(request.email(), request.name());
         if (tenantUserAccessService.hasAnyMembership(tenantId, user.id())) {
+            log.warn("inviteUser: usuario ja possui membership no tenant tenantId='{}', userId='{}'", tenantId, user.id());
             throw new TenantUserAlreadyExistsException();
         }
 
@@ -103,47 +109,58 @@ public class TenantUserService {
         notificationOnboardingService.assignOnboarding(user.id());
         recordAudit(tenantId, caller.subject(), "USER_INVITED_TO_TENANT", user.id(), user.displayName(),
                 null, Map.of("role", role, DIFF_KEY_STATUS, STATUS_INVITED));
+        log.info("inviteUser: usuario convidado tenantId='{}', userId='{}', role='{}'", tenantId, user.id(), role);
         return toSummary(membership, user);
     }
 
     @Transactional(readOnly = true)
     public TenantUserSummary getUser(AuthenticatedUser caller, UUID tenantId, String userId) {
+        log.debug("getUser: tenantId='{}', userId='{}'", tenantId, userId);
         return toSummary(getVisibleMembership(caller, tenantId, userId));
     }
 
     @Transactional
     public TenantUserSummary updateUser(AuthenticatedUser caller, UUID tenantId, String userId,
                                         UpdateTenantUserRequest request) {
+        log.debug("updateUser: tenantId='{}', userId='{}', role='{}', status='{}'", tenantId, userId, request.role(), request.status());
         TenantMembershipReference current = getVisibleMembership(caller, tenantId, userId);
         String role = parseRole(request.role());
         String status = parseStatus(request.status());
         assertNotLastActiveAdmin(tenantId, current.userSubject(), role, status);
-        return toSummary(tenantUserAccessService.update(tenantId, userId, role, status));
+        TenantUserSummary summary = toSummary(tenantUserAccessService.update(tenantId, userId, role, status));
+        log.info("updateUser: usuario atualizado tenantId='{}', userId='{}', role='{}', status='{}'", tenantId, userId, role, status);
+        return summary;
     }
 
     @Transactional
     public TenantUserSummary resendInvite(AuthenticatedUser caller, UUID tenantId, String userId) {
+        log.debug("resendInvite: tenantId='{}', userId='{}'", tenantId, userId);
         TenantMembershipReference membership = getVisibleMembership(caller, tenantId, userId);
         if (!STATUS_INVITED.equals(membership.status())) {
+            log.warn("resendInvite: usuario nao esta pendente tenantId='{}', userId='{}', status='{}'", tenantId, userId, membership.status());
             throw new InvalidTenantUserOperationException("Invite can only be resent for pending users");
         }
         IdentityUser user = identityUserLifecycleService.getRequiredUser(userId);
         sendInviteActivation(user, membership, membershipProductNames(membership), membership.role(), caller.name());
+        log.info("resendInvite: convite reenviado tenantId='{}', userId='{}'", tenantId, userId);
         return toSummary(membership);
     }
 
     @Transactional
     public TenantUserSummary blockUser(AuthenticatedUser caller, UUID tenantId, String userId) {
+        log.debug("blockUser: tenantId='{}', userId='{}'", tenantId, userId);
         TenantMembershipReference current = getVisibleMembership(caller, tenantId, userId);
         assertNotLastActiveAdmin(tenantId, current.userSubject(), current.role(), STATUS_BLOCKED);
         TenantUserSummary summary = toSummary(tenantUserAccessService.block(tenantId, userId));
         recordAudit(tenantId, caller.subject(), "USER_BLOCKED", userId, null,
                 Map.of(DIFF_KEY_STATUS, current.status()), Map.of(DIFF_KEY_STATUS, STATUS_BLOCKED));
+        log.info("blockUser: usuario bloqueado tenantId='{}', userId='{}'", tenantId, userId);
         return summary;
     }
 
     @Transactional
     public void removeUser(AuthenticatedUser caller, UUID tenantId, String userId) {
+        log.debug("removeUser: tenantId='{}', userId='{}'", tenantId, userId);
         TenantMembershipReference current = getVisibleMembership(caller, tenantId, userId);
         assertNotLastActiveAdmin(tenantId, current.userSubject(), current.role(), STATUS_REMOVED);
         tenantUserAccessService.remove(tenantId, userId);
@@ -153,12 +170,15 @@ public class TenantUserService {
         }
         recordAudit(tenantId, caller.subject(), "USER_REMOVED_FROM_TENANT", userId, null,
                 Map.of(DIFF_KEY_STATUS, current.status()), Map.of(DIFF_KEY_STATUS, STATUS_REMOVED));
+        log.info("removeUser: usuario removido tenantId='{}', userId='{}'", tenantId, userId);
     }
 
     @Transactional
     public TenantUserSummary restoreUser(AuthenticatedUser caller, UUID tenantId, String userId) {
+        log.debug("restoreUser: tenantId='{}', userId='{}'", tenantId, userId);
         TenantMembershipReference current = getVisibleMembership(caller, tenantId, userId, true);
         if (!STATUS_REMOVED.equals(current.status()) && !STATUS_BLOCKED.equals(current.status())) {
+            log.warn("restoreUser: status invalido para restauracao tenantId='{}', userId='{}', status='{}'", tenantId, userId, current.status());
             throw new InvalidTenantUserOperationException("Only removed or blocked users can be restored");
         }
         TenantMembershipReference restored = tenantUserAccessService.restore(tenantId, userId);
@@ -167,6 +187,7 @@ public class TenantUserService {
         sendInviteActivation(user, restored, membershipProductNames(restored), restored.role(), caller.name());
         recordAudit(tenantId, caller.subject(), "USER_RESTORED_TO_TENANT", userId, null,
                 Map.of(DIFF_KEY_STATUS, current.status()), Map.of(DIFF_KEY_STATUS, STATUS_ACTIVE));
+        log.info("restoreUser: usuario restaurado tenantId='{}', userId='{}'", tenantId, userId);
         return toSummary(restored);
     }
 
@@ -218,6 +239,7 @@ public class TenantUserService {
 
     private void assertNotLastActiveAdmin(UUID tenantId, String userSubject, String nextRole, String nextStatus) {
         if (tenantUserAccessService.wouldRemoveLastActiveAdmin(tenantId, userSubject, nextRole, nextStatus)) {
+            log.warn("assertNotLastActiveAdmin: operacao removeria ultimo admin ativo tenantId='{}'", tenantId);
             throw new LastTenantAdminException();
         }
     }

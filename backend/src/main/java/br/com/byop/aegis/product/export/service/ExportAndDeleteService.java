@@ -10,8 +10,7 @@ import br.com.byop.aegis.product.export.dto.StoredExport;
 import br.com.byop.aegis.product.export.repository.ExportTokenRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.tenant.api.TenantExportRemovalPort;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +18,10 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ExportAndDeleteService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ExportAndDeleteService.class);
     private static final String ACTION_PRODUCT_DELETED = "USER_DATA_EXPORTED_AND_PRODUCT_DELETED";
     private static final String TARGET_TYPE_PRODUCT = "Product";
 
@@ -62,6 +61,7 @@ public class ExportAndDeleteService {
     @Async(ExportAsyncConfig.EXPORT_TASK_EXECUTOR)
     public void exportAndDelete(UUID productId, String callerSubject, String callerEmail, String callerName,
                                 boolean deleteTenantWhenEmpty) {
+        log.debug("exportAndDelete: productId='{}', deleteTenantWhenEmpty={}", productId, deleteTenantWhenEmpty);
         ProductExportData data;
         try {
             data = productExportSerializer.serialize(productId, callerSubject, callerEmail);
@@ -72,6 +72,7 @@ public class ExportAndDeleteService {
             exportIntegrityService.validateStoredZip(data, stored, token);
             exportTokenRepository.save(token);
             productExportEmailService.sendExportReady(data, stored, token.getId(), callerEmail, callerName);
+            log.info("exportAndDelete: export concluido productId='{}', exportTokenId='{}'", productId, token.getId());
         } catch (Exception exception) {
             handleExportFailure(productId, callerEmail, exception);
             return;
@@ -81,13 +82,14 @@ public class ExportAndDeleteService {
             productExportDeletionService.deleteExportedProduct(data);
             recordDeletionAudit(data, callerSubject);
             deleteTenantIfReady(data, deleteTenantWhenEmpty);
+            log.info("exportAndDelete: produto excluido apos export productId='{}'", productId);
         } catch (Exception exception) {
             handleDeleteFailure(productId, callerEmail, exception);
         }
     }
 
     private void handleExportFailure(UUID productId, String callerEmail, Exception exception) {
-        LOGGER.error("Product export failed for product {}", productId, exception);
+        log.error("Product export failed for product {}", productId, exception);
         Product product = productRepository.findById(productId).orElse(null);
         if (product == null) {
             return;
@@ -97,12 +99,12 @@ public class ExportAndDeleteService {
         try {
             productExportEmailService.sendExportFailure(callerEmail, product.getName());
         } catch (Exception emailException) {
-            LOGGER.warn("Unable to send export failure e-mail for product {}", productId, emailException);
+            log.warn("Unable to send export failure e-mail for product {}", productId, emailException);
         }
     }
 
     private void handleDeleteFailure(UUID productId, String callerEmail, Exception exception) {
-        LOGGER.error("Product delete failed after export for product {}", productId, exception);
+        log.error("Product delete failed after export for product {}", productId, exception);
         Product product = productRepository.findById(productId).orElse(null);
         if (product == null) {
             return;
@@ -112,7 +114,7 @@ public class ExportAndDeleteService {
         try {
             productExportEmailService.sendExportFailure(callerEmail, product.getName());
         } catch (Exception emailException) {
-            LOGGER.warn("Unable to send delete failure e-mail for product {}", productId, emailException);
+            log.warn("Unable to send delete failure e-mail for product {}", productId, emailException);
         }
     }
 

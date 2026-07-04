@@ -27,6 +27,7 @@ import br.com.byop.aegis.knowledgegraph.api.KnowledgeGraphPort;
 import br.com.byop.aegis.product.api.ProductReference;
 import br.com.byop.aegis.product.api.ProductReferenceService;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -42,6 +43,7 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 public class ContentService {
 
@@ -85,6 +87,7 @@ public class ContentService {
 
     @Transactional
     public ContentSummary createContent(UUID productId, CreateContentRequest request, AuthenticatedUser caller) {
+        log.debug("createContent: productId='{}', title='{}', type='{}'", productId, request.title(), request.type());
         ProductReference product = productReferenceService.getRequiredReference(productId);
 
         String sanitizedBody = markdownSanitizer.sanitize(request.body());
@@ -98,6 +101,7 @@ public class ContentService {
                 request.summary(), difficultyLevel, request.category(), request.topic(), metadataJson));
         contentRepository.save(content);
         recordContentCreationAudit(product.tenantId(), productId, caller.subject(), content);
+        log.info("createContent: conteudo criado id='{}', productId='{}'", content.getId(), productId);
 
         syncKnowledgeGraph(productId, content, referencedNodeIds);
 
@@ -106,6 +110,7 @@ public class ContentService {
 
     @Transactional(readOnly = true)
     public List<ContentSummary> listContent(UUID productId) {
+        log.debug("listContent: productId='{}'", productId);
         return contentRepository.findAllByProductId(productId).stream()
                 .map(this::toSummary)
                 .toList();
@@ -113,11 +118,13 @@ public class ContentService {
 
     @Transactional(readOnly = true)
     public ContentSummary getContent(UUID productId, UUID contentId) {
+        log.debug("getContent: productId='{}', contentId='{}'", productId, contentId);
         return toSummary(findContentInProduct(productId, contentId));
     }
 
     @Transactional
     public ContentSummary updateContent(UUID productId, UUID contentId, UpdateContentRequest request) {
+        log.debug("updateContent: productId='{}', contentId='{}'", productId, contentId);
         Content content = findContentInProduct(productId, contentId);
 
         String sanitizedBody = markdownSanitizer.sanitize(request.body());
@@ -128,6 +135,7 @@ public class ContentService {
         content.applyEdit(new Content.Edit(request.title(), request.type(), request.lang(), sanitizedBody,
                 request.summary(), difficultyLevel, request.category(), request.topic(), metadataJson));
         contentRepository.save(content);
+        log.info("updateContent: conteudo atualizado id='{}'", content.getId());
 
         syncKnowledgeGraph(productId, content, referencedNodeIds);
 
@@ -137,12 +145,14 @@ public class ContentService {
     @Transactional
     public ContentSummary transition(UUID productId, UUID contentId, ContentTransitionRequest request,
                                      AuthenticatedUser caller) {
+        log.debug("transition: productId='{}', contentId='{}', from='{}', to='{}'", productId, contentId, request.from(), request.to());
         return doTransition(productId, contentId, request, caller);
     }
 
     @Transactional
     public ContentSummary publish(UUID productId, UUID contentId, PublishContentRequest request,
                                   AuthenticatedUser caller) {
+        log.debug("publish: productId='{}', contentId='{}'", productId, contentId);
         Content content = findContentInProduct(productId, contentId);
         ContentTransitionRequest asTransition = new ContentTransitionRequest(
                 content.getStatus().contractValue(),
@@ -154,6 +164,7 @@ public class ContentService {
 
     @Transactional(readOnly = true)
     public List<ContentVersionSummary> listVersions(UUID productId, UUID contentId) {
+        log.debug("listVersions: productId='{}', contentId='{}'", productId, contentId);
         findContentInProduct(productId, contentId);
         return versionRepository.findAllByContentIdOrderByCreatedAtAsc(contentId).stream()
                 .map(version -> versionMapper.toSummary(version, resolveAuthorName(version.getCreatedBySubject())))
@@ -162,6 +173,7 @@ public class ContentService {
 
     @Transactional(readOnly = true)
     public List<String> listEditEvents(UUID productId) {
+        log.debug("listEditEvents: productId='{}'", productId);
         return contentRepository.findAllByProductId(productId).stream()
                 .flatMap(content -> versionRepository.findAllByContentIdOrderByCreatedAtAsc(content.getId()).stream())
                 .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
@@ -171,6 +183,7 @@ public class ContentService {
 
     @Transactional(readOnly = true)
     public List<WorkflowItemSummary> listWorkflowItems(UUID productId) {
+        log.debug("listWorkflowItems: productId='{}'", productId);
         return contentRepository.findAllByProductId(productId).stream()
                 .map(content -> contentMapper.toWorkflowItem(content, resolveAuthorName(content.getAuthorSubject())))
                 .toList();
@@ -188,6 +201,8 @@ public class ContentService {
         ContentStatus from = parseStatus(request.from());
         ContentStatus to = parseStatus(request.to());
         if (content.getStatus() != from) {
+            log.warn("doTransition: transicao rejeitada, status atual diverge do esperado contentId='{}', statusAtual='{}', statusEsperado='{}'",
+                    contentId, content.getStatus(), from);
             throw new InvalidContentTransitionException(content.getStatus(), to);
         }
 
@@ -203,6 +218,7 @@ public class ContentService {
         if (to == ContentStatus.PUBLISHED) {
             recordContentPublicationAudit(productId, caller.subject(), content, from);
         }
+        log.info("doTransition: conteudo transicionado id='{}', status='{}'", content.getId(), content.getStatus());
 
         return toSummary(content);
     }
@@ -343,6 +359,7 @@ public class ContentService {
 
     private void assertNodeExists(UUID productId, UUID nodeId, String rawNodeId) {
         if (!knowledgeGraphPort.nodeExists(productId, nodeId)) {
+            log.warn("assertNodeExists: referencia kg-ref invalida rejeitada productId='{}', nodeId='{}'", productId, rawNodeId);
             throw new InvalidContentReferenceException(rawNodeId);
         }
     }

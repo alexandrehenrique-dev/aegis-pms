@@ -22,6 +22,7 @@ import br.com.byop.aegis.tenant.mapper.TenantMapper;
 import br.com.byop.aegis.tenant.repository.TenantMembershipRepository;
 import br.com.byop.aegis.tenant.repository.TenantRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class TenantService {
 
@@ -58,6 +60,7 @@ public class TenantService {
 
     @Transactional
     public TenantSummary createTenant(AuthenticatedUser caller, CreateTenantCommand command) {
+        log.debug("createTenant: key='{}', name='{}'", command.key(), command.name());
         if (tenantRepository.existsByKey(command.key())) {
             throw new TenantAlreadyExistsException(command.key());
         }
@@ -69,12 +72,14 @@ public class TenantService {
         Tenant savedTenant = tenantRepository.save(tenant);
         membershipRepository.save(new TenantMembership(savedTenant, caller.subject(), TENANT_ADMIN));
         recordTenantCreationAudit(caller, savedTenant);
+        log.info("createTenant: tenant criado id='{}', key='{}'", savedTenant.getId(), savedTenant.getKey());
 
         return tenantMapper.toSummary(savedTenant);
     }
 
     @Transactional(readOnly = true)
     public List<TenantSummary> listTenants(AuthenticatedUser caller) {
+        log.debug("listTenants: caller='{}'", caller.subject());
         if (caller.authorities().contains(ROLE_SUPER_ADMIN)) {
             return tenantRepository.findAll()
                     .stream()
@@ -93,6 +98,7 @@ public class TenantService {
 
     @Transactional
     public TenantSummary updateTenant(AuthenticatedUser caller, UUID tenantId, UpdateTenantRequest request) {
+        log.debug("updateTenant: tenantId='{}', status='{}'", tenantId, request.status());
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
         Map<String, Object> before = tenantSnapshot(tenant);
@@ -105,6 +111,7 @@ public class TenantService {
         Tenant savedTenant = tenantRepository.save(tenant);
         recordTenantUpdateAudit(caller, savedTenant, before);
         publishLifecycleTransition(caller, savedTenant, statusBefore, statusAfter);
+        log.info("updateTenant: tenant atualizado id='{}', status='{}'", savedTenant.getId(), savedTenant.getStatus());
 
         return tenantMapper.toSummary(savedTenant);
     }
@@ -135,15 +142,18 @@ public class TenantService {
 
     @Transactional
     public TenantDeleteAcceptedResponse deleteTenant(AuthenticatedUser caller, UUID tenantId, DeleteTenantRequest request) {
+        log.debug("deleteTenant: tenantId='{}'", tenantId);
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
 
         if (!tenant.getName().equals(request.confirmationText())) {
+            log.warn("deleteTenant: confirmacao invalida para tenantId='{}'", tenantId);
             throw new InvalidTenantConfirmationException();
         }
 
         recordTenantDeletionAudit(caller, tenant);
         tenantProductExportPort.startTenantProductExports(tenantId, caller);
+        log.info("deleteTenant: exclusao iniciada para tenantId='{}'", tenantId);
         return new TenantDeleteAcceptedResponse("Exportação iniciada. Um link de download será enviado por produto em instantes.");
     }
 
@@ -167,6 +177,7 @@ public class TenantService {
 
     @Transactional(readOnly = true)
     public Tenant getTenantOrThrow(UUID tenantId) {
+        log.debug("getTenantOrThrow: tenantId='{}'", tenantId);
         return tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
     }

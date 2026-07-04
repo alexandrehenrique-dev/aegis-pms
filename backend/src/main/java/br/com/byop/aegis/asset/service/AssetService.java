@@ -32,6 +32,7 @@ import br.com.byop.aegis.product.api.ProductAccessPort;
 import br.com.byop.aegis.product.api.ProductReference;
 import br.com.byop.aegis.product.api.ProductReferenceService;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,6 +47,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class AssetService {
 
@@ -85,10 +87,12 @@ public class AssetService {
 
     @Transactional
     public AssetSummary uploadAsset(UUID productId, MultipartFile file, String friendlyName, AuthenticatedUser caller) {
+        log.debug("uploadAsset: productId='{}', friendlyName='{}'", productId, friendlyName);
         ProductReference product = productReferenceService.getRequiredReference(productId);
         AssetStorageStrategy strategy = productReferenceService.getRequiredAssetStorageStrategy(productId);
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null || originalFilename.isBlank()) {
+            log.warn("uploadAsset: nome de arquivo invalido para productId='{}'", productId);
             throw new InvalidAssetFilenameException(originalFilename);
         }
         String mimeType = file.getContentType() == null ? "" : file.getContentType();
@@ -103,12 +107,14 @@ public class AssetService {
             asset.applyMetadata(new Asset.Metadata(friendlyName, null, null, null));
         }
         assetRepository.save(asset);
+        log.info("uploadAsset: asset criado id='{}', productId='{}'", asset.getId(), productId);
 
         return toSummary(asset);
     }
 
     @Transactional(readOnly = true)
     public List<AssetSummary> listAssets(UUID productId) {
+        log.debug("listAssets: productId='{}'", productId);
         return assetRepository.findAllByProductId(productId).stream()
                 .map(this::toSummary)
                 .toList();
@@ -116,27 +122,33 @@ public class AssetService {
 
     @Transactional(readOnly = true)
     public AssetDetail getAsset(UUID productId, UUID assetId) {
+        log.debug("getAsset: productId='{}', assetId='{}'", productId, assetId);
         return toDetail(findAssetInProduct(productId, assetId));
     }
 
     @Transactional
     public AssetDetail updateMetadata(UUID productId, UUID assetId, UpdateAssetMetadataRequest request) {
+        log.debug("updateMetadata: productId='{}', assetId='{}'", productId, assetId);
         Asset asset = findAssetInProduct(productId, assetId);
         asset.applyMetadata(new Asset.Metadata(request.friendlyName(), request.altText(), request.caption(), request.credit()));
         assetRepository.save(asset);
         reconcileTags(productId, asset.getId(), parseCsv(request.tags()));
+        log.info("updateMetadata: asset atualizado id='{}'", asset.getId());
         return toDetail(asset);
     }
 
     @Transactional
     public void deleteAsset(AuthenticatedUser caller, UUID productId, UUID assetId, boolean force) {
+        log.debug("deleteAsset: productId='{}', assetId='{}', force='{}'", productId, assetId, force);
         Asset asset = findAssetInProduct(productId, assetId);
         if (!force && usageRepository.existsByAssetId(assetId)) {
+            log.warn("deleteAsset: asset em uso, exclusao rejeitada id='{}'", assetId);
             throw new AssetInUseException(assetId);
         }
         storageProvisioningService.resolveProvider(asset.getStorageProvider()).delete(asset.getStorageKey());
         assetRepository.delete(asset);
         recordAssetDeletionAudit(caller, asset);
+        log.info("deleteAsset: asset excluido id='{}'", assetId);
     }
 
     private void recordAssetDeletionAudit(AuthenticatedUser caller, Asset asset) {
@@ -149,6 +161,7 @@ public class AssetService {
 
     @Transactional(readOnly = true)
     public List<AssetUsageSummary> listUsage(UUID productId, UUID assetId) {
+        log.debug("listUsage: productId='{}', assetId='{}'", productId, assetId);
         findAssetInProduct(productId, assetId);
         return usageRepository.findAllByAssetId(assetId).stream()
                 .map(assetMapper::toUsageSummary)
@@ -157,27 +170,34 @@ public class AssetService {
 
     @Transactional(readOnly = true)
     public List<String> listTags(UUID productId) {
+        log.debug("listTags: productId='{}'", productId);
         return listTagNames(productId);
     }
 
     @Transactional
     public List<String> createTag(UUID productId, String name) {
+        log.debug("createTag: productId='{}', name='{}'", productId, name);
         String trimmed = name == null ? "" : name.trim();
         if (trimmed.isBlank()) {
+            log.warn("createTag: nome de tag em branco rejeitado para productId='{}'", productId);
             throw new InvalidAssetTagNameException();
         }
         if (assetTagRepository.existsByProductIdAndName(productId, trimmed)) {
+            log.warn("createTag: tag ja existente rejeitada productId='{}', name='{}'", productId, trimmed);
             throw new AssetTagAlreadyExistsException(productId, trimmed);
         }
         assetTagRepository.save(new AssetTag(productId, trimmed));
+        log.info("createTag: tag criada productId='{}', name='{}'", productId, trimmed);
         return listTagNames(productId);
     }
 
     @Transactional
     public List<String> deleteTag(UUID productId, String name) {
+        log.debug("deleteTag: productId='{}', name='{}'", productId, name);
         AssetTag tag = assetTagRepository.findByProductIdAndName(productId, name)
                 .orElseThrow(() -> new AssetTagNotFoundException(name));
         assetTagRepository.delete(tag);
+        log.info("deleteTag: tag removida productId='{}', name='{}'", productId, name);
         return listTagNames(productId);
     }
 
@@ -195,6 +215,7 @@ public class AssetService {
 
     @Transactional(readOnly = true)
     public ResolvedAsset resolveAsset(UUID assetId, AuthenticatedUser caller) {
+        log.debug("resolveAsset: assetId='{}', caller='{}'", assetId, caller.subject());
         Asset asset = requireAsset(assetId);
         productAccessPort.assertAccessible(asset.getProductId(), caller);
         ResolvedLocation location = storageProvisioningService.resolveProvider(asset.getStorageProvider())
@@ -205,9 +226,11 @@ public class AssetService {
 
     @Transactional(readOnly = true)
     public AssetFileContent loadAssetFile(UUID assetId, AuthenticatedUser caller) {
+        log.debug("loadAssetFile: assetId='{}', caller='{}'", assetId, caller.subject());
         Asset asset = requireAsset(assetId);
         productAccessPort.assertAccessible(asset.getProductId(), caller);
         if (asset.getStorageProvider() != AssetStorageStrategy.LOCAL) {
+            log.warn("loadAssetFile: asset nao esta em storage LOCAL, rejeitado id='{}'", assetId);
             throw new AssetNotFoundException(assetId);
         }
         byte[] content = localStorageProvider.loadContent(asset.getStorageKey());

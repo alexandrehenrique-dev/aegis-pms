@@ -17,6 +17,7 @@ import br.com.byop.aegis.pages.repository.EventRepository;
 import br.com.byop.aegis.product.api.ProductReference;
 import br.com.byop.aegis.product.api.ProductReferenceService;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class EventService {
 
@@ -47,6 +49,7 @@ public class EventService {
 
     @Transactional(readOnly = true)
     public List<EventSummary> listEvents(UUID productId) {
+        log.debug("listEvents: productId='{}'", productId);
         return eventRepository.findAllByProductIdOrderByDatetimeAsc(productId).stream()
                 .map(eventMapper::toSummary)
                 .toList();
@@ -54,6 +57,7 @@ public class EventService {
 
     @Transactional
     public EventDetail createEvent(UUID productId, CreateEventRequest request, AuthenticatedUser caller) {
+        log.debug("createEvent: productId='{}', title='{}'", productId, request.title());
         ProductReference product = productReferenceService.getRequiredReference(productId);
         EventAccessType type = parseAccessType(request.type());
         EventVisibility visibility = parseVisibility(request.visibility());
@@ -64,17 +68,20 @@ public class EventService {
                 request.description(), request.imageAssetId()));
         eventRepository.save(event);
         recordAudit("EVENT_CREATED", event, caller.subject(), null, currentEventState(event));
+        log.info("createEvent: evento criado id='{}', productId='{}'", event.getId(), productId);
 
         return eventMapper.toDetail(event);
     }
 
     @Transactional(readOnly = true)
     public EventDetail getEvent(UUID productId, UUID eventId) {
+        log.debug("getEvent: productId='{}', eventId='{}'", productId, eventId);
         return eventMapper.toDetail(findEventInProduct(productId, eventId));
     }
 
     @Transactional
     public EventDetail updateEvent(UUID productId, UUID eventId, UpdateEventRequest request, AuthenticatedUser caller) {
+        log.debug("updateEvent: productId='{}', eventId='{}'", productId, eventId);
         Event event = findEventInProduct(productId, eventId);
         Map<String, Object> before = currentEventState(event);
         EventAccessType type = parseAccessType(request.type());
@@ -84,15 +91,18 @@ public class EventService {
                 request.description(), request.imageAssetId()));
         eventRepository.save(event);
         recordAudit("EVENT_UPDATED", event, caller.subject(), before, currentEventState(event));
+        log.info("updateEvent: evento atualizado id='{}'", event.getId());
 
         return eventMapper.toDetail(event);
     }
 
     @Transactional
     public void deleteEvent(UUID productId, UUID eventId, AuthenticatedUser caller) {
+        log.debug("deleteEvent: productId='{}', eventId='{}'", productId, eventId);
         Event event = findEventInProduct(productId, eventId);
         recordAudit("EVENT_DELETED", event, caller.subject(), currentEventState(event), null);
         eventRepository.delete(event);
+        log.info("deleteEvent: evento removido id='{}'", eventId);
     }
 
     private Event findEventInProduct(UUID productId, UUID eventId) {

@@ -11,12 +11,14 @@ import br.com.byop.aegis.content.api.ContentAnalyticsResponse;
 import br.com.byop.aegis.content.api.ContentAnalyticsService;
 import br.com.byop.aegis.submission.api.SubmissionAnalyticsResponse;
 import br.com.byop.aegis.submission.api.SubmissionAnalyticsService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class AnalyticsService {
 
@@ -44,6 +46,7 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public List<AnalyticsKpiResponse> listKpis(UUID productId) {
+        log.debug("listKpis: productId='{}'", productId);
         ContentAnalyticsResponse content = contentAnalyticsService.summarize(productId);
         SubmissionAnalyticsResponse submissions = submissionAnalyticsService.summarize(productId);
         AssetAnalyticsResponse assets = assetAnalyticsService.summarize(productId);
@@ -57,6 +60,7 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public List<HealthSignalResponse> listHealth(UUID productId) {
+        log.debug("listHealth: productId='{}'", productId);
         ContentAnalyticsResponse content = contentAnalyticsService.summarize(productId);
         SubmissionAnalyticsResponse submissions = submissionAnalyticsService.summarize(productId);
         AssetAnalyticsResponse assets = assetAnalyticsService.summarize(productId);
@@ -69,6 +73,7 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public List<ChannelRowResponse> listChannels(UUID productId) {
+        log.debug("listChannels: productId='{}'", productId);
         return List.of(
                 new ChannelRowResponse("Direto", "0", "0%", SIMULATED_TRAFFIC),
                 new ChannelRowResponse("Google", "0", "0%", SIMULATED_TRAFFIC),
@@ -80,6 +85,7 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public List<TrendCardResponse> listTrends(UUID productId) {
+        log.debug("listTrends: productId='{}'", productId);
         ContentAnalyticsResponse content = contentAnalyticsService.summarize(productId);
         SubmissionAnalyticsResponse submissions = submissionAnalyticsService.summarize(productId);
         AssetAnalyticsResponse assets = assetAnalyticsService.summarize(productId);
@@ -93,6 +99,7 @@ public class AnalyticsService {
 
     @Transactional(readOnly = true)
     public List<AnalyticsReportResponse> listReports(UUID productId) {
+        log.debug("listReports: productId='{}'", productId);
         ContentAnalyticsResponse content = contentAnalyticsService.summarize(productId);
         SubmissionAnalyticsResponse submissions = submissionAnalyticsService.summarize(productId);
         AssetAnalyticsResponse assets = assetAnalyticsService.summarize(productId);

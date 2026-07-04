@@ -9,22 +9,20 @@ import br.com.byop.aegis.identity.auth.exception.InvalidCredentialsException;
 import br.com.byop.aegis.identity.auth.exception.KeycloakAuthenticationException;
 import br.com.byop.aegis.identity.auth.exception.RefreshTokenExpiredException;
 import br.com.byop.aegis.identity.auth.exception.WeakPasswordException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestControllerAdvice(assignableTypes = AuthController.class)
 public class AuthExceptionHandler {
-
-    private static final Logger LOGGER =
-            LoggerFactory.getLogger(AuthExceptionHandler.class);
 
     @ExceptionHandler(InvalidCredentialsException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public AuthErrorResponse handleInvalidCredentials() {
+        log.warn("handleInvalidCredentials: tentativa de login com credenciais invalidas");
         return new AuthErrorResponse("INVALID_CREDENTIALS");
     }
 
@@ -39,7 +37,7 @@ public class AuthExceptionHandler {
     public AuthErrorResponse handleKeycloakAuthentication(
             KeycloakAuthenticationException exception
     ) {
-        LOGGER.error("Keycloak authentication error", exception);
+        log.error("Keycloak authentication error", exception);
         return new AuthErrorResponse("KEYCLOAK_AUTHENTICATION_ERROR");
     }
 

@@ -10,6 +10,7 @@ import br.com.byop.aegis.identity.auth.exception.AuthActionTokenNotFoundExceptio
 import br.com.byop.aegis.identity.auth.exception.AuthActionTokenUsedException;
 import br.com.byop.aegis.identity.auth.exception.AuthRateLimitExceededException;
 import br.com.byop.aegis.identity.auth.repository.AuthActionTokenRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class AuthActionTokenService {
 
@@ -53,6 +55,7 @@ public class AuthActionTokenService {
 
     @Transactional
     public AuthActionToken createInvite(IdentityActionInviteCommand command) {
+        log.debug("createInvite: keycloakId='{}', tenantId='{}'", command.keycloakId(), command.tenantId());
         Instant createdAt = clock.instant();
         AuthActionToken token = new AuthActionToken(
                 command.keycloakId(),
@@ -69,11 +72,14 @@ public class AuthActionTokenService {
                 command.role(),
                 command.inviterName()
         );
-        return tokenRepository.save(token);
+        AuthActionToken savedToken = tokenRepository.save(token);
+        log.info("createInvite: token de convite criado para keycloakId='{}'", command.keycloakId());
+        return savedToken;
     }
 
     @Transactional
     public AuthActionToken createPasswordReset(IdentityUser user) {
+        log.debug("createPasswordReset: userId='{}'", user.id());
         assertPasswordResetAllowed(user.email());
         expirePendingPasswordResetTokens(user.id());
         Instant createdAt = clock.instant();
@@ -85,26 +91,35 @@ public class AuthActionTokenService {
                 createdAt,
                 createdAt.plus(PASSWORD_RESET_EXPIRATION)
         );
-        return tokenRepository.save(token);
+        AuthActionToken savedToken = tokenRepository.save(token);
+        log.info("createPasswordReset: token de redefinicao criado para userId='{}'", user.id());
+        return savedToken;
     }
 
     @Transactional(readOnly = true)
     public AuthActionToken validateInvite(UUID tokenId) {
+        log.debug("validateInvite: validando token de convite");
         return validate(tokenId, AuthActionType.INVITE, false);
     }
 
     @Transactional
     public AuthActionToken consumeInvite(UUID tokenId) {
+        log.debug("consumeInvite: consumindo token de convite");
         AuthActionToken token = validate(tokenId, AuthActionType.INVITE, true);
         token.markUsed(clock.instant());
-        return tokenRepository.save(token);
+        AuthActionToken savedToken = tokenRepository.save(token);
+        log.info("consumeInvite: token de convite consumido para keycloakId='{}'", savedToken.getKeycloakId());
+        return savedToken;
     }
 
     @Transactional
     public AuthActionToken consumePasswordReset(UUID tokenId) {
+        log.debug("consumePasswordReset: consumindo token de redefinicao");
         AuthActionToken token = validate(tokenId, AuthActionType.PASSWORD_RESET, true);
         token.markUsed(clock.instant());
-        return tokenRepository.save(token);
+        AuthActionToken savedToken = tokenRepository.save(token);
+        log.info("consumePasswordReset: token de redefinicao consumido para keycloakId='{}'", savedToken.getKeycloakId());
+        return savedToken;
     }
 
     public List<String> productNames(AuthActionToken token) {
@@ -123,6 +138,7 @@ public class AuthActionTokenService {
                 .filter(candidate -> candidate.getType() == expectedType)
                 .orElseThrow(AuthActionTokenNotFoundException::new);
         if (token.getStatus() == AuthActionStatus.USED) {
+            log.warn("validate: tentativa de uso de token ja consumido, tipo='{}'", expectedType);
             throw new AuthActionTokenUsedException();
         }
         if (token.getStatus() == AuthActionStatus.EXPIRED || token.isExpired(clock.instant())) {
@@ -130,6 +146,7 @@ public class AuthActionTokenService {
                 token.markExpired();
                 tokenRepository.save(token);
             }
+            log.warn("validate: tentativa de uso de token expirado, tipo='{}'", expectedType);
             throw new AuthActionTokenExpiredException();
         }
         return token;
@@ -143,6 +160,7 @@ public class AuthActionTokenService {
                 createdAtAfter
         );
         if (tokensInWindow >= RATE_LIMIT_MAX_TOKENS) {
+            log.warn("assertPasswordResetAllowed: limite de tentativas excedido, tentativas='{}'", tokensInWindow);
             throw new AuthRateLimitExceededException(RETRY_AFTER_SECONDS);
         }
     }

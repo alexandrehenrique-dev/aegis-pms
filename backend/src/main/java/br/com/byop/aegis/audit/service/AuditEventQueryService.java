@@ -11,6 +11,7 @@ import br.com.byop.aegis.audit.repository.AuditEventRepository;
 import br.com.byop.aegis.audit.api.TenantVisibilityPort;
 import br.com.byop.aegis.identity.api.IdentityUserDirectory;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -26,6 +27,7 @@ import java.util.UUID;
  * {@code ProductAccessResolver}, apenas a regra geral de isolamento por
  * tenant (Secao 10.1-10.4).
  */
+@Slf4j
 @Service
 public class AuditEventQueryService {
 
@@ -51,6 +53,7 @@ public class AuditEventQueryService {
     @Transactional(readOnly = true)
     public List<AuditEventSummary> listEvents(AuthenticatedUser caller, UUID tenantId, String actorSubject,
                                               UUID productId, String module, String risk) {
+        log.debug("listEvents: tenantId='{}', productId='{}', module='{}', risk='{}'", tenantId, productId, module, risk);
         assertTenantVisible(caller, tenantId);
         AuditRisk riskFilter = parseRiskFilter(risk);
         return auditEventRepository.findAllByFilters(tenantId, actorSubject, productId, module, riskFilter)
@@ -62,6 +65,7 @@ public class AuditEventQueryService {
 
     @Transactional(readOnly = true)
     public AuditEventDetail getEvent(AuthenticatedUser caller, UUID tenantId, UUID eventId) {
+        log.debug("getEvent: tenantId='{}', eventId='{}'", tenantId, eventId);
         assertTenantVisible(caller, tenantId);
         AuditEvent event = auditEventRepository.findByIdAndTenantId(eventId, tenantId)
                 .orElseThrow(AuditEventNotFoundException::new);
@@ -80,6 +84,7 @@ public class AuditEventQueryService {
         if (isSuperAdmin(caller) || tenantVisibilityPort.hasActiveMembership(tenantId, caller.subject())) {
             return;
         }
+        log.warn("assertTenantVisible: acesso negado a tenantId='{}' para caller='{}'", tenantId, caller.subject());
         throw new AuditEventNotFoundException();
     }
 
@@ -94,6 +99,7 @@ public class AuditEventQueryService {
         try {
             return AuditRisk.fromContractValue(risk);
         } catch (IllegalArgumentException _) {
+            log.warn("parseRiskFilter: filtro de risco invalido rejeitado risk='{}'", risk);
             throw new InvalidAuditRiskFilterException(risk);
         }
     }

@@ -3,11 +3,13 @@ package br.com.byop.aegis.product.api;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.exception.ProductNotFoundException;
 import br.com.byop.aegis.product.repository.ProductRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ProductReferenceService {
 
@@ -19,6 +21,7 @@ public class ProductReferenceService {
 
     @Transactional(readOnly = true)
     public ProductReference getRequiredReference(UUID productId) {
+        log.debug("getRequiredReference: productId='{}'", productId);
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
         return new ProductReference(product.getId(), product.getTenantId());
@@ -35,6 +38,7 @@ public class ProductReferenceService {
      */
     @Transactional(readOnly = true)
     public AssetStorageStrategy getRequiredAssetStorageStrategy(UUID productId) {
+        log.debug("getRequiredAssetStorageStrategy: productId='{}'", productId);
         return productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId))
                 .getAssetStorageStrategy();
@@ -52,8 +56,10 @@ public class ProductReferenceService {
      */
     @Transactional
     public void renameProduct(UUID productId, String name) {
+        log.debug("renameProduct: productId='{}', name='{}'", productId, name);
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
         product.rename(name);
+        log.info("renameProduct: produto renomeado id='{}', name='{}'", productId, name);
     }
 }

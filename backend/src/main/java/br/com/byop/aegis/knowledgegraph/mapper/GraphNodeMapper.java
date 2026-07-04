@@ -8,19 +8,18 @@ import br.com.byop.aegis.knowledgegraph.dto.GraphNodeSummary;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.mapstruct.Mapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Mapper(componentModel = "spring")
 public abstract class GraphNodeMapper {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GraphNodeMapper.class);
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> METADATA_TYPE = new TypeReference<>() {
     };
@@ -121,7 +120,7 @@ public abstract class GraphNodeMapper {
         try {
             return JSON_MAPPER.readValue(metadataJson, METADATA_TYPE);
         } catch (JsonProcessingException exception) {
-            LOGGER.debug("Ignoring invalid graph node metadata JSON while mapping props", exception);
+            log.debug("Ignoring invalid graph node metadata JSON while mapping props", exception);
             return Map.of();
         }
     }
