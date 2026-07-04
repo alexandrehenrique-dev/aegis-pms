@@ -1,10 +1,4 @@
-/**
- * Wrapper único de HTTP para todo o frontend. Hoje nenhum domínio o usa de
- * fato (todos os services ainda leem de mocks locais — ver Sprint 07 para o
- * toggle mock/real), mas a interface já nasce pronta: quando um domínio
- * trocar de mock para chamada real, troca só a implementação do service,
- * nunca a forma de uso deste cliente.
- */
+/** Wrapper único de HTTP para todo o frontend — cada service decide, via `IS_API_MODE`, se lê de mocks locais ou chama a API real através deste cliente. */
 
 import { logApiCall } from "./devLog";
 import { toast } from "../../core/notifications/toast";
@@ -104,9 +98,49 @@ async function request<T>(path: string, init: RequestInit = {}, isRetry = false)
   return response.json() as Promise<T>;
 }
 
+/**
+ * Upload multipart — não passa por `request()` porque este fixa
+ * `Content-Type: application/json` em todo request (Sprint de Integração 02,
+ * Seção E). Nunca setar `Content-Type` manualmente aqui: o browser injeta o
+ * boundary correto do `multipart/form-data` sozinho a partir do `FormData`.
+ */
+async function upload<T>(path: string, formData: FormData): Promise<T> {
+  const token = tokenProvider();
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  logApiCall("POST", path, `multipart (${formData.has("file") ? "1 arquivo" : "sem arquivo"})`);
+
+  let response: Response;
+  try {
+    response = await fetch(`${resolveBaseUrl()}${path}`, { method: "POST", headers, body: formData });
+  } catch {
+    const networkError: ApiError = { status: 0, message: "Falha de rede ao contatar a API." };
+    throw networkError;
+  }
+
+  if (!response.ok) {
+    let message = `Erro ${response.status} ao enviar arquivo para ${path}`;
+    let code: string | undefined;
+    try {
+      const body = await response.json();
+      message = body?.message ?? message;
+      code = body?.code ?? body?.error;
+    } catch {
+      /* corpo de erro não é JSON; mantém a mensagem padrão */
+    }
+    const apiError: ApiError = { status: response.status, message, code };
+    throw apiError;
+  }
+
+  if (response.status === 204) return undefined as T;
+  return response.json() as Promise<T>;
+}
+
 export const apiClient = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body: body !== undefined ? JSON.stringify(body) : undefined }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  upload,
 };

@@ -11,7 +11,6 @@ import { toast } from "../../../core/notifications/toast";
 import { ContentStructureTree, BlockEditorCanvas, PropertiesPanel } from "../components/EditorPanels";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
-import { slugify } from "../../../shared/utils/slugify";
 import { pagesService } from "../services/pagesService";
 import { DEFAULT_BLOCK_CONTENT } from "../blockDefaults";
 import type { BlockType, Page } from "../contracts/responses";
@@ -41,7 +40,7 @@ export function PageEditor() {
   const pendingContentPatch = useRef<{ sectionId: string; patch: Record<string, unknown> } | null>(null);
   const contentDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { product } = useCurrentProduct();
-  const productSlug = product ? slugify(product.name) : "maestro-beton";
+  const productSlug = product ? product.id : "maestro-beton";
 
   const { data: foundPage, loading: loadingPage } = useAsyncData(
     () => (pageSlug ? pagesService.getPageBySlug(productSlug, pageSlug) : Promise.resolve(undefined)),

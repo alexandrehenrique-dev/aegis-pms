@@ -20,6 +20,7 @@
         <mockito.version>5.23.0</mockito.version>
         <spring-modulith.version>2.0.1</spring-modulith.version>
         <awssdk.version>2.29.52</awssdk.version>
+        <lombok.version>1.18.38</lombok.version>
     </properties>
 
     <dependencyManagement>
@@ -148,6 +149,14 @@
             <version>${mapstruct.version}</version>
         </dependency>
 
+        <!-- Logging estruturado (Sprint de Integracao 02, Secao K) — @Slf4j em todos os services -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Sanitizacao de markdown (dominio content, Sprint 11) -->
         <dependency>
             <groupId>org.jsoup</groupId>
@@ -211,9 +220,19 @@
                     <release>${maven.compiler.release}</release>
                     <annotationProcessorPaths>
                         <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <path>
                             <groupId>org.mapstruct</groupId>
                             <artifactId>mapstruct-processor</artifactId>
                             <version>${mapstruct.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>0.2.0</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

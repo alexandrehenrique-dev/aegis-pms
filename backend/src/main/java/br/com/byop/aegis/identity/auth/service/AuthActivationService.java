@@ -9,6 +9,7 @@ import br.com.byop.aegis.identity.auth.dto.AuthInviteValidationResponse;
 import br.com.byop.aegis.identity.auth.dto.AuthMessageResponse;
 import br.com.byop.aegis.identity.auth.exception.KeycloakAuthenticationException;
 import br.com.byop.aegis.identity.auth.exception.WeakPasswordException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class AuthActivationService {
 
@@ -47,6 +49,7 @@ public class AuthActivationService {
 
     @Transactional(readOnly = true)
     public AuthInviteValidationResponse validateInvite(UUID tokenId) {
+        log.debug("validateInvite: validando convite");
         AuthActionToken token = tokenService.validateInvite(tokenId);
         return new AuthInviteValidationResponse(
                 token.getUserName(),
@@ -61,17 +64,20 @@ public class AuthActivationService {
 
     @Transactional
     public AuthMessageResponse activate(UUID tokenId, String password) {
+        log.debug("activate: ativando conta via token de convite");
         passwordPolicy.assertStrong(password);
         AuthActionToken token = tokenService.consumeInvite(tokenId);
         updatePassword(token.getKeycloakId(), password);
         keycloakAdminClient.setUserEnabled(token.getKeycloakId(), true);
         keycloakAdminClient.clearRequiredActions(token.getKeycloakId());
         audit(token, "USER_INVITE_ACTIVATED");
+        log.info("activate: conta ativada para keycloakId='{}'", token.getKeycloakId());
         return new AuthMessageResponse(ACTIVATE_MESSAGE);
     }
 
     @Transactional
     public AuthMessageResponse requestPasswordReset(String email) {
+        log.debug("requestPasswordReset: email='{}'", email);
         userLifecycleService.findByEmail(email)
                 .ifPresent(this::sendPasswordReset);
         return new AuthMessageResponse(RESET_REQUEST_MESSAGE);
@@ -79,10 +85,12 @@ public class AuthActivationService {
 
     @Transactional
     public AuthMessageResponse confirmPasswordReset(UUID tokenId, String password) {
+        log.debug("confirmPasswordReset: confirmando redefinicao de senha");
         passwordPolicy.assertStrong(password);
         AuthActionToken token = tokenService.consumePasswordReset(tokenId);
         updatePassword(token.getKeycloakId(), password);
         audit(token, "PASSWORD_RESET_COMPLETED");
+        log.info("confirmPasswordReset: senha redefinida para keycloakId='{}'", token.getKeycloakId());
         return new AuthMessageResponse(RESET_CONFIRM_MESSAGE);
     }
 
@@ -90,12 +98,14 @@ public class AuthActivationService {
         AuthActionToken token = tokenService.createPasswordReset(user);
         emailService.sendPasswordReset(token);
         audit(token, "PASSWORD_RESET_REQUESTED");
+        log.info("requestPasswordReset: e-mail de redefinicao enviado para keycloakId='{}'", token.getKeycloakId());
     }
 
     private void updatePassword(String keycloakId, String password) {
         try {
             keycloakAdminClient.resetPassword(keycloakId, password);
         } catch (KeycloakAuthenticationException _) {
+            log.warn("updatePassword: senha rejeitada pelo Keycloak para keycloakId='{}'", keycloakId);
             throw new WeakPasswordException(PasswordPolicy.WEAK_CREDENTIAL_MESSAGE);
         }
     }

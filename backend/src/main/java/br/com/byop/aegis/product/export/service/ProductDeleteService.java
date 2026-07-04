@@ -15,11 +15,13 @@ import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ProductDeleteService {
 
@@ -41,9 +43,11 @@ public class ProductDeleteService {
 
     @Transactional
     public DeleteAcceptedResponse deleteProduct(AuthenticatedUser caller, UUID productId, DeleteProductRequest request) {
+        log.debug("deleteProduct: productId='{}'", productId);
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
         if (!product.getName().equals(request.confirmationText())) {
+            log.warn("deleteProduct: confirmacao invalida para productId='{}'", productId);
             throw new InvalidProductDeleteConfirmationException();
         }
         assertAuthorized(caller, product);
@@ -51,6 +55,7 @@ public class ProductDeleteService {
         product.markDeleting();
         productRepository.save(product);
         exportAndDeleteService.exportAndDelete(productId, caller.subject(), caller.email(), caller.name(), false);
+        log.info("deleteProduct: exclusao iniciada productId='{}'", productId);
         return new DeleteAcceptedResponse("Exportação iniciada. Um link de download será enviado para %s em instantes."
                 .formatted(caller.email()));
     }
@@ -67,6 +72,7 @@ public class ProductDeleteService {
                 .filter(this::isAssignedProductManager)
                 .isPresent();
         if (!productManager) {
+            log.warn("assertAuthorized: acesso negado para exclusao productId='{}'", product.getId());
             throw new ProductDeleteForbiddenException();
         }
     }
@@ -78,6 +84,7 @@ public class ProductDeleteService {
 
     private void assertDeletionCanStart(Product product) {
         if (product.getStatus() == ProductStatus.DELETING || product.getStatus() == ProductStatus.EXPORT_FAILED) {
+            log.warn("assertDeletionCanStart: exclusao ja em andamento productId='{}'", product.getId());
             throw new ExportAlreadyInProgressException();
         }
     }

@@ -130,3 +130,10 @@ aegis:
           - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
           - text/csv
         max-size-bytes: 15728640
+
+logging:
+  level:
+    br.com.byop.aegis: INFO
+    br.com.byop.aegis.security: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

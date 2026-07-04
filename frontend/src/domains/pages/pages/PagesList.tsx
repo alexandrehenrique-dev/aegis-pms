@@ -73,7 +73,7 @@ export function PagesList() {
   const { viewAsRole } = useViewAsRole();
   const canEdit = viewAsRole !== "viewer";
   const { product } = useCurrentProduct();
-  const productSlug = product ? slugify(product.name) : "maestro-beton";
+  const productSlug = product ? product.id : "maestro-beton";
 
   const { data: loadedPages, loading, error } = useAsyncData(() => pagesService.listPages(productSlug), [productSlug]);
   const [pages, setPages] = useState<Page[]>([]);

@@ -7,6 +7,7 @@ import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -23,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ProductExportEmailService {
 
@@ -49,6 +51,7 @@ public class ProductExportEmailService {
 
     public void sendExportReady(ProductExportData data, StoredExport storedExport, UUID tokenId,
                                 String recipientEmail, String recipientName) {
+        log.debug("sendExportReady: productId='{}', tokenId='{}'", data.productId(), tokenId);
         Map<?, ?> product = productManifest(data);
         Map<String, Object> model = Map.of(
                 "userName", recipientName,
@@ -60,9 +63,11 @@ public class ProductExportEmailService {
                 "fileSizeMb", fileSizeMb(storedExport.sizeBytes())
         );
         sendHtml(recipientEmail, EXPORT_SUBJECT, model);
+        log.info("sendExportReady: email de exportacao enviado productId='{}', tokenId='{}'", data.productId(), tokenId);
     }
 
     public void sendExportFailure(String recipientEmail, String productName) {
+        log.debug("sendExportFailure: productName='{}'", productName);
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, StandardCharsets.UTF_8.name());
@@ -71,7 +76,9 @@ public class ProductExportEmailService {
             helper.setSubject(FAILURE_SUBJECT);
             helper.setText("Nao foi possivel gerar o backup do produto %s. Entre em contato com o suporte.".formatted(productName));
             mailSender.send(message);
+            log.info("sendExportFailure: email de falha enviado productName='{}'", productName);
         } catch (MessagingException exception) {
+            log.warn("sendExportFailure: falha ao enviar email de notificacao de falha productName='{}'", productName);
             throw new IllegalStateException("Unable to send export failure e-mail", exception);
         }
     }
@@ -96,6 +103,7 @@ public class ProductExportEmailService {
             helper.setText(html, true);
             mailSender.send(message);
         } catch (IOException | MessagingException | TemplateException exception) {
+            log.warn("sendHtml: falha ao enviar email subject='{}'", subject);
             throw new IllegalStateException("Unable to send product export e-mail", exception);
         }
     }

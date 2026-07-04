@@ -35,7 +35,7 @@ export function ProductCard({ p }: { p: ProductSummary }) {
   const handleArchive = async () => {
     setArchiving(true);
     try {
-      await productsService.archiveProduct(p.id ?? p.name);
+      await productsService.archiveProduct(p);
       toast.success("Produto arquivado.", { description: `${p.name} foi movido para arquivados.` });
       setConfirmArchive(false);
     } finally {

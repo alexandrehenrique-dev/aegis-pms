@@ -3,6 +3,7 @@ package br.com.byop.aegis.submission.api;
 import br.com.byop.aegis.form.api.FormReferenceService;
 import br.com.byop.aegis.submission.domain.Submission;
 import br.com.byop.aegis.submission.repository.SubmissionRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class SubmissionAnalyticsService {
 
@@ -32,6 +34,7 @@ public class SubmissionAnalyticsService {
 
     @Transactional(readOnly = true)
     public SubmissionAnalyticsResponse summarize(UUID productId) {
+        log.debug("summarize: productId='{}'", productId);
         List<UUID> formIds = formReferenceService.listFormIds(productId);
         if (formIds.isEmpty()) {
             return new SubmissionAnalyticsResponse(0, 0, null);
@@ -59,6 +62,7 @@ public class SubmissionAnalyticsService {
      */
     @Transactional(readOnly = true)
     public long countToday(UUID productId) {
+        log.debug("countToday: productId='{}'", productId);
         List<UUID> formIds = formReferenceService.listFormIds(productId);
         if (formIds.isEmpty()) {
             return 0;

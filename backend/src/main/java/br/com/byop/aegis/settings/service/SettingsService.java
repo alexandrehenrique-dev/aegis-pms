@@ -18,6 +18,7 @@ import br.com.byop.aegis.settings.exception.SettingsNotFoundException;
 import br.com.byop.aegis.settings.mapper.RolePermissionMapper;
 import br.com.byop.aegis.settings.repository.RolePermissionRepository;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +37,7 @@ import java.util.UUID;
  * tenant/produto (Secao 10.1-10.4) e a restricao explicita de papel desta
  * etapa.
  */
+@Slf4j
 @Service
 public class SettingsService {
 
@@ -73,6 +75,7 @@ public class SettingsService {
 
     @Transactional(readOnly = true)
     public List<SettingCard> getOverview(AuthenticatedUser caller, UUID productId) {
+        log.debug("getOverview: productId='{}'", productId);
         ProductAccessScope scope = resolveProductScope(caller, productId);
         assertProductSettingsRole(caller);
         return buildOverview(scope);
@@ -81,6 +84,7 @@ public class SettingsService {
     @Transactional
     public List<SettingCard> updateProductSettings(AuthenticatedUser caller, UUID productId,
                                                     UpdateProductSettingsRequest request) {
+        log.debug("updateProductSettings: productId='{}', name='{}'", productId, request.name());
         ProductAccessScope scope = resolveProductScope(caller, productId);
         assertProductSettingsRole(caller);
         productReferenceService.renameProduct(productId, request.name());
@@ -89,17 +93,20 @@ public class SettingsService {
                 TARGET_TYPE_PRODUCT_SETTINGS, productId.toString(), request.name(), MODULE_SETTINGS, null,
                 Map.of("name", request.name())
         ));
+        log.info("updateProductSettings: produto atualizado productId='{}', name='{}'", productId, request.name());
         return buildOverview(scope);
     }
 
     @Transactional(readOnly = true)
     public List<RoleMatrixEntry> getRoleMatrix(AuthenticatedUser caller, UUID tenantId) {
+        log.debug("getRoleMatrix: tenantId='{}'", tenantId);
         assertRoleMatrixAccess(caller, tenantId);
         return buildMatrix(tenantId);
     }
 
     @Transactional
     public List<RoleMatrixEntry> updateRoleMatrix(AuthenticatedUser caller, UUID tenantId, List<RoleMatrixEntry> entries) {
+        log.debug("updateRoleMatrix: tenantId='{}', entries='{}'", tenantId, entries.size());
         assertRoleMatrixAccess(caller, tenantId);
         Map<String, Object> before = matrixSnapshot(tenantId);
 
@@ -113,12 +120,14 @@ public class SettingsService {
                 tenantId, null, caller.subject(), "ROLE_PERMISSIONS_UPDATED", TARGET_TYPE_ROLE_PERMISSIONS,
                 tenantId.toString(), null, MODULE_SETTINGS, before, matrixSnapshot(tenantId)
         ));
+        log.info("updateRoleMatrix: matriz de permissoes atualizada tenantId='{}'", tenantId);
         return updated;
     }
 
     @Transactional
     public RoleMatrixEntry previewPermissionMatrix(AuthenticatedUser caller, UUID tenantId,
                                                     PermissionMatrixPreviewRequest request) {
+        log.debug("previewPermissionMatrix: tenantId='{}', role='{}'", tenantId, request.role());
         assertRoleMatrixAccess(caller, tenantId);
         String role = requireCanonicalRole(request.role());
         return matrixEntryForRole(tenantId, role);
@@ -126,6 +135,7 @@ public class SettingsService {
 
     @Transactional
     public List<RoleMatrixEntry> restoreDefaultPermissions(AuthenticatedUser caller, UUID tenantId) {
+        log.debug("restoreDefaultPermissions: tenantId='{}'", tenantId);
         assertRoleMatrixAccess(caller, tenantId);
         Map<String, Object> before = matrixSnapshot(tenantId);
 
@@ -144,6 +154,7 @@ public class SettingsService {
                 tenantId, null, caller.subject(), "ROLE_PERMISSIONS_RESTORED", TARGET_TYPE_ROLE_PERMISSIONS,
                 tenantId.toString(), null, MODULE_SETTINGS, before, matrixSnapshot(tenantId)
         ));
+        log.info("restoreDefaultPermissions: permissoes restauradas para padrao tenantId='{}'", tenantId);
         return restored;
     }
 

@@ -6,15 +6,18 @@ import { UnsavedChangesBanner } from "../../../shared/components/Banners";
 import { SettingsSection } from "../components/SettingsBits";
 import { toast } from "../../../core/notifications/toast";
 import { productsService } from "../../products/services/productsService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 export function ProductSettings() {
   const navigate = useNavigate();
+  const { product } = useCurrentProduct();
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
+    if (!product) return;
     setSaving(true);
     try {
-      await productsService.saveSettings();
+      await productsService.saveSettings(product.id);
       toast.success("Alterações salvas!");
     } finally {
       setSaving(false);

@@ -5,7 +5,6 @@ import { MediaField } from "../../../shared/components/MediaField";
 import { ItemsCrudEditor } from "../components/ItemsCrudEditor";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
-import { slugify } from "../../../shared/utils/slugify";
 import { globalsService } from "../services/globalsService";
 import { toast } from "../../../core/notifications/toast";
 import type { NavLink, ProductGlobals, SocialLink } from "../contracts/globals";
@@ -17,7 +16,7 @@ import type { NavLink, ProductGlobals, SocialLink } from "../contracts/globals";
  */
 export function GlobalsSettings() {
   const { product } = useCurrentProduct();
-  const productSlug = product ? slugify(product.name) : "maestro-beton";
+  const productSlug = product ? product.id : "maestro-beton";
   const { data: loaded, loading } = useAsyncData(() => globalsService.getGlobals(productSlug), [productSlug]);
   const [globals, setGlobals] = useState<ProductGlobals | null>(null);
   const [saving, setSaving] = useState(false);

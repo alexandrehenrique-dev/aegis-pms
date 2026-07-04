@@ -2,6 +2,7 @@ import { kgNodes, kgEdges, wikidevKgNodes, wikidevKgEdges, lokiKgNodes, lokiKgEd
 import { logApiCall } from "../../../shared/services/devLog";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
+import { requireCurrentProductId } from "../../../core/products/currentProductContext";
 import type { EdgeType, GraphNodePreview, ListEdgesResponse, ListNodesResponse, RelatedNode } from "../contracts/responses";
 
 // Store em memória só para a sessão do navegador — ver nota equivalente em
@@ -35,32 +36,32 @@ export const knowledgeService = {
    * re-arquitetura das telas de visualização.
    */
   async listNodes(): Promise<ListNodesResponse> {
-    if (IS_API_MODE) return apiClient.get<ListNodesResponse>("/products/{productId}/graph/nodes");
+    if (IS_API_MODE) return apiClient.get<ListNodesResponse>(`/products/${requireCurrentProductId()}/graph/nodes`);
     return allNodes;
   },
   async listEdges(): Promise<ListEdgesResponse> {
-    if (IS_API_MODE) return apiClient.get<ListEdgesResponse>("/products/{productId}/graph/edges");
+    if (IS_API_MODE) return apiClient.get<ListEdgesResponse>(`/products/${requireCurrentProductId()}/graph/edges`);
     return allEdges;
   },
   // Pontos de integração real (Sprint 07) — sem endpoint formalizado ainda em
   // docs/trace/00_endpoints_esperados.md (só o GET de orphans existe, Seção B.5);
   // path inferido por convenção REST sobre o recurso já documentado.
   async markInsightReviewed(text: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.post("/products/{productId}/graph/insights/review", { text });
+    if (IS_API_MODE) return apiClient.post(`/products/${requireCurrentProductId()}/graph/insights/review`, { text });
     logApiCall("POST", "/api/v1/products/{productId}/graph/insights/review", { text });
   },
   async resolveOrphan(id: string, action: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.post(`/products/{productId}/graph/orphans/${id}/resolve`, { action });
+    if (IS_API_MODE) return apiClient.post(`/products/${requireCurrentProductId()}/graph/orphans/${id}/resolve`, { action });
     logApiCall("POST", `/api/v1/products/{productId}/graph/orphans/${id}/resolve`, { action });
   },
   async resolveOrphans(ids: string[]): Promise<void> {
-    if (IS_API_MODE) return apiClient.post("/products/{productId}/graph/orphans/resolve", { ids });
+    if (IS_API_MODE) return apiClient.post(`/products/${requireCurrentProductId()}/graph/orphans/resolve`, { ids });
     logApiCall("POST", "/api/v1/products/{productId}/graph/orphans/resolve", { ids });
   },
 
   /** Preview leve para tooltip de referência inline (`kg-ref`) — Sprint 11, Tarefa C.1/C.4. */
   async getNodePreview(nodeId: string): Promise<GraphNodePreview | undefined> {
-    if (IS_API_MODE) return apiClient.get<GraphNodePreview>(`/graph/nodes/${nodeId}/preview`);
+    if (IS_API_MODE) return apiClient.get<GraphNodePreview>(`/products/${requireCurrentProductId()}/graph/nodes/${nodeId}/preview`);
     const node = allNodes.find((n) => n.id === nodeId);
     if (!node) return undefined;
     return { id: node.id, label: node.label, type: node.type, summary: node.summary ?? "", difficulty: node.difficulty, thumbnail: node.thumbnail };
@@ -68,7 +69,7 @@ export const knowledgeService = {
 
   /** Nós relacionados a um nó, ordenados por `weight` desc — Sprint 11, Tarefa C.5 (já é `GET /graph/nodes/{id}/related` no backend, etapa 07). */
   async listRelated(nodeId: string): Promise<RelatedNode[]> {
-    if (IS_API_MODE) return apiClient.get<RelatedNode[]>(`/graph/nodes/${nodeId}/related`);
+    if (IS_API_MODE) return apiClient.get<RelatedNode[]>(`/products/${requireCurrentProductId()}/graph/nodes/${nodeId}/related`);
     return allEdges
       .filter((e) => e.from === nodeId || e.to === nodeId)
       .map((e) => {
@@ -124,11 +125,11 @@ export const knowledgeService = {
   async createEdge(from: string, to: string, productSlug: string, edgeType: EdgeType = "RELATED_TO"): Promise<void> {
     if (IS_API_MODE) return apiClient.post(`/products/${productSlug}/graph/edges`, { from, to, edgeType });
     if (!allNodes.some((n) => n.id === to)) {
-      console.warn(`knowledgeService.createEdge: nó de destino "${to}" não existe — edge não criada.`);
+      if (!import.meta.env.PROD) console.warn(`knowledgeService.createEdge: nó de destino "${to}" não existe — edge não criada.`);
       return;
     }
     if (nodeProductSlug.get(to) !== productSlug) {
-      console.warn(`knowledgeService.createEdge: nó de destino "${to}" pertence a outro produto — Knowledge Graph não conecta conteúdos de produtos diferentes (ADR-0016). Edge não criada.`);
+      if (!import.meta.env.PROD) console.warn(`knowledgeService.createEdge: nó de destino "${to}" pertence a outro produto — Knowledge Graph não conecta conteúdos de produtos diferentes (ADR-0016). Edge não criada.`);
       return;
     }
     if (allEdges.some((e) => e.from === from && e.to === to && e.verb === edgeType)) return;

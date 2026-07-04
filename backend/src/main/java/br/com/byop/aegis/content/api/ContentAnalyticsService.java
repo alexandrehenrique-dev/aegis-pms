@@ -3,6 +3,7 @@ package br.com.byop.aegis.content.api;
 import br.com.byop.aegis.content.domain.Content;
 import br.com.byop.aegis.content.domain.ContentStatus;
 import br.com.byop.aegis.content.repository.ContentRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ContentAnalyticsService {
 
@@ -28,6 +30,7 @@ public class ContentAnalyticsService {
 
     @Transactional(readOnly = true)
     public ContentAnalyticsResponse summarize(UUID productId) {
+        log.debug("summarize: productId='{}'", productId);
         List<Content> contents = contentRepository.findAllByProductId(productId);
         OffsetDateTime staleLimit = OffsetDateTime.now(clock).minusDays(STALE_REVIEW_DAYS);
         long published = countByStatus(contents, ContentStatus.PUBLISHED);

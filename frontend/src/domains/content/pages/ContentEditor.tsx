@@ -7,7 +7,6 @@ import { toast } from "../../../core/notifications/toast";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { resolveEnabledModules } from "../../../core/products/moduleDefaults";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
-import { slugify } from "../../../shared/utils/slugify";
 import { contentService } from "../services/contentService";
 import { ContentArticleEditor } from "../components/ContentArticleEditor";
 import type { ContentRow } from "../contracts/responses";
@@ -27,7 +26,7 @@ export function ContentEditor() {
   const { id } = useParams<{ id: string }>();
   const { product } = useCurrentProduct();
   const knowledgeGraphEnabled = resolveEnabledModules(product).includes("Knowledge Graph");
-  const productSlug = product ? slugify(product.name) : "maestro-beton";
+  const productSlug = product ? product.id : "maestro-beton";
 
   const { data: foundContent, loading } = useAsyncData(() => (id ? contentService.getContent(id) : Promise.resolve(undefined)), [id]);
   const [content, setContent] = useState<ContentRow | null>(null);

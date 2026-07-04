@@ -22,12 +22,14 @@ import br.com.byop.aegis.product.api.ProductReferenceService;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantMembershipReference;
 import br.com.byop.aegis.tenant.api.TenantUserAccessService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class FeedbackService {
 
@@ -66,6 +68,8 @@ public class FeedbackService {
 
     @Transactional
     public FeedbackSummary create(AuthenticatedUser caller, CreateFeedbackRequest request) {
+        log.debug("create: caller='{}', productId='{}', category='{}', priority='{}'",
+                caller.subject(), request.productId(), request.category(), request.priority());
         ProductContext context = resolveProductContext(caller, request.productId());
         validateAttachment(context.tenantId(), request.attachmentAssetId());
         FeedbackPriority priority = FeedbackPriority.fromContractValue(request.priority());
@@ -83,11 +87,13 @@ public class FeedbackService {
         Feedback saved = feedbackRepository.save(feedback);
         telegramFeedbackNotifier.notify(saved);
         notifyCriticalFeedback(caller, saved);
+        log.info("create: feedback criado publicId='{}', priority='{}'", saved.getPublicId(), priority);
         return feedbackMapper.toSummary(saved);
     }
 
     @Transactional(readOnly = true)
     public List<FeedbackSummary> listAll(AuthenticatedUser caller) {
+        log.debug("listAll: caller='{}'", caller.subject());
         assertSuperAdmin(caller);
         return feedbackRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
@@ -97,6 +103,7 @@ public class FeedbackService {
 
     @Transactional(readOnly = true)
     public List<FeedbackSummary> listByTenant(AuthenticatedUser caller, UUID tenantId) {
+        log.debug("listByTenant: tenantId='{}'", tenantId);
         assertTenantFeedbackAccess(caller, tenantId);
         return feedbackRepository.findAllByTenantIdOrderByCreatedAtDesc(tenantId)
                 .stream()
@@ -106,10 +113,12 @@ public class FeedbackService {
 
     @Transactional
     public FeedbackSummary updateStatus(AuthenticatedUser caller, String feedbackId, String status) {
+        log.debug("updateStatus: feedbackId='{}', status='{}'", feedbackId, status);
         assertSuperAdmin(caller);
         Feedback feedback = feedbackRepository.findByPublicId(feedbackId)
                 .orElseThrow(() -> new FeedbackNotFoundException(feedbackId));
         feedback.changeStatus(FeedbackStatus.fromContractValue(status));
+        log.info("updateStatus: feedback publicId='{}' -> status='{}'", feedbackId, status);
         return feedbackMapper.toSummary(feedback);
     }
 

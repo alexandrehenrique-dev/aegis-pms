@@ -7,12 +7,14 @@ import br.com.byop.aegis.tenant.domain.TenantMembershipStatus;
 import br.com.byop.aegis.tenant.exception.TenantNotFoundException;
 import br.com.byop.aegis.tenant.repository.TenantMembershipRepository;
 import br.com.byop.aegis.tenant.repository.TenantRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class TenantAccessService implements TenantVisibilityPort {
 
@@ -28,6 +30,7 @@ public class TenantAccessService implements TenantVisibilityPort {
 
     @Transactional(readOnly = true)
     public TenantReference getRequiredReference(UUID tenantId) {
+        log.debug("getRequiredReference: tenantId='{}'", tenantId);
         return tenantRepository.findById(tenantId)
                 .map(tenant -> new TenantReference(tenant.getId(), tenant.getName()))
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
@@ -35,6 +38,7 @@ public class TenantAccessService implements TenantVisibilityPort {
 
     @Transactional(readOnly = true)
     public List<UUID> findActiveTenantAdminTenantIds(String userSubject) {
+        log.debug("findActiveTenantAdminTenantIds: userSubject='{}'", userSubject);
         return membershipRepository.findAllByUserSubject(userSubject)
                 .stream()
                 .filter(this::isActiveTenantAdminMembership)
@@ -46,6 +50,7 @@ public class TenantAccessService implements TenantVisibilityPort {
     @Override
     @Transactional(readOnly = true)
     public boolean hasActiveMembership(UUID tenantId, String userSubject) {
+        log.debug("hasActiveMembership: tenantId='{}', userSubject='{}'", tenantId, userSubject);
         return membershipRepository.existsByTenantIdAndUserSubjectAndStatus(
                 tenantId,
                 userSubject,
@@ -56,6 +61,7 @@ public class TenantAccessService implements TenantVisibilityPort {
     @Override
     @Transactional(readOnly = true)
     public String findTenantName(UUID tenantId) {
+        log.debug("findTenantName: tenantId='{}'", tenantId);
         return tenantRepository.findById(tenantId).map(Tenant::getName).orElse(null);
     }
 
@@ -68,8 +74,10 @@ public class TenantAccessService implements TenantVisibilityPort {
      */
     @Transactional
     public void markTutorialCompleted(String userSubject) {
+        log.debug("markTutorialCompleted: userSubject='{}'", userSubject);
         membershipRepository.findAllByUserSubject(userSubject)
                 .forEach(TenantMembership::completeTutorial);
+        log.info("markTutorialCompleted: tutorial marcado como concluido userSubject='{}'", userSubject);
     }
 
     /**
@@ -80,6 +88,7 @@ public class TenantAccessService implements TenantVisibilityPort {
      */
     @Transactional(readOnly = true)
     public boolean hasCompletedTutorial(String userSubject) {
+        log.debug("hasCompletedTutorial: userSubject='{}'", userSubject);
         return membershipRepository.existsByUserSubjectAndTutorialCompletedTrue(userSubject);
     }
 

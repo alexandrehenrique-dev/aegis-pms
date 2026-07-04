@@ -22,6 +22,7 @@ import br.com.byop.aegis.shared.markdown.SharedMarkdownSanitizer;
 import br.com.byop.aegis.tenant.api.TenantLifecycleTransition;
 import br.com.byop.aegis.tenant.api.TenantStatusChangedEvent;
 import br.com.byop.aegis.tenant.api.TenantUserAccessService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
@@ -36,6 +37,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class NotificationService {
 
@@ -73,6 +75,7 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public List<NotificationWithStatus> listMine(AuthenticatedUser caller) {
+        log.debug("listMine: caller='{}'", caller.subject());
         return statusRepository.findAllByUserSubjectOrderByNotificationCreatedAtDesc(caller.subject())
                 .stream()
                 .map(notificationMapper::toWithStatus)
@@ -92,18 +95,21 @@ public class NotificationService {
 
     @Transactional
     public void markShown(AuthenticatedUser caller, UUID notificationId) {
+        log.debug("markShown: notificationId='{}'", notificationId);
         UserNotificationStatus status = getStatusForCaller(caller, notificationId);
         status.markShown(now());
     }
 
     @Transactional
     public void markRead(AuthenticatedUser caller, UUID notificationId) {
+        log.debug("markRead: notificationId='{}'", notificationId);
         UserNotificationStatus status = getStatusForCaller(caller, notificationId);
         status.markRead(now());
     }
 
     @Transactional
     public NotificationResponse create(AuthenticatedUser caller, CreateNotificationRequest request) {
+        log.debug("create: type='{}', target='{}'", request.type(), request.target().type());
         assertSuperAdmin(caller);
         List<String> recipients = resolveRecipients(request.target());
         String sanitizedBody = markdownSanitizer.sanitize(request.bodyMarkdown());
@@ -116,11 +122,13 @@ public class NotificationService {
         );
         Notification saved = notificationRepository.save(notification);
         saveStatuses(saved, recipients);
+        log.info("create: notificacao criada id='{}', destinatarios={}", saved.getId(), recipients.size());
         return notificationMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> listAll(AuthenticatedUser caller) {
+        log.debug("listAll: caller='{}'", caller.subject());
         assertSuperAdmin(caller);
         return notificationRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
@@ -143,18 +151,22 @@ public class NotificationService {
      */
     @Transactional
     public void notifyTenantStatusChange(UUID tenantId, TenantLifecycleTransition transition, String actorSubject) {
+        log.debug("notifyTenantStatusChange: tenantId='{}', transition='{}'", tenantId, transition);
         doNotifyTenantStatusChange(tenantId, transition, actorSubject);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void onTenantStatusChanged(TenantStatusChangedEvent event) {
+        log.debug("onTenantStatusChanged: tenantId='{}', transition='{}'", event.tenantId(), event.transition());
         doNotifyTenantStatusChange(event.tenantId(), event.transition(), event.actorSubject());
     }
 
     @Transactional
     public void notifyCriticalFeedback(CriticalFeedbackNotificationRequest request) {
+        log.debug("notifyCriticalFeedback: feedbackPublicId='{}'", request.publicId());
         List<String> recipients = distinct(tenantUserAccessService.listActiveSuperAdminSubjects());
         if (recipients.isEmpty()) {
+            log.warn("notifyCriticalFeedback: nenhum super admin ativo para notificar (feedbackPublicId='{}')", request.publicId());
             return;
         }
         Notification notification = new Notification(
@@ -166,6 +178,7 @@ public class NotificationService {
         );
         Notification saved = notificationRepository.save(notification);
         saveStatuses(saved, recipients);
+        log.info("notifyCriticalFeedback: notificacao id='{}' criada para {} destinatarios", saved.getId(), recipients.size());
     }
 
     /**
@@ -185,6 +198,8 @@ public class NotificationService {
                 NotificationPresentationMode.BELL_ONLY, actorSubject);
         Notification saved = notificationRepository.save(notification);
         saveStatuses(saved, recipients);
+        log.info("doNotifyTenantStatusChange: notificacao id='{}' criada para tenantId='{}', destinatarios={}",
+                saved.getId(), tenantId, recipients.size());
     }
 
     private String criticalFeedbackBody(CriticalFeedbackNotificationRequest request) {
@@ -225,12 +240,14 @@ public class NotificationService {
 
     @Transactional
     public void assignOnboarding(String userSubject) {
+        log.debug("assignOnboarding: userSubject='{}'", userSubject);
         Notification onboarding = notificationRepository.findFirstByType(NotificationType.ONBOARDING)
                 .orElseThrow(OnboardingNotificationNotFoundException::new);
         if (statusRepository.existsByNotificationIdAndUserSubject(onboarding.getId(), userSubject)) {
             return;
         }
         statusRepository.save(new UserNotificationStatus(onboarding, userSubject));
+        log.info("assignOnboarding: notificacao de onboarding atribuida a userSubject='{}'", userSubject);
     }
 
     private UserNotificationStatus getStatusForCaller(AuthenticatedUser caller, UUID notificationId) {

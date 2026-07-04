@@ -16,3 +16,7 @@ springdoc:
 aegis:
   app:
     base-url: ${AEGIS_APP_BASE_URL:http://localhost:5173}
+
+logging:
+  level:
+    br.com.byop.aegis: DEBUG

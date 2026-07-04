@@ -6,6 +6,7 @@ import br.com.byop.aegis.tenant.domain.TenantMembershipStatus;
 import br.com.byop.aegis.tenant.exception.TenantNotFoundException;
 import br.com.byop.aegis.tenant.repository.TenantMembershipRepository;
 import br.com.byop.aegis.tenant.repository.TenantRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class TenantUserAccessService {
 
@@ -29,6 +31,7 @@ public class TenantUserAccessService {
 
     @Transactional(readOnly = true)
     public TenantReference getRequiredTenant(UUID tenantId) {
+        log.debug("getRequiredTenant: tenantId='{}'", tenantId);
         return tenantRepository.findById(tenantId)
                 .map(tenant -> new TenantReference(tenant.getId(), tenant.getName()))
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
@@ -36,6 +39,7 @@ public class TenantUserAccessService {
 
     @Transactional(readOnly = true)
     public List<TenantMembershipReference> listMemberships(UUID tenantId) {
+        log.debug("listMemberships: tenantId='{}'", tenantId);
         ensureTenantExists(tenantId);
         return membershipRepository.findAllByTenantId(tenantId)
                 .stream()
@@ -45,12 +49,14 @@ public class TenantUserAccessService {
 
     @Transactional(readOnly = true)
     public Optional<TenantMembershipReference> findMembership(UUID tenantId, String userSubject) {
+        log.debug("findMembership: tenantId='{}', userSubject='{}'", tenantId, userSubject);
         return membershipRepository.findByTenantIdAndUserSubject(tenantId, userSubject)
                 .map(this::toReference);
     }
 
     @Transactional(readOnly = true)
     public List<TenantMembershipReference> listActiveMemberships(String userSubject) {
+        log.debug("listActiveMemberships: userSubject='{}'", userSubject);
         return membershipRepository.findAllByUserSubjectAndStatus(userSubject, TenantMembershipStatus.ACTIVE)
                 .stream()
                 .map(this::toReference)
@@ -59,6 +65,7 @@ public class TenantUserAccessService {
 
     @Transactional(readOnly = true)
     public boolean hasActiveMembership(UUID tenantId, String userSubject) {
+        log.debug("hasActiveMembership: tenantId='{}', userSubject='{}'", tenantId, userSubject);
         return membershipRepository.existsByTenantIdAndUserSubjectAndStatus(
                 tenantId,
                 userSubject,
@@ -68,27 +75,32 @@ public class TenantUserAccessService {
 
     @Transactional(readOnly = true)
     public boolean hasAnyMembership(UUID tenantId, String userSubject) {
+        log.debug("hasAnyMembership: tenantId='{}', userSubject='{}'", tenantId, userSubject);
         return membershipRepository.existsByTenantIdAndUserSubject(tenantId, userSubject);
     }
 
     @Transactional(readOnly = true)
     public List<String> listActiveUserSubjects() {
+        log.debug("listActiveUserSubjects: todos os tenants");
         return membershipRepository.findDistinctUserSubjectsByStatus(TenantMembershipStatus.ACTIVE);
     }
 
     @Transactional(readOnly = true)
     public List<String> listActiveUserSubjects(UUID tenantId) {
+        log.debug("listActiveUserSubjects: tenantId='{}'", tenantId);
         ensureTenantExists(tenantId);
         return membershipRepository.findDistinctUserSubjectsByTenantIdAndStatus(tenantId, TenantMembershipStatus.ACTIVE);
     }
 
     @Transactional(readOnly = true)
     public List<String> listActiveSuperAdminSubjects() {
+        log.debug("listActiveSuperAdminSubjects: consultando super admins ativos");
         return membershipRepository.findDistinctUserSubjectsByRoleAndStatus(SUPER_ADMIN, TenantMembershipStatus.ACTIVE);
     }
 
     @Transactional(readOnly = true)
     public boolean hasOtherActiveMembership(String userSubject, UUID ignoredTenantId) {
+        log.debug("hasOtherActiveMembership: userSubject='{}', ignoredTenantId='{}'", userSubject, ignoredTenantId);
         return membershipRepository.findAllByUserSubjectAndStatus(userSubject, TenantMembershipStatus.ACTIVE)
                 .stream()
                 .anyMatch(membership -> !membership.getTenant().getId().equals(ignoredTenantId));
@@ -96,6 +108,8 @@ public class TenantUserAccessService {
 
     @Transactional(readOnly = true)
     public boolean wouldRemoveLastActiveAdmin(UUID tenantId, String userSubject, String nextRole, String nextStatus) {
+        log.debug("wouldRemoveLastActiveAdmin: tenantId='{}', userSubject='{}', nextRole='{}', nextStatus='{}'",
+                tenantId, userSubject, nextRole, nextStatus);
         return membershipRepository.findByTenantIdAndUserSubject(tenantId, userSubject)
                 .filter(membership -> isActiveAdmin(membership.getRole(), membership.getStatus()))
                 .filter(_ -> !isActiveAdmin(nextRole, parseStatus(nextStatus)))
@@ -109,44 +123,59 @@ public class TenantUserAccessService {
 
     @Transactional
     public TenantMembershipReference invite(UUID tenantId, String userSubject, String role) {
+        log.debug("invite: tenantId='{}', userSubject='{}', role='{}'", tenantId, userSubject, role);
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
         TenantMembership membership = new TenantMembership(tenant, userSubject, role);
         membership.invite();
-        return toReference(membershipRepository.save(membership));
+        TenantMembershipReference saved = toReference(membershipRepository.save(membership));
+        log.info("invite: membership criada id='{}', tenantId='{}', userSubject='{}'", saved.id(), tenantId, userSubject);
+        return saved;
     }
 
     @Transactional
     public TenantMembershipReference update(UUID tenantId, String userSubject, String role, String status) {
+        log.debug("update: tenantId='{}', userSubject='{}', role='{}', status='{}'", tenantId, userSubject, role, status);
         TenantMembership membership = membershipRepository.findByTenantIdAndUserSubject(tenantId, userSubject)
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
         membership.changeRole(role);
         applyStatus(membership, parseStatus(status));
-        return toReference(membershipRepository.save(membership));
+        TenantMembershipReference saved = toReference(membershipRepository.save(membership));
+        log.info("update: membership atualizada id='{}', tenantId='{}', userSubject='{}'", saved.id(), tenantId, userSubject);
+        return saved;
     }
 
     @Transactional
     public TenantMembershipReference block(UUID tenantId, String userSubject) {
+        log.debug("block: tenantId='{}', userSubject='{}'", tenantId, userSubject);
         TenantMembership membership = membershipRepository.findByTenantIdAndUserSubject(tenantId, userSubject)
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
         membership.suspend();
-        return toReference(membershipRepository.save(membership));
+        TenantMembershipReference saved = toReference(membershipRepository.save(membership));
+        log.info("block: membership bloqueada id='{}', tenantId='{}', userSubject='{}'", saved.id(), tenantId, userSubject);
+        return saved;
     }
 
     @Transactional
     public TenantMembershipReference remove(UUID tenantId, String userSubject) {
+        log.debug("remove: tenantId='{}', userSubject='{}'", tenantId, userSubject);
         TenantMembership membership = membershipRepository.findByTenantIdAndUserSubject(tenantId, userSubject)
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
         membership.remove();
-        return toReference(membershipRepository.save(membership));
+        TenantMembershipReference saved = toReference(membershipRepository.save(membership));
+        log.info("remove: membership removida id='{}', tenantId='{}', userSubject='{}'", saved.id(), tenantId, userSubject);
+        return saved;
     }
 
     @Transactional
     public TenantMembershipReference restore(UUID tenantId, String userSubject) {
+        log.debug("restore: tenantId='{}', userSubject='{}'", tenantId, userSubject);
         TenantMembership membership = membershipRepository.findByTenantIdAndUserSubject(tenantId, userSubject)
                 .orElseThrow(() -> new TenantNotFoundException(tenantId));
         membership.activate();
-        return toReference(membershipRepository.save(membership));
+        TenantMembershipReference saved = toReference(membershipRepository.save(membership));
+        log.info("restore: membership restaurada id='{}', tenantId='{}', userSubject='{}'", saved.id(), tenantId, userSubject);
+        return saved;
     }
 
     private void ensureTenantExists(UUID tenantId) {

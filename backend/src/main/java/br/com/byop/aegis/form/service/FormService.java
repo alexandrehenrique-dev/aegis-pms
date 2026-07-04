@@ -12,6 +12,7 @@ import br.com.byop.aegis.form.mapper.FormDefinitionMapper;
 import br.com.byop.aegis.form.repository.FormDefinitionRepository;
 import br.com.byop.aegis.product.api.ProductReference;
 import br.com.byop.aegis.product.api.ProductReferenceService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class FormService {
 
@@ -47,6 +49,7 @@ public class FormService {
 
     @Transactional(readOnly = true)
     public List<FormSummary> listForms(UUID productId) {
+        log.debug("listForms: productId='{}'", productId);
         return formRepository.findAllByProductId(productId).stream()
                 .map(this::toSummary)
                 .toList();
@@ -54,48 +57,58 @@ public class FormService {
 
     @Transactional
     public FormDetail createForm(UUID productId, CreateFormDefinitionRequest request) {
+        log.debug("createForm: productId='{}', name='{}'", productId, request.name());
         ProductReference product = productReferenceService.getRequiredReference(productId);
         FormDefinition form = formRepository.save(new FormDefinition(new FormDefinition.Creation(
                 product.tenantId(), productId, request.name(), request.type(), writeJson(request.fields()), "[]"
         )));
+        log.info("createForm: formulario criado id='{}', productId='{}'", form.getId(), productId);
         return toDetail(form, request.fields(), List.of());
     }
 
     @Transactional(readOnly = true)
     public FormDetail getForm(UUID productId, UUID formId) {
+        log.debug("getForm: productId='{}', formId='{}'", productId, formId);
         return toDetail(findFormInProduct(productId, formId));
     }
 
     @Transactional
     public FormDetail updateForm(UUID productId, UUID formId, UpdateFormDefinitionRequest request) {
+        log.debug("updateForm: productId='{}', formId='{}', name='{}'", productId, formId, request.name());
         FormDefinition form = findFormInProduct(productId, formId);
         form.applyDefinition(new FormDefinition.Edit(request.name(), request.type(), writeJson(request.fields())));
         formRepository.save(form);
+        log.info("updateForm: formulario atualizado id='{}'", form.getId());
         return toDetail(form);
     }
 
     @Transactional(readOnly = true)
     public List<String> listFieldTypes(UUID productId) {
+        log.debug("listFieldTypes: productId='{}'", productId);
         productReferenceService.getRequiredReference(productId);
         return FormFieldType.contractValues();
     }
 
     @Transactional
     public FormDetail publish(UUID productId, UUID formId) {
+        log.debug("publish: productId='{}', formId='{}'", productId, formId);
         FormDefinition form = findFormInProduct(productId, formId);
         List<Map<String, Object>> fields = readList(form.getFieldsJson());
         publicationPolicy.assertPublishable(fields);
         form.publish(OffsetDateTime.now(ZoneOffset.UTC).toString());
         formRepository.save(form);
+        log.info("publish: formulario publicado id='{}'", form.getId());
         return toDetail(form, fields, readList(form.getDeliveryChannelsJson()));
     }
 
     @Transactional
     public FormDetail updateDelivery(UUID productId, UUID formId, UpdateFormDeliveryRequest request) {
+        log.debug("updateDelivery: productId='{}', formId='{}'", productId, formId);
         FormDefinition form = findFormInProduct(productId, formId);
         request.channels().forEach(deliveryPolicy::assertValid);
         form.updateDeliveryChannels(writeJson(request.channels()));
         formRepository.save(form);
+        log.info("updateDelivery: canais de entrega atualizados formId='{}'", form.getId());
         return toDetail(form);
     }
 

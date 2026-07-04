@@ -14,6 +14,7 @@ import br.com.byop.aegis.pages.repository.ProductGlobalsRepository;
 import br.com.byop.aegis.product.api.ProductReference;
 import br.com.byop.aegis.product.api.ProductReferenceService;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -29,6 +30,7 @@ import java.util.UUID;
  * retorna 404 — objeto vazio quando o produto ainda nao tem {@link
  * ProductGlobals} configurado; {@code PUT} faz upsert (Secao F da Sprint 23).
  */
+@Slf4j
 @Service
 public class ProductGlobalsService {
 
@@ -57,6 +59,7 @@ public class ProductGlobalsService {
 
     @Transactional(readOnly = true)
     public ProductGlobalsResponse getGlobals(UUID productId) {
+        log.debug("getGlobals: productId='{}'", productId);
         return globalsRepository.findByProductId(productId)
                 .map(this::toResponse)
                 .orElseGet(this::emptyResponse);
@@ -64,6 +67,7 @@ public class ProductGlobalsService {
 
     @Transactional
     public ProductGlobalsResponse updateGlobals(UUID productId, UpdateProductGlobalsRequest request, AuthenticatedUser caller) {
+        log.debug("updateGlobals: productId='{}'", productId);
         String navbarJson = writeJson(request.navbar());
         String footerJson = writeJson(request.footer());
         String socialLinksJson = writeJson(request.socialLinks());
@@ -79,6 +83,7 @@ public class ProductGlobalsService {
         globalsRepository.save(globals);
 
         recordAudit(productId, caller.subject(), existing.isEmpty());
+        log.info("updateGlobals: globals atualizados productId='{}', created='{}'", productId, existing.isEmpty());
 
         return globalsMapper.toResponse(request);
     }

@@ -28,6 +28,7 @@ import br.com.byop.aegis.pages.repository.PageSectionRepository;
 import br.com.byop.aegis.product.api.ProductReference;
 import br.com.byop.aegis.product.api.ProductReferenceService;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -42,6 +43,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class PageService {
 
@@ -79,28 +81,33 @@ public class PageService {
 
     @Transactional(readOnly = true)
     public List<PageSummary> listPages(UUID productId) {
+        log.debug("listPages: productId='{}'", productId);
         return pageRepository.findAllByProductId(productId).stream().map(pageMapper::toSummary).toList();
     }
 
     @Transactional
     public PageSummary createPage(UUID productId, CreatePageRequest request, AuthenticatedUser caller) {
+        log.debug("createPage: productId='{}', slug='{}'", productId, request.slug());
         ProductReference product = productReferenceService.getRequiredReference(productId);
         assertSlugAvailable(productId, request.slug(), null);
 
         Page page = new Page(product.tenantId(), productId, request.slug(), request.title(), request.locale());
         pageRepository.save(page);
         recordPageAudit("PAGE_CREATED", page, caller.subject(), null, currentPageState(page));
+        log.info("createPage: pagina criada id='{}', slug='{}'", page.getId(), page.getSlug());
 
         return pageMapper.toSummary(page);
     }
 
     @Transactional(readOnly = true)
     public PageDetail getPage(UUID productId, UUID pageId) {
+        log.debug("getPage: productId='{}', pageId='{}'", productId, pageId);
         return toDetail(findPageInProduct(productId, pageId));
     }
 
     @Transactional
     public PageDetail updatePage(UUID productId, UUID pageId, UpdatePageRequest request, AuthenticatedUser caller) {
+        log.debug("updatePage: productId='{}', pageId='{}', slug='{}'", productId, pageId, request.slug());
         Page page = findPageInProduct(productId, pageId);
         assertSlugAvailable(productId, request.slug(), pageId);
         Map<String, Object> before = currentPageState(page);
@@ -113,20 +120,24 @@ public class PageService {
                 seo != null && seo.noIndex()));
         pageRepository.save(page);
         recordPageAudit("PAGE_UPDATED", page, caller.subject(), before, currentPageState(page));
+        log.info("updatePage: pagina atualizada id='{}', status='{}'", page.getId(), page.getStatus());
 
         return toDetail(page);
     }
 
     @Transactional
     public void deletePage(UUID productId, UUID pageId, AuthenticatedUser caller) {
+        log.debug("deletePage: productId='{}', pageId='{}'", productId, pageId);
         Page page = findPageInProduct(productId, pageId);
         recordPageAudit("PAGE_DELETED", page, caller.subject(), currentPageState(page), null);
         pageRepository.delete(page);
+        log.info("deletePage: pagina removida id='{}'", pageId);
     }
 
     @Transactional
     public PageSectionResponse createSection(UUID productId, UUID pageId, CreateSectionRequest request,
                                              AuthenticatedUser caller) {
+        log.debug("createSection: productId='{}', pageId='{}', type='{}'", productId, pageId, request.type());
         Page page = findPageInProduct(productId, pageId);
         BlockType type = parseBlockType(request.type());
         Map<String, Object> sanitizedContent = validationService.sanitizeContent(request.content());
@@ -137,6 +148,7 @@ public class PageService {
                 writeJson(sanitizedContent), writeJson(sanitizedSettings));
         sectionRepository.save(section);
         recordSectionAudit("PAGE_SECTION_CREATED", page, section, caller.subject());
+        log.info("createSection: secao criada id='{}', pageId='{}', type='{}'", section.getId(), pageId, type);
 
         return sectionMapper.toResponse(section, sanitizedContent, sanitizedSettings);
     }
@@ -144,6 +156,7 @@ public class PageService {
     @Transactional
     public PageSectionResponse updateSection(UUID productId, UUID pageId, UUID sectionId, UpdateSectionRequest request,
                                              AuthenticatedUser caller) {
+        log.debug("updateSection: productId='{}', pageId='{}', sectionId='{}'", productId, pageId, sectionId);
         Page page = findPageInProduct(productId, pageId);
         PageSection section = findSectionInPage(pageId, sectionId);
         BlockType type = parseBlockType(request.type());
@@ -155,21 +168,26 @@ public class PageService {
                 writeJson(sanitizedContent), writeJson(sanitizedSettings)));
         sectionRepository.save(section);
         recordSectionAudit("PAGE_SECTION_UPDATED", page, section, caller.subject());
+        log.info("updateSection: secao atualizada id='{}'", section.getId());
 
         return sectionMapper.toResponse(section, sanitizedContent, sanitizedSettings);
     }
 
     @Transactional
     public void deleteSection(UUID productId, UUID pageId, UUID sectionId, AuthenticatedUser caller) {
+        log.debug("deleteSection: productId='{}', pageId='{}', sectionId='{}'", productId, pageId, sectionId);
         Page page = findPageInProduct(productId, pageId);
         PageSection section = findSectionInPage(pageId, sectionId);
         recordSectionAudit("PAGE_SECTION_DELETED", page, section, caller.subject());
         sectionRepository.delete(section);
+        log.info("deleteSection: secao removida id='{}'", sectionId);
     }
 
     @Transactional
     public List<PageSectionResponse> reorderSections(UUID productId, UUID pageId, ReorderSectionsRequest request,
                                                       AuthenticatedUser caller) {
+        log.debug("reorderSections: productId='{}', pageId='{}', count='{}'", productId, pageId,
+                request.sectionIds().size());
         Page page = findPageInProduct(productId, pageId);
         List<PageSection> sections = sectionRepository.findAllByPageIdOrderByOrderAsc(pageId);
         assertReorderMatchesCurrentSections(sections, request.sectionIds());
@@ -184,6 +202,7 @@ public class PageService {
         auditService.recordEvent(new AuditRecordCommand(page.getTenantId(), productId, caller.subject(),
                 "PAGE_SECTIONS_REORDERED", TARGET_TYPE_PAGE, page.getId().toString(), page.getTitle(), MODULE_PAGES,
                 null, Map.of("sectionIds", request.sectionIds())));
+        log.info("reorderSections: secoes reordenadas pageId='{}'", pageId);
 
         return loadSectionResponses(pageId);
     }
@@ -218,6 +237,7 @@ public class PageService {
     private void assertSlugAvailable(UUID productId, String slug, UUID pageIdBeingEdited) {
         pageRepository.findByProductIdAndSlug(productId, slug).ifPresent(existing -> {
             if (!existing.getId().equals(pageIdBeingEdited)) {
+                log.warn("assertSlugAvailable: slug ja em uso productId='{}', slug='{}'", productId, slug);
                 throw new DuplicatePageSlugException(slug);
             }
         });
@@ -227,6 +247,7 @@ public class PageService {
         Set<UUID> currentIds = sections.stream().map(PageSection::getId).collect(Collectors.toSet());
         Set<UUID> requestedIds = new HashSet<>(sectionIds);
         if (requestedIds.size() != sectionIds.size() || !currentIds.equals(requestedIds)) {
+            log.warn("assertReorderMatchesCurrentSections: reorder invalido, ids nao correspondem as secoes atuais");
             throw new InvalidSectionReorderException();
         }
     }

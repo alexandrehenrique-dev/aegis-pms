@@ -18,6 +18,7 @@ import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
 import br.com.byop.aegis.tenant.api.TenantReference;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -27,6 +28,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ProductAssignmentService {
 
@@ -64,6 +66,7 @@ public class ProductAssignmentService {
 
     @Transactional(readOnly = true)
     public List<ProductAssignmentSummary> listAssignments(UUID productId) {
+        log.debug("listAssignments: productId='{}'", productId);
         Product product = getRequiredProduct(productId);
         return assignmentRepository.findAllByProductId(product.getId())
                 .stream()
@@ -74,6 +77,7 @@ public class ProductAssignmentService {
     @Transactional
     public ProductAssignmentSummary assignUser(AuthenticatedUser caller, UUID pathProductId,
                                                AssignProductUserRequest request) {
+        log.debug("assignUser: productId='{}', role='{}'", pathProductId, request.role());
         validateProductPath(pathProductId, request.productId());
         validateUserXor(request.userId(), request.inviteEmail());
 
@@ -91,6 +95,7 @@ public class ProductAssignmentService {
 
     @Transactional
     public void removeAssignment(AuthenticatedUser caller, UUID productId, String userSubject) {
+        log.debug("removeAssignment: productId='{}', userSubject='{}'", productId, userSubject);
         Product product = getRequiredProduct(productId);
         ProductAssignment assignment = assignmentRepository.findByProductIdAndUserSubject(product.getId(), userSubject)
                 .orElseThrow(() -> new ProductAssignmentNotFoundException(productId, userSubject));
@@ -101,11 +106,13 @@ public class ProductAssignmentService {
         assignmentRepository.delete(assignment);
         recordAssignmentAudit(caller, product, user, "PRODUCT_ASSIGNMENT_REMOVED",
                 assignment.getRole().name(), null);
+        log.info("removeAssignment: atribuicao removida productId='{}', userSubject='{}'", productId, userSubject);
     }
 
     private ProductAssignmentSummary assignExistingUser(AuthenticatedUser caller, Product product, String userId,
                                                          ProductAssignmentRole role) {
         if (!tenantAccessService.hasActiveMembership(product.getTenantId(), userId)) {
+            log.warn("assignExistingUser: usuario sem membership ativa productId='{}'", product.getId());
             throw new InvalidProductAssignmentException("User does not have active membership in product tenant");
         }
 
@@ -114,6 +121,7 @@ public class ProductAssignmentService {
         emailPort.notifyAssignment(emailCommand(product, user));
         notificationPort.notifyAssignment(product.getTenantId(), product.getId(), user.id());
         recordAssignmentAudit(caller, product, user, "PRODUCT_ASSIGNMENT_CREATED", null, role.name());
+        log.info("assignUser: atribuicao criada id='{}', productId='{}', role='{}'", assignment.getId(), product.getId(), role);
 
         return assignmentMapper.toSummary(assignment, user.displayName(), user.email());
     }
@@ -126,6 +134,7 @@ public class ProductAssignmentService {
         ProductAssignment saved = assignmentRepository.save(assignment);
         notificationPort.notifyAssignment(product.getTenantId(), product.getId(), invitedUser.id());
         recordAssignmentAudit(caller, product, invitedUser, "PRODUCT_ASSIGNMENT_CREATED", null, role.name());
+        log.info("assignUser: atribuicao de convite criada id='{}', productId='{}', role='{}'", saved.getId(), product.getId(), role);
 
         return assignmentMapper.toSummary(saved, invitedUser.displayName(), invitedUser.email());
     }

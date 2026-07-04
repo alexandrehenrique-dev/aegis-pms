@@ -1,6 +1,7 @@
 package br.com.byop.aegis.system.service;
 
 import br.com.byop.aegis.system.dto.SystemStatusResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
@@ -11,6 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class SystemStatusService {
 
@@ -38,6 +40,7 @@ public class SystemStatusService {
     }
 
     public SystemStatusResponse currentStatus() {
+        log.debug("currentStatus: consultando status do sistema");
         DatabaseStatus databaseStatus = databaseStatus();
         String keycloakIssuer = keycloakIssuer();
 
@@ -62,6 +65,7 @@ public class SystemStatusService {
 
             return new DatabaseStatus(STATUS_DOWN, DATABASE_UNAVAILABLE_MESSAGE);
         } catch (Exception exception) {
+            log.warn("databaseStatus: falha ao consultar banco de dados: '{}'", exception.getMessage());
             return new DatabaseStatus(STATUS_DOWN, readableMessage(exception));
         }
     }

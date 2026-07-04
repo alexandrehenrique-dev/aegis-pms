@@ -10,11 +10,13 @@ import br.com.byop.aegis.settings.exception.InsufficientSettingsRoleException;
 import br.com.byop.aegis.settings.exception.SettingsNotFoundException;
 import br.com.byop.aegis.settings.mapper.ProductSecuritySettingsMapper;
 import br.com.byop.aegis.settings.repository.ProductSecuritySettingsRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ProductSecuritySettingsService {
 
@@ -35,6 +37,7 @@ public class ProductSecuritySettingsService {
 
     @Transactional
     public ProductSecuritySettingsResponse getSecuritySettings(AuthenticatedUser caller, UUID productId) {
+        log.debug("getSecuritySettings: productId='{}'", productId);
         assertSecuritySettingsRole(caller);
         resolveProductScope(caller, productId);
         ProductSecuritySettings settings = repository.findById(productId)
@@ -45,6 +48,7 @@ public class ProductSecuritySettingsService {
     @Transactional
     public ProductSecuritySettingsResponse updateSecuritySettings(AuthenticatedUser caller, UUID productId,
                                                                   UpdateProductSecuritySettingsRequest request) {
+        log.debug("updateSecuritySettings: productId='{}'", productId);
         assertSecuritySettingsRole(caller);
         resolveProductScope(caller, productId);
         ProductSecuritySettings settings = repository.findById(productId)
@@ -55,7 +59,9 @@ public class ProductSecuritySettingsService {
                 request.webhookUrl(), request.webhookSecret(), request.analyticsEnabled(),
                 request.analyticsProviderKey(), request.emailDeliveryEnabled(), telegramChatId, telegramBotToken
         ));
-        return mapper.toResponse(repository.save(settings));
+        ProductSecuritySettings saved = repository.save(settings);
+        log.info("updateSecuritySettings: configuracoes atualizadas productId='{}'", saved.getProductId());
+        return mapper.toResponse(saved);
     }
 
     private ProductAccessScope resolveProductScope(AuthenticatedUser caller, UUID productId) {

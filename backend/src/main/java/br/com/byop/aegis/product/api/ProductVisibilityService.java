@@ -2,6 +2,7 @@ package br.com.byop.aegis.product.api;
 
 import br.com.byop.aegis.product.service.ProductService;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +15,7 @@ import java.util.List;
  * resolucao de papel, apenas adapta o resultado para o contrato publico
  * deste modulo.
  */
+@Slf4j
 @Service
 public class ProductVisibilityService {
 
@@ -25,6 +27,7 @@ public class ProductVisibilityService {
 
     @Transactional(readOnly = true)
     public List<ProductAccessScope> listVisibleProducts(AuthenticatedUser caller) {
+        log.debug("listVisibleProducts: caller='{}'", caller.subject());
         return productService.listProducts(caller)
                 .stream()
                 .map(product -> new ProductAccessScope(product.id(), product.tenantId(), product.status().name()))

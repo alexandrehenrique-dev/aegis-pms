@@ -4,9 +4,12 @@ import br.com.byop.aegis.identity.auth.client.KeycloakTokenClient;
 import br.com.byop.aegis.identity.auth.client.KeycloakTokenResponse;
 import br.com.byop.aegis.identity.auth.dto.AuthMessageResponse;
 import br.com.byop.aegis.identity.auth.dto.AuthTokenResponse;
+import br.com.byop.aegis.identity.auth.exception.InvalidCredentialsException;
+import br.com.byop.aegis.identity.auth.exception.RefreshTokenExpiredException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 class AuthServiceTest {
@@ -43,6 +46,19 @@ class AuthServiceTest {
     }
 
     @Test
+    void shouldLogWarnAndPropagateLoginFailure() {
+
+        InvalidCredentialsException expected = new InvalidCredentialsException();
+        when(keycloakTokenClient.login("loki", "wrong")).thenThrow(expected);
+
+        RuntimeException thrown = assertThrows(RuntimeException.class,
+                () -> service.login("loki", "wrong"));
+
+        assertEquals(expected, thrown);
+        verify(keycloakTokenClient).login("loki", "wrong");
+    }
+
+    @Test
     void shouldRefresh() {
 
         when(keycloakTokenClient.refresh("refresh-token"))
@@ -63,6 +79,19 @@ class AuthServiceTest {
 
         verify(keycloakTokenClient).refresh("refresh-token");
         verifyNoMoreInteractions(keycloakTokenClient);
+    }
+
+    @Test
+    void shouldLogWarnAndPropagateRefreshFailure() {
+
+        RefreshTokenExpiredException expected = new RefreshTokenExpiredException();
+        when(keycloakTokenClient.refresh("refresh-token")).thenThrow(expected);
+
+        RuntimeException thrown = assertThrows(RuntimeException.class,
+                () -> service.refresh("refresh-token"));
+
+        assertEquals(expected, thrown);
+        verify(keycloakTokenClient).refresh("refresh-token");
     }
 
     @Test

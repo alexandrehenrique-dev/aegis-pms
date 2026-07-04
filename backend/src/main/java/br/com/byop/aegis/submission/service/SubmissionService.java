@@ -17,6 +17,7 @@ import br.com.byop.aegis.submission.exception.SubmissionNotFoundException;
 import br.com.byop.aegis.submission.mapper.SubmissionMapper;
 import br.com.byop.aegis.submission.repository.SubmissionRepository;
 import br.com.byop.aegis.submission.api.SubmissionReceivedEvent;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class SubmissionService {
 
@@ -68,6 +70,7 @@ public class SubmissionService {
 
     @Transactional(readOnly = true)
     public List<SubmissionSummary> listSubmissions(UUID productId, UUID formId) {
+        log.debug("listSubmissions: productId='{}', formId='{}'", productId, formId);
         FormReference form = formReferenceService.getRequiredReference(productId, formId);
         return submissionRepository.findAllByFormIdOrderByDateDesc(form.id()).stream()
                 .map(submissionMapper::toSummary)
@@ -76,6 +79,7 @@ public class SubmissionService {
 
     @Transactional(readOnly = true)
     public List<SubmissionSummary> listProductSubmissions(UUID productId) {
+        log.debug("listProductSubmissions: productId='{}'", productId);
         List<UUID> formIds = formReferenceService.listFormIds(productId);
         if (formIds.isEmpty()) {
             return List.of();
@@ -87,6 +91,7 @@ public class SubmissionService {
 
     @Transactional(readOnly = true)
     public SubmissionDetail getSubmission(UUID productId, UUID formId, UUID submissionId) {
+        log.debug("getSubmission: productId='{}', formId='{}', submissionId='{}'", productId, formId, submissionId);
         FormReference form = formReferenceService.getRequiredReference(productId, formId);
         Submission submission = submissionRepository.findByFormIdAndId(form.id(), submissionId)
                 .orElseThrow(() -> new SubmissionNotFoundException(submissionId));
@@ -95,8 +100,10 @@ public class SubmissionService {
 
     @Transactional
     public SubmissionDetail submit(UUID productId, UUID formId, SubmitFormCommand command) {
+        log.debug("submit: productId='{}', formId='{}'", productId, formId);
         FormReference form = formReferenceService.getRequiredReference(productId, formId);
         if (!form.published()) {
+            log.warn("submit: formulario nao publicado formId='{}'", formId);
             throw new InvalidSubmissionException(FORM_NOT_PUBLISHED_ERROR);
         }
         List<Map<String, Object>> fields = readList(form.fieldsJson());
@@ -107,6 +114,7 @@ public class SubmissionService {
                 form.id(), receivedAt, command.name(), command.email(), command.source(),
                 SubmissionStatus.NEW, command.ownerSubject(), command.score(), writeJson(command.answers())
         )));
+        log.info("submit: submission criada id='{}', formId='{}'", submission.getId(), form.id());
         Map<String, Object> auditPayload = new LinkedHashMap<>();
         auditPayload.put("submissionId", submission.getId());
         auditPayload.put("source", command.source());

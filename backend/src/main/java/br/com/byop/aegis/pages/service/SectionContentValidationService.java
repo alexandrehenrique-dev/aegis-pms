@@ -7,6 +7,7 @@ import br.com.byop.aegis.pages.domain.BlockType;
 import br.com.byop.aegis.pages.domain.BlockTypeCatalog;
 import br.com.byop.aegis.pages.domain.BlockTypeDefinition;
 import br.com.byop.aegis.pages.exception.InvalidSectionContentException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -28,6 +29,7 @@ import java.util.regex.Pattern;
  * catalogo de {@link BlockTypeCatalog}, nunca um {@code if}/{@code switch}
  * hardcoded por {@link BlockType}.
  */
+@Slf4j
 @Service
 public class SectionContentValidationService {
 
@@ -85,6 +87,7 @@ public class SectionContentValidationService {
      * @param content {@code contentJson} decodificado da secao
      */
     public void validateSectionContent(UUID productId, BlockType type, Map<String, Object> content) {
+        log.debug("validateSectionContent: productId='{}', type='{}'", productId, type);
         if (content == null) {
             throw invalid("SECTION_CONTENT_REQUIRED", "Section content is required");
         }
@@ -106,6 +109,7 @@ public class SectionContentValidationService {
      * @return copia sanitizada de {@code content}, nunca {@code null}
      */
     public Map<String, Object> sanitizeContent(Map<String, Object> content) {
+        log.debug("sanitizeContent: keyCount='{}'", content.size());
         Map<String, Object> sanitized = new LinkedHashMap<>();
         content.forEach((key, value) -> sanitized.put(key, sanitizeValue(key, value)));
         return sanitized;

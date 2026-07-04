@@ -9,6 +9,7 @@ import br.com.byop.aegis.pages.domain.SectionSkeletonTemplate;
 import br.com.byop.aegis.pages.repository.PageRepository;
 import br.com.byop.aegis.pages.repository.PageSectionRepository;
 import br.com.byop.aegis.product.api.ProductCreatedEvent;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -36,6 +37,7 @@ import java.util.UUID;
  * inteira (produto + modulos + paginas + secoes) seja uma unica transacao — se
  * qualquer secao falhar a validacao, nada deve persistir, produto incluido.
  */
+@Slf4j
 @Service
 public class ProductPageScaffoldService {
 
@@ -63,17 +65,22 @@ public class ProductPageScaffoldService {
      * @param defaultLocale locale default do produto, usado em toda pagina criada
      */
     public void scaffoldFor(UUID tenantId, UUID productId, String productType, String defaultLocale) {
+        log.debug("scaffoldFor: productId='{}', productType='{}'", productId, productType);
+        int pagesCreated = 0;
         for (PageSkeletonTemplate pageTemplate : PageTemplateCatalog.skeletonFor(productType)) {
             Page page = new Page(tenantId, productId, pageTemplate.slug(), pageTemplate.title(), defaultLocale);
             pageRepository.save(page);
             for (SectionSkeletonTemplate sectionTemplate : pageTemplate.sections()) {
                 createSection(page, sectionTemplate, productId);
             }
+            pagesCreated++;
         }
+        log.info("scaffoldFor: esqueleto criado productId='{}', pagesCreated='{}'", productId, pagesCreated);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void onProductCreated(ProductCreatedEvent event) {
+        log.debug("onProductCreated: productId='{}', productType='{}'", event.productId(), event.productType());
         scaffoldFor(event.tenantId(), event.productId(), event.productType(), event.defaultLocale());
     }
 

@@ -7,8 +7,7 @@ import br.com.byop.aegis.knowledgegraph.api.GraphNodeContentPreviewPort;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,10 +15,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ContentPreviewLookupService implements GraphNodeContentPreviewPort {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ContentPreviewLookupService.class);
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> METADATA_TYPE = new TypeReference<>() {
     };
@@ -34,6 +33,7 @@ public class ContentPreviewLookupService implements GraphNodeContentPreviewPort 
     @Transactional(readOnly = true)
     @Override
     public Optional<GraphNodeContentPreview> findPreview(UUID productId, UUID graphNodeId, String refId) {
+        log.debug("findPreview: productId='{}', graphNodeId='{}'", productId, graphNodeId);
         Optional<Content> content = contentRepository.findByProductIdAndGraphNodeId(productId, graphNodeId)
                 .or(() -> findByReferenceId(productId, refId));
         return content.map(this::toPreview);
@@ -43,7 +43,7 @@ public class ContentPreviewLookupService implements GraphNodeContentPreviewPort 
         try {
             return contentRepository.findByProductIdAndId(productId, UUID.fromString(refId));
         } catch (IllegalArgumentException exception) {
-            LOGGER.debug("Ignoring graph node refId that is not a content UUID during preview lookup", exception);
+            log.debug("findByReferenceId: refId='{}' nao e um UUID de content valido — ignorado na preview", refId, exception);
             return Optional.empty();
         }
     }
@@ -65,7 +65,7 @@ public class ContentPreviewLookupService implements GraphNodeContentPreviewPort 
             Object thumbnail = JSON_MAPPER.readValue(metadataJson, METADATA_TYPE).get(THUMBNAIL_KEY);
             return thumbnail == null || String.valueOf(thumbnail).isBlank() ? null : String.valueOf(thumbnail);
         } catch (JsonProcessingException exception) {
-            LOGGER.debug("Ignoring invalid content metadata JSON while mapping preview thumbnail", exception);
+            log.debug("thumbnailFrom: metadata JSON invalido — thumbnail ignorado", exception);
             return null;
         }
     }

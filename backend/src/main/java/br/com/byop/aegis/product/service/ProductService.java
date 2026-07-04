@@ -23,6 +23,7 @@ import br.com.byop.aegis.product.repository.ProductModuleRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ProductService {
 
@@ -69,10 +71,12 @@ public class ProductService {
 
     @Transactional
     public ProductSummary createProduct(AuthenticatedUser caller, CreateProductCommand command) {
+        log.debug("createProduct: tenantId='{}', key='{}', type='{}'", command.tenantId(), command.key(), command.type());
         tenantAccessService.getRequiredReference(command.tenantId());
         ProductTypeKey type = parseProductType(command.type());
 
         if (productRepository.existsByTenantIdAndKey(command.tenantId(), command.key())) {
+            log.warn("createProduct: key='{}' ja existe no tenantId='{}'", command.key(), command.tenantId());
             throw new ProductAlreadyExistsException(command.tenantId(), command.key());
         }
 
@@ -95,6 +99,7 @@ public class ProductService {
         enableRecommendedModules(product, type);
         eventPublisher.publishEvent(new ProductCreatedEvent(product.getTenantId(), product.getId(), storageStrategy,
                 type.name(), product.getDefaultLocale()));
+        log.info("createProduct: produto criado id='{}', key='{}', type='{}'", product.getId(), product.getKey(), type);
 
         return productMapper.toSummary(product);
     }
@@ -113,6 +118,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public List<ProductSummary> listProducts(AuthenticatedUser caller) {
+        log.debug("listProducts: caller='{}'", caller.subject());
         if (caller.authorities().contains(ROLE_SUPER_ADMIN)) {
             return productRepository.findAll()
                     .stream()
@@ -143,11 +149,13 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public ProductSummary getProduct(AuthenticatedUser caller, UUID productId) {
+        log.debug("getProduct: productId='{}'", productId);
         return productMapper.toSummary(resolveAccessibleProduct(caller, productId));
     }
 
     @Transactional(readOnly = true)
     public ProductDetail getProductDetail(AuthenticatedUser caller, UUID productId) {
+        log.debug("getProductDetail: productId='{}'", productId);
         Product product = resolveAccessibleProduct(caller, productId);
         List<ProductModuleSummary> modules = moduleRepository.findAllByProductId(productId)
                 .stream()

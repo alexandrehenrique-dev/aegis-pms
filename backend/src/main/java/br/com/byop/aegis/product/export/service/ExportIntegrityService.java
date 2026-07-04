@@ -5,6 +5,7 @@ import br.com.byop.aegis.product.export.dto.ExportAssetFile;
 import br.com.byop.aegis.product.export.dto.ProductExportData;
 import br.com.byop.aegis.product.export.dto.StoredExport;
 import br.com.byop.aegis.product.export.exception.ProductExportException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -13,6 +14,7 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+@Slf4j
 @Service
 public class ExportIntegrityService {
 
@@ -38,16 +40,20 @@ public class ExportIntegrityService {
     }
 
     public void validateStoredZip(ProductExportData data, StoredExport storedExport, ExportToken token) {
+        log.debug("validateStoredZip: productId='{}'", data.productId());
         Set<String> entries = readEntries(token);
         if (!entries.containsAll(REQUIRED_ENTRIES)) {
+            log.warn("validateStoredZip: ZIP incompleto (entradas obrigatorias ausentes) productId='{}'", data.productId());
             throw new ProductExportException("Stored ZIP is missing required JSON entries", null);
         }
         for (ExportAssetFile asset : data.assets()) {
             if (!containsAsset(entries, asset)) {
+                log.warn("validateStoredZip: asset ausente no ZIP productId='{}', assetId='{}'", data.productId(), asset.id());
                 throw new ProductExportException("Stored ZIP is missing asset file " + asset.name(), null);
             }
         }
         if (storedExport.sizeBytes() <= 0) {
+            log.warn("validateStoredZip: ZIP vazio productId='{}'", data.productId());
             throw new ProductExportException("Stored ZIP is empty", null);
         }
     }

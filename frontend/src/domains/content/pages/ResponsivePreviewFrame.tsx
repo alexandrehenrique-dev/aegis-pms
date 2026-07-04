@@ -6,7 +6,6 @@ import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
-import { slugify } from "../../../shared/utils/slugify";
 import { ArticleBody } from "../components/ArticleBody";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
 import { KGBadge } from "../../knowledge/components/KGBadge";
@@ -49,7 +48,7 @@ export function ResponsivePreviewFrame() {
   const [lang, setLang] = useState(LANGUAGES[0]);
   const [submitting, setSubmitting] = useState(false);
   const { product } = useCurrentProduct();
-  const productSlug = product ? slugify(product.name) : "maestro-beton";
+  const productSlug = product ? product.id : "maestro-beton";
   const { data: productContent } = useAsyncData(() => contentService.listContentByProduct(productSlug), [productSlug]);
   const wikidevArticle = productSlug === "wikidev" ? productContent?.find((c) => c.body) : undefined;
   const { data: page, loading: loadingPage } = useAsyncData(
