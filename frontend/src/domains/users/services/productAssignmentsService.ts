@@ -15,7 +15,7 @@ export const productAssignmentsService = {
 
   async assign(req: AssignProductUserRequest): Promise<ProductAssignmentSummary> {
     if (IS_API_MODE) return apiClient.post<ProductAssignmentSummary>(`/products/${req.productId}/users`, req);
-    logApiCall("POST", `/api/v1/admin/products/${req.productId}/assignments`, req);
+    logApiCall("POST", `/api/v1/products/${req.productId}/users`, req);
     const products = await productsService.listProducts();
     const product = products.find((p) => p.id === req.productId);
 
@@ -30,7 +30,7 @@ export const productAssignmentsService = {
       status = "convidado";
     } else if (req.userId) {
       const users = await usersService.listUsers(req.tenantId);
-      const existing = users.find((u) => u.email === req.userId);
+      const existing = users.find((u) => u.userId === req.userId);
       userName = existing?.name ?? req.userId;
       userEmail = existing?.email ?? req.userId;
     }

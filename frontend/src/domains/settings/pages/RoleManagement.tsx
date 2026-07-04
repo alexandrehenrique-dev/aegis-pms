@@ -8,6 +8,7 @@ import { RiskBadge } from "../../../shared/components/RiskBadge";
 import { PermissionImpactSummary } from "../components/PermissionBits";
 import { toast } from "../../../core/notifications/toast";
 import { settingsService } from "../services/settingsService";
+import { useAuth } from "../../../core/auth/useAuth";
 
 const DEFAULT_ROLES = [
   ["Super Admin", "Acesso global ao sistema", "1", "alto", "30 dias"],
@@ -30,6 +31,7 @@ function RoleCard({ r, onEdit, onImpact }: { r: string[]; onEdit: () => void; on
 }
 
 export function RoleManagement() {
+  const { effectiveTenant } = useAuth();
   const [roles, setRoles] = useState(DEFAULT_ROLES);
   const [confirmRestore, setConfirmRestore] = useState(false);
   const [restoring, setRestoring] = useState(false);
@@ -44,7 +46,7 @@ export function RoleManagement() {
   const handleRestore = async () => {
     setRestoring(true);
     try {
-      await settingsService.restoreDefaultRoles();
+      await settingsService.restoreDefaultRoles(effectiveTenant?.id);
       setRoles(DEFAULT_ROLES);
       toast.success("Roles restauradas ao padrão.");
       setConfirmRestore(false);

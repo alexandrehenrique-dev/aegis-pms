@@ -5,13 +5,14 @@ import { apiClient } from "../../../shared/services/apiClient";
 import type { InviteUserRequest } from "../contracts/requests";
 import type { ListUsersResponse, UserStatus, UserSummary } from "../contracts/responses";
 
-const usersStore: UserSummary[] = usersRows.map(([name, email, role, products, status, lastAccess, inviteStatus]) => ({
-  name, email, role, products, status: status as UserStatus, lastAccess, inviteStatus,
+const usersStore: UserSummary[] = usersRows.map(([userId, name, email, role, products, status, lastAccess, inviteStatus]) => ({
+  userId, name, email, role, products, status: status as UserStatus, lastAccess, inviteStatus,
 }));
 
 // Papéis administrativos para a regra de "não se trancar para fora" (ADR-0020):
 // nunca remover/bloquear o último admin ativo do tenant.
 const ADMIN_ROLES = ["Tenant Admin", "Super Admin"];
+const MOCK_TENANT_ID = "mock-tenant";
 
 export const usersService = {
   /**
@@ -28,16 +29,17 @@ export const usersService = {
     return usersStore;
   },
 
-  /** ADR-0020: true quando `email` é o único administrador (Tenant/Super Admin) ativo do tenant. */
-  async isLastActiveAdmin(email: string): Promise<boolean> {
+  /** ADR-0020: true quando `userId` é o único administrador (Tenant/Super Admin) ativo do tenant. */
+  async isLastActiveAdmin(userId: string): Promise<boolean> {
     const activeAdmins = usersStore.filter((u) => ADMIN_ROLES.includes(u.role) && u.status === "ativo");
-    return activeAdmins.length === 1 && activeAdmins[0].email === email;
+    return activeAdmins.length === 1 && activeAdmins[0].userId === userId;
   },
 
   async invite(req: InviteUserRequest, tenantId?: string): Promise<UserSummary> {
     if (IS_API_MODE && tenantId) return apiClient.post<UserSummary>(`/tenants/${tenantId}/users/invite`, req);
-    logApiCall("POST", `/api/v1/tenants/${tenantId ?? "{tenantId}"}/users/invite`, req);
+    logApiCall("POST", `/api/v1/tenants/${tenantId ?? MOCK_TENANT_ID}/users/invite`, req);
     const created: UserSummary = {
+      userId: `mock-user-${Date.now()}`,
       name: req.name, email: req.email, role: req.role, products: req.allowedProducts,
       status: "convidado", lastAccess: "nunca", inviteStatus: "pendente",
     };
@@ -45,37 +47,37 @@ export const usersService = {
     return created;
   },
 
-  async resendInvite(email: string, tenantId?: string): Promise<void> {
-    if (IS_API_MODE && tenantId) return apiClient.post(`/tenants/${tenantId}/users/${email}/resend-invite`);
-    const u = usersStore.find((x) => x.email === email);
+  async resendInvite(userId: string, tenantId?: string): Promise<void> {
+    if (IS_API_MODE && tenantId) return apiClient.post(`/tenants/${tenantId}/users/${userId}/resend-invite`);
+    const u = usersStore.find((x) => x.userId === userId);
     if (!u) return;
-    logApiCall("POST", `/api/v1/tenants/${tenantId ?? "{tenantId}"}/users/${email}/resend-invite`);
+    logApiCall("POST", `/api/v1/tenants/${tenantId ?? MOCK_TENANT_ID}/users/${userId}/resend-invite`);
     u.inviteStatus = "pendente";
   },
 
-  async blockUser(email: string, tenantId?: string): Promise<void> {
-    if (IS_API_MODE && tenantId) return apiClient.post(`/tenants/${tenantId}/users/${email}/block`);
-    const u = usersStore.find((x) => x.email === email);
+  async blockUser(userId: string, tenantId?: string): Promise<void> {
+    if (IS_API_MODE && tenantId) return apiClient.post(`/tenants/${tenantId}/users/${userId}/block`);
+    const u = usersStore.find((x) => x.userId === userId);
     if (!u) return;
-    logApiCall("POST", `/api/v1/tenants/${tenantId ?? "{tenantId}"}/users/${email}/block`);
+    logApiCall("POST", `/api/v1/tenants/${tenantId ?? MOCK_TENANT_ID}/users/${userId}/block`);
     u.status = "bloqueado";
   },
 
   /** Soft delete — remove usuário do tenant (ADR-0020). Reversível via `restoreUser`. */
-  async removeUser(email: string, tenantId?: string): Promise<void> {
-    if (IS_API_MODE && tenantId) return apiClient.delete(`/tenants/${tenantId}/users/${email}`);
-    const u = usersStore.find((x) => x.email === email);
+  async removeUser(userId: string, tenantId?: string): Promise<void> {
+    if (IS_API_MODE && tenantId) return apiClient.delete(`/tenants/${tenantId}/users/${userId}`);
+    const u = usersStore.find((x) => x.userId === userId);
     if (!u) return;
-    logApiCall("DELETE", `/api/v1/tenants/${tenantId ?? "{tenantId}"}/users/${email}`);
+    logApiCall("DELETE", `/api/v1/tenants/${tenantId ?? MOCK_TENANT_ID}/users/${userId}`);
     u.status = "removido";
   },
 
   /** Restaura acesso de um usuário removido ou bloqueado (ADR-0020). */
-  async restoreUser(email: string, tenantId?: string): Promise<UserSummary> {
-    if (IS_API_MODE && tenantId) return apiClient.post<UserSummary>(`/tenants/${tenantId}/users/${email}/restore`);
-    const u = usersStore.find((x) => x.email === email);
-    if (!u) throw { status: 404, message: `Usuário ${email} não encontrado.` };
-    logApiCall("POST", `/api/v1/tenants/${tenantId ?? "{tenantId}"}/users/${email}/restore`);
+  async restoreUser(userId: string, tenantId?: string): Promise<UserSummary> {
+    if (IS_API_MODE && tenantId) return apiClient.post<UserSummary>(`/tenants/${tenantId}/users/${userId}/restore`);
+    const u = usersStore.find((x) => x.userId === userId);
+    if (!u) throw { status: 404, message: `Usuário ${userId} não encontrado.` };
+    logApiCall("POST", `/api/v1/tenants/${tenantId ?? MOCK_TENANT_ID}/users/${userId}/restore`);
     u.status = "ativo";
     return u;
   },

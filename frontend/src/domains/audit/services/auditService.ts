@@ -7,6 +7,28 @@ const auditStore: AuditEvent[] = auditEvents.map(([actor, action, target, tenant
   actor, action, target, tenant, module, time, risk,
 }));
 
+type AuditEventDto = AuditEvent & {
+  actorSubject?: string;
+  targetType?: string;
+  targetId?: string;
+  tenantId?: string;
+  timestamp?: string;
+};
+
+function mapAuditEvent(dto: AuditEventDto): AuditEvent {
+  const fallbackTarget = [dto.targetType, dto.targetId].filter(Boolean).join(":") || "—";
+  return {
+    id: dto.id,
+    actor: dto.actor ?? dto.actorSubject ?? "—",
+    action: dto.action,
+    target: dto.target ?? fallbackTarget,
+    tenant: dto.tenant ?? dto.tenantId ?? "—",
+    module: dto.module ?? "—",
+    time: dto.time ?? (dto.timestamp ? new Date(dto.timestamp).toLocaleTimeString("pt-BR") : "—"),
+    risk: dto.risk ?? "baixo",
+  };
+}
+
 export const auditService = {
   /**
    * Backend é tenant-scoped (`GET /tenants/{tenantId}/audit-events`,
@@ -17,7 +39,8 @@ export const auditService = {
   async listEvents(tenantId?: string): Promise<ListAuditEventsResponse> {
     if (IS_API_MODE) {
       if (!tenantId) throw { status: 400, message: "Timeline de auditoria requer um tenant selecionado." };
-      return apiClient.get<ListAuditEventsResponse>(`/tenants/${tenantId}/audit-events`);
+      const events = await apiClient.get<AuditEventDto[]>(`/tenants/${tenantId}/audit-events`);
+      return events.map(mapAuditEvent);
     }
     return auditStore;
   },
