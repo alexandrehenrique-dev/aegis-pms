@@ -1,14 +1,18 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { AnimatePresence } from "motion/react";
 import { Lock } from "lucide-react";
 import { Badge, Button, Card, PageHeader } from "../../../shared/components/Primitives";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 export function VersionTimeline({ compact = false }: { compact?: boolean }) {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
   const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
 
@@ -16,7 +20,7 @@ export function VersionTimeline({ compact = false }: { compact?: boolean }) {
     if (!confirmRestore) return;
     setRestoring(true);
     try {
-      await contentService.restoreVersion(confirmRestore);
+      await contentService.restoreVersion(confirmRestore, id, productId);
       toast.success("Versão restaurada!", { description: `${confirmRestore} agora é a versão atual.` });
       setConfirmRestore(null);
     } finally {

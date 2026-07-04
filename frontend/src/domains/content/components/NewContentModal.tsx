@@ -27,7 +27,7 @@ const LANG_TO_LOCALE: Record<string, string> = { "PT-BR": "pt-BR", "EN-US": "en-
 export function NewContentModal({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const { product } = useCurrentProduct();
-  const productSlug = product ? product.id : "maestro-beton";
+  const productId = product ? product.id : "p1";
   const [title, setTitle] = useState("");
   const [type, setType] = useState(TYPES[0]);
   const [lang, setLang] = useState(LANGS[0]);
@@ -38,13 +38,13 @@ export function NewContentModal({ onClose }: { onClose: () => void }) {
     setCreating(true);
     try {
       if (type === PAGE_TYPE) {
-        const created = await pagesService.createPage(productSlug, { title, slug: slugify(title), locale: LANG_TO_LOCALE[lang] });
+        const created = await pagesService.createPage(productId, { title, slug: slugify(title), locale: LANG_TO_LOCALE[lang] });
         toast.success("Página criada", { description: created.title });
         onClose();
         navigate(`/pages/${created.slug}/editor`);
         return;
       }
-      const created = await contentService.createContent({ title, type, lang, author: author || "Eu" }, product);
+      const created = await contentService.createContent(productId, { title, type, lang, author: author || "Eu" }, product);
       toast.success("Artigo criado", { description: `${created.title} entrou como rascunho.` });
       onClose();
       navigate(`/content/${created.id}/editor`);

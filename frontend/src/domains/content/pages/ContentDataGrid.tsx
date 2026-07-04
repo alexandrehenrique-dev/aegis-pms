@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/compone
 import { PermGate } from "../../../app/guards/PermGate";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { contentService } from "../services/contentService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { ContentStatusBadge } from "../components/ContentStatusBadge";
 import { ContentCardMobile } from "../components/ContentCardMobile";
@@ -35,7 +36,9 @@ export function ContentDataGrid() {
   const [type, setType] = useState<string | null>(null);
   const [author, setAuthor] = useState<string | null>(null);
   const [showNewContent, setShowNewContent] = useState(false);
-  const { data: contents, loading, error } = useAsyncData(() => contentService.listContent(), []);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
+  const { data: contents, loading, error } = useAsyncData(() => contentService.listContent(productId), [productId]);
 
   const options = useMemo(() => ({
     statuses: Array.from(new Set((contents ?? []).map((r) => r.status))),

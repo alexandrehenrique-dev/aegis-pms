@@ -1,12 +1,17 @@
 import { useState } from "react";
+import { useParams } from "react-router";
 import { AnimatePresence } from "motion/react";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 export function PublishPanel() {
+  const { id } = useParams<{ id: string }>();
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -18,7 +23,7 @@ export function PublishPanel() {
   const handleArchive = async () => {
     setArchiving(true);
     try {
-      await contentService.archive();
+      await contentService.archive(id, productId);
       toast.success("Conteúdo arquivado.", { description: "Evento de auditoria registrado." });
       setConfirmArchive(false);
     } finally {
@@ -28,7 +33,7 @@ export function PublishPanel() {
   const handlePublish = async () => {
     setPublishing(true);
     try {
-      await contentService.publish();
+      await contentService.publish(id, productId);
       toast.success("Conteúdo publicado!", { description: "Maestro Beton · Página Home · v19" });
       setConfirmPublish(false);
     } finally {
@@ -38,7 +43,7 @@ export function PublishPanel() {
   const handleSaveDraft = async () => {
     setSavingDraft(true);
     try {
-      await contentService.saveDraft();
+      await contentService.saveDraft(id, productId);
       toast.success("Rascunho salvo!");
     } finally {
       setSavingDraft(false);
@@ -47,7 +52,7 @@ export function PublishPanel() {
   const handleSchedule = async () => {
     setScheduling(true);
     try {
-      await contentService.schedulePublish();
+      await contentService.schedulePublish(id, productId);
       toast.success("Publicação agendada!");
     } finally {
       setScheduling(false);
@@ -56,7 +61,7 @@ export function PublishPanel() {
   const handleSubmitForReview = async () => {
     setSubmittingReview(true);
     try {
-      await contentService.submitForReview();
+      await contentService.submitForReview(id, productId);
       toast.success("Enviado para revisão!");
     } finally {
       setSubmittingReview(false);

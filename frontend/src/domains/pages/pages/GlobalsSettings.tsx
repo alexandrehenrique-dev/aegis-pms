@@ -16,7 +16,7 @@ import type { NavLink, ProductGlobals, SocialLink } from "../contracts/globals";
  */
 export function GlobalsSettings() {
   const { product } = useCurrentProduct();
-  const productSlug = product ? product.id : "maestro-beton";
+  const productSlug = product ? product.id : "p1";
   const { data: loaded, loading } = useAsyncData(() => globalsService.getGlobals(productSlug), [productSlug]);
   const [globals, setGlobals] = useState<ProductGlobals | null>(null);
   const [saving, setSaving] = useState(false);

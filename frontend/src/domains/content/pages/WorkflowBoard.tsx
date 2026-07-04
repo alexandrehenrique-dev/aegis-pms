@@ -7,6 +7,7 @@ import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { roleLabels } from "../../../core/permissions/roles";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import type { PendingDrop, WFEvent, WFItem, WFStatus } from "../mocks/content.mocks";
 import { WFLane } from "../components/WFLane";
@@ -14,7 +15,9 @@ import { TransitionModal } from "../components/TransitionModal";
 
 export function WorkflowBoard() {
   const { viewAsRole } = useViewAsRole();
-  const { data: initialItems, loading, error } = useAsyncData(() => contentService.listWorkflowItems(), []);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
+  const { data: initialItems, loading, error } = useAsyncData(() => contentService.listWorkflowItems(productId), [productId]);
   const [items, setItems] = useState<WFItem[]>([]);
   const [pending, setPending] = useState<PendingDrop | null>(null);
   const [events, setEvents] = useState<WFEvent[]>([]);
@@ -31,8 +34,9 @@ export function WorkflowBoard() {
     setPending({ item, from: item.status, to: toLane });
   };
 
-  const handleConfirm = (comment: string) => {
+  const handleConfirm = async (comment: string) => {
     if (!pending) return;
+    await contentService.transitionContent(pending.item.id, pending.from, pending.to, comment, productId);
     setItems((prev) => prev.map((i) => (i.id === pending.item.id ? { ...i, status: pending.to } : i)));
     const ev: WFEvent = { id: Date.now().toString(), text: `"${pending.item.title}" movido de ${pending.from} para ${pending.to}`, from: pending.from, to: pending.to, time: "agora", comment };
     setEvents((prev) => [ev, ...prev]);
