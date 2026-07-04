@@ -13,9 +13,10 @@ import type { UserStatus } from "../contracts/responses";
 
 export function UserDetailPanel() {
   const navigate = useNavigate();
-  const { authUser } = useAuth();
+  const { authUser, effectiveTenant } = useAuth();
+  const userId = "kc-subj-001";
   const email = "ana@byop.com";
-  const isSelf = authUser?.email === email;
+  const isSelf = authUser?.id === userId;
   const [status, setStatus] = useState<UserStatus>("ativo");
   const [resending, setResending] = useState(false);
   const [confirmBlock, setConfirmBlock] = useState(false);
@@ -26,7 +27,7 @@ export function UserDetailPanel() {
   const [isLastActiveAdmin, setIsLastActiveAdmin] = useState(false);
 
   useEffect(() => {
-    usersService.isLastActiveAdmin(email).then(setIsLastActiveAdmin);
+    usersService.isLastActiveAdmin(userId).then(setIsLastActiveAdmin);
   }, []);
 
   // ADR-0020: nunca trancar o último admin ativo do tenant fora da plataforma.
@@ -38,7 +39,7 @@ export function UserDetailPanel() {
   const handleResend = async () => {
     setResending(true);
     try {
-      await usersService.resendInvite(email);
+      await usersService.resendInvite(userId, effectiveTenant?.id);
       toast.success("Convite reenviado!", { description: email });
     } finally {
       setResending(false);
@@ -48,7 +49,7 @@ export function UserDetailPanel() {
   const handleBlock = async () => {
     setBlocking(true);
     try {
-      await usersService.blockUser(email);
+      await usersService.blockUser(userId, effectiveTenant?.id);
       setStatus("bloqueado");
       toast.success("Usuário bloqueado.", { description: "Ana Martins perdeu acesso à plataforma." });
       setConfirmBlock(false);
@@ -60,7 +61,7 @@ export function UserDetailPanel() {
   const handleRemove = async () => {
     setRemoving(true);
     try {
-      await usersService.removeUser(email);
+      await usersService.removeUser(userId, effectiveTenant?.id);
       setStatus("removido");
       toast.success("Usuário removido.", { description: "Você pode restaurar o acesso a qualquer momento." });
       setConfirmRemove(false);
@@ -72,7 +73,7 @@ export function UserDetailPanel() {
   const handleRestore = async () => {
     setRestoring(true);
     try {
-      await usersService.restoreUser(email);
+      await usersService.restoreUser(userId, effectiveTenant?.id);
       setStatus("ativo");
       toast.success("Acesso restaurado.", { description: "Um e-mail de redefinição de senha foi enviado ao usuário." });
     } finally {

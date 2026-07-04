@@ -4,10 +4,12 @@ import { Button, Card, PageHeader, PartialErrorWidget, PermissionHint, SkeletonL
 import { settingsService } from "../services/settingsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { SettingsCard } from "../components/SettingsBits";
+import { useAuth } from "../../../core/auth/useAuth";
 
 export function SettingsOverview() {
   const navigate = useNavigate();
-  const { data: settingCards, loading, error } = useAsyncData(() => settingsService.listSettingCards(), []);
+  const { effectiveProduct } = useAuth();
+  const { data: settingCards, loading, error } = useAsyncData(() => settingsService.listSettingCards(effectiveProduct?.id), [effectiveProduct?.id]);
   const attnItems: [string, string][] = [
     ["2 usuários com convite pendente.", "/users"],
     ["1 integração sem configuração.", "/settings/security"],

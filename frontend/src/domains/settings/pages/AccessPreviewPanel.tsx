@@ -4,12 +4,14 @@ import { Button, Card, PageHeader, SelectLike } from "../../../shared/components
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../../shared/components/ui/dialog";
 import { toast } from "../../../core/notifications/toast";
 import { settingsService } from "../services/settingsService";
+import { useAuth } from "../../../core/auth/useAuth";
 
 const SUBJECTS = ["Editor", "Viewer", "Product Manager", "Tenant Admin"];
 const PRODUCTS = ["Maestro Beton", "Conecta Talentos"];
 const MODULES = ["Conteúdo", "Assets", "Forms", "Analytics"];
 
 export function AccessPreviewPanel() {
+  const { effectiveTenant } = useAuth();
   const [subject, setSubject] = useState(SUBJECTS[0]);
   const [product, setProduct] = useState(PRODUCTS[0]);
   const [module, setModule] = useState(MODULES[0]);
@@ -19,7 +21,7 @@ export function AccessPreviewPanel() {
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      await settingsService.generateAccessPreview({ subject, product, module });
+      await settingsService.generateAccessPreview({ subject, product, module }, effectiveTenant?.id);
       toast.success("Preview gerado!", { description: `${subject} em ${product} · ${module}` });
     } finally {
       setGenerating(false);

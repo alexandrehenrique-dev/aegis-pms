@@ -90,16 +90,16 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
   };
 
   // Step 3 fields
-  const { data: existingUsers } = useAsyncData(() => usersService.listUsers(), []);
+  const { data: existingUsers } = useAsyncData(() => usersService.listUsers(tenant?.id), [tenant?.id]);
   const [assignMode, setAssignMode] = useState<"existing" | "invite">("invite");
-  const [selectedEmail, setSelectedEmail] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [touched3, setTouched3] = useState<{ inviteEmail?: boolean; xor?: boolean }>({});
   const [role, setRole] = useState("Editor");
 
   const inviteEmailErr = assignMode === "invite" ? emailError(inviteEmail) : undefined;
-  const assignXorErr = assignmentXorError(selectedEmail, inviteEmail);
+  const assignXorErr = assignmentXorError(selectedUserId, inviteEmail);
 
   const handleCreateTenant = async () => {
     setTouched1({ name: true, slug: true, email: true });
@@ -141,7 +141,7 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
     try {
       const summary = await productAssignmentsService.assign({
         tenantId: tenant.id, productId: product.id,
-        userId: assignMode === "existing" ? selectedEmail : undefined,
+        userId: assignMode === "existing" ? selectedUserId : undefined,
         inviteEmail: assignMode === "invite" ? inviteEmail : undefined,
         inviteName: assignMode === "invite" ? inviteName : undefined,
         role,
@@ -154,7 +154,7 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
     }
   };
 
-  const canSubmitAssign = !assignXorErr && (assignMode === "existing" ? !!selectedEmail : !!inviteEmail.trim() && !!inviteName.trim() && !inviteEmailErr);
+  const canSubmitAssign = !assignXorErr && (assignMode === "existing" ? !!selectedUserId : !!inviteEmail.trim() && !!inviteName.trim() && !inviteEmailErr);
 
   return (
     <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={step < 4 ? onClose : undefined}>
@@ -199,9 +199,9 @@ export function CreateTenantWizardModal({ onClose, onDone }: { onClose: () => vo
             ) : (
               <div className="max-h-40 space-y-1.5 overflow-y-auto">
                 {existingUsers?.map((u) => (
-                  <button key={u.email} onClick={() => { setSelectedEmail(u.email); setTouched3((t) => ({ ...t, xor: true })); }} className={`flex w-full items-center justify-between rounded-lg border p-2.5 text-left text-sm transition ${selectedEmail === u.email ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}>
+                  <button key={u.userId} onClick={() => { setSelectedUserId(u.userId); setTouched3((t) => ({ ...t, xor: true })); }} className={`flex w-full items-center justify-between rounded-lg border p-2.5 text-left text-sm transition ${selectedUserId === u.userId ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}>
                     <span><b>{u.name}</b> <span className="text-muted-foreground">· {u.email}</span></span>
-                    {selectedEmail === u.email && <CheckCircle2 size={14} className="text-primary" />}
+                    {selectedUserId === u.userId && <CheckCircle2 size={14} className="text-primary" />}
                   </button>
                 ))}
               </div>

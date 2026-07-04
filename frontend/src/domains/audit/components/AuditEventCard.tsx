@@ -14,7 +14,7 @@ export function AuditEventCard({ e }: { e: AuditEvent }) {
         </div>
         <div className="flex items-center gap-2">
           <RiskBadge risk={e.risk} />
-          <Button onClick={() => navigate("/audit/1")}>Ver detalhe</Button>
+          <Button onClick={() => navigate(`/audit/${e.id ?? "1"}`)}>Ver detalhe</Button>
         </div>
       </div>
     </div>

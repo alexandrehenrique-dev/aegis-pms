@@ -3,6 +3,7 @@
 export type UserStatus = "ativo" | "bloqueado" | "convidado" | "removido";
 
 export type UserSummary = {
+  userId: string;
   name: string;
   email: string;
   role: string;

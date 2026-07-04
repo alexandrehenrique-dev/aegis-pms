@@ -32,24 +32,50 @@ function maskToken(token: string): string {
 }
 
 export const settingsService = {
-  async listSettingCards(): Promise<ListSettingCardsResponse> {
-    if (IS_API_MODE) return apiClient.get<ListSettingCardsResponse>("/settings/cards");
+  async listSettingCards(productId?: string): Promise<ListSettingCardsResponse> {
+    if (IS_API_MODE) {
+      if (!productId) {
+        console.warn("[settingsService] overview de settings requer produto efetivo — usando mock em modo API.");
+        return settingCardsStore;
+      }
+      return apiClient.get<ListSettingCardsResponse>(`/products/${productId}/settings/overview`);
+    }
     return settingCardsStore;
   },
-  async restoreDefaultRoles(): Promise<void> {
-    if (IS_API_MODE) return apiClient.post("/settings/roles/restore-defaults");
+  async restoreDefaultRoles(tenantId?: string): Promise<void> {
+    if (IS_API_MODE) {
+      if (!tenantId) {
+        console.warn("[settingsService] restaurar roles requer tenant efetivo — ignorando em modo API.");
+        return;
+      }
+      await apiClient.post(`/tenants/${tenantId}/roles/restore-defaults`);
+      return;
+    }
     logApiCall("POST", "/api/v1/admin/roles/restore-defaults");
   },
   async createRole(payload: { name: string; description: string }): Promise<void> {
-    if (IS_API_MODE) return apiClient.post("/settings/roles", payload);
+    if (IS_API_MODE) {
+      console.warn("[settingsService] endpoint para criar role individual não existe no backend — ignorando em modo API.");
+      return;
+    }
     logApiCall("POST", "/api/v1/admin/roles", payload);
   },
-  async restoreDefaultPermissions(): Promise<void> {
-    if (IS_API_MODE) return apiClient.post("/settings/permissions/restore-defaults");
+  async restoreDefaultPermissions(tenantId?: string): Promise<void> {
+    if (IS_API_MODE) {
+      if (!tenantId) {
+        console.warn("[settingsService] restaurar matriz de permissoes requer tenant efetivo — ignorando em modo API.");
+        return;
+      }
+      await apiClient.post(`/tenants/${tenantId}/permission-matrix/restore-defaults`);
+      return;
+    }
     logApiCall("POST", "/api/v1/admin/permissions/restore-defaults");
   },
   async savePermissions(): Promise<void> {
-    if (IS_API_MODE) return apiClient.put("/settings/permissions");
+    if (IS_API_MODE) {
+      console.warn("[settingsService] salvar roles exige matriz completa no shape RoleMatrixEntry[] — tela atual mantém edição local.");
+      return;
+    }
     logApiCall("PUT", "/api/v1/admin/permissions");
   },
   /** Path corrigido: `/products/{productId}/settings/security` (etapa 19, Seção C) — `productId` agora obrigatório. */
@@ -57,8 +83,15 @@ export const settingsService = {
     if (IS_API_MODE) return apiClient.put(`/products/${productId}/settings/security`, payload);
     logApiCall("PUT", `/api/v1/products/${productId}/settings/security`, payload);
   },
-  async generateAccessPreview(payload: { subject: string; product: string; module: string }): Promise<void> {
-    if (IS_API_MODE) return apiClient.post("/settings/permissions/preview", payload);
+  async generateAccessPreview(payload: { subject: string; product: string; module: string }, tenantId?: string): Promise<void> {
+    if (IS_API_MODE) {
+      if (!tenantId) {
+        console.warn("[settingsService] preview de permissoes requer tenant efetivo — ignorando em modo API.");
+        return;
+      }
+      await apiClient.post(`/tenants/${tenantId}/permission-matrix/preview`, { role: payload.subject });
+      return;
+    }
     logApiCall("POST", "/api/v1/admin/permissions/preview", payload);
   },
 

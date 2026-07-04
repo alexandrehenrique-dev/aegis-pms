@@ -7,6 +7,7 @@ import { ConflictAlert } from "../../../shared/components/Banners";
 import { PermissionCell, PermissionImpactSummary, UnsavedPermissionChanges } from "../components/PermissionBits";
 import { toast } from "../../../core/notifications/toast";
 import { settingsService } from "../services/settingsService";
+import { useAuth } from "../../../core/auth/useAuth";
 
 const MODULES = ["Conteúdo", "Assets", "Forms", "Analytics", "Knowledge Graph", "Users", "Settings", "Audit"];
 const COLS = ["Visualizar", "Criar", "Editar", "Publicar", "Arquivar", "Excluir", "Exportar", "Administrar"];
@@ -16,6 +17,7 @@ function buildDefaultMatrix(): string[][] {
 }
 
 export function PermissionMatrixView() {
+  const { effectiveTenant } = useAuth();
   const [matrix, setMatrix] = useState<string[][]>(buildDefaultMatrix);
   const [confirmRestore, setConfirmRestore] = useState(false);
   const [restoring, setRestoring] = useState(false);
@@ -28,7 +30,7 @@ export function PermissionMatrixView() {
   const handleRestore = async () => {
     setRestoring(true);
     try {
-      await settingsService.restoreDefaultPermissions();
+      await settingsService.restoreDefaultPermissions(effectiveTenant?.id);
       setMatrix(buildDefaultMatrix());
       toast.success("Permissões restauradas ao padrão.");
       setConfirmRestore(false);
