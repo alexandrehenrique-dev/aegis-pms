@@ -3,6 +3,7 @@ import { logApiCall } from "../../../shared/services/devLog";
 import { seedNotifications, seedStatusByUser } from "../mocks/notifications.mocks";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
+import { mapNotification, mapNotificationWithStatus, type NotificationDto, type NotificationWithStatusDto } from "../mappers/notificationMapper";
 import type { Notification, NotificationWithStatus, UserNotificationStatus } from "../contracts/notification";
 import type { CreateNotificationRequest } from "../contracts/requests";
 
@@ -62,14 +63,20 @@ function userIdsForTenant(tenantId: string): string[] {
 
 export const notificationsService = {
   async listMine(): Promise<NotificationWithStatus[]> {
-    if (IS_API_MODE) return apiClient.get<NotificationWithStatus[]>("/notifications/mine");
+    if (IS_API_MODE) {
+      const dtos = await apiClient.get<NotificationWithStatusDto[]>("/notifications/mine");
+      return dtos.map(mapNotificationWithStatus);
+    }
     if (!currentUserId) return [];
     return notificationsFor(currentUserId).sort(byCreatedAtDesc);
   },
 
   /** A mais antiga ainda não mostrada automaticamente — fila de "primeiro acesso", uma por vez (Sprint 14, Tarefa C). */
   async getPendingModal(): Promise<NotificationWithStatus | null> {
-    if (IS_API_MODE) return apiClient.get<NotificationWithStatus | null>("/notifications/mine/pending-modal");
+    if (IS_API_MODE) {
+      const dto = await apiClient.get<NotificationWithStatusDto | undefined>("/notifications/mine/pending-modal");
+      return dto ? mapNotificationWithStatus(dto) : null;
+    }
     if (!currentUserId) return null;
     const pending = notificationsFor(currentUserId)
       .filter((n) => n.presentationMode === "MODAL_ONCE" && !n.autoShown)
@@ -99,7 +106,10 @@ export const notificationsService = {
 
   /** Super Admin cria e o mock "espalha" — uma `UserNotificationStatus` por destinatário, exatamente como o backend fará via fan-out na criação (Seção F). */
   async create(req: CreateNotificationRequest): Promise<Notification> {
-    if (IS_API_MODE) return apiClient.post<Notification>("/notifications", req);
+    if (IS_API_MODE) {
+      const dto = await apiClient.post<NotificationDto>("/notifications", req);
+      return mapNotification(dto);
+    }
     logApiCall("POST", "/api/v1/notifications", req);
     const created: Notification = {
       id: `n-${Date.now()}`,
@@ -129,7 +139,10 @@ export const notificationsService = {
 
   /** Gestão/auditoria do Super Admin — todas as notificações já criadas, independente de destinatário. */
   async listAll(): Promise<Notification[]> {
-    if (IS_API_MODE) return apiClient.get<Notification[]>("/notifications");
+    if (IS_API_MODE) {
+      const dtos = await apiClient.get<NotificationDto[]>("/notifications");
+      return dtos.map(mapNotification);
+    }
     return [...notificationsStore].sort(byCreatedAtDesc);
   },
 };
