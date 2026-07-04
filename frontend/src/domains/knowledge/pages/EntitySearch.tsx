@@ -6,13 +6,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/compone
 import { kgColor } from "../mocks/knowledge.mocks";
 import { knowledgeService } from "../services/knowledgeService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 export function EntitySearch() {
   const navigate = useNavigate();
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
-  const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(), []);
-  const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(), []);
+  const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(productId), [productId]);
+  const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(productId), [productId]);
 
   const types = useMemo(() => Array.from(new Set((kgNodes ?? []).map((n) => n.type))), [kgNodes]);
 

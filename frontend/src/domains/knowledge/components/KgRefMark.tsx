@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../shared/components/ui/tooltip";
 import { Badge } from "../../../shared/components/Primitives";
 import { knowledgeService } from "../services/knowledgeService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import type { GraphNodePreview } from "../contracts/responses";
 
 /**
@@ -11,11 +12,13 @@ import type { GraphNodePreview } from "../contracts/responses";
  * navegar para a tela de detalhe completa do nó.
  */
 export function KgRefMark({ nodeId, label }: { nodeId: string; label: string }) {
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
   const [preview, setPreview] = useState<GraphNodePreview | null | undefined>(undefined);
 
   const loadPreview = () => {
     if (preview !== undefined) return;
-    knowledgeService.getNodePreview(nodeId).then((p) => setPreview(p ?? null));
+    knowledgeService.getNodePreview(productId, nodeId).then((p) => setPreview(p ?? null));
   };
 
   return (

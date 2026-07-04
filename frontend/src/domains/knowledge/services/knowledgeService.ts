@@ -1,8 +1,9 @@
 import { kgNodes, kgEdges, wikidevKgNodes, wikidevKgEdges, lokiKgNodes, lokiKgEdges, type KGEdge, type KGEntityType, type KGNode } from "../mocks/knowledge.mocks";
+import { products as productsStore } from "../../products/mocks/products.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
-import { requireCurrentProductId } from "../../../core/products/currentProductContext";
+import { slugify } from "../../../shared/utils/slugify";
 import type { EdgeType, GraphNodePreview, ListEdgesResponse, ListNodesResponse, RelatedNode } from "../contracts/responses";
 
 // Store em memória só para a sessão do navegador — ver nota equivalente em
@@ -25,51 +26,77 @@ const allEdges: KGEdge[] = PRODUCT_NODE_SEEDS.flatMap((g) => g.edges);
  */
 const nodeProductSlug = new Map<string, string>(PRODUCT_NODE_SEEDS.flatMap((g) => g.nodes.map((n) => [n.id, g.slug] as const)));
 
+function productSlugFromId(productId: string): string | undefined {
+  const product = productsStore.find((p) => p.id === productId);
+  return product ? slugify(product.name) : undefined;
+}
+
+function productNodes(productId: string): KGNode[] {
+  const productSlug = productSlugFromId(productId);
+  return allNodes.filter((n) => !productSlug || nodeProductSlug.get(n.id) === productSlug);
+}
+
+function productEdges(productId: string): KGEdge[] {
+  const nodeIds = new Set(productNodes(productId).map((n) => n.id));
+  return allEdges.filter((e) => nodeIds.has(e.from) && nodeIds.has(e.to));
+}
+
+function warnMissingEndpoint(method: string, path: string) {
+  if (!import.meta.env.PROD) console.warn(`knowledgeService: backend ainda não expõe ${method} ${path}; usando mock local.`);
+}
+
+type GraphRelatedApiResponse = {
+  node: KGNode;
+  edge: { edgeType?: string; weight?: number | string | null };
+};
+
+function mapRelatedApiResponse(row: GraphRelatedApiResponse): RelatedNode {
+  return {
+    node: row.node,
+    verb: row.edge.edgeType ?? "RELATED_TO",
+    weight: Number(row.edge.weight ?? 0),
+  };
+}
+
 export const knowledgeService = {
-  /**
-   * Sprint 16, Tarefa A — antes retornava só `kgNodes` (mock estático do
-   * Maestro Beton), nunca o store mutável em que `createEdge`/
-   * `ensureNodeForContent` escrevem; uma edge criada nunca aparecia aqui.
-   * Sem filtro por produto (telas de visualização do grafo ainda chamam sem
-   * argumento) — é um problema pré-existente e maior, fora do escopo desta
-   * sprint, que tratou da jornada de criação de conexão, não da
-   * re-arquitetura das telas de visualização.
-   */
-  async listNodes(): Promise<ListNodesResponse> {
-    if (IS_API_MODE) return apiClient.get<ListNodesResponse>(`/products/${requireCurrentProductId()}/graph/nodes`);
-    return allNodes;
+  async listNodes(productId: string): Promise<ListNodesResponse> {
+    if (IS_API_MODE) return apiClient.get<ListNodesResponse>(`/products/${productId}/graph/nodes`);
+    return productNodes(productId);
   },
-  async listEdges(): Promise<ListEdgesResponse> {
-    if (IS_API_MODE) return apiClient.get<ListEdgesResponse>(`/products/${requireCurrentProductId()}/graph/edges`);
-    return allEdges;
+  async listEdges(productId: string): Promise<ListEdgesResponse> {
+    if (IS_API_MODE) warnMissingEndpoint("GET", `/api/v1/products/${productId}/graph/edges`);
+    return productEdges(productId);
   },
   // Pontos de integração real (Sprint 07) — sem endpoint formalizado ainda em
   // docs/trace/00_endpoints_esperados.md (só o GET de orphans existe, Seção B.5);
   // path inferido por convenção REST sobre o recurso já documentado.
-  async markInsightReviewed(text: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.post(`/products/${requireCurrentProductId()}/graph/insights/review`, { text });
-    logApiCall("POST", "/api/v1/products/{productId}/graph/insights/review", { text });
+  async markInsightReviewed(productId: string, text: string): Promise<void> {
+    if (IS_API_MODE) return apiClient.post(`/products/${productId}/graph/insights/review`, { text });
+    logApiCall("POST", `/api/v1/products/${productId}/graph/insights/review`, { text });
   },
-  async resolveOrphan(id: string, action: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.post(`/products/${requireCurrentProductId()}/graph/orphans/${id}/resolve`, { action });
-    logApiCall("POST", `/api/v1/products/{productId}/graph/orphans/${id}/resolve`, { action });
+  async resolveOrphan(productId: string, id: string, action: string): Promise<void> {
+    if (IS_API_MODE) return apiClient.post(`/products/${productId}/graph/orphans/${id}/resolve`, { action });
+    logApiCall("POST", `/api/v1/products/${productId}/graph/orphans/${id}/resolve`, { action });
   },
-  async resolveOrphans(ids: string[]): Promise<void> {
-    if (IS_API_MODE) return apiClient.post(`/products/${requireCurrentProductId()}/graph/orphans/resolve`, { ids });
-    logApiCall("POST", "/api/v1/products/{productId}/graph/orphans/resolve", { ids });
+  async resolveOrphans(productId: string, ids: string[]): Promise<void> {
+    if (IS_API_MODE) return apiClient.post(`/products/${productId}/graph/orphans/resolve`, { ids });
+    logApiCall("POST", `/api/v1/products/${productId}/graph/orphans/resolve`, { ids });
   },
 
   /** Preview leve para tooltip de referência inline (`kg-ref`) — Sprint 11, Tarefa C.1/C.4. */
-  async getNodePreview(nodeId: string): Promise<GraphNodePreview | undefined> {
-    if (IS_API_MODE) return apiClient.get<GraphNodePreview>(`/products/${requireCurrentProductId()}/graph/nodes/${nodeId}/preview`);
+  async getNodePreview(productId: string, nodeId: string): Promise<GraphNodePreview | undefined> {
+    if (IS_API_MODE) return apiClient.get<GraphNodePreview>(`/products/${productId}/graph/nodes/${nodeId}/preview`);
     const node = allNodes.find((n) => n.id === nodeId);
     if (!node) return undefined;
     return { id: node.id, label: node.label, type: node.type, summary: node.summary ?? "", difficulty: node.difficulty, thumbnail: node.thumbnail };
   },
 
   /** Nós relacionados a um nó, ordenados por `weight` desc — Sprint 11, Tarefa C.5 (já é `GET /graph/nodes/{id}/related` no backend, etapa 07). */
-  async listRelated(nodeId: string): Promise<RelatedNode[]> {
-    if (IS_API_MODE) return apiClient.get<RelatedNode[]>(`/products/${requireCurrentProductId()}/graph/nodes/${nodeId}/related`);
+  async listRelated(productId: string, nodeId: string): Promise<RelatedNode[]> {
+    if (IS_API_MODE) {
+      const rows = await apiClient.get<GraphRelatedApiResponse[]>(`/products/${productId}/graph/nodes/${nodeId}/related`);
+      return rows.map(mapRelatedApiResponse).sort((a, b) => b.weight - a.weight);
+    }
     return allEdges
       .filter((e) => e.from === nodeId || e.to === nodeId)
       .map((e) => {
@@ -81,12 +108,10 @@ export const knowledgeService = {
       .sort((a, b) => b.weight - a.weight);
   },
 
-  /** Busca por label entre os nós de um produto (Sprint 16: `EntityPicker`, ao vincular durante a autoria, nunca deve listar nó de outro produto — ADR-0016). Sem `productSlug`, busca em todos (uso por `EntitySearch.tsx`/`GraphCanvasView.tsx`, fora da jornada de vínculo). */
-  async searchNodes(query: string, productSlug?: string): Promise<KGNode[]> {
-    if (IS_API_MODE) {
-      const path = productSlug ? `/products/${productSlug}/graph/nodes/search?q=${query}` : `/graph/nodes/search?q=${query}`;
-      return apiClient.get<KGNode[]>(path);
-    }
+  /** Busca por label entre os nós de um produto (ADR-0016: uma edge nunca conecta nós de produtos diferentes). */
+  async searchNodes(query: string, productId: string): Promise<KGNode[]> {
+    if (IS_API_MODE) return apiClient.get<KGNode[]>(`/products/${productId}/graph/nodes?q=${encodeURIComponent(query)}`);
+    const productSlug = productSlugFromId(productId);
     const q = query.toLowerCase();
     return allNodes
       .filter((n) => !productSlug || nodeProductSlug.get(n.id) === productSlug)
@@ -102,11 +127,12 @@ export const knowledgeService = {
    * `productSlug` marca o produto-dono do nó (idempotente mesmo se o nó já
    * existir) — é o que permite `createEdge` aplicar a regra de mesmo produto.
    */
-  async ensureNodeForContent(nodeId: string, label: string, productSlug: string, type: KGEntityType = "Página"): Promise<void> {
-    if (IS_API_MODE) return apiClient.post(`/products/${productSlug}/graph/nodes`, { id: nodeId, label, type });
+  async ensureNodeForContent(productId: string, nodeId: string, label: string, type: KGEntityType = "Página"): Promise<void> {
+    if (IS_API_MODE) return apiClient.post(`/products/${productId}/graph/nodes`, { refId: nodeId, refType: "CONTENT", label, nodeType: "PAGE" });
+    const productSlug = productSlugFromId(productId) ?? productId;
     nodeProductSlug.set(nodeId, productSlug);
     if (allNodes.some((n) => n.id === nodeId)) return;
-    logApiCall("POST", "/api/v1/products/{productId}/graph/nodes", { id: nodeId, label, type });
+    logApiCall("POST", `/api/v1/products/${productId}/graph/nodes`, { id: nodeId, label, type });
     allNodes.push({ id: nodeId, label, type, status: "ativo", x: 0, y: 0, props: [] });
   },
 
@@ -122,8 +148,9 @@ export const knowledgeService = {
    * outro produto (ADR-0016: edge nunca cruza produto), (3) edge idêntica já
    * existente (evita duplicar ao salvar o mesmo conteúdo sem mudar as refs).
    */
-  async createEdge(from: string, to: string, productSlug: string, edgeType: EdgeType = "RELATED_TO"): Promise<void> {
-    if (IS_API_MODE) return apiClient.post(`/products/${productSlug}/graph/edges`, { from, to, edgeType });
+  async createEdge(productId: string, from: string, to: string, edgeType: EdgeType = "RELATED_TO"): Promise<void> {
+    if (IS_API_MODE) return apiClient.post(`/products/${productId}/graph/edges`, { sourceNodeId: from, targetNodeId: to, edgeType });
+    const productSlug = productSlugFromId(productId) ?? productId;
     if (!allNodes.some((n) => n.id === to)) {
       if (!import.meta.env.PROD) console.warn(`knowledgeService.createEdge: nó de destino "${to}" não existe — edge não criada.`);
       return;
@@ -133,7 +160,7 @@ export const knowledgeService = {
       return;
     }
     if (allEdges.some((e) => e.from === from && e.to === to && e.verb === edgeType)) return;
-    logApiCall("POST", "/api/v1/products/{productId}/graph/edges", { from, to, edgeType });
+    logApiCall("POST", `/api/v1/products/${productId}/graph/edges`, { from, to, edgeType });
     allEdges.push({ from, to, verb: edgeType });
   },
 };

@@ -57,9 +57,9 @@ async function syncKnowledgeGraphRefs(content: ContentRow, product: ContentProdu
   const matches = [...content.body.matchAll(KG_REF_PATTERN)];
   if (matches.length === 0) return;
   const productId = product ? product.id : "p1";
-  await knowledgeService.ensureNodeForContent(content.id, content.title, productId, "Página");
+  await knowledgeService.ensureNodeForContent(productId, content.id, content.title, "Página");
   for (const [, nodeId] of matches) {
-    await knowledgeService.createEdge(content.id, nodeId, productId, "RELATED_TO");
+    await knowledgeService.createEdge(productId, content.id, nodeId, "RELATED_TO");
   }
 }
 

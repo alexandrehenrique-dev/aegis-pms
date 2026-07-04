@@ -5,6 +5,7 @@ import { Badge, Button, Card, SkeletonLines, PartialErrorWidget } from "../../..
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { analyticsService } from "../services/analyticsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import type { AnalyticsKpi } from "../contracts/responses";
 
 const KPI_ROUTES: Record<string, string> = {
@@ -39,7 +40,9 @@ export function KPIBlock({ k }: { k: AnalyticsKpi }) {
 }
 
 export function KPIGrid() {
-  const { data: kpis, loading, error } = useAsyncData(() => analyticsService.listKpis(), []);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
+  const { data: kpis, loading, error } = useAsyncData(() => analyticsService.listKpis(productId), [productId]);
   if (loading) return <SkeletonLines />;
   if (error || !kpis) return <PartialErrorWidget />;
   return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{kpis.map((k) => <KPIBlock key={k.label} k={k} />)}</div>;

@@ -17,8 +17,8 @@ import { GlobalFooter, GlobalNavbar } from "../../pages/components/GlobalChrome"
 const LANGUAGES = ["PT-BR", "EN-US", "ES-ES"];
 
 /** Artigo com referência kg-ref de exemplo, usado como prova de conceito da Tarefa C quando o produto atual é a WikiDev. */
-function WikiDevArticlePreview({ article }: { article: { title: string; body: string } }) {
-  const { data: related } = useAsyncData(() => knowledgeService.listRelated("node-spring-boot"), []);
+function WikiDevArticlePreview({ article, productId }: { article: { title: string; body: string }; productId: string }) {
+  const { data: related } = useAsyncData(() => knowledgeService.listRelated(productId, "node-spring-boot"), [productId]);
   return (
     <div className="rounded-xl bg-muted p-8">
       <p className="text-xs text-muted-foreground">Preview de artigo publicado — WikiDev</p>
@@ -81,7 +81,7 @@ export function ResponsivePreviewFrame() {
         </div>
         <div className={`light isolate mx-auto rounded-2xl border border-border bg-white p-5 shadow-[0_8px_30px_rgba(28,28,28,.05)] ${vp === "mobile" ? "max-w-[375px]" : vp === "tablet" ? "max-w-[768px]" : "max-w-5xl"}`}>
           {wikidevArticle?.body ? (
-            <WikiDevArticlePreview article={{ title: wikidevArticle.title, body: wikidevArticle.body }} />
+            <WikiDevArticlePreview article={{ title: wikidevArticle.title, body: wikidevArticle.body }} productId={productId} />
           ) : loadingPage ? (
             <SkeletonLines />
           ) : page ? (

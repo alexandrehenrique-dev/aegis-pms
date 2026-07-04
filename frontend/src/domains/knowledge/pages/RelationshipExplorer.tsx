@@ -6,6 +6,7 @@ import { knowledgeService } from "../services/knowledgeService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { KGBadge } from "../components/KGBadge";
 import { toast } from "../../../core/notifications/toast";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import type { KGEdge, KGNode } from "../mocks/knowledge.mocks";
 
 function exportEdgesCsv(edges: KGEdge[], nodes: KGNode[]) {
@@ -22,8 +23,10 @@ function exportEdgesCsv(edges: KGEdge[], nodes: KGNode[]) {
 }
 
 export function RelationshipExplorer() {
-  const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(), []);
-  const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(), []);
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
+  const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(productId), [productId]);
+  const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(productId), [productId]);
   const [verbFilter, setVerbFilter] = useState<string | null>(null);
 
   const verbs = useMemo(() => Array.from(new Set((kgEdges ?? []).map((e) => e.verb))), [kgEdges]);

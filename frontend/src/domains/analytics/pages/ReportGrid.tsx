@@ -4,6 +4,7 @@ import { Button, Card, PageHeader } from "../../../shared/components/Primitives"
 import { ComparisonBadge } from "../components/AnalyticsBits";
 import { toast } from "../../../core/notifications/toast";
 import { analyticsService } from "../services/analyticsService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
 function downloadReport(name: string) {
   const blob = new Blob([`Relatório: ${name}\nGerado em: ${new Date().toISOString()}`], { type: "text/plain" });
@@ -15,13 +16,13 @@ function downloadReport(name: string) {
   URL.revokeObjectURL(url);
 }
 
-function ReportCard({ r }: { r: string[] }) {
+function ReportCard({ r, productId }: { r: string[]; productId: string }) {
   const [generating, setGenerating] = useState(false);
 
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      await analyticsService.generateReport(r[0]);
+      await analyticsService.generateReport(productId, r[0]);
       toast.success("Relatório gerado!", { description: r[0] });
     } finally {
       setGenerating(false);
@@ -42,6 +43,8 @@ function ReportCard({ r }: { r: string[] }) {
 }
 
 export function ReportGrid() {
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
   const [generatingAll, setGeneratingAll] = useState(false);
   const reports = [
     ["Relatório mensal do produto", "Resumo executivo-operacional do produto.", "Junho", "PDF", "pronto", "hoje"],
@@ -55,7 +58,7 @@ export function ReportGrid() {
   const handleGenerateAll = async () => {
     setGeneratingAll(true);
     try {
-      await Promise.all(reports.map((r) => analyticsService.generateReport(r[0])));
+      await Promise.all(reports.map((r) => analyticsService.generateReport(productId, r[0])));
       toast.success("Todos os relatórios foram gerados!");
     } finally {
       setGeneratingAll(false);
@@ -67,7 +70,7 @@ export function ReportGrid() {
       <PageHeader title="Reports" module="Analytics" desc="Central de relatórios implementáveis e rastreáveis." badge="Relatórios">
         <Button primary onClick={handleGenerateAll} disabled={generatingAll}>{generatingAll && <Loader2 size={15} className="animate-spin" />}{generatingAll ? "Gerando..." : "Gerar relatório"}</Button>
       </PageHeader>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{reports.map((r) => <ReportCard key={r[0]} r={r} />)}</div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{reports.map((r) => <ReportCard key={r[0]} r={r} productId={productId} />)}</div>
     </>
   );
 }

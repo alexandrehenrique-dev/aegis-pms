@@ -4,6 +4,7 @@ import { Button, Card, PageHeader } from "../../../shared/components/Primitives"
 import { KGBadge } from "../components/KGBadge";
 import { toast } from "../../../core/notifications/toast";
 import { knowledgeService } from "../services/knowledgeService";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import type { KGEntityType } from "../mocks/knowledge.mocks";
 
 type OrphanRow = { id: string; label: string; type: KGEntityType; status: string; action: string };
@@ -17,6 +18,8 @@ const ROWS: OrphanRow[] = [
 ];
 
 export function OrphanEntityTable() {
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [resolved, setResolved] = useState<Set<string>>(new Set());
   const [resolvingAll, setResolvingAll] = useState(false);
@@ -32,7 +35,7 @@ export function OrphanEntityTable() {
   const handleResolveRow = async (row: OrphanRow) => {
     setResolvingRow(row.id);
     try {
-      await knowledgeService.resolveOrphan(row.id, row.action);
+      await knowledgeService.resolveOrphan(productId, row.id, row.action);
       setResolved((prev) => new Set(prev).add(row.id));
       toast.success(`${row.action} aplicado!`, { description: row.label });
     } finally {
@@ -47,7 +50,7 @@ export function OrphanEntityTable() {
     }
     setResolvingAll(true);
     try {
-      await knowledgeService.resolveOrphans(Array.from(selected));
+      await knowledgeService.resolveOrphans(productId, Array.from(selected));
       setResolved((prev) => new Set([...prev, ...selected]));
       toast.success(`${selected.size} entidade(s) resolvida(s)!`);
       setSelected(new Set());

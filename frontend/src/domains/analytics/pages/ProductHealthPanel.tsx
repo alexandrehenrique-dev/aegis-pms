@@ -6,6 +6,7 @@ import { ComparisonBadge, InsightPanel } from "../components/AnalyticsBits";
 import { analyticsService } from "../services/analyticsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { toast } from "../../../core/notifications/toast";
+import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import type { HealthSignal } from "../contracts/responses";
 
 const HEALTH_ROUTES: Record<string, string> = {
@@ -26,8 +27,10 @@ function HealthScoreCard({ h }: { h: HealthSignal }) {
 }
 
 export function ProductHealthPanel() {
+  const { product } = useCurrentProduct();
+  const productId = product?.id ?? "p1";
   const [reloadKey, setReloadKey] = useState(0);
-  const { data: health, loading, error } = useAsyncData(() => analyticsService.listHealth(), [reloadKey]);
+  const { data: health, loading, error } = useAsyncData(() => analyticsService.listHealth(productId), [productId, reloadKey]);
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
 
@@ -41,7 +44,7 @@ export function ProductHealthPanel() {
   const handleGeneratePlan = async () => {
     setGenerating(true);
     try {
-      await analyticsService.generateActionPlan();
+      await analyticsService.generateActionPlan(productId);
       toast.success("Plano de ação gerado!");
     } finally {
       setGenerating(false);
