@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { Loader2 } from "lucide-react";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
 import { ConversionCard } from "../components/ConversionCard";
@@ -14,6 +15,7 @@ const EMBED_SNIPPET = "<aegis-form id=contato-comercial />";
 const FORM_ID = "form-contato-comercial";
 
 export function PublicationPanel() {
+  const navigate = useNavigate();
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "";
   const [publishing, setPublishing] = useState(false);
@@ -51,6 +53,7 @@ export function PublicationPanel() {
     try {
       await formsService.publish(productId, FORM_ID);
       toast.success("Alterações publicadas!");
+      navigate("/forms/list");
     } finally {
       setPublishing(false);
     }
