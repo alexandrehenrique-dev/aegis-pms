@@ -12,8 +12,10 @@ import br.com.byop.aegis.content.domain.ContentVersion;
 import br.com.byop.aegis.content.dto.ContentSummary;
 import br.com.byop.aegis.content.dto.ContentVersionSummary;
 import br.com.byop.aegis.content.dto.WorkflowItemSummary;
+import br.com.byop.aegis.content.exception.ContentDeletionNotAllowedException;
 import br.com.byop.aegis.content.exception.ContentNotFoundException;
 import br.com.byop.aegis.content.exception.DuplicateContentTitleException;
+import br.com.byop.aegis.content.exception.InsufficientContentDeleteRoleException;
 import br.com.byop.aegis.content.exception.InsufficientContentRoleException;
 import br.com.byop.aegis.content.exception.InvalidContentReferenceException;
 import br.com.byop.aegis.content.exception.InvalidContentStatusException;
@@ -558,6 +560,79 @@ class ContentServiceTest {
 
         assertThatThrownBy(() -> service.publish(productId, contentId, request, editor))
                 .isInstanceOf(InsufficientContentRoleException.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"ROLE_SUPER_ADMIN", "ROLE_TENANT_ADMIN"})
+    void shouldDeleteNeverPublishedDraftContent(String role) {
+        UUID productId = UUID.randomUUID();
+        UUID tenantId = UUID.randomUUID();
+        Content content = content(productId, ContentStatus.DRAFT);
+        when(contentRepository.findByProductIdAndId(productId, content.getId())).thenReturn(Optional.of(content));
+        when(productReferenceService.getRequiredReference(productId)).thenReturn(new ProductReference(productId, tenantId));
+
+        service.deleteContent(productId, content.getId(), caller(Set.of(role)));
+
+        verify(versionRepository).deleteAllByContentId(content.getId());
+        verify(contentRepository).delete(content);
+        ArgumentCaptor<AuditRecordCommand> auditCaptor = ArgumentCaptor.forClass(AuditRecordCommand.class);
+        verify(auditService).recordEvent(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().action()).isEqualTo("CONTENT_DELETED");
+        assertThat(auditCaptor.getValue().tenantId()).isEqualTo(tenantId);
+    }
+
+    @Test
+    void shouldRejectDeleteWhenCallerLacksAdminRole() {
+        UUID productId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
+        AuthenticatedUser editor = caller(Set.of("ROLE_EDITOR"));
+
+        assertThatThrownBy(() -> service.deleteContent(productId, contentId, editor))
+                .isInstanceOf(InsufficientContentDeleteRoleException.class);
+
+        verify(contentRepository, never()).findByProductIdAndId(any(), any());
+        verify(contentRepository, never()).delete(any(Content.class));
+    }
+
+    @Test
+    void shouldRejectDeleteWhenContentAlreadyPublished() {
+        UUID productId = UUID.randomUUID();
+        Content content = content(productId, ContentStatus.PUBLISHED);
+        when(contentRepository.findByProductIdAndId(productId, content.getId())).thenReturn(Optional.of(content));
+        UUID contentId = content.getId();
+        AuthenticatedUser admin = caller(Set.of("ROLE_SUPER_ADMIN"));
+
+        assertThatThrownBy(() -> service.deleteContent(productId, contentId, admin))
+                .isInstanceOf(ContentDeletionNotAllowedException.class);
+
+        verify(contentRepository, never()).delete(any(Content.class));
+        verify(versionRepository, never()).deleteAllByContentId(any());
+    }
+
+    @Test
+    void shouldRejectDeleteWhenDraftWasAlreadyPublishedBefore() {
+        UUID productId = UUID.randomUUID();
+        Content content = content(productId, ContentStatus.DRAFT);
+        ReflectionTestUtils.setField(content, "currentVersion", 2);
+        when(contentRepository.findByProductIdAndId(productId, content.getId())).thenReturn(Optional.of(content));
+        UUID contentId = content.getId();
+        AuthenticatedUser admin = caller(Set.of("ROLE_TENANT_ADMIN"));
+
+        assertThatThrownBy(() -> service.deleteContent(productId, contentId, admin))
+                .isInstanceOf(ContentDeletionNotAllowedException.class);
+
+        verify(contentRepository, never()).delete(any(Content.class));
+    }
+
+    @Test
+    void shouldRejectDeleteWhenContentNotFoundInProduct() {
+        UUID productId = UUID.randomUUID();
+        UUID contentId = UUID.randomUUID();
+        when(contentRepository.findByProductIdAndId(productId, contentId)).thenReturn(Optional.empty());
+        AuthenticatedUser admin = caller(Set.of("ROLE_SUPER_ADMIN"));
+
+        assertThatThrownBy(() -> service.deleteContent(productId, contentId, admin))
+                .isInstanceOf(ContentNotFoundException.class);
     }
 
     @Test

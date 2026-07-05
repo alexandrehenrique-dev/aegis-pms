@@ -50,4 +50,16 @@ public class ContentExceptionHandler {
     public CoreErrorResponse handleDuplicateContentTitle() {
         return new CoreErrorResponse("CONTENT_TITLE_ALREADY_EXISTS");
     }
+
+    @ExceptionHandler(InsufficientContentDeleteRoleException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public CoreErrorResponse handleInsufficientContentDeleteRole() {
+        return new CoreErrorResponse("CONTENT_DELETE_FORBIDDEN");
+    }
+
+    @ExceptionHandler(ContentDeletionNotAllowedException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CoreErrorResponse handleContentDeletionNotAllowed() {
+        return new CoreErrorResponse("CONTENT_DELETE_NOT_ALLOWED");
+    }
 }
