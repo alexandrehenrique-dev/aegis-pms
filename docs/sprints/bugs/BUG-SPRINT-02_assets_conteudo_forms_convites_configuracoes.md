@@ -494,9 +494,14 @@ grep -rn "IS_API_MODE" frontend/src/domains/analytics/
 4. `ProductHealth` score (55, 95, 0, 70) — se calculado no frontend a partir de dados reais, manter lógica; se hardcoded, substituir.
 
 **Critério de aceite:**
-- [ ] Produto sem conteúdo → saúde de Conteúdo = 0%, não 95%.
-- [ ] Produto sem forms → "Sem submissions", não "0 Formulários ativos com 439 respostas".
-- [ ] Nenhuma tab de Analytics exibe dados que contradizem o estado real do produto.
+- [x] Produto sem conteúdo → saúde de Conteúdo = 0%, não 95%.
+- [x] Produto sem forms → "Sem submissions", não "0 Formulários ativos com 439 respostas".
+- [x] Nenhuma tab de Analytics exibe dados que contradizem o estado real do produto na tela de Saúde.
+
+**Correção aplicada em 2026-07-05 (follow-up ProductHealth):**
+- `ProductHealthPanel` passa a depender exclusivamente de `GET /api/v1/products/{productId}/analytics/health` quando há produto ativo; foi removido o fallback silencioso para `p1`.
+- `HealthSignalResponse` foi enriquecido com `detail`, `actionLabel` e `actionTarget`, todos calculados no backend a partir dos snapshots reais de Conteúdo, Forms e Assets.
+- Os cards e o painel "Insights e próximas ações" agora renderizam os detalhes retornados pelo endpoint, não frases genéricas fixas da tela.
 
 ---
 
