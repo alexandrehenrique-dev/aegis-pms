@@ -772,6 +772,61 @@ Para cada endpoint novo criado no backend, o agente deve:
 
 ---
 
+## Seção J — Usuários (1 bug)
+
+### J.1 — Filtro "Papel / status / produto" na tela de usuários não abre popover
+
+**Sintoma:** Clicar no botão "Papel / status / produto" (ícone funil, canto superior direito da `UserTable`) exibe um elemento vazio/popup em branco, ou não abre nada. O filtro não funciona — aparentemente renderiza um container sem conteúdo.
+
+**Evidência:** Print mostra um retângulo branco vazio aparecendo abaixo do botão ao clicar — estrutura do popover existe mas sem conteúdo interno.
+
+**Causa raiz provável:** O componente de filtro (`FilterPanel` ou `Popover`) foi montado mas o conteúdo interno (chips de papel, status e produto) está renderizando como `null` ou está fora da viewport. Verificar em `UserTable.tsx` se o popover de filtros tem seu conteúdo condicional a algum estado que nunca é verdadeiro.
+
+**Investigação necessária:**
+1. Localizar em `frontend/src/domains/users/pages/UserTable.tsx` o handler do botão "Papel / status / produto".
+2. Verificar se o `Popover`/`DropdownMenu`/`FilterPanel` tem conteúdo real ou está vazio.
+3. Verificar se `tenantProducts`, `roles` e `statuses` usados para popular os chips estão sendo carregados antes do render.
+
+**Fix necessário:**
+1. O popover deve exibir três grupos de filtros com chips clicáveis:
+   - **Papel:** Editor, Product Manager, Tenant Admin, Super Admin (+ "Todos")
+   - **Status:** Ativo, Convidado, Inativo (+ "Todos")
+   - **Produto:** lista dinâmica dos produtos do tenant (`tenantProducts`)
+2. Ao selecionar um filtro, a tabela de usuários filtra localmente (sem nova requisição).
+3. Múltiplos filtros simultâneos: AND lógico (papel = Editor AND status = ativo).
+4. Botão "Limpar filtros" reseta todos os filtros ativos.
+5. Identidade visual: **exatamente igual** ao `FilterPanel` implementado em `AuditTimeline` — mesmos chips, cores, ícones Lucide, comportamento de "Todos" e "Limpar".
+
+**Fix de referência (padrão já implementado em AuditTimeline):**
+```tsx
+// UserTable.tsx — popover de filtros
+const [filters, setFilters] = useState({ role: "Todos", status: "Todos", product: "Todos" });
+
+const ROLE_OPTIONS   = ["Todos", "editor", "product_manager", "tenant_admin", "super_admin"];
+const STATUS_OPTIONS = ["Todos", "ativo", "convidado", "inativo"];
+const PRODUCT_OPTIONS = ["Todos", ...tenantProducts.map(p => p.name)];
+
+// Aplicar filtros na lista:
+const filtered = users.filter(u =>
+  (filters.role    === "Todos" || u.role    === filters.role)    &&
+  (filters.status  === "Todos" || u.status  === filters.status)  &&
+  (filters.product === "Todos" || u.products.includes(filters.product))
+);
+```
+
+**Critério de aceite:**
+- [ ] Clicar "Papel / status / produto" → popover abre com 3 grupos de chips visíveis.
+- [ ] Selecionar "editor" → tabela exibe apenas usuários com papel editor.
+- [ ] Selecionar "convidado" → tabela exibe apenas convidados.
+- [ ] Selecionar produto "Maestro Beton" → apenas usuários com esse produto.
+- [ ] Combinar: role=editor + status=ativo → filtro AND.
+- [ ] "Todos" num grupo → reseta apenas aquele grupo.
+- [ ] "Limpar" → reseta todos os grupos.
+- [ ] tsc --noEmit: zero erros.
+- [ ] Visual idêntico ao FilterPanel do AuditTimeline.
+
+---
+
 ## Apêndice — Mapa de mocks remanescentes identificados
 
 | Arquivo | Linha | Dado hardcoded | Prioridade |
