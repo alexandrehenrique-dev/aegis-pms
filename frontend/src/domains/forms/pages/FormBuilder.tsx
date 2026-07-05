@@ -156,6 +156,7 @@ export function FormBuilder() {
     try {
       await formsService.publish(productId, formId);
       toast.success("Formulário publicado!");
+      navigate("/forms/list");
     } finally {
       setPublishing(false);
     }

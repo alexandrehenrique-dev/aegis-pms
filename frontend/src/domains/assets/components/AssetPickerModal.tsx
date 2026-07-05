@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Search, X } from "lucide-react";
 import { Badge, Button, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
@@ -13,6 +13,15 @@ import type { AssetSummary } from "../contracts/responses";
 export type AssetTypeFilter = "imagem" | "PDF" | "áudio" | "vídeo" | "qualquer";
 
 const FILTER_OPTIONS: AssetTypeFilter[] = ["qualquer", "imagem", "PDF", "áudio", "vídeo"];
+
+function previewKind(type: string | undefined) {
+  const normalized = (type ?? "").trim().toLowerCase();
+  if (normalized === "imagem" || normalized === "image") return "image";
+  if (normalized === "pdf") return "pdf";
+  if (normalized === "vídeo" || normalized === "video") return "video";
+  if (normalized === "áudio" || normalized === "audio") return "audio";
+  return "document";
+}
 
 /**
  * Variante modal do `AssetPicker` (Sprint 13, Tarefa C) — diferente da tela
@@ -31,19 +40,25 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "";
   const { data: assets, loading, error } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId]);
+  const [visibleAssets, setVisibleAssets] = useState<AssetSummary[]>([]);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<AssetTypeFilter>(typeFilter);
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
-    if (!assets) return [];
-    return assets.filter((a) => {
-      const matchesType = activeFilter === "qualquer" || a.type === activeFilter;
-      const matchesQuery = !query.trim() || a.name.toLowerCase().includes(query.trim().toLowerCase());
+    return visibleAssets.filter((a) => {
+      const matchesType = activeFilter === "qualquer" || previewKind(a.type) === previewKind(activeFilter);
+      const normalizedQuery = query.trim().toLowerCase();
+      const matchesQuery = !normalizedQuery
+        || a.name.toLowerCase().includes(normalizedQuery)
+        || a.type.toLowerCase().includes(normalizedQuery)
+        || a.tags.toLowerCase().includes(normalizedQuery);
       return matchesType && matchesQuery;
     });
-  }, [assets, activeFilter, query]);
+  }, [visibleAssets, activeFilter, query]);
+
+  useEffect(() => setVisibleAssets(assets ?? []), [assets]);
 
   if (!open) return null;
 
@@ -51,13 +66,15 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
     const files = e.target.files;
     if (!files || files.length === 0) return;
     await assetsService.uploadFiles(productId, Array.from(files));
+    const refreshed = await assetsService.listAssets(productId);
+    setVisibleAssets(refreshed);
     toast.success(`${files.length} arquivo(s) enviado(s)!`);
     setSelectedName(files[0].name);
     e.target.value = "";
   };
 
   const handleConfirm = () => {
-    const asset = assets?.find((a) => a.name === selectedName);
+    const asset = visibleAssets.find((a) => a.name === selectedName);
     if (!asset) return;
     onSelect(asset);
   };

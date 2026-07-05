@@ -31,6 +31,15 @@ function maskToken(token: string): string {
   return `****${token.slice(-4)}`;
 }
 
+function connectionStatus(value: string | null | undefined): "connected" | "disconnected" {
+  return value && value.trim() ? "connected" : "disconnected";
+}
+
+function analyticsStatus(enabled: boolean, providerKey: string | null | undefined): "connected" | "disconnected" | "attention" {
+  if (!enabled) return "disconnected";
+  return connectionStatus(providerKey) === "connected" ? "connected" : "attention";
+}
+
 export const settingsService = {
   async listSettingCards(productId?: string): Promise<ListSettingCardsResponse> {
     if (IS_API_MODE) {
@@ -124,6 +133,9 @@ export const settingsService = {
       updatedAt: new Date().toISOString(),
       telegramAlert,
     };
+    updated.webhookStatus = connectionStatus(updated.webhookUrl);
+    updated.analyticsStatus = analyticsStatus(updated.analyticsEnabled, updated.analyticsProviderKey);
+    updated.emailStatus = updated.emailDeliveryEnabled ? "connected" : "disconnected";
     securitySettingsStore.set(productId, updated);
     return updated;
   },

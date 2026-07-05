@@ -7,6 +7,9 @@ import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.identity.api.IdentityUserLifecycleService;
 import br.com.byop.aegis.notification.api.NotificationOnboardingService;
 import br.com.byop.aegis.product.api.ProductUserAccessService;
+import br.com.byop.aegis.product.domain.Product;
+import br.com.byop.aegis.product.domain.ProductTypeKey;
+import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.product.user.contract.InviteTenantUserRequest;
 import br.com.byop.aegis.product.user.contract.UpdateTenantUserRequest;
 import br.com.byop.aegis.product.user.dto.TenantUserSummary;
@@ -43,6 +46,7 @@ import static org.mockito.Mockito.when;
 class TenantUserServiceTest {
 
     private static final UUID TENANT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    private static final UUID PRODUCT_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
     @Mock
     private IdentityUserLifecycleService identityUserLifecycleService;
@@ -55,6 +59,9 @@ class TenantUserServiceTest {
 
     @Mock
     private ProductUserAccessService productUserAccessService;
+
+    @Mock
+    private ProductRepository productRepository;
 
     @Mock
     private TenantUserMapper userMapper;
@@ -113,17 +120,31 @@ class TenantUserServiceTest {
     @Test
     void shouldInviteUser() {
         AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
-        InviteTenantUserRequest request = new InviteTenantUserRequest("Guest User", "guest@byop.dev", "EDITOR", "Aegis", null);
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "EDITOR",
+                "Maestro Beton",
+                List.of(PRODUCT_ID),
+                null
+        );
         TenantMembershipReference membership = membership("user-1", "EDITOR", "convidado");
+        Product product = product(PRODUCT_ID, "conecta-talentos", "Conecta Talentos");
         visibleTenant(caller);
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
         when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
         when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
         when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
         when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
 
         assertThat(service.inviteUser(caller, TENANT_ID, request).status()).isEqualTo("convidado");
+        verify(productUserAccessService).inviteTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of(PRODUCT_ID));
+        org.mockito.ArgumentCaptor<IdentityActionInviteCommand> inviteCaptor =
+                org.mockito.ArgumentCaptor.forClass(IdentityActionInviteCommand.class);
+        verify(identityActionTokenService).sendInviteActivation(inviteCaptor.capture());
+        assertThat(inviteCaptor.getValue().productNames()).containsExactly("Conecta Talentos");
         verify(notificationOnboardingService).assignOnboarding("user-1");
         org.mockito.ArgumentCaptor<br.com.byop.aegis.audit.api.AuditRecordCommand> auditCaptor =
                 org.mockito.ArgumentCaptor.forClass(br.com.byop.aegis.audit.api.AuditRecordCommand.class);
@@ -436,6 +457,12 @@ class TenantUserServiceTest {
 
     private IdentityUser user(String subject) {
         return new IdentityUser(subject, subject, subject + "@byop.dev", "User", subject);
+    }
+
+    private Product product(UUID id, String key, String name) {
+        Product product = new Product(TENANT_ID, key, name, ProductTypeKey.PRODUTO_SAAS, "pt-BR");
+        org.springframework.test.util.ReflectionTestUtils.setField(product, "id", id);
+        return product;
     }
 
     private TenantUserSummary summary(String subject, String status) {

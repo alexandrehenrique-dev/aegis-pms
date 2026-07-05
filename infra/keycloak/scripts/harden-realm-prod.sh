@@ -38,9 +38,9 @@ echo "==> Autenticando no Keycloak em $KEYCLOAK_URL..."
 
 echo "==> Aplicando timeouts de token..."
 "$KCADM" update "realms/$REALM" \
-  -s accessTokenLifespan=900 \
-  -s accessTokenLifespanForImplicitFlow=900 \
-  -s ssoSessionIdleTimeout=14400 \
+  -s accessTokenLifespan=300 \
+  -s accessTokenLifespanForImplicitFlow=300 \
+  -s ssoSessionIdleTimeout=1800 \
   -s ssoSessionMaxLifespan=28800 \
   -s offlineSessionIdleTimeout=604800 \
   -s offlineSessionMaxLifespan=2592000 \

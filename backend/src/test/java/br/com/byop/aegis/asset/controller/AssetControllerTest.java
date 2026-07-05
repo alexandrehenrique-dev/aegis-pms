@@ -46,8 +46,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = AssetController.class)
@@ -332,15 +333,16 @@ class AssetControllerTest {
     }
 
     @Test
-    void shouldRedirectAssetDownloadToResolvedUrl() throws Exception {
+    void shouldDownloadAssetWithOriginalFilename() throws Exception {
         AuthenticatedUser caller = user();
-        String fileUrl = "/api/v1/assets/" + ASSET_ID + "/file";
         when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
-        when(assetService.resolveAsset(ASSET_ID, caller)).thenReturn(new ResolvedAsset(ASSET_ID, fileUrl, null, "image/png"));
+        when(assetService.loadAssetFile(ASSET_ID, caller)).thenReturn(
+                new br.com.byop.aegis.asset.dto.AssetFileContent("conteudo".getBytes(), "image/png", "foto.png"));
 
         mockMvc.perform(get("/api/v1/assets/{assetId}/download", ASSET_ID).with(jwt()))
-                .andExpect(status().isFound())
-                .andExpect(redirectedUrl(fileUrl));
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"foto.png\""))
+                .andExpect(content().contentType("image/png"));
     }
 
     @Test

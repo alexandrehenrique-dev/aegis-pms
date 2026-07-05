@@ -29,8 +29,14 @@ public class AnalyticsService {
     private static final String ASSETS_LABEL = "Assets";
     private static final String CONTENT_LABEL = "Conteúdo";
     private static final String FORMS_LABEL = "Forms";
+    private static final String GENERAL_HEALTH_LABEL = "Saúde geral";
     private static final String OPERATING_WELL_STATUS = "Operando bem";
     private static final String SIMULATED_TRAFFIC = "simulado";
+    private static final String ACTION_VIEW_SIGNALS = "Ver sinais";
+    private static final String TARGET_OVERVIEW = "overview";
+    private static final String TARGET_CONTENT = "content";
+    private static final String TARGET_FORMS = "forms";
+    private static final String TARGET_ASSETS = "assets";
 
     private final ContentAnalyticsService contentAnalyticsService;
     private final SubmissionAnalyticsService submissionAnalyticsService;
@@ -144,35 +150,50 @@ public class AnalyticsService {
 
     private HealthSignalResponse contentHealth(ContentAnalyticsResponse content) {
         if (content.total() == 0) {
-            return new HealthSignalResponse(CONTENT_LABEL, "Sem conteúdo", "0", NEUTRAL);
+            return healthSignal(CONTENT_LABEL, "Sem conteúdo", "0", NEUTRAL,
+                    "Nenhum item editorial encontrado para este produto.", "Criar conteúdo", TARGET_CONTENT);
         }
         if (content.stalePendingReview() > 0) {
-            return new HealthSignalResponse(CONTENT_LABEL, "Revisão atrasada", "60", ATTENTION);
+            return healthSignal(CONTENT_LABEL, "Revisão atrasada", "60", ATTENTION,
+                    content.stalePendingReview() + " item(ns) aguardam revisão há mais de 30 dias.",
+                    "Resolver pendência", TARGET_CONTENT);
         }
         if (content.pendingReview() + content.drafts() > 0) {
-            return new HealthSignalResponse(CONTENT_LABEL, "Pendências leves", "78", ATTENTION);
+            long pending = content.pendingReview() + content.drafts();
+            return healthSignal(CONTENT_LABEL, "Pendências leves", "78", ATTENTION,
+                    pending + " item(ns) ainda estão em rascunho ou revisão.", "Ver workflow", TARGET_CONTENT);
         }
-        return new HealthSignalResponse(CONTENT_LABEL, OPERATING_WELL_STATUS, "95", POSITIVE);
+        return healthSignal(CONTENT_LABEL, OPERATING_WELL_STATUS, "95", POSITIVE,
+                content.published() + " conteúdo(s) publicados sem pendência operacional.", ACTION_VIEW_SIGNALS, TARGET_CONTENT);
     }
 
     private HealthSignalResponse formsHealth(SubmissionAnalyticsResponse submissions) {
         if (submissions.total() == 0) {
-            return new HealthSignalResponse(FORMS_LABEL, "Sem submissions", "0", NEUTRAL);
+            return healthSignal(FORMS_LABEL, "Sem submissions", "0", NEUTRAL,
+                    "Nenhuma submission real foi recebida para os formulários deste produto.",
+                    "Ver submissions", TARGET_FORMS);
         }
         if (submissions.recent() == 0) {
-            return new HealthSignalResponse(FORMS_LABEL, "Sem atividade recente", "72", ATTENTION);
+            return healthSignal(FORMS_LABEL, "Sem atividade recente", "72", ATTENTION,
+                    submissions.total() + " submission(ns) no total, mas nenhuma nos últimos 14 dias.",
+                    "Investigar forms", TARGET_FORMS);
         }
-        return new HealthSignalResponse(FORMS_LABEL, OPERATING_WELL_STATUS, "90", POSITIVE);
+        return healthSignal(FORMS_LABEL, OPERATING_WELL_STATUS, "90", POSITIVE,
+                submissions.recent() + " submission(ns) recebidas nos últimos 14 dias.", ACTION_VIEW_SIGNALS, TARGET_FORMS);
     }
 
     private HealthSignalResponse assetsHealth(AssetAnalyticsResponse assets) {
         if (assets.total() == 0) {
-            return new HealthSignalResponse(ASSETS_LABEL, "Sem assets", "0", NEUTRAL);
+            return healthSignal(ASSETS_LABEL, "Sem assets", "0", NEUTRAL,
+                    "Nenhum asset real cadastrado para este produto.", "Enviar asset", TARGET_ASSETS);
         }
         if (assets.missingAltText() > 0) {
-            return new HealthSignalResponse(ASSETS_LABEL, "Alt text pendente", "70", ATTENTION);
+            return healthSignal(ASSETS_LABEL, "Alt text pendente", "70", ATTENTION,
+                    assets.missingAltText() + " asset(s) precisam de alt text para acessibilidade e SEO.",
+                    "Resolver pendência", TARGET_ASSETS);
         }
-        return new HealthSignalResponse(ASSETS_LABEL, OPERATING_WELL_STATUS, "92", POSITIVE);
+        return healthSignal(ASSETS_LABEL, OPERATING_WELL_STATUS, "92", POSITIVE,
+                assets.total() + " asset(s) cadastrados sem pendência de alt text.", ACTION_VIEW_SIGNALS, TARGET_ASSETS);
     }
 
     private HealthSignalResponse generalHealth(HealthSignalResponse content, HealthSignalResponse forms,
@@ -180,7 +201,14 @@ public class AnalyticsService {
         int score = (parseScore(content.score()) + parseScore(forms.score()) + parseScore(assets.score())) / 3;
         String tone = generalHealthTone(score);
         String status = generalHealthStatus(score);
-        return new HealthSignalResponse("Saúde geral", status, Integer.toString(score), tone);
+        String detail = "Média operacional calculada a partir de Conteúdo, Forms e Assets.";
+        String action = ATTENTION.equals(tone) ? "Priorizar pendências" : ACTION_VIEW_SIGNALS;
+        return healthSignal(GENERAL_HEALTH_LABEL, status, Integer.toString(score), tone, detail, action, TARGET_OVERVIEW);
+    }
+
+    private HealthSignalResponse healthSignal(String label, String status, String score, String tone,
+                                              String detail, String actionLabel, String actionTarget) {
+        return new HealthSignalResponse(label, status, score, tone, detail, actionLabel, actionTarget);
     }
 
     private String generalHealthTone(int score) {

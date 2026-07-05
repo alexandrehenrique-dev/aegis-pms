@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Search } from "lucide-react";
-import { Badge, Button, EmptyState, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
+import { Badge, Button, EmptyState, PageHeader, PartialErrorWidget, SkeletonLines } from "../../../shared/components/Primitives";
 import { PermGate } from "../../../app/guards/PermGate";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { assetsService } from "../services/assetsService";
@@ -18,11 +18,18 @@ export function AssetLibrary() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [q, setQ] = useState("");
   const { data: assets, loading, error } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId]);
+  const [visibleAssets, setVisibleAssets] = useState(assets ?? []);
+
+  useEffect(() => setVisibleAssets(assets ?? []), [assets]);
 
   if (loading) return <SkeletonLines />;
   if (error || !assets) return <PartialErrorWidget />;
 
-  const rows = assets.filter((a) => (a.name + a.tags + a.type).toLowerCase().includes(q.toLowerCase()));
+  const handleDeleted = (assetId: string) => {
+    setVisibleAssets((current) => current.filter((asset) => (asset.id ?? asset.name) !== assetId));
+  };
+
+  const rows = visibleAssets.filter((a) => (a.name + a.tags + a.type).toLowerCase().includes(q.toLowerCase()));
 
   return (
     <>
@@ -44,13 +51,8 @@ export function AssetLibrary() {
           <Badge>Data de upload</Badge>
         </div>
       </div>
-      <div className="mb-4 grid gap-3 md:grid-cols-3">
-        <div><p className="mb-2 text-sm font-medium">Loading skeleton</p><SkeletonLines /></div>
-        <PartialErrorWidget />
-        <PermissionHint />
-      </div>
       {rows.length === 0 ? <EmptyState title="Busca sem resultado" description="Nenhum asset corresponde aos filtros atuais." /> : view === "grid" ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{rows.map((a) => <AssetCard key={a.name} a={a} productId={productId} />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{rows.map((a) => <AssetCard key={a.name} a={a} productId={productId} canEdit={canEdit} onDeleted={handleDeleted} />)}</div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <table className="hidden w-full text-left text-sm lg:table">
@@ -65,12 +67,12 @@ export function AssetLibrary() {
                   <td className="p-3">{a.tags}</td>
                   <td className="p-3">{a.usage}</td>
                   <td className="p-3">{a.uploadedAt}</td>
-                  <td className="p-3"><Button onClick={() => navigate(`/assets/${a.name.replace(/\.[a-z0-9]+$/i, "")}`)}>Abrir</Button></td>
+                  <td className="p-3"><Button onClick={() => navigate(`/assets/${a.id ?? a.name}`)}>Abrir</Button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div className="grid gap-2 p-3 lg:hidden">{rows.map((a) => <AssetCard key={a.name} a={a} productId={productId} />)}</div>
+          <div className="grid gap-2 p-3 lg:hidden">{rows.map((a) => <AssetCard key={a.name} a={a} productId={productId} canEdit={canEdit} onDeleted={handleDeleted} />)}</div>
         </div>
       )}
     </>

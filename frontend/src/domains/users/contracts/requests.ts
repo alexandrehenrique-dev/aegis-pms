@@ -3,5 +3,6 @@ export type InviteUserRequest = {
   email: string;
   role: string;
   allowedProducts: string;
+  allowedProductIds?: string[];
   message?: string;
 };

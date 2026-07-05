@@ -67,7 +67,7 @@ class FormResponseCountListenerTest {
 
     private FormDefinition saveForm(String suffix) {
         String uniqueSuffix = suffix + "-" + java.util.UUID.randomUUID();
-        Tenant tenant = tenantRepository.saveAndFlush(new Tenant("tenant-" + uniqueSuffix, "Tenant " + suffix));
+        Tenant tenant = tenantRepository.saveAndFlush(new Tenant("test-tenant-" + uniqueSuffix, "TEST-Form Listener " + suffix));
         Product product = productRepository.saveAndFlush(new Product(
                 tenant.getId(),
                 "product-" + uniqueSuffix,

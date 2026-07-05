@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Loader2 } from "lucide-react";
 import { Button, Card, Field, SelectLike } from "../../../shared/components/Primitives";
@@ -7,24 +7,32 @@ import { toast } from "../../../core/notifications/toast";
 import { assetsService } from "../services/assetsService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
-const FOLDERS = ["Campanha institucional", "Campanha de evento", "Branding", "Sem grupo"];
+const FOLDERS = ["Sem grupo", "Campanha institucional", "Campanha de evento", "Branding"];
 const VISIBILITY = ["Público", "Interno", "Restrito"];
-const SEO_USAGE = ["OG Image", "Hero", "Thumbnail", "Não aplicável"];
+const SEO_USAGE = ["Não aplicável", "OG Image", "Hero", "Thumbnail"];
 
-export function AssetMetadataFormCard() {
+function friendlyNameFromFile(fileName?: string): string {
+  return fileName ? fileName.replace(/\.[a-z0-9]+$/i, "") : "";
+}
+
+export function AssetMetadataFormCard({ suggestedFileName }: { suggestedFileName?: string }) {
   const navigate = useNavigate();
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "";
-  const [friendlyName, setFriendlyName] = useState("Hero Maestro Beton");
-  const [altText, setAltText] = useState("Maestro Beton em apresentação ao vivo");
-  const [caption, setCaption] = useState("Apresentação institucional");
-  const [credit, setCredit] = useState("BYOP Studio");
-  const [tags, setTags] = useState("hero, seo, institucional");
+  const [friendlyName, setFriendlyName] = useState("");
+  const [altText, setAltText] = useState("");
+  const [caption, setCaption] = useState("");
+  const [credit, setCredit] = useState("");
+  const [tags, setTags] = useState("");
   const [folder, setFolder] = useState(FOLDERS[0]);
   const [visibility, setVisibility] = useState(VISIBILITY[0]);
   const [seoUsage, setSeoUsage] = useState(SEO_USAGE[0]);
-  const [notes, setNotes] = useState("Usado na Home e preview público");
+  const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setFriendlyName((current) => current || friendlyNameFromFile(suggestedFileName));
+  }, [suggestedFileName]);
 
   const handleSave = async () => {
     setSaving(true);

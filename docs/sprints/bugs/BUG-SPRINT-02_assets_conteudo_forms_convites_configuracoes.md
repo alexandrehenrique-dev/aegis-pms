@@ -169,6 +169,12 @@ public ResponseEntity<Resource> downloadAsset(@PathVariable UUID assetId) {
 - [ ] Fazer upload de `foto.jpg` → "Nome amigável" sugere "foto", demais campos vazios.
 - [ ] tsc --noEmit: zero erros.
 
+**Follow-up 2026-07-05 — progresso de upload grande:**
+- `AssetUploadScreen` passou a controlar status por arquivo (`pronto para envio`, `enviando`, `processando`, `concluído`, `erro`) e não usa mais `aguardando` para arquivo apenas selecionado.
+- O botão de upload fica desabilitado quando não há produto ativo, quando não há arquivo selecionado, ou enquanto algum arquivo está em envio/processamento; ele só habilita quando todos os arquivos estão prontos para envio.
+- Uploads são processados arquivo a arquivo via `assetsService.uploadFile`, com progresso mínimo visual enquanto o request está ativo, progresso real quando o browser informa `xhr.upload.onprogress`, e barra em `100%` somente após resposta bem-sucedida da API.
+- Em falha de rede, limite de tamanho ou erro da API, a linha do arquivo muda para `erro` e o toast orienta nova tentativa, evitando espera infinita.
+
 ---
 
 ### A.5 — AssetPicker (upload rápido) — asset enviado não aparece para seleção imediata
@@ -186,6 +192,12 @@ public ResponseEntity<Resource> downloadAsset(@PathVariable UUID assetId) {
 - [ ] Upload rápido de `foto.jpg` na modal → `foto.jpg` aparece imediatamente na lista.
 - [ ] Clicar em `foto.jpg` → botão "Usar asset" habilitado.
 - [ ] Clicar "Usar asset" → bloco recebe o asset corretamente.
+
+**Follow-up 2026-07-05 — filtros do Asset Picker:**
+- A tela standalone `/assets/picker` não deve exibir chips decorativos ("Busca", "Filtros", "Seleção única" etc.). Os chips são filtros reais: tipo (`Todos`, `Imagens`, `PDFs`, `Vídeos`, `Áudios`, `Documentos`), `Selecionado` e `Limpar`.
+- A busca filtra por nome, tipo e tags, com estado controlado.
+- A filtragem precisa aceitar o contrato real do backend (`image`, `pdf`, `video`, `audio`, `document`) e os labels legados dos mocks (`imagem`, `PDF`, `vídeo`, `áudio`).
+- A mesma normalização vale para a modal `AssetPickerModal`, porque ela é usada por campos de mídia do editor.
 
 ---
 
@@ -488,9 +500,14 @@ grep -rn "IS_API_MODE" frontend/src/domains/analytics/
 4. `ProductHealth` score (55, 95, 0, 70) — se calculado no frontend a partir de dados reais, manter lógica; se hardcoded, substituir.
 
 **Critério de aceite:**
-- [ ] Produto sem conteúdo → saúde de Conteúdo = 0%, não 95%.
-- [ ] Produto sem forms → "Sem submissions", não "0 Formulários ativos com 439 respostas".
-- [ ] Nenhuma tab de Analytics exibe dados que contradizem o estado real do produto.
+- [x] Produto sem conteúdo → saúde de Conteúdo = 0%, não 95%.
+- [x] Produto sem forms → "Sem submissions", não "0 Formulários ativos com 439 respostas".
+- [x] Nenhuma tab de Analytics exibe dados que contradizem o estado real do produto na tela de Saúde.
+
+**Correção aplicada em 2026-07-05 (follow-up ProductHealth):**
+- `ProductHealthPanel` passa a depender exclusivamente de `GET /api/v1/products/{productId}/analytics/health` quando há produto ativo; foi removido o fallback silencioso para `p1`.
+- `HealthSignalResponse` foi enriquecido com `detail`, `actionLabel` e `actionTarget`, todos calculados no backend a partir dos snapshots reais de Conteúdo, Forms e Assets.
+- Os cards e o painel "Insights e próximas ações" agora renderizam os detalhes retornados pelo endpoint, não frases genéricas fixas da tela.
 
 ---
 

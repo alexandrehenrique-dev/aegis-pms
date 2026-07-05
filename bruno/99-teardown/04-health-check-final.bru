@@ -17,7 +17,7 @@ presente e com o nome intacto.
 Nao afirmamos que a lista so contem CLIENTES BETA: DELETE /api/v1/tenants/{id}
 e assincrono (ver step 02), entao tenants de teste recem-marcados para exclusao
 podem ainda aparecer aqui por alguns instantes. O que reporta e o numero de
-tenants com o prefixo TEST- ainda visiveis — informativo, nao falha o teardown.
+tenants com marcador de teste ainda visiveis — informativo, nao falha o teardown.
 }
 
 tests {
@@ -33,7 +33,16 @@ tests {
   test("reporta tenants de teste ainda pendentes de exclusao (informativo)", function() {
     const prefix = bru.getVar('testTenantPrefix') || 'TEST-';
     const tenants = Array.isArray(res.body) ? res.body : [];
-    const stillPending = tenants.filter((t) => String(t.name || '').startsWith(prefix));
+    const legacyTestName = /^Tenant listener-(commit|rollback)$/i;
+    const legacyUuidName = /^Tenant [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const legacyE2eName = /^Tenant E2E [0-9]+$/i;
+    const stillPending = tenants.filter((t) => {
+      const name = String(t.name || '').trim();
+      return name.startsWith(prefix)
+        || legacyTestName.test(name)
+        || legacyUuidName.test(name)
+        || legacyE2eName.test(name);
+    });
     bru.setVar('teardownStillPendingCount', stillPending.length);
     expect(stillPending.length).to.be.a('number');
   });

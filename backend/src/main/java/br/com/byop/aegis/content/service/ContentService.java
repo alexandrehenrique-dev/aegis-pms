@@ -14,6 +14,7 @@ import br.com.byop.aegis.content.dto.ContentSummary;
 import br.com.byop.aegis.content.dto.ContentVersionSummary;
 import br.com.byop.aegis.content.dto.WorkflowItemSummary;
 import br.com.byop.aegis.content.exception.ContentNotFoundException;
+import br.com.byop.aegis.content.exception.DuplicateContentTitleException;
 import br.com.byop.aegis.content.exception.InvalidContentReferenceException;
 import br.com.byop.aegis.content.exception.InvalidContentStatusException;
 import br.com.byop.aegis.content.exception.InvalidContentTransitionException;
@@ -89,6 +90,10 @@ public class ContentService {
     public ContentSummary createContent(UUID productId, CreateContentRequest request, AuthenticatedUser caller) {
         log.debug("createContent: productId='{}', title='{}', type='{}'", productId, request.title(), request.type());
         ProductReference product = productReferenceService.getRequiredReference(productId);
+        if (contentRepository.existsByProductIdAndTitle(productId, request.title())) {
+            log.warn("createContent: titulo ja existe productId='{}', title='{}'", productId, request.title());
+            throw new DuplicateContentTitleException(request.title());
+        }
 
         String sanitizedBody = markdownSanitizer.sanitize(request.body());
         List<UUID> referencedNodeIds = extractAndValidateKgRefs(productId, sanitizedBody);

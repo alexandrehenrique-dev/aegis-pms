@@ -143,7 +143,7 @@ export const contentService = {
     return created;
   },
   /**
-   * Pontos de integração real (Sprint 07) — docs/trace/00_endpoints_esperados.md,
+   * Pontos de integração real — docs/trace/00_endpoints_esperados.md,
    * Seção B.1. `id` (contentId) é obrigatório: as telas que chamam este método
    * (`VersionTimeline`/`VersionCompareView`) ainda são mockups estáticos sem
    * roteamento por conteúdo real (Sprint de Integração 04 conecta isso);

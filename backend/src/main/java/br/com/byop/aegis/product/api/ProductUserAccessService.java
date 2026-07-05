@@ -4,10 +4,12 @@ import br.com.byop.aegis.product.domain.ProductAssignment;
 import br.com.byop.aegis.product.domain.ProductAssignmentRole;
 import br.com.byop.aegis.product.domain.ProductAssignmentStatus;
 import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
+import br.com.byop.aegis.product.repository.ProductRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -19,9 +21,11 @@ import java.util.UUID;
 public class ProductUserAccessService {
 
     private final ProductAssignmentRepository assignmentRepository;
+    private final ProductRepository productRepository;
 
-    public ProductUserAccessService(ProductAssignmentRepository assignmentRepository) {
+    public ProductUserAccessService(ProductAssignmentRepository assignmentRepository, ProductRepository productRepository) {
         this.assignmentRepository = assignmentRepository;
+        this.productRepository = productRepository;
     }
 
     @Transactional(readOnly = true)
@@ -80,6 +84,27 @@ public class ProductUserAccessService {
     }
 
     @Transactional
+    public void inviteTenantAssignments(UUID tenantId, String userSubject, String role, List<UUID> productIds) {
+        log.debug("inviteTenantAssignments: tenantId='{}', userSubject='{}', productCount='{}'",
+                tenantId, userSubject, productIds.size());
+        if (productIds.isEmpty() || !isProductRole(role)) {
+            return;
+        }
+
+        ProductAssignmentRole assignmentRole = ProductAssignmentRole.valueOf(role);
+        productRepository.findAllById(productIds)
+                .stream()
+                .filter(product -> tenantId.equals(product.getTenantId()))
+                .filter(product -> assignmentRepository.findByProductIdAndUserSubject(product.getId(), userSubject).isEmpty())
+                .map(product -> {
+                    ProductAssignment assignment = new ProductAssignment(product, userSubject, assignmentRole);
+                    assignment.revoke();
+                    return assignment;
+                })
+                .forEach(assignmentRepository::save);
+    }
+
+    @Transactional
     public void removeTenantAssignments(UUID tenantId, String userSubject) {
         log.debug("removeTenantAssignments: tenantId='{}', userSubject='{}'", tenantId, userSubject);
         List<ProductAssignment> assignments = assignmentRepository.findAllByTenantIdAndUserSubjectAndStatus(
@@ -101,5 +126,9 @@ public class ProductUserAccessService {
                 assignment.getRole().name(),
                 assignment.getStatus().contractValue()
         );
+    }
+
+    private boolean isProductRole(String role) {
+        return Arrays.stream(ProductAssignmentRole.values()).anyMatch(productRole -> productRole.name().equals(role));
     }
 }

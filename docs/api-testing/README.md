@@ -42,7 +42,13 @@ Para rodar contra outro ambiente: `npx @usebruno/cli run --env dev` (ou `homolog
 | `homolog` | `bruno/environments/homolog.bru` | `baseUrl` vazio — preencher quando o ambiente existir |
 | `prod` | `bruno/environments/prod.bru` | `baseUrl` vazio — preencher quando o ambiente existir |
 
-Cada environment declara as variáveis necessárias para a collection inteira: `baseUrl`, `keycloakIssuer`, `clientId`, `username`, `password`, `tenantName` (valores reais em `local`/`dev`) e placeholders vazios para variáveis geradas dinamicamente a cada execução (`tenantKey`, `productKey`, `inviteEmail`, `assetTagName`, `graphRefSeed`, `editorToken`) — o `script:pre-request` de `collection.bru` só preenche essas últimas com um valor único (sufixo `Date.now()`) quando o environment não tiver um valor próprio, então elas devem permanecer vazias nos arquivos de environment.
+Cada environment declara as variáveis necessárias para a collection inteira: `baseUrl`, `keycloakIssuer`, `clientId`, `username`, `password`, `tenantName` e placeholders vazios para variáveis geradas dinamicamente a cada execução (`tenantKey`, `productKey`, `inviteEmail`, `assetTagName`, `graphRefSeed`, `editorToken`) — o `script:pre-request` de `collection.bru` só preenche essas últimas com um valor único (sufixo `Date.now()`) quando o environment não tiver um valor próprio, então elas devem permanecer vazias nos arquivos de environment. Por segurança, `tenantName` deve sempre começar com `TEST-` em todos os environments, inclusive `prod`, para que tenants criados pela Bruno sejam capturados pelo teardown final e nunca pareçam tenants reais.
+
+## Limpeza segura de tenants de teste
+
+A pasta `99-teardown` roda por último e remove somente tenants marcados como teste. O critério principal é o prefixo `TEST-`, aplicado na criação dos tenants pela própria collection. O step `02-limpar-tenants-de-teste` também reconhece, de forma temporária e fechada, resíduos antigos de testes locais (`Tenant listener-commit`, `Tenant listener-rollback`, `Tenant <uuid>` e `Tenant E2E <timestamp>`), porque esses nomes existiram antes da padronização.
+
+O teardown nunca usa a lógica "apague tudo exceto CLIENTES BETA". Tenants reais sem marcador de teste não entram como candidatos, e `CLIENTES BETA` ainda é protegido explicitamente por nome/key como trava adicional. Ao adicionar um request Bruno, smoke frontend ou teste de integração que possa criar tenant em banco compartilhado, use nome com prefixo `TEST-` para que a limpeza consiga removê-lo sem risco para clientes reais.
 
 ## Estrutura da collection
 

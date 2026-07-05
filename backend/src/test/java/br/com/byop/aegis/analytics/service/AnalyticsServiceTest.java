@@ -27,6 +27,15 @@ class AnalyticsServiceTest {
     private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
     private static final OffsetDateTime NOW = OffsetDateTime.parse("2026-06-27T12:00:00Z");
     private static final String SIMULATED_TRAFFIC = "simulado";
+    private static final String POSITIVE = "positivo";
+    private static final String ATTENTION = "atenção";
+    private static final String NEUTRAL = "neutro";
+    private static final String ACTION_VIEW_SIGNALS = "Ver sinais";
+    private static final String TARGET_OVERVIEW = "overview";
+    private static final String TARGET_CONTENT = "content";
+    private static final String TARGET_FORMS = "forms";
+    private static final String TARGET_ASSETS = "assets";
+    private static final String GENERAL_HEALTH_DETAIL = "Média operacional calculada a partir de Conteúdo, Forms e Assets.";
 
     private ContentAnalyticsService contentAnalyticsService;
     private SubmissionAnalyticsService submissionAnalyticsService;
@@ -96,10 +105,14 @@ class AnalyticsServiceTest {
         List<HealthSignalResponse> health = service.listHealth(PRODUCT_ID);
 
         assertThat(health).containsExactly(
-                new HealthSignalResponse("Saúde geral", "Produto saudável", "92", "positivo"),
-                new HealthSignalResponse("Conteúdo", "Operando bem", "95", "positivo"),
-                new HealthSignalResponse("Forms", "Operando bem", "90", "positivo"),
-                new HealthSignalResponse("Assets", "Operando bem", "92", "positivo")
+                healthSignal("Saúde geral", "Produto saudável", "92", POSITIVE,
+                        GENERAL_HEALTH_DETAIL, ACTION_VIEW_SIGNALS, TARGET_OVERVIEW),
+                healthSignal("Conteúdo", "Operando bem", "95", POSITIVE,
+                        "3 conteúdo(s) publicados sem pendência operacional.", ACTION_VIEW_SIGNALS, TARGET_CONTENT),
+                healthSignal("Forms", "Operando bem", "90", POSITIVE,
+                        "2 submission(ns) recebidas nos últimos 14 dias.", ACTION_VIEW_SIGNALS, TARGET_FORMS),
+                healthSignal("Assets", "Operando bem", "92", POSITIVE,
+                        "4 asset(s) cadastrados sem pendência de alt text.", ACTION_VIEW_SIGNALS, TARGET_ASSETS)
         );
     }
 
@@ -114,10 +127,14 @@ class AnalyticsServiceTest {
         List<HealthSignalResponse> health = service.listHealth(PRODUCT_ID);
 
         assertThat(health).containsExactly(
-                new HealthSignalResponse("Saúde geral", "Requer atenção", "67", "atenção"),
-                new HealthSignalResponse("Conteúdo", "Revisão atrasada", "60", "atenção"),
-                new HealthSignalResponse("Forms", "Sem atividade recente", "72", "atenção"),
-                new HealthSignalResponse("Assets", "Alt text pendente", "70", "atenção")
+                healthSignal("Saúde geral", "Requer atenção", "67", ATTENTION,
+                        GENERAL_HEALTH_DETAIL, "Priorizar pendências", TARGET_OVERVIEW),
+                healthSignal("Conteúdo", "Revisão atrasada", "60", ATTENTION,
+                        "1 item(ns) aguardam revisão há mais de 30 dias.", "Resolver pendência", TARGET_CONTENT),
+                healthSignal("Forms", "Sem atividade recente", "72", ATTENTION,
+                        "8 submission(ns) no total, mas nenhuma nos últimos 14 dias.", "Investigar forms", TARGET_FORMS),
+                healthSignal("Assets", "Alt text pendente", "70", ATTENTION,
+                        "2 asset(s) precisam de alt text para acessibilidade e SEO.", "Resolver pendência", TARGET_ASSETS)
         );
     }
 
@@ -131,7 +148,8 @@ class AnalyticsServiceTest {
 
         List<HealthSignalResponse> health = service.listHealth(PRODUCT_ID);
 
-        assertThat(health.get(1)).isEqualTo(new HealthSignalResponse("Conteúdo", "Pendências leves", "78", "atenção"));
+        assertThat(health.get(1)).isEqualTo(healthSignal("Conteúdo", "Pendências leves", "78", ATTENTION,
+                "1 item(ns) ainda estão em rascunho ou revisão.", "Ver workflow", TARGET_CONTENT));
     }
 
     @Test
@@ -145,10 +163,14 @@ class AnalyticsServiceTest {
         List<HealthSignalResponse> health = service.listHealth(PRODUCT_ID);
 
         assertThat(health).containsExactly(
-                new HealthSignalResponse("Saúde geral", "Dados insuficientes", "0", "neutro"),
-                new HealthSignalResponse("Conteúdo", "Sem conteúdo", "0", "neutro"),
-                new HealthSignalResponse("Forms", "Sem submissions", "0", "neutro"),
-                new HealthSignalResponse("Assets", "Sem assets", "0", "neutro")
+                healthSignal("Saúde geral", "Dados insuficientes", "0", NEUTRAL,
+                        GENERAL_HEALTH_DETAIL, ACTION_VIEW_SIGNALS, TARGET_OVERVIEW),
+                healthSignal("Conteúdo", "Sem conteúdo", "0", NEUTRAL,
+                        "Nenhum item editorial encontrado para este produto.", "Criar conteúdo", TARGET_CONTENT),
+                healthSignal("Forms", "Sem submissions", "0", NEUTRAL,
+                        "Nenhuma submission real foi recebida para os formulários deste produto.", "Ver submissions", TARGET_FORMS),
+                healthSignal("Assets", "Sem assets", "0", NEUTRAL,
+                        "Nenhum asset real cadastrado para este produto.", "Enviar asset", TARGET_ASSETS)
         );
     }
 
@@ -244,5 +266,10 @@ class AnalyticsServiceTest {
         when(contentAnalyticsService.summarize(PRODUCT_ID)).thenReturn(content);
         when(submissionAnalyticsService.summarize(PRODUCT_ID)).thenReturn(submissions);
         when(assetAnalyticsService.summarize(PRODUCT_ID)).thenReturn(assets);
+    }
+
+    private HealthSignalResponse healthSignal(String label, String status, String score, String tone,
+                                              String detail, String actionLabel, String actionTarget) {
+        return new HealthSignalResponse(label, status, score, tone, detail, actionLabel, actionTarget);
     }
 }

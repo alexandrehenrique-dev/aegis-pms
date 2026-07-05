@@ -91,7 +91,8 @@ class AnalyticsControllerTest {
     @Test
     void shouldListHealth() throws Exception {
         when(analyticsService.listHealth(PRODUCT_ID)).thenReturn(List.of(
-                new HealthSignalResponse("Saúde geral", "Produto saudável", "94", "positivo")
+                new HealthSignalResponse("Saúde geral", "Produto saudável", "94", "positivo",
+                        "Média operacional calculada a partir dos módulos reais.", "Ver sinais", "overview")
         ));
 
         mockMvc.perform(get("/api/v1/products/{productId}/analytics/health", PRODUCT_ID).with(jwt()))
@@ -99,7 +100,10 @@ class AnalyticsControllerTest {
                 .andExpect(jsonPath("$[0].label").value("Saúde geral"))
                 .andExpect(jsonPath("$[0].status").value("Produto saudável"))
                 .andExpect(jsonPath("$[0].score").value("94"))
-                .andExpect(jsonPath("$[0].tone").value("positivo"));
+                .andExpect(jsonPath("$[0].tone").value("positivo"))
+                .andExpect(jsonPath("$[0].detail").value("Média operacional calculada a partir dos módulos reais."))
+                .andExpect(jsonPath("$[0].actionLabel").value("Ver sinais"))
+                .andExpect(jsonPath("$[0].actionTarget").value("overview"));
     }
 
     @Test

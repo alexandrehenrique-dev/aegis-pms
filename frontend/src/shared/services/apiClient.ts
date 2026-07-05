@@ -14,6 +14,7 @@ export type ApiError = {
 
 type TokenProvider = () => string | null;
 type RefreshHandler = () => Promise<boolean>;
+type ProgressHandler = (percent: number) => void;
 
 let tokenProvider: TokenProvider = () => null;
 let refreshHandler: RefreshHandler = async () => false;
@@ -137,10 +138,82 @@ async function upload<T>(path: string, formData: FormData): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function getBlob(path: string, isRetry = false): Promise<Blob> {
+  const token = tokenProvider();
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  logApiCall("GET", path);
+
+  let response: Response;
+  try {
+    response = await fetch(`${resolveBaseUrl()}${path}`, { method: "GET", headers });
+  } catch {
+    const networkError: ApiError = { status: 0, message: "Falha de rede ao baixar arquivo da API." };
+    throw networkError;
+  }
+
+  if (response.status === 401 && !isRetry) {
+    const refreshed = await refreshHandler();
+    if (refreshed) return getBlob(path, true);
+  }
+
+  if (!response.ok) {
+    const apiError: ApiError = { status: response.status, message: `Erro ${response.status} ao baixar arquivo de ${path}` };
+    throw apiError;
+  }
+
+  return response.blob();
+}
+
+function uploadWithProgress<T>(path: string, formData: FormData, onProgress?: ProgressHandler): Promise<T> {
+  const token = tokenProvider();
+  logApiCall("POST", path, `multipart (${formData.has("file") ? "1 arquivo" : "sem arquivo"})`);
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${resolveBaseUrl()}${path}`);
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      onProgress?.(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+    };
+
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) {
+        let message = `Erro ${xhr.status} ao enviar arquivo para ${path}`;
+        let code: string | undefined;
+        try {
+          const body = JSON.parse(xhr.responseText);
+          message = body?.message ?? message;
+          code = body?.code ?? body?.error;
+        } catch {
+          /* corpo de erro não é JSON; mantém a mensagem padrão */
+        }
+        reject({ status: xhr.status, message, code } satisfies ApiError);
+        return;
+      }
+
+      onProgress?.(100);
+      if (xhr.status === 204 || !xhr.responseText) {
+        resolve(undefined as T);
+        return;
+      }
+      resolve(JSON.parse(xhr.responseText) as T);
+    };
+
+    xhr.onerror = () => reject({ status: 0, message: "Falha de rede ao enviar arquivo para a API." } satisfies ApiError);
+    xhr.send(formData);
+  });
+}
+
 export const apiClient = {
   get: <T>(path: string) => request<T>(path, { method: "GET" }),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body: body !== undefined ? JSON.stringify(body) : undefined }),
   delete: <T>(path: string, body?: unknown) => request<T>(path, { method: "DELETE", body: body !== undefined ? JSON.stringify(body) : undefined }),
   upload,
+  uploadWithProgress,
+  getBlob,
 };

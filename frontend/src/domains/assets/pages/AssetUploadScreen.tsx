@@ -7,11 +7,28 @@ import { toast } from "../../../core/notifications/toast";
 import { assetsService } from "../services/assetsService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
-function UploadProgressItem({ name, p }: { name: string; p: number }) {
+type UploadStatus = "ready" | "uploading" | "processing" | "done" | "error";
+type UploadFileState = { id: string; name: string; p: number; status: UploadStatus };
+
+const UPLOAD_STATUS_LABEL: Record<UploadStatus, string> = {
+  ready: "pronto para envio",
+  uploading: "enviando",
+  processing: "processando",
+  done: "concluído",
+  error: "erro",
+};
+
+function UploadProgressItem({ file }: { file: UploadFileState }) {
+  const label = file.status === "uploading" || file.status === "processing" || file.status === "done"
+    ? `${UPLOAD_STATUS_LABEL[file.status]} · ${file.p}%`
+    : UPLOAD_STATUS_LABEL[file.status];
+
   return (
     <div className="rounded-xl border border-border p-3">
-      <div className="flex justify-between text-sm"><b>{name}</b><span>{p}%</span></div>
-      <div className="mt-2 h-2 rounded-full bg-muted"><div className="h-2 rounded-full bg-primary" style={{ width: `${p}%` }} /></div>
+      <div className="flex justify-between gap-3 text-sm"><b className="min-w-0 truncate">{file.name}</b><span className="shrink-0">{label}</span></div>
+      <div className="mt-2 h-2 rounded-full bg-muted">
+        <div className={`h-2 rounded-full ${file.status === "error" ? "bg-destructive" : "bg-primary"}`} style={{ width: `${file.p}%` }} />
+      </div>
     </div>
   );
 }
@@ -36,13 +53,10 @@ export function AssetUploadScreen() {
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "";
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [files, setFiles] = useState([
-    { name: "hero-maestro-beton.jpg", p: 72 },
-    { name: "release-institucional.pdf", p: 100 },
-    { name: "video-depoimento.mov", p: 38 },
-  ]);
+  const [files, setFiles] = useState<UploadFileState[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [completing, setCompleting] = useState(false);
+  const canStartUpload = Boolean(productId) && files.length > 0 && files.every((file) => file.status === "ready" || file.status === "error");
 
   const handleSelectFiles = () => fileInputRef.current?.click();
 
@@ -51,16 +65,55 @@ export function AssetUploadScreen() {
     if (!selected || selected.length === 0) return;
     const nextFiles = Array.from(selected);
     setSelectedFiles((prev) => [...prev, ...nextFiles]);
-    setFiles((prev) => [...prev, ...nextFiles.map((f) => ({ name: f.name, p: 0 }))]);
+    setFiles((prev) => [
+      ...prev,
+      ...nextFiles.map((file) => ({ id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`, name: file.name, p: 0, status: "ready" as const })),
+    ]);
     e.target.value = "";
   };
 
   const handleCompleteUpload = async () => {
+    if (!productId) {
+      toast.error("Produto ativo não encontrado.", { description: "Selecione um produto antes de enviar assets." });
+      return;
+    }
     setCompleting(true);
+    setFiles((current) => current.map((file) => ({ ...file, p: 0, status: "ready" })));
     try {
-      await assetsService.uploadFiles(productId, selectedFiles);
+      for (const selectedFile of selectedFiles) {
+        const fileKey = `${selectedFile.name}-${selectedFile.size}-${selectedFile.lastModified}`;
+        let latestProgress = 1;
+        setFiles((current) => current.map((file) => file.id.startsWith(fileKey) ? { ...file, p: 1, status: "uploading" } : file));
+
+        const progressTimer = window.setInterval(() => {
+          setFiles((current) => current.map((file) => {
+            if (!file.id.startsWith(fileKey) || file.status !== "uploading") return file;
+            latestProgress = Math.min(95, Math.max(latestProgress + 1, file.p + 1));
+            return { ...file, p: latestProgress };
+          }));
+        }, 900);
+
+        try {
+          await assetsService.uploadFile(productId, selectedFile, (percent) => {
+            latestProgress = Math.max(latestProgress, percent);
+            setFiles((current) => current.map((file) => {
+              if (!file.id.startsWith(fileKey)) return file;
+              const status: UploadStatus = percent >= 99 ? "processing" : "uploading";
+              return { ...file, p: Math.max(file.p, percent), status };
+            }));
+          });
+          setFiles((current) => current.map((file) => file.id.startsWith(fileKey) ? { ...file, p: 100, status: "done" } : file));
+        } catch (error) {
+          setFiles((current) => current.map((file) => file.id.startsWith(fileKey) ? { ...file, status: "error" } : file));
+          throw error;
+        } finally {
+          window.clearInterval(progressTimer);
+        }
+      }
       toast.success("Upload concluído!", { description: `${selectedFiles.length} arquivo(s) vinculado(s) ao produto.` });
       navigate("/assets");
+    } catch {
+      toast.error("Upload não concluído.", { description: "Verifique o tipo/tamanho do arquivo e tente novamente." });
     } finally {
       setCompleting(false);
     }
@@ -71,18 +124,18 @@ export function AssetUploadScreen() {
       <input ref={fileInputRef} type="file" multiple hidden onChange={handleFilesSelected} />
       <PageHeader title="Upload de Asset" module="Assets" desc="Envie arquivos com validação, progresso e metadados iniciais." badge="Upload">
         <Button onClick={() => navigate(-1)}>Cancelar</Button>
-        <Button primary onClick={handleCompleteUpload} disabled={completing}>{completing && <Loader2 size={15} className="animate-spin" />}{completing ? "Concluindo..." : "Concluir upload"}</Button>
+        <Button primary onClick={handleCompleteUpload} disabled={completing || !canStartUpload}>{completing && <Loader2 size={15} className="animate-spin" />}{completing ? "Enviando..." : "Enviar upload"}</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <AssetUploadZone onSelect={handleSelectFiles} />
           <Card>
             <h2 className="mb-3 text-lg font-semibold">Arquivos selecionados</h2>
-            {files.map((f) => <UploadProgressItem key={f.name} name={f.name} p={f.p} />)}
+            {files.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum arquivo selecionado.</p> : files.map((file) => <UploadProgressItem key={file.id} file={file} />)}
             <div className="mt-3"><FileValidationAlert /></div>
           </Card>
         </div>
-        <AssetMetadataFormCard />
+        <AssetMetadataFormCard suggestedFileName={selectedFiles[0]?.name} />
       </div>
     </>
   );

@@ -189,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * Editar Produto a partir de ProductSelectScreen (botão direito → menu de
    * contexto, mesma jornada de TenantSelectScreen para tenants suspensos) —
    * único jeito de agir sobre um produto bloqueado/sem módulos, que não pode
-   * ser aberto. Ponto de integração real (Sprint 07): `PATCH
+   * ser aberto. Ponto de integração real: `PATCH
    * /api/v1/admin/products/{productId}` (docs/AEGIS_PMS_V1.md §8.4).
    */
   const updateProduct = useCallback((productId: string, req: UpdateProductRequest) => {

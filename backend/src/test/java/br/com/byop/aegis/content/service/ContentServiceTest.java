@@ -13,6 +13,7 @@ import br.com.byop.aegis.content.dto.ContentSummary;
 import br.com.byop.aegis.content.dto.ContentVersionSummary;
 import br.com.byop.aegis.content.dto.WorkflowItemSummary;
 import br.com.byop.aegis.content.exception.ContentNotFoundException;
+import br.com.byop.aegis.content.exception.DuplicateContentTitleException;
 import br.com.byop.aegis.content.exception.InsufficientContentRoleException;
 import br.com.byop.aegis.content.exception.InvalidContentReferenceException;
 import br.com.byop.aegis.content.exception.InvalidContentStatusException;
@@ -146,6 +147,24 @@ class ContentServiceTest {
         assertThat(auditCaptor.getValue().action()).isEqualTo("CONTENT_CREATED");
         assertThat(auditCaptor.getValue().tenantId()).isEqualTo(tenantId);
         assertThat(auditCaptor.getValue().productId()).isEqualTo(productId);
+    }
+
+    @Test
+    void shouldRejectCreateWhenTitleAlreadyExistsInProduct() {
+        UUID productId = UUID.randomUUID();
+        UUID tenantId = UUID.randomUUID();
+        when(productReferenceService.getRequiredReference(productId)).thenReturn(new ProductReference(productId, tenantId));
+        when(contentRepository.existsByProductIdAndTitle(productId, "Artigo novo")).thenReturn(true);
+        CreateContentRequest request = new CreateContentRequest(
+                "Artigo novo", "article", "pt-BR", "corpo", null, null, null, null, null
+        );
+        AuthenticatedUser caller = caller(Set.of("ROLE_EDITOR"));
+
+        assertThatThrownBy(() -> service.createContent(productId, request, caller))
+                .isInstanceOf(DuplicateContentTitleException.class)
+                .hasMessage("Content title already exists in this product: Artigo novo");
+
+        verify(contentRepository, never()).save(any(Content.class));
     }
 
     @Test

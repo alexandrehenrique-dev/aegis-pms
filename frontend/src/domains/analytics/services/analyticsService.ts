@@ -2,7 +2,7 @@ import { kpis, health, channels } from "../mocks/analytics.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
-import type { AnalyticsKpi, ChannelRow, HealthSignal, ListChannelsResponse, ListHealthResponse, ListKpisResponse } from "../contracts/responses";
+import type { AnalyticsKpi, ChannelRow, HealthSignal, ListChannelsResponse, ListHealthResponse, ListKpisResponse, ListReportsResponse, ListTrendsResponse } from "../contracts/responses";
 
 const kpisStore: AnalyticsKpi[] = kpis.map(([label, value, comparison, note, tone]) => ({ label, value, comparison, note, tone }));
 const healthStore: HealthSignal[] = health.map(([label, status, score, tone]) => ({ label, status, score, tone }));
@@ -24,6 +24,14 @@ export const analyticsService = {
   async listChannels(productId: string): Promise<ListChannelsResponse> {
     if (IS_API_MODE) return apiClient.get<ListChannelsResponse>(`/products/${productId}/analytics/channels`);
     return channelsStore;
+  },
+  async listTrends(productId: string): Promise<ListTrendsResponse> {
+    if (IS_API_MODE) return apiClient.get<ListTrendsResponse>(`/products/${productId}/analytics/trends`);
+    return [];
+  },
+  async listReports(productId: string): Promise<ListReportsResponse> {
+    if (IS_API_MODE) return apiClient.get<ListReportsResponse>(`/products/${productId}/analytics/reports`);
+    return [];
   },
   async generateReport(productId: string, name: string): Promise<void> {
     if (IS_API_MODE) warnMissingEndpoint("POST", `/api/v1/products/${productId}/analytics/reports`);

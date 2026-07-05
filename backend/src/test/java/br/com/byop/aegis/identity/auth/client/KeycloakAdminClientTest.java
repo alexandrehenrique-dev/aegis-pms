@@ -146,7 +146,7 @@ class KeycloakAdminClientTest {
                 .withRequestBody(matchingJsonPath("$.username", equalTo("guest@byop.dev")))
                 .withRequestBody(matchingJsonPath("$.email", equalTo("guest@byop.dev")))
                 .withRequestBody(matchingJsonPath("$.enabled", equalTo("true")))
-                .withRequestBody(matchingJsonPath("$.requiredActions", equalToJson("[]")))
+                .withRequestBody(matchingJsonPath("$.requiredActions", equalToJson("[\"UPDATE_PASSWORD\"]")))
                 .willReturn(created()));
         wireMockServer.stubFor(get(urlPathEqualTo("/admin/realms/aegis/users"))
                 .withQueryParam("email", equalTo("guest@byop.dev"))
@@ -168,7 +168,7 @@ class KeycloakAdminClientTest {
         assertEquals("created-user-id", user.id());
         assertEquals("guest@byop.dev", user.username());
         wireMockServer.verify(postRequestedFor(urlEqualTo("/admin/realms/aegis/users"))
-                .withRequestBody(matchingJsonPath("$.requiredActions", equalToJson("[]"))));
+                .withRequestBody(matchingJsonPath("$.requiredActions", equalToJson("[\"UPDATE_PASSWORD\"]"))));
         wireMockServer.verify(0, putRequestedFor(urlPathMatching(".*/execute-actions-email.*")));
     }
 

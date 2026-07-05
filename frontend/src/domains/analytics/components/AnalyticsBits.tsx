@@ -81,20 +81,14 @@ export function PeriodSelector() {
 }
 
 export function ChartContainer({ title, type = "line" }: { title: string; type?: string }) {
-  const vals = [42, 68, 55, 80, 62, 91, 73];
   return (
     <Card>
       <div className="mb-4 flex items-center justify-between">
-        <div><h3 className="font-semibold">{title}</h3><p className="text-xs text-muted-foreground">Visual implementável · {type}</p></div>
-        <Badge tone="blue">operacional</Badge>
+        <div><h3 className="font-semibold">{title}</h3><p className="text-xs text-muted-foreground">Instrumentação pendente · {type}</p></div>
+        <Badge>sem dados</Badge>
       </div>
-      <div className="flex h-40 items-end gap-2 rounded-xl bg-muted/40 p-3">
-        {vals.map((v, i) => (
-          <div key={i} className="flex flex-1 flex-col items-center gap-2">
-            <div className={`w-full rounded-t ${type === "area" ? "bg-primary/60" : type === "stacked" ? "bg-[#1F5FA8]" : "bg-primary"}`} style={{ height: `${v}%` }} />
-            <span className="font-mono text-[10px] text-muted-foreground">{i + 1}</span>
-          </div>
-        ))}
+      <div className="grid h-40 place-items-center rounded-xl bg-muted/40 p-3 text-sm text-muted-foreground">
+        Dados não disponíveis ainda.
       </div>
     </Card>
   );
@@ -104,12 +98,9 @@ export function InsightPanel() {
   return (
     <Card>
       <h2 className="mb-3 text-lg font-semibold">Insights e próximas ações</h2>
-      {["Revisar SEO da Home", "Atualizar página Galeria", "Ver leads não qualificados", "Adicionar alt text em imagens", "Revisar formulário de orçamento"].map((a, i) => (
-        <div key={a} className="mb-2 rounded-xl border border-border p-3 text-sm">
-          <div className="flex items-center justify-between"><b>{a}</b><Badge tone={i < 2 ? "amber" : "blue"}>{i < 2 ? "atenção" : "ação"}</Badge></div>
-          <p className="text-muted-foreground">Recomendação gerada a partir de variação e impacto operacional.</p>
-        </div>
-      ))}
+      <div className="rounded-xl border border-border p-3 text-sm text-muted-foreground">
+        Insights automáticos aparecem quando os endpoints de tendência retornarem sinais suficientes para o produto.
+      </div>
     </Card>
   );
 }

@@ -36,8 +36,7 @@ export function ChannelBreakdown() {
         </div>
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Destaques</h2>
-          <p className="mb-3 text-sm text-muted-foreground">Instagram trouxe tráfego, mas WhatsApp converteu melhor.</p>
-          <p className="text-sm text-muted-foreground">Google orgânico cresceu após atualização da página Home.</p>
+          <p className="text-sm text-muted-foreground">Destaques de canal aparecem quando houver instrumentação real de tráfego.</p>
         </Card>
       </div>
     </>

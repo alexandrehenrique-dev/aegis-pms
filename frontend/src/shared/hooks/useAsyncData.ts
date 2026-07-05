@@ -4,7 +4,7 @@ type AsyncState<T> = { data: T | null; loading: boolean; error: boolean };
 
 /**
  * Carrega dados de um service (hoje sempre resolvendo sobre mocks, depois
- * sobre chamadas reais — Sprint 07) e expõe o trio loading/error/data que as
+ * sobre chamadas reais) e expõe o trio loading/error/data que as
  * páginas usam para decidir entre skeleton, PartialErrorWidget ou conteúdo.
  * `deps` segue a mesma semântica de useEffect — uma chamada nova é disparada
  * quando algum item mudar.
