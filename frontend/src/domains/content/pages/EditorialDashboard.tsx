@@ -42,8 +42,25 @@ export function EditorialDashboard() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
   const { product } = useCurrentProduct();
+  const productId = product?.id ?? "";
+  const { data: contentItems, loading, error } = useAsyncData(
+    () => (productId ? contentService.listContent(productId) : Promise.resolve([])),
+    [productId],
+  );
   const canEdit = viewAsRole !== "viewer";
   const [showNewContent, setShowNewContent] = useState(false);
+  const rows = contentItems ?? [];
+  const drafts = rows.filter((item) => item.status === "Draft").length;
+  const inReview = rows.filter((item) => item.status === "In Review").length;
+  const published = rows.filter((item) => item.status === "Published").length;
+  const archived = rows.filter((item) => item.status === "Archived").length;
+  const translations = rows.filter((item) => item.lang !== "PT-BR").length;
+  const recentlyUpdated = rows.filter((item) => item.updatedAt && item.updatedAt !== "—").length;
+  const approvals = inReview;
+
+  if (loading) return <SkeletonLines />;
+  if (error) return <PartialErrorWidget />;
+
   return (
     <>
       <AnimatePresence>{showNewContent && <NewContentModal onClose={() => setShowNewContent(false)} />}</AnimatePresence>
@@ -54,13 +71,13 @@ export function EditorialDashboard() {
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <KPIWidget label="Rascunhos" value="8" detail="3 atualizados hoje" />
-            <KPIWidget label="Em revisão" value="5" detail="2 acima do SLA" />
-            <KPIWidget label="Publicados" value="42" detail="+4 nesta semana" />
-            <KPIWidget label="Arquivados" value="7" detail="Histórico preservado" />
-            <KPIWidget label="Traduções pendentes" value="11" detail="EN-US e ES-ES" />
-            <KPIWidget label="Atualizados recentemente" value="14" detail="últimas 48h" />
-            <KPIWidget label="Aprovações pendentes" value="4" detail="Product Manager" />
+            <KPIWidget label="Rascunhos" value={String(drafts)} detail="conteúdos em draft" />
+            <KPIWidget label="Em revisão" value={String(inReview)} detail="aguardando aprovação" />
+            <KPIWidget label="Publicados" value={String(published)} detail="visíveis para consumo" />
+            <KPIWidget label="Arquivados" value={String(archived)} detail="histórico preservado" />
+            <KPIWidget label="Traduções pendentes" value={String(translations)} detail="idiomas não PT-BR" />
+            <KPIWidget label="Atualizados recentemente" value={String(recentlyUpdated)} detail="itens com atualização" />
+            <KPIWidget label="Aprovações pendentes" value={String(approvals)} detail="Product Manager" />
             <KPIWidget label="Widget restrito" value="—" detail="" locked />
           </div>
           <Card>
