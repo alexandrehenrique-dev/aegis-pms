@@ -539,4 +539,347 @@ useAsyncData(() => usersService.listUsers(effectiveTenant?.id), [isTenantWideVie
 | `core/auth/pages/LoginScreen.tsx` | postLoginNext ref para ?next= redirect |
 | `core/auth/services/authActivationService.ts` | InviteTokenData +requiresPasswordSetup, +productSlug |
 | `domains/products/pages/CreateProductForm.tsx` | addProduct() após criação |
+
+---
+
+## Seção H — Bugs identificados em validação com dados reais (pós-Sprint 01)
+
+> **Contexto:** Bugs encontrados durante testes manuais após merge da Sprint 01. O ambiente estava com backend + Keycloak + MailHog ativos.
+
+---
+
+### H.1 — `requiresPasswordSetup` sempre retorna `true` para qualquer convite
+
+**Observação:** Ao aceitar um convite via link de email, mesmo quando o usuário **já possui uma conta ativa no Keycloak**, a tela de convite exibe o formulário de criação de senha ("Definir senha e ativar conta") em vez do fluxo de usuário existente ("Você já tem uma conta!").
+
+**Causa raiz:**
+`AuthActivationService.validateInvite()` tem o campo `requiresPasswordSetup` **hardcoded como `true`**, com o comentário equivocado de que "usuários existentes não passam pelo fluxo de token". Na realidade, `KeycloakAdminClient.inviteUser()` faz `findUserByEmail()` primeiro — se o usuário já existe, retorna-o sem criar um novo, mas **ainda gera um `AuthActionToken` e envia o email de convite**, o que significa que o usuário existente clica no link e cai nessa tela.
+
+```java
+// AuthActivationService.java — linha atual (ERRADA)
+return new AuthInviteValidationResponse(
+        token.getUserName(), token.getUserEmail(), token.getTenantName(),
+        tokenService.productNames(token), token.getProductSlug(),
+        token.getRole(), token.getInviterName(), token.getExpiresAt(),
+        true  // ← hardcoded: ignora o estado real do Keycloak
+);
+```
+
+**Correção esperada:**
+
+1. **`KeycloakAdminClient.java`**: adicionar `List<String> requiredActions` ao record interno `KeycloakUserResponse` (Jackson já mapeia o campo `requiredActions` da API do Keycloak Admin). Adicionar método público:
+   ```java
+   public boolean hasRequiredAction(String keycloakId, String action) {
+       // GET /admin/realms/{realm}/users/{id}
+       // verifica se action está em user.requiredActions()
+   }
+   ```
+
+2. **`AuthActivationService.validateInvite()`**: substituir `true` por:
+   ```java
+   boolean requiresPasswordSetup =
+       keycloakAdminClient.hasRequiredAction(token.getKeycloakId(), "UPDATE_PASSWORD");
+   ```
+
+**Critérios de aceite:**
+- Usuário existente (já tem senha no Keycloak): `requiresPasswordSetup = false` → UI mostra "Você já tem uma conta!"
+- Usuário novo (criado pelo `createUserForInvitation`, tem `UPDATE_PASSWORD` em `requiredActions`): `requiresPasswordSetup = true` → UI mostra formulário de senha
+- JaCoCo: `hasRequiredAction()` com 2 branches (true/false), `validateInvite()` com ambos os caminhos
+- Bruno: `POST /auth/invite/validate` para token de usuário existente retorna `"requiresPasswordSetup": false`
+
+---
+
+### H.2 — Produtos não aparecem após aceitar convite (usuário existente)
+
+**Observação:** Quando um usuário com conta existente aceita o convite via link, após fazer login os produtos atribuídos **não aparecem no sidebar nem em `/products`**. O usuário fica com a tela vazia de produtos.
+
+**Causa raiz (cadeia completa):**
+
+```
+Usuário existente clica "Fazer login e acessar produto"
+  → frontend navega direto para /login SEM chamar activate()
+  → activate() nunca é executado
+  → IdentityUserInviteActivatedEvent NUNCA é publicado
+  → ProductAssignmentActivationListener NUNCA executa
+  → ProductAssignment permanece com status = INVITED
+  → ProductService.listProducts() filtra APENAS status = ASSIGNED
+  → Resultado: lista de produtos vazia para o usuário
+```
+
+`ProductService.listProducts()` (linha relevante):
+```java
+return assignmentRepository
+    .findAllByUserSubjectAndStatus(caller.subject(), ProductAssignmentStatus.ASSIGNED)
+    ...
+```
+
+O `AuthActionToken` para o convite foi consumido, mas o evento de ativação nunca disparou.
+
+**Correção esperada:**
+
+1. **Backend — novo método** `AuthActivationService.acceptExistingUser(UUID tokenId)`:
+   ```java
+   @Transactional
+   public AuthMessageResponse acceptExistingUser(UUID tokenId) {
+       AuthActionToken token = tokenService.consumeInvite(tokenId);
+       keycloakAdminClient.clearRequiredActions(token.getKeycloakId());
+       eventPublisher.publishEvent(new IdentityUserInviteActivatedEvent(token.getKeycloakId()));
+       audit(token, "USER_INVITE_ACCEPTED_EXISTING");
+       return new AuthMessageResponse("Convite aceito. Faça login para acessar o produto.");
+   }
+   ```
+
+2. **Backend — novo endpoint** em `AuthController`:
+   ```
+   POST /api/v1/auth/invite/accept-existing
+   Body: { "token": "<uuid>" }
+   Resposta: 200 { "message": "Convite aceito..." }
+   ```
+
+3. **Frontend — `authActivationService.ts`**: adicionar:
+   ```ts
+   acceptExistingUserInvite(token: string): Promise<void> {
+       if (!IS_API_MODE) return Promise.resolve();
+       return apiClient.post("/auth/invite/accept-existing", { token });
+   }
+   ```
+
+4. **Frontend — `InviteScreen.tsx`**: o botão "Fazer login e acessar produto" deve chamar `acceptExistingUserInvite(token)` **antes** de navegar:
+   ```tsx
+   onClick={async () => {
+     await authActivationService.acceptExistingUserInvite(token!);
+     navigate("/login", { state: { next: invite.productSlug ? `/products/${invite.productSlug}` : undefined } });
+   }}
+   ```
+
+**Critérios de aceite:**
+- Usuário existente aceita convite → `ProductAssignment.status` muda para `ASSIGNED` imediatamente
+- Login após aceite → produto aparece no sidebar e em `/products`
+- JaCoCo: `acceptExistingUser()` com coverage de caminho feliz e `consumeInvite()` com token inválido
+- Bruno: sequência completa — `POST /invite/validate` → `POST /invite/accept-existing` → `GET /products?tenantId=...` (produto visível)
+
+---
+
+### H.3 — Notificação mock hardcoded na sidebar do AppShell
+
+**Observação:** No rodapé esquerdo da sidebar, aparece sempre a mensagem:
+> *"Recentemente — {product.name} recebeu respostas e exige revisão."*
+
+Essa mensagem é completamente fictícia e aparece **independentemente de qualquer formulário ter sido respondido ou aprovação estar pendente**. No screenshot de validação, o produto "Maestro Beton" não tem nenhuma resposta nova, mas a mensagem aparece.
+
+Além disso, o rodapé da sidebar exibe `"Aegis PMS · Sprint 19 · Protótipo"`, visível para qualquer usuário logado.
+
+**Localização:**
+```
+frontend/src/app/layouts/AppShell.tsx — linhas 136-140
+```
+
+```tsx
+// MOCK HARDCODED — deve ser substituído
+<div className="mt-auto rounded-xl border border-border bg-[var(--byop-violet-soft)] p-3 text-xs">
+  <p className="flex items-center gap-1.5 font-medium text-[var(--byop-violet-dark)]">
+    <Clock3 size={13} />Recentemente
+  </p>
+  <p className="mt-1 text-muted-foreground">
+    {effectiveProduct.name} recebeu respostas e exige revisão.
+  </p>
+</div>
+<p className="mt-2 text-center text-[9px] text-muted-foreground/40">Aegis PMS · Sprint 19 · Protótipo</p>
+```
+
+**Correção esperada:**
+
+O bloco deve ser substituído por um widget que usa `notificationsService.listMine()` (já integrado com o backend real via `GET /api/v1/notifications/mine`):
+
+- Se houver notificações não-lidas: exibir a mais recente com `title` e `createdAt` reais
+- Se não houver notificações: suprimir o painel (não mostrar nada)
+- O watermark `"Sprint 19 · Protótipo"` deve ser removido definitivamente
+
+```tsx
+// Estrutura esperada (AppShell.tsx)
+const { data: myNotifs } = useAsyncData(() => notificationsService.listMine(), []);
+const latestUnread = myNotifs?.find((n) => !n.read) ?? null;
+
+// Na sidebar:
+{latestUnread && (
+  <div className="mt-auto rounded-xl border border-border bg-[var(--byop-violet-soft)] p-3 text-xs">
+    <p className="flex items-center gap-1.5 font-medium text-[var(--byop-violet-dark)]">
+      <Clock3 size={13} />Recentemente
+    </p>
+    <p className="mt-1 text-muted-foreground">{latestUnread.title}</p>
+  </div>
+)}
+```
+
+**Critérios de aceite:**
+- Sem notificações não-lidas: painel some da sidebar
+- Com notificação não-lida: exibe `title` real vindo do endpoint
+- Watermark removido
+- Sem chamada duplicada ao backend (já existe `Notifications` no header que chama o mesmo endpoint — avaliar se vale usar contexto compartilhado ou `useAsyncData` separado)
+
+---
+
+### H.4 — Mapa de mocks remanescentes no sistema (varredura completa)
+
+> Esta seção cataloga todos os pontos do frontend que ainda dependem de dados fictícios ou locais, para priorização de integração futura. **Não são todos bugs bloqueadores**, mas precisam ser endereçados antes de qualquer release.
+
+| # | Arquivo | Tipo de mock | Endpoint real esperado | Prioridade |
+|---|---------|-------------|----------------------|------------|
+| 1 | `AppShell.tsx:137` | Notificação hardcoded na sidebar | `GET /notifications/mine` | 🔴 Alta (já visível ao usuário) |
+| 2 | `AppShell.tsx:140` | Watermark "Sprint 19 · Protótipo" | — (remover) | 🔴 Alta |
+| 3 | `analyticsService.ts` | Todos os endpoints retornam mock local com `console.warn` | `GET /analytics/*` (não implementados) | 🟡 Média |
+| 4 | `knowledgeService.ts` | Escrita de nós usa mock local; leitura é real | `POST /knowledge-graph/nodes`, `PUT /knowledge-graph/edges` | 🟡 Média |
+| 5 | `formsService.ts:102` | Catálogo de campos do form builder é estático | `GET /forms/field-catalog` | 🟡 Média |
+| 6 | `formsService.ts:32` | `FormBuilder` abria sempre com form hardcoded (corrigido em Sprint 20, mas catálogo ainda local) | — | 🟢 Baixa |
+| 7 | `formsService.ts:20` | Exportação de formulários usa `console.warn` + mock | `GET /forms/{id}/export` | 🟡 Média |
+| 8 | `contentService.ts:148` | `VersionTimeline` e `VersionCompareView` são mockups estáticos | `GET /content/{id}/versions` | 🟡 Média |
+| 9 | `AssetMetadataFormCard.tsx:32` | Tela de metadados não recebe asset real por rota | Precisa de rota `/assets/:id/edit` | 🟡 Média |
+| 10 | `pagesService.ts:112` | Catálogo de tipos de páginas é estático | `GET /pages/catalog` | 🟢 Baixa |
+| 11 | `helpTopics.ts` | Tópicos de ajuda mantidos como mock no frontend | `GET /help/topics` (ou manter estático, avaliar) | 🟢 Baixa |
+| 12 | `authActivationService.ts:46` | Mock mode do convite sempre tem `requiresPasswordSetup: true` | Corrigido no H.1 (backend real) | 🔴 Incluso H.1 |
+
+**Observação:** Os services `analyticsService` e `knowledgeService` já logam `console.warn` em dev avisando que o endpoint não existe. Isso é intencional e correto — não é um bug, é um aviso de integração pendente. A prioridade de implementação segue o roadmap de etapas do backend.
+
+---
+
+### H.5 — Matriz de jornada completa por role e combinações
+
+> O agente de validação deve executar a jornada completa para cada perfil abaixo usando Bruno (`bru run`) ou teste manual. Cada perfil tem pré-condições, passos e critérios de aceite.
+
+#### Roles simples
+
+| Role | Sidebar visível | Produtos visíveis | Pode criar produto | Pode convidar usuário | Pode ver Auditoria | Pode ver Configurações |
+|------|----------------|-------------------|-------------------|----------------------|-------------------|----------------------|
+| `super_admin` | Dashboard, Produtos, Auditoria, Configurações, Feedbacks | Todos (todos os tenants) | ✅ | ✅ | ✅ | ✅ |
+| `tenant_admin` | Dashboard, Produtos, Auditoria, Configurações, Feedbacks | Todos do seu tenant | ✅ | ✅ | ✅ | ✅ |
+| `product_manager` | Dashboard, Produtos, Auditoria, Configurações | Apenas os que tem `ASSIGNED` | ❌ | ✅ (no próprio produto) | ✅ | ✅ (do produto) |
+| `editor` | Dashboard, Produtos, Configurações | Apenas os que tem `ASSIGNED` | ❌ | ❌ | ❌ | ✅ (só leitura) |
+| `viewer` | Dashboard, Produtos | Apenas os que tem `ASSIGNED` | ❌ | ❌ | ❌ | ❌ |
+
+#### Jornadas por role
+
+**J-01 — super_admin:**
+1. Login como `admin@byop.dev`
+2. Sidebar deve mostrar: Dashboard, Produtos, Auditoria, Configurações, Feedbacks
+3. Header deve mostrar badge "Super Admin" com link para `/select-tenant`
+4. `/products` deve listar **todos** os produtos de **todos** os tenants
+5. Criar novo produto — deve aparecer no sidebar imediatamente (via `addProduct()`)
+6. Convidar usuário para qualquer tenant — email chega no MailHog
+7. Verificar `GET /api/v1/products` → retorna todos os produtos (sem filtro de assignment)
+8. **Bruno:** `bru run bruno/smoke/super-admin-journey.bru --env local`
+
+**J-02 — tenant_admin:**
+1. Login como `tenant-admin@byop.dev`
+2. Sidebar deve mostrar: Dashboard, Produtos, Auditoria, Configurações, Feedbacks
+3. `/products` deve listar apenas produtos do tenant `CLIENTES BETA`
+4. Convidar novo usuário → email no MailHog → usuário aparece em `/users` com status "convidado"
+5. Após ativação do convite → `/users` mostra status "ativo"
+6. **Não deve** ver produtos de outros tenants
+7. **Bruno:** `bru run bruno/smoke/tenant-admin-journey.bru --env local`
+
+**J-03 — product_manager:**
+1. Login como `pm@byop.dev` (deve ter `ProductAssignment.status = ASSIGNED` em pelo menos 1 produto)
+2. Sidebar deve mostrar: Dashboard, Produtos, Auditoria, Configurações
+3. `/products` deve mostrar apenas os produtos com `ASSIGNED`
+4. Entrar no produto → ver Dashboard, módulos habilitados
+5. Gerenciar equipe do produto via `/settings/team` → AddMemberModal funcional
+6. **Não deve** criar novos produtos (botão "Criar produto" não deve aparecer)
+7. **Bruno:** `bru run bruno/smoke/product-manager-journey.bru --env local`
+
+**J-04 — editor:**
+1. Login como `editor@byop.dev` (deve ter `ProductAssignment.status = ASSIGNED`)
+2. Sidebar deve mostrar: Dashboard, Produtos, Configurações (sem Auditoria)
+3. `/products` mostra apenas seus produtos atribuídos
+4. Pode editar conteúdo, assets, forms do produto
+5. **Não deve** ver aba Equipe nem gerenciar membros
+6. **Não deve** ver `/audit` (rota bloqueada ou não aparece na nav)
+7. **Bruno:** `bru run bruno/smoke/editor-journey.bru --env local`
+
+**J-05 — viewer:**
+1. Login como `viewer@byop.dev` (deve ter `ProductAssignment.status = ASSIGNED`)
+2. Sidebar deve mostrar: Dashboard, Produtos
+3. Tudo é somente-leitura — nenhum botão de ação destrutiva visível
+4. `/audit`, `/settings`, `/settings/team` não aparecem na nav e retornam 403 se acessados diretamente
+5. **Bruno:** `bru run bruno/smoke/viewer-journey.bru --env local`
+
+#### Combinações de roles (cenários de borda)
+
+| Combinação | Cenário | Comportamento esperado |
+|-----------|---------|----------------------|
+| `super_admin` + `product_manager` | Usuário tem ambos os roles no Keycloak | `super_admin` prevalece — vê todos os produtos de todos os tenants, não filtrado por `ProductAssignment` |
+| `tenant_admin` + `product_manager` | Administra o tenant E é PM de um produto | Vê todos os produtos do tenant (via `tenant_admin`) + tem acesso de PM nas configurações do produto específico |
+| `tenant_admin` + `editor` | Admin do tenant mas editor em produto específico | Vê todos os produtos do tenant (via `tenant_admin`), mas em `/settings/team` do produto age como editor (sem permissão de remover membros) |
+| `product_manager` + `editor` | Tem ambas as roles em produtos diferentes | PM no produto A → pode gerenciar equipe; Editor no produto B → somente conteúdo. O `viewAsRole` deve refletir a role do produto efetivo |
+| `super_admin` (sem assignments) | Super admin que nunca foi atribuído a nenhum produto | Vê todos os produtos mesmo sem `ProductAssignment` — a query no backend usa `productRepository.findAll()` para este role |
+| `tenant_admin` (sem assignment) | Admin do tenant sem nenhum `ProductAssignment` | Vê todos os produtos do tenant via `tenantAccessService.findActiveTenantAdminTenantIds()` |
+
+#### Fluxo de convite completo — 4 cenários
+
+| Cenário | Pré-condição | Passos | Resultado esperado |
+|---------|-------------|--------|-------------------|
+| **C-01** Novo usuário | Email não existe no Keycloak | Convidar → email no MailHog → clicar link → formulário de senha → ativar → login → produto visível | `requiresPasswordSetup: true`, `ProductAssignment.status = ASSIGNED` após activate() |
+| **C-02** Usuário existente | Email já existe no Keycloak com senha | Convidar → email no MailHog → clicar link → "Você já tem conta" → clicar "Fazer login" → login → produto visível | `requiresPasswordSetup: false`, `acceptExistingUser()` publica evento, status = ASSIGNED |
+| **C-03** Convite expirado | Token com `expires_at` no passado | Clicar link → tela de token expirado | Status 410 ou mensagem "convite expirado" |
+| **C-04** Convite já usado | Token `consumed_at` preenchido | Clicar link → tela de token já utilizado | Mensagem "convite já foi utilizado" |
+
+---
+
+### H.6 — Critérios de aceite globais da Bug Sprint 02
+
+> Esta seção consolida os gates obrigatórios que o agente de implementação deve verificar antes de qualquer PR.
+
+#### Gate 1: Bruno — smoke tests 100%
+
+```bash
+# Sequência completa de smoke tests
+bru run bruno/smoke/ --env local --reporter json > /tmp/smoke-report.json
+
+# Verificar zero falhas
+cat /tmp/smoke-report.json | jq '.stats.failed'
+# Esperado: 0
+```
+
+Arquivos Bruno a criar/atualizar:
+- `bruno/smoke/super-admin-journey.bru` — jornada J-01
+- `bruno/smoke/tenant-admin-journey.bru` — jornada J-02
+- `bruno/smoke/product-manager-journey.bru` — jornada J-03
+- `bruno/smoke/editor-journey.bru` — jornada J-04
+- `bruno/smoke/viewer-journey.bru` — jornada J-05
+- `bruno/smoke/invite-flow-new-user.bru` — cenário C-01
+- `bruno/smoke/invite-flow-existing-user.bru` — cenário C-02 (requer endpoint H.2)
+- `bruno/smoke/invite-flow-edge-cases.bru` — cenários C-03 e C-04
+
+#### Gate 2: JaCoCo — 100% line + branch
+
+```bash
+cd backend && mvn verify -q
+# Esperado: BUILD SUCCESS + jacoco-check PASSED
+```
+
+Novos métodos que precisam de cobertura:
+- `KeycloakAdminClient.hasRequiredAction()` — 2 branches (true/false)
+- `AuthActivationService.validateInvite()` — 2 branches (`requiresPasswordSetup` true/false)
+- `AuthActivationService.acceptExistingUser()` — caminho feliz + token inválido (via `consumeInvite`)
+- `AuthController` — novo endpoint `POST /invite/accept-existing`
+
+#### Gate 3: TypeScript — zero erros
+
+```bash
+cd frontend && npm run typecheck
+# Esperado: saída vazia
+```
+
+#### Gate 4: Verificação visual por role (manual)
+
+| Checklist | super_admin | tenant_admin | product_manager | editor | viewer |
+|-----------|------------|-------------|----------------|--------|--------|
+| Login funcional | ☐ | ☐ | ☐ | ☐ | ☐ |
+| Sidebar correto | ☐ | ☐ | ☐ | ☐ | ☐ |
+| Produtos visíveis | ☐ | ☐ | ☐ | ☐ | ☐ |
+| Auditoria: acessa/bloqueado | acessa | acessa | acessa | bloqueado | bloqueado |
+| Settings/team | ☐ | ☐ | ☐ | bloqueado | bloqueado |
+| Criar produto | ☐ | ☐ | bloqueado | bloqueado | bloqueado |
+| Convidar usuário | ☐ | ☐ | ☐ (só produto) | bloqueado | bloqueado |
+| Sidebar notification: real | ☐ | ☐ | ☐ | ☐ | ☐ |
+| Watermark ausente | ☐ | ☐ | ☐ | ☐ | ☐ |
 | `core/tenants/services/tenantsService.ts` | incrementProductCount() |
