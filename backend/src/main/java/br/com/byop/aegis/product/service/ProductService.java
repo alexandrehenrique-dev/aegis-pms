@@ -101,7 +101,7 @@ public class ProductService {
                 type.name(), product.getDefaultLocale()));
         log.info("createProduct: produto criado id='{}', key='{}', type='{}'", product.getId(), product.getKey(), type);
 
-        return toSummaryWithModuleCount(product);
+        return toSummaryWithModuleCount(product, ProductAssignmentRole.PRODUCT_MANAGER);
     }
 
     /**
@@ -120,27 +120,27 @@ public class ProductService {
     public List<ProductSummary> listProducts(AuthenticatedUser caller) {
         log.debug("listProducts: caller='{}'", caller.subject());
         if (caller.authorities().contains(ROLE_SUPER_ADMIN)) {
+            Map<UUID, ProductAssignmentRole> callerRoles = callerRolesByProductId(caller.subject());
             return productRepository.findAll()
                     .stream()
-                    .map(this::toSummaryWithModuleCount)
+                    .map(product -> toSummaryWithModuleCount(product, callerRoles.get(product.getId())))
                     .toList();
         }
 
         if (caller.authorities().contains(ROLE_TENANT_ADMIN)) {
+            Map<UUID, ProductAssignmentRole> callerRoles = callerRolesByProductId(caller.subject());
             return tenantAccessService.findActiveTenantAdminTenantIds(caller.subject())
                     .stream()
                     .flatMap(tenantId -> productRepository.findAllByTenantId(tenantId).stream())
                     .distinct()
-                    .map(this::toSummaryWithModuleCount)
+                    .map(product -> toSummaryWithModuleCount(product, callerRoles.get(product.getId())))
                     .toList();
         }
 
         if (hasProductRole(caller)) {
             return assignmentRepository.findAllByUserSubjectAndStatus(caller.subject(), ProductAssignmentStatus.ASSIGNED)
                     .stream()
-                    .map(ProductAssignment::getProduct)
-                    .distinct()
-                    .map(this::toSummaryWithModuleCount)
+                    .map(assignment -> toSummaryWithModuleCount(assignment.getProduct(), assignment.getRole()))
                     .toList();
         }
 
@@ -150,12 +150,34 @@ public class ProductService {
     @Transactional(readOnly = true)
     public ProductSummary getProduct(AuthenticatedUser caller, UUID productId) {
         log.debug("getProduct: productId='{}'", productId);
-        return toSummaryWithModuleCount(resolveAccessibleProduct(caller, productId));
+        Product product = resolveAccessibleProduct(caller, productId);
+        return toSummaryWithModuleCount(product, callerRoleForProduct(caller.subject(), productId));
     }
 
-    private ProductSummary toSummaryWithModuleCount(Product product) {
+    /**
+     * O papel de plataforma do caller (Keycloak realm role, ex. ROLE_SUPER_ADMIN)
+     * e o papel dele NUM PRODUTO especifico ({@link ProductAssignmentRole}) sao
+     * independentes — um Super Admin pode alem disso ser Editor de um produto
+     * pontual. Este campo carrega o segundo, para o frontend mesclar a
+     * navegacao da sidebar quando os dois coexistem.
+     */
+    private Map<UUID, ProductAssignmentRole> callerRolesByProductId(String subject) {
+        return assignmentRepository.findAllByUserSubjectAndStatus(subject, ProductAssignmentStatus.ASSIGNED)
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(ProductAssignment::getProductId, ProductAssignment::getRole));
+    }
+
+    private ProductAssignmentRole callerRoleForProduct(String subject, UUID productId) {
+        return assignmentRepository.findByProductIdAndUserSubject(productId, subject)
+                .filter(assignment -> assignment.getStatus() == ProductAssignmentStatus.ASSIGNED)
+                .map(ProductAssignment::getRole)
+                .orElse(null);
+    }
+
+    private ProductSummary toSummaryWithModuleCount(Product product, ProductAssignmentRole callerRole) {
         int enabledModuleCount = (int) moduleRepository.countByProductIdAndEnabledTrue(product.getId());
-        return productMapper.toSummary(product, enabledModuleCount);
+        String callerRoleName = callerRole == null ? null : callerRole.name();
+        return productMapper.toSummary(product, enabledModuleCount, callerRoleName);
     }
 
     @Transactional(readOnly = true)

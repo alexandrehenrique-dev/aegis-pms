@@ -87,7 +87,7 @@ class ProductServiceTest {
         when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "maestro-beton")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
-        when(productMapper.toSummary(savedProduct, 0)).thenReturn(summary);
+        when(productMapper.toSummary(savedProduct, 0, "PRODUCT_MANAGER")).thenReturn(summary);
 
         ProductSummary result = productService.createProduct(
                 user("creator-subject", "ROLE_TENANT_ADMIN"),
@@ -139,7 +139,7 @@ class ProductServiceTest {
         when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "kb-product")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
-        when(productMapper.toSummary(savedProduct, 0)).thenReturn(productSummary(tenantId, savedProductId(), "kb-product"));
+        when(productMapper.toSummary(savedProduct, 0, "PRODUCT_MANAGER")).thenReturn(productSummary(tenantId, savedProductId(), "kb-product"));
 
         productService.createProduct(user("creator-subject", "ROLE_TENANT_ADMIN"),
                 createCommand(tenantId, "kb-product", "Knowledge Base"));
@@ -156,7 +156,7 @@ class ProductServiceTest {
         when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "custom-product")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
-        when(productMapper.toSummary(savedProduct, 0)).thenReturn(productSummary(tenantId, savedProductId(), "custom-product"));
+        when(productMapper.toSummary(savedProduct, 0, "PRODUCT_MANAGER")).thenReturn(productSummary(tenantId, savedProductId(), "custom-product"));
 
         productService.createProduct(user("creator-subject", "ROLE_TENANT_ADMIN"),
                 createCommand(tenantId, "custom-product", ProductTypeKey.CUSTOM.name()));
@@ -192,7 +192,7 @@ class ProductServiceTest {
         when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "explicit-storage-product")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
-        when(productMapper.toSummary(savedProduct, 0)).thenReturn(summary);
+        when(productMapper.toSummary(savedProduct, 0, "PRODUCT_MANAGER")).thenReturn(summary);
 
         ProductSummary result = productService.createProduct(
                 user("creator-subject", "ROLE_TENANT_ADMIN"),
@@ -251,13 +251,18 @@ class ProductServiceTest {
         Product product = product(tenant, "all-products");
         ProductSummary summary = productSummary(tenant.getId(), savedProductId(), "all-products");
         when(productRepository.findAll()).thenReturn(List.of(product));
-        when(productMapper.toSummary(product, 0)).thenReturn(summary);
+        when(assignmentRepository.findAllByUserSubjectAndStatus("super-subject", ProductAssignmentStatus.ASSIGNED))
+                .thenReturn(List.of());
+        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
 
         List<ProductSummary> result = productService.listProducts(user("super-subject", "ROLE_SUPER_ADMIN"));
 
         assertThat(result).containsExactly(summary);
         verify(tenantAccessService, never()).findActiveTenantAdminTenantIds("super-subject");
-        verify(assignmentRepository, never()).findAllByUserSubjectAndStatus("super-subject", ProductAssignmentStatus.ASSIGNED);
+        // Super Admin agora TAMBEM consulta as proprias ProductAssignment (nao mais "never") —
+        // necessario para saber, por produto, se ele acumula um papel de produto especifico
+        // (ex.: Editor de um produto pontual) a mesclar na navegacao do frontend.
+        verify(assignmentRepository).findAllByUserSubjectAndStatus("super-subject", ProductAssignmentStatus.ASSIGNED);
     }
 
     @Test
@@ -269,7 +274,7 @@ class ProductServiceTest {
         when(tenantAccessService.findActiveTenantAdminTenantIds("tenant-admin-subject"))
                 .thenReturn(List.of(activeTenant.getId()));
         when(productRepository.findAllByTenantId(activeTenant.getId())).thenReturn(List.of(product));
-        when(productMapper.toSummary(product, 0)).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
 
         List<ProductSummary> result = productService.listProducts(user("tenant-admin-subject", "ROLE_TENANT_ADMIN"));
 
@@ -309,7 +314,7 @@ class ProductServiceTest {
         UUID productId = product.getId();
         ProductSummary summary = productSummary(tenant.getId(), productId, "visible-product");
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-        when(productMapper.toSummary(product, 0)).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
 
         assertThat(productService.getProduct(user("super-subject", "ROLE_SUPER_ADMIN"), productId)).isEqualTo(summary);
 
@@ -320,6 +325,39 @@ class ProductServiceTest {
                 productId, "editor-subject", ProductAssignmentStatus.ASSIGNED
         )).thenReturn(true);
         assertThat(productService.getProduct(user("editor-subject", "ROLE_EDITOR"), productId)).isEqualTo(summary);
+    }
+
+    @Test
+    void shouldReportCallerAssignedRoleWhenAssignmentIsActive() {
+        Tenant tenant = tenant(UUID.fromString("b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1"), "combo");
+        Product product = product(tenant, "combo-product");
+        UUID productId = product.getId();
+        ProductAssignment assignment = new ProductAssignment(product, "super-editor-subject", ProductAssignmentRole.EDITOR);
+        ProductSummary summary = productSummary(tenant.getId(), productId, "combo-product");
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(assignmentRepository.findByProductIdAndUserSubject(productId, "super-editor-subject"))
+                .thenReturn(Optional.of(assignment));
+        when(productMapper.toSummary(product, 0, "EDITOR")).thenReturn(summary);
+
+        assertThat(productService.getProduct(user("super-editor-subject", "ROLE_SUPER_ADMIN"), productId))
+                .isEqualTo(summary);
+    }
+
+    @Test
+    void shouldNotReportCallerAssignedRoleWhenAssignmentIsNotActive() {
+        Tenant tenant = tenant(UUID.fromString("b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2"), "revoked");
+        Product product = product(tenant, "revoked-product");
+        UUID productId = product.getId();
+        ProductAssignment assignment = new ProductAssignment(product, "super-subject", ProductAssignmentRole.EDITOR);
+        assignment.revoke();
+        ProductSummary summary = productSummary(tenant.getId(), productId, "revoked-product");
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(assignmentRepository.findByProductIdAndUserSubject(productId, "super-subject"))
+                .thenReturn(Optional.of(assignment));
+        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
+
+        assertThat(productService.getProduct(user("super-subject", "ROLE_SUPER_ADMIN"), productId))
+                .isEqualTo(summary);
     }
 
     @Test
@@ -421,7 +459,7 @@ class ProductServiceTest {
         ProductSummary summary = productSummary(tenant.getId(), product.getId(), product.getKey());
         when(assignmentRepository.findAllByUserSubjectAndStatus("assigned-subject", ProductAssignmentStatus.ASSIGNED))
                 .thenReturn(List.of(assignment));
-        when(productMapper.toSummary(product, 0)).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, "EDITOR")).thenReturn(summary);
 
         return productService.listProducts(user("assigned-subject", authority));
     }
@@ -461,7 +499,8 @@ class ProductServiceTest {
                 AssetStorageStrategy.S3,
                 OffsetDateTime.parse("2026-06-25T10:00:00-03:00"),
                 OffsetDateTime.parse("2026-06-25T10:10:00-03:00"),
-                0
+                0,
+                null
         );
     }
 

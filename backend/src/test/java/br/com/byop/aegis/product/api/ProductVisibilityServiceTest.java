@@ -64,7 +64,8 @@ class ProductVisibilityServiceTest {
                 AssetStorageStrategy.LOCAL,
                 FIXED_TIMESTAMP,
                 FIXED_TIMESTAMP,
-                0
+                0,
+                null
         );
     }
 }

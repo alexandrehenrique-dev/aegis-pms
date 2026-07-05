@@ -13,6 +13,8 @@ export type ProductSummary = {
   tenantId?: string;
   /** Módulos selecionados (chaves de `core/products/moduleDefaults.ts`) — editável, mesma UI da criação (ver EditProductModal). */
   modulesList?: string[];
+  /** Papel do caller neste produto (`ProductAssignmentRole` do backend), independente do papel de plataforma — ver `ProductOption.callerAssignedRole`. */
+  callerAssignedRole?: string | null;
 };
 
 export type ListProductsResponse = ProductSummary[];

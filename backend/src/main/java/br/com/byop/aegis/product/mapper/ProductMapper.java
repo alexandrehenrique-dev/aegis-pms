@@ -19,7 +19,7 @@ public interface ProductMapper {
      * o JaCoCo sempre reporta como não coberto. Evitar a geração automática aqui
      * elimina esse branch em vez de mascará-lo no gate de cobertura.
      */
-    default ProductSummary toSummary(Product product, int enabledModuleCount) {
+    default ProductSummary toSummary(Product product, int enabledModuleCount, String callerAssignedRole) {
         if (product == null) {
             return null;
         }
@@ -34,7 +34,8 @@ public interface ProductMapper {
                 product.getAssetStorageStrategy(),
                 product.getCreatedAt(),
                 product.getUpdatedAt(),
-                enabledModuleCount
+                enabledModuleCount,
+                callerAssignedRole
         );
     }
 
