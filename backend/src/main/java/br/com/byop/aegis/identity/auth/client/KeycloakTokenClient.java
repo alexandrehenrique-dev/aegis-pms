@@ -27,7 +27,7 @@ public class KeycloakTokenClient {
     private static final String KEYCLOAK_COMMUNICATION_ERROR = "Error communicating with Keycloak";
 
     private static final Pattern ACCOUNT_DISABLED_PATTERN =
-            Pattern.compile("disabled", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("disabled|not fully set up", Pattern.CASE_INSENSITIVE);
 
     private final RestClient restClient;
     private final KeycloakProperties properties;
@@ -56,8 +56,17 @@ public class KeycloakTokenClient {
             if (isAccountDisabled(exception.getResponseBodyAsString())) {
                 throw new AccountDisabledException();
             }
-
             throw new InvalidCredentialsException();
+
+        } catch (HttpClientErrorException.BadRequest exception) {
+            // Keycloak retorna 400 com invalid_grant quando a conta existe mas tem
+            // required actions pendentes (ex.: "Account is not fully set up").
+            // Tratamos como conta bloqueada/pendente — mensagem ao usuário é mais
+            // precisa do que "Erro no servidor".
+            if (isAccountDisabled(exception.getResponseBodyAsString())) {
+                throw new AccountDisabledException();
+            }
+            throw new KeycloakAuthenticationException(KEYCLOAK_COMMUNICATION_ERROR, exception);
 
         } catch (HttpServerErrorException | HttpClientErrorException exception) {
             throw new KeycloakAuthenticationException(KEYCLOAK_COMMUNICATION_ERROR, exception);

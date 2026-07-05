@@ -15,7 +15,9 @@ springdoc:
 
 aegis:
   app:
-    base-url: ${AEGIS_APP_BASE_URL:http://localhost:5173}
+    # 8080: Spring Boot serve a SPA em produção local (npm run build:backend).
+    # Em dev com Vite separado, sobrescreva via AEGIS_APP_BASE_URL=http://localhost:5173.
+    base-url: ${AEGIS_APP_BASE_URL:http://localhost:8080}
 
 logging:
   level:
