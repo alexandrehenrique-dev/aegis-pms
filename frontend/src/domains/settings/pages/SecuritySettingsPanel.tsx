@@ -122,7 +122,7 @@ export function SecuritySettingsPanel() {
     ["Analytics Provider", "requer atenção", "produção", "ontem"],
     ["Storage Provider", "conectado", "produção", "há 1 h"],
     ["Email Provider", "desconectado", "staging", "—"],
-    ["WhatsApp futuro", "futuro", "—", "—"],
+    ["WhatsApp", "indisponível", "—", "—"],
   ];
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [configuring, setConfiguring] = useState<string | null>(null);
@@ -157,7 +157,7 @@ export function SecuritySettingsPanel() {
       <Dialog open={configuring !== null} onOpenChange={(open) => !open && setConfiguring(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Configurar {configuring}</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Integração mock — a configuração real desta integração chega quando o backend (Sprint 07) estiver disponível.</p>
+          <p className="text-sm text-muted-foreground">Esta integração ainda não possui configuração editável neste painel.</p>
         </DialogContent>
       </Dialog>
       <PageHeader title="Security & Integrations" module="Configurações" desc="Segurança e integrações essenciais, com estados e risco operacional." badge="Admin">
@@ -167,7 +167,7 @@ export function SecuritySettingsPanel() {
       <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Segurança</h2>
-          {["Sessões ativas", "Tokens futuros", "Política de senha", "Rate limit futuro", "2FA futuro"].map((x) => <div key={x} className="mb-2 rounded-lg bg-muted p-3 text-sm">{x}</div>)}
+          {["Sessões ativas", "Tokens de API", "Política de senha", "Rate limit", "2FA"].map((x) => <div key={x} className="mb-2 rounded-lg bg-muted p-3 text-sm">{x}</div>)}
         </Card>
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{ints.map((i) => <IntegrationCard key={i[0]} i={i} onConfigure={() => setConfiguring(i[0])} />)}</div>
