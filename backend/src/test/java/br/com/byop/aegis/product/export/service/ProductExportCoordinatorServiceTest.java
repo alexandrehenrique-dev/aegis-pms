@@ -11,6 +11,7 @@ import br.com.byop.aegis.product.export.dto.ExportRecipient;
 import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import br.com.byop.aegis.tenant.api.TenantExportRemovalPort;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -46,6 +47,20 @@ class ProductExportCoordinatorServiceTest {
 
     @Mock
     private ExportAndDeleteService exportAndDeleteService;
+
+    @Mock
+    private TenantExportRemovalPort tenantExportRemovalPort;
+
+    @Test
+    void shouldRemoveTenantImmediatelyWhenThereAreNoProductsToExport() {
+        AuthenticatedUser caller = caller();
+        when(productRepository.findAllByTenantId(TENANT_ID)).thenReturn(List.of());
+
+        service().startTenantProductExports(TENANT_ID, caller);
+
+        verify(tenantExportRemovalPort).deleteTenantAfterExports(TENANT_ID);
+        verify(exportAndDeleteService, never()).exportAndDelete(any(), any(), any(), any(), anyBoolean());
+    }
 
     @Test
     void shouldStartExportsForTenantProductsThatAreNotDeleted() {
@@ -121,7 +136,8 @@ class ProductExportCoordinatorServiceTest {
     }
 
     private ProductExportCoordinatorService service() {
-        return new ProductExportCoordinatorService(productRepository, assignmentRepository, identityUserDirectory, exportAndDeleteService);
+        return new ProductExportCoordinatorService(productRepository, assignmentRepository, identityUserDirectory,
+                exportAndDeleteService, tenantExportRemovalPort);
     }
 
     private Product product(UUID productId, String key) {

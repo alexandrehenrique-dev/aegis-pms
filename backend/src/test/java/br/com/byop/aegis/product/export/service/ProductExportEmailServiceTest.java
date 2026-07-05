@@ -81,6 +81,22 @@ class ProductExportEmailServiceTest {
     }
 
     @Test
+    void shouldSendProductDeletedWithoutBackupEmail() {
+        JavaMailSender mailSender = mockMailSender();
+        ProductExportEmailService service = service(mailSender, TEMPLATE_PATH, "http://localhost:8080");
+
+        service.sendProductDeletedWithoutBackup("admin@byop.dev", "Admin", "Maestro Beton");
+
+        MimeMessage message = sentMessage(mailSender);
+        assertThat(subject(message)).isEqualTo("Produto excluido sem backup no Aegis PMS");
+        assertThat(firstRecipient(message)).hasToString("admin@byop.dev");
+        assertThat(content(message))
+                .contains("Admin")
+                .contains("Maestro Beton")
+                .contains("S3");
+    }
+
+    @Test
     void shouldRejectInvalidTemplateDirectory() {
         JavaMailSender mailSender = mock(JavaMailSender.class);
         File missing = new File(tempDir, "missing");

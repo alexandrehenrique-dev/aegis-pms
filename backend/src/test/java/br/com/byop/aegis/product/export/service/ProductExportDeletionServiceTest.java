@@ -49,6 +49,21 @@ class ProductExportDeletionServiceTest {
         verify(statementSpec, times(19)).update();
     }
 
+    @Test
+    void shouldDeleteProductRowsWithoutTouchingAssetFiles() {
+        ProductExportData data = data();
+        when(jdbcClient.sql(anyString())).thenReturn(statementSpec);
+        when(statementSpec.param("productId", PRODUCT_ID)).thenReturn(statementSpec);
+        when(statementSpec.update()).thenReturn(1);
+
+        service().deleteExportedProductSkippingAssetFiles(data);
+
+        verify(storagePort, org.mockito.Mockito.never()).deleteAsset(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+        verify(jdbcClient, times(19)).sql(anyString());
+        verify(statementSpec, times(19)).param("productId", PRODUCT_ID);
+        verify(statementSpec, times(19)).update();
+    }
+
     private ProductExportDeletionService service() {
         return new ProductExportDeletionService(jdbcClient, storagePort);
     }

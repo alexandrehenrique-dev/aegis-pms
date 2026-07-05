@@ -2,6 +2,7 @@ package br.com.byop.aegis.product.export.service;
 
 import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.product.api.AssetStorageStrategy;
+import br.com.byop.aegis.product.api.ProductExportStoragePort;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductStatus;
 import br.com.byop.aegis.product.domain.ProductTypeKey;
@@ -70,6 +71,9 @@ class ExportAndDeleteServiceTest {
     private TenantExportRemovalPort tenantExportRemovalPort;
 
     @Mock
+    private ProductExportStoragePort storagePort;
+
+    @Mock
     private AuditService auditService;
 
     @Test
@@ -78,6 +82,7 @@ class ExportAndDeleteServiceTest {
         Path zip = Path.of("target/aegis-export.zip");
         StoredExport storedExport = storedExport();
         when(productExportSerializer.serialize(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL)).thenReturn(data);
+        when(storagePort.isStorageConfigured(AssetStorageStrategy.LOCAL)).thenReturn(true);
         when(exportZipBuilder.build(data)).thenReturn(zip);
         when(exportStorageService.store(eq(zip), any(UUID.class), eq(data.filename()), eq(AssetStorageStrategy.LOCAL)))
                 .thenReturn(storedExport);
@@ -103,6 +108,7 @@ class ExportAndDeleteServiceTest {
         Path zip = Path.of("target/aegis-export.zip");
         Product remainingProduct = product();
         when(productExportSerializer.serialize(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL)).thenReturn(data);
+        when(storagePort.isStorageConfigured(AssetStorageStrategy.LOCAL)).thenReturn(true);
         when(exportZipBuilder.build(data)).thenReturn(zip);
         when(exportStorageService.store(eq(zip), any(UUID.class), eq(data.filename()), eq(AssetStorageStrategy.LOCAL)))
                 .thenReturn(storedExport());
@@ -118,6 +124,7 @@ class ExportAndDeleteServiceTest {
         ProductExportData data = data();
         Path zip = Path.of("target/aegis-export.zip");
         when(productExportSerializer.serialize(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL)).thenReturn(data);
+        when(storagePort.isStorageConfigured(AssetStorageStrategy.LOCAL)).thenReturn(true);
         when(exportZipBuilder.build(data)).thenReturn(zip);
         when(exportStorageService.store(eq(zip), any(UUID.class), eq(data.filename()), eq(AssetStorageStrategy.LOCAL)))
                 .thenReturn(storedExport());
@@ -160,6 +167,23 @@ class ExportAndDeleteServiceTest {
     }
 
     @Test
+    void shouldMarkProductAsExportFailedWhenZipBuildFails() {
+        Product product = product();
+        ProductExportData data = data();
+        when(productExportSerializer.serialize(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL)).thenReturn(data);
+        when(storagePort.isStorageConfigured(AssetStorageStrategy.LOCAL)).thenReturn(true);
+        when(exportZipBuilder.build(data)).thenThrow(new IllegalStateException("zip build failed"));
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), false);
+
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.EXPORT_FAILED);
+        verify(productRepository).save(product);
+        verify(productExportEmailService).sendExportFailure(CALLER_EMAIL, product.getName());
+        verify(productExportDeletionService, never()).deleteExportedProduct(any(ProductExportData.class));
+    }
+
+    @Test
     void shouldIgnoreExportFailureWhenProductNoLongerExists() {
         when(productExportSerializer.serialize(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL))
                 .thenThrow(new IllegalStateException("serialize failed"));
@@ -177,6 +201,7 @@ class ExportAndDeleteServiceTest {
         ProductExportData data = data();
         Path zip = Path.of("target/aegis-export.zip");
         when(productExportSerializer.serialize(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL)).thenReturn(data);
+        when(storagePort.isStorageConfigured(AssetStorageStrategy.LOCAL)).thenReturn(true);
         when(exportZipBuilder.build(data)).thenReturn(zip);
         when(exportStorageService.store(eq(zip), any(UUID.class), eq(data.filename()), eq(AssetStorageStrategy.LOCAL)))
                 .thenReturn(storedExport());
@@ -197,6 +222,7 @@ class ExportAndDeleteServiceTest {
         ProductExportData data = data();
         Path zip = Path.of("target/aegis-export.zip");
         when(productExportSerializer.serialize(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL)).thenReturn(data);
+        when(storagePort.isStorageConfigured(AssetStorageStrategy.LOCAL)).thenReturn(true);
         when(exportZipBuilder.build(data)).thenReturn(zip);
         when(exportStorageService.store(eq(zip), any(UUID.class), eq(data.filename()), eq(AssetStorageStrategy.LOCAL)))
                 .thenReturn(storedExport());
@@ -217,6 +243,7 @@ class ExportAndDeleteServiceTest {
         ProductExportData data = data();
         Path zip = Path.of("target/aegis-export.zip");
         when(productExportSerializer.serialize(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL)).thenReturn(data);
+        when(storagePort.isStorageConfigured(AssetStorageStrategy.LOCAL)).thenReturn(true);
         when(exportZipBuilder.build(data)).thenReturn(zip);
         when(exportStorageService.store(eq(zip), any(UUID.class), eq(data.filename()), eq(AssetStorageStrategy.LOCAL)))
                 .thenReturn(storedExport());
@@ -227,6 +254,52 @@ class ExportAndDeleteServiceTest {
 
         verify(productRepository, never()).save(any(Product.class));
         verify(productExportEmailService, never()).sendExportFailure(eq(CALLER_EMAIL), any(String.class));
+    }
+
+    @Test
+    void shouldDeleteWithoutBackupAndRemoveTenantWhenStorageNotConfigured() {
+        ProductExportData data = data();
+        when(productExportSerializer.serialize(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL)).thenReturn(data);
+        when(storagePort.isStorageConfigured(AssetStorageStrategy.LOCAL)).thenReturn(false);
+        when(productRepository.findAllByTenantId(TENANT_ID)).thenReturn(List.of());
+
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), true);
+
+        verify(productExportDeletionService).deleteExportedProductSkippingAssetFiles(data);
+        verify(exportZipBuilder, never()).build(any(ProductExportData.class));
+        verify(productExportEmailService).sendProductDeletedWithoutBackup(CALLER_EMAIL, CALLER_NAME, data.productName());
+        verify(auditService).recordEvent(any());
+        verify(tenantExportRemovalPort).deleteTenantAfterExports(TENANT_ID);
+    }
+
+    @Test
+    void shouldSwallowWarningEmailErrorWhenStorageNotConfigured() {
+        ProductExportData data = data();
+        when(productExportSerializer.serialize(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL)).thenReturn(data);
+        when(storagePort.isStorageConfigured(AssetStorageStrategy.LOCAL)).thenReturn(false);
+        doThrow(new IllegalStateException("mail failed"))
+                .when(productExportEmailService)
+                .sendProductDeletedWithoutBackup(CALLER_EMAIL, CALLER_NAME, data.productName());
+
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), false);
+
+        verify(productExportDeletionService).deleteExportedProductSkippingAssetFiles(data);
+    }
+
+    @Test
+    void shouldMarkProductAsDeleteFailedWhenDeletionWithoutBackupFails() {
+        Product product = product();
+        ProductExportData data = data();
+        when(productExportSerializer.serialize(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL)).thenReturn(data);
+        when(storagePort.isStorageConfigured(AssetStorageStrategy.LOCAL)).thenReturn(false);
+        doThrow(new IllegalStateException("delete failed"))
+                .when(productExportDeletionService).deleteExportedProductSkippingAssetFiles(data);
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), false);
+
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.DELETE_FAILED);
+        verify(productExportEmailService, never()).sendProductDeletedWithoutBackup(any(), any(), any());
     }
 
     private ExportAndDeleteService service() {
@@ -240,6 +313,7 @@ class ExportAndDeleteServiceTest {
                 productExportDeletionService,
                 exportIntegrityService,
                 tenantExportRemovalPort,
+                storagePort,
                 auditService
         );
     }
