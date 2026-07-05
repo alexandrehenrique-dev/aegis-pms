@@ -24,6 +24,26 @@ function IntegrationCard({ i, onConfigure }: { i: string[]; onConfigure: () => v
   );
 }
 
+function statusLabel(status: "connected" | "disconnected" | "attention"): string {
+  if (status === "connected") return "conectado";
+  if (status === "attention") return "requer atenção";
+  return "desconectado";
+}
+
+function lastSync(settings: ProductSecuritySettings): string {
+  return settings.updatedAt ? new Date(settings.updatedAt).toLocaleString("pt-BR") : "—";
+}
+
+function integrationsFrom(settings: ProductSecuritySettings): string[][] {
+  const updatedAt = lastSync(settings);
+  return [
+    ["Webhooks", statusLabel(settings.webhookStatus), "produção", updatedAt],
+    ["Analytics Provider", statusLabel(settings.analyticsStatus), "produção", updatedAt],
+    ["Email Provider", statusLabel(settings.emailStatus), "produção", updatedAt],
+    ["Telegram", settings.telegramAlert ? "conectado" : "desconectado", "produção", updatedAt],
+  ];
+}
+
 /**
  * Alertas por Telegram (Sprint 23, Seção D) — canal do produto/formulário
  * externo, distinto do Telegram global do Aegis (`POST /feedback`, Sprint 30
@@ -117,13 +137,11 @@ function TelegramAlertSection({ productId }: { productId: string }) {
 
 export function SecuritySettingsPanel() {
   const { effectiveProduct } = useAuth();
-  const ints = [
-    ["Webhooks", "conectado", "produção", "há 20 min"],
-    ["Analytics Provider", "requer atenção", "produção", "ontem"],
-    ["Storage Provider", "conectado", "produção", "há 1 h"],
-    ["Email Provider", "desconectado", "staging", "—"],
-    ["WhatsApp", "indisponível", "—", "—"],
-  ];
+  const { data: productSettings, loading: loadingSettings } = useAsyncData(
+    () => (effectiveProduct ? settingsService.getProductSettings(effectiveProduct.id) : Promise.resolve(null)),
+    [effectiveProduct?.id],
+  );
+  const integrations = productSettings ? integrationsFrom(productSettings) : [];
   const [sessionsOpen, setSessionsOpen] = useState(false);
   const [configuring, setConfiguring] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -170,7 +188,7 @@ export function SecuritySettingsPanel() {
           {["Sessões ativas", "Tokens de API", "Política de senha", "Rate limit", "2FA"].map((x) => <div key={x} className="mb-2 rounded-lg bg-muted p-3 text-sm">{x}</div>)}
         </Card>
         <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{ints.map((i) => <IntegrationCard key={i[0]} i={i} onConfigure={() => setConfiguring(i[0])} />)}</div>
+          {loadingSettings ? <SkeletonLines /> : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{integrations.map((i) => <IntegrationCard key={i[0]} i={i} onConfigure={() => setConfiguring(i[0])} />)}</div>}
           {effectiveProduct && <TelegramAlertSection productId={effectiveProduct.id} />}
         </div>
       </div>

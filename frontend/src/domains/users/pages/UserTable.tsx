@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { Filter, RefreshCw, UserRound } from "lucide-react";
+import { Filter, RefreshCw, X, UserRound } from "lucide-react";
 import { Button, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { UserStatusBadge } from "../components/UserStatusBadge";
@@ -15,6 +15,8 @@ import type { ProductAssignmentSummary } from "../contracts/productAssignments";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+type FilterKey = "role" | "status" | "product";
+
 const ROLE_LABELS: Record<string, string> = {
   PRODUCT_MANAGER: "Product Manager",
   EDITOR: "Editor",
@@ -22,9 +24,23 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ADMIN_ROLES = ["super_admin", "tenant_admin"];
+const ROLE_OPTIONS = ["Super Admin", "Tenant Admin", "Product Manager", "Editor", "Viewer", "Visualizador"];
+const STATUS_OPTIONS = ["ativo", "convidado", "bloqueado", "removido"];
 
 function isAdminRole(role: string): boolean {
   return ADMIN_ROLES.includes(role);
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function productNamesFrom(user: UserSummary): string[] {
+  return user.products.split(",").map((product) => product.trim()).filter(Boolean);
+}
+
+function matchesProduct(user: UserSummary, productName: string): boolean {
+  return user.products === "Todos" || productNamesFrom(user).includes(productName);
 }
 
 /** Converte um `ProductAssignmentSummary` para o shape de exibição da tabela */
@@ -43,13 +59,30 @@ function assignmentToRow(a: ProductAssignmentSummary): UserSummary {
 
 // ─── Sub-componente de filtros ────────────────────────────────────────────────
 
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+        active ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/70"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function FilterGroup({ label, options, value, onChange }: { label: string; options: string[]; value: string | null; onChange: (v: string | null) => void }) {
   return (
-    <div className="mb-3">
-      <p className="mb-1 text-sm font-medium">{label}</p>
+    <div className="mb-4">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
       <div className="flex flex-wrap gap-1">
-        <Button onClick={() => onChange(null)} primary={!value}>Todos</Button>
-        {options.map((o) => <Button key={o} onClick={() => onChange(o)} primary={value === o}>{o}</Button>)}
+        <Chip active={!value} onClick={() => onChange(null)}>Todos</Chip>
+        {options.map((o) => (
+          <Chip key={o} active={value === o} onClick={() => onChange(value === o ? null : o)}>
+            {o}
+          </Chip>
+        ))}
       </div>
     </div>
   );
@@ -59,7 +92,7 @@ function FilterGroup({ label, options, value, onChange }: { label: string; optio
 
 export function UserTable() {
   const navigate = useNavigate();
-  const { effectiveTenant, effectiveProduct } = useAuth();
+  const { effectiveTenant, effectiveProduct, tenantProducts } = useAuth();
   const { viewAsRole } = useViewAsRole();
 
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
@@ -91,11 +124,27 @@ export function UserTable() {
     return (productAssignments ?? []).map(assignmentToRow);
   }, [isTenantWideView, tenantUsers, productAssignments]);
 
-  const options = useMemo(() => ({
-    roles:    Array.from(new Set(users.map((u) => u.role))).filter(Boolean),
-    statuses: Array.from(new Set(users.map((u) => u.status))).filter(Boolean),
-    products: Array.from(new Set(users.map((u) => u.products))).filter(Boolean),
-  }), [users]);
+  const options = useMemo(() => {
+    const productNames = users.flatMap(productNamesFrom).filter((product) => product !== "Todos");
+    return {
+      roles: uniqueSorted([...ROLE_OPTIONS, ...users.map((u) => u.role)]),
+      statuses: uniqueSorted([...STATUS_OPTIONS, ...users.map((u) => u.status)]),
+      products: uniqueSorted([...tenantProducts.map((product) => product.name), ...productNames]),
+    };
+  }, [tenantProducts, users]);
+
+  const filters: Partial<Record<FilterKey, string | null>> = {
+    role: roleFilter,
+    status: statusFilter,
+    product: productFilter,
+  };
+
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const clearFilters = () => {
+    setRoleFilter(null);
+    setStatusFilter(null);
+    setProductFilter(null);
+  };
 
   if (loading) return <SkeletonLines />;
   if (error) return <PartialErrorWidget />;
@@ -103,7 +152,7 @@ export function UserTable() {
   const filtered = users.filter((u) =>
     (!roleFilter   || u.role     === roleFilter) &&
     (!statusFilter || u.status   === statusFilter) &&
-    (!productFilter || u.products === productFilter),
+    (!productFilter || matchesProduct(u, productFilter)),
   );
 
   const pageTitle = isTenantWideView ? "Usuários do tenant" : `Equipe — ${effectiveProduct?.name ?? "Produto"}`;
@@ -114,18 +163,24 @@ export function UserTable() {
   return (
     <>
       <PageHeader title={pageTitle} module="Users" desc={pageDesc} badge={isTenantWideView ? effectiveTenant?.name : effectiveProduct?.name}>
-        {options.roles.length > 0 && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button><Filter size={15} />Papel / status / produto</Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80">
-              {options.roles.length > 1    && <FilterGroup label="Papel"   options={options.roles}    value={roleFilter}    onChange={setRoleFilter} />}
-              {options.statuses.length > 1  && <FilterGroup label="Status"  options={options.statuses} value={statusFilter}  onChange={setStatusFilter} />}
-              {options.products.length > 1  && <FilterGroup label="Produto" options={options.products} value={productFilter} onChange={setProductFilter} />}
-            </PopoverContent>
-          </Popover>
-        )}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button><Filter size={15} />Papel / status / produto</Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Filtros</h2>
+              {activeFilterCount > 0 && (
+                <button onClick={clearFilters} className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                  <X size={10} /> Limpar
+                </button>
+              )}
+            </div>
+            <FilterGroup label="Papel" options={options.roles} value={roleFilter} onChange={setRoleFilter} />
+            <FilterGroup label="Status" options={options.statuses} value={statusFilter} onChange={setStatusFilter} />
+            <FilterGroup label="Produto" options={options.products} value={productFilter} onChange={setProductFilter} />
+          </PopoverContent>
+        </Popover>
         <Button onClick={() => setRefreshKey((k) => k + 1)} title="Atualizar lista">
           <RefreshCw size={15} />
         </Button>
