@@ -30,8 +30,10 @@ fi
 echo "==> Instalando dependências do frontend (se necessário)..."
 (cd "$FRONTEND_DIR" && npm install)
 
-echo "==> Buildando o frontend (vite build)..."
-(cd "$FRONTEND_DIR" && npm run build)
+echo "==> Buildando o frontend (vite build, VITE_API_MODE=api)..."
+# Força api mode no build de produção — o .env padrão usa 'mock' para dev,
+# mas o backend nunca deve servir um bundle em modo mock.
+(cd "$FRONTEND_DIR" && VITE_API_MODE=api npm run build)
 
 if [ ! -d "$FRONTEND_DIST" ]; then
   echo "Erro: build não gerou $FRONTEND_DIST" >&2

@@ -18,6 +18,7 @@ import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
 import br.com.byop.aegis.tenant.api.TenantReference;
+import br.com.byop.aegis.tenant.api.TenantUserAccessService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +38,7 @@ public class ProductAssignmentService {
     private final ProductRepository productRepository;
     private final ProductAssignmentRepository assignmentRepository;
     private final TenantAccessService tenantAccessService;
+    private final TenantUserAccessService tenantUserAccessService;
     private final IdentityUserDirectory userDirectory;
     private final ProductAssignmentInvitePort invitePort;
     private final ProductAssignmentEmailPort emailPort;
@@ -47,6 +49,7 @@ public class ProductAssignmentService {
     public ProductAssignmentService(ProductRepository productRepository,
                                     ProductAssignmentRepository assignmentRepository,
                                     TenantAccessService tenantAccessService,
+                                    TenantUserAccessService tenantUserAccessService,
                                     IdentityUserDirectory userDirectory,
                                     ProductAssignmentInvitePort invitePort,
                                     ProductAssignmentEmailPort emailPort,
@@ -56,6 +59,7 @@ public class ProductAssignmentService {
         this.productRepository = productRepository;
         this.assignmentRepository = assignmentRepository;
         this.tenantAccessService = tenantAccessService;
+        this.tenantUserAccessService = tenantUserAccessService;
         this.userDirectory = userDirectory;
         this.invitePort = invitePort;
         this.emailPort = emailPort;
@@ -132,6 +136,15 @@ public class ProductAssignmentService {
         ProductAssignment assignment = new ProductAssignment(product, invitedUser.id(), role);
         assignment.revoke();
         ProductAssignment saved = assignmentRepository.save(assignment);
+
+        // Garante que o usuário convidado aparece em GET /tenants/{id}/users com
+        // status "convidado" — sem esta membership, listMemberships() não o retorna.
+        if (!tenantUserAccessService.hasAnyMembership(product.getTenantId(), invitedUser.id())) {
+            tenantUserAccessService.invite(product.getTenantId(), invitedUser.id(), role.name());
+            log.info("inviteUser: TenantMembership INVITED criada para userSubject='{}', tenantId='{}'",
+                    invitedUser.id(), product.getTenantId());
+        }
+
         notificationPort.notifyAssignment(product.getTenantId(), product.getId(), invitedUser.id());
         recordAssignmentAudit(caller, product, invitedUser, "PRODUCT_ASSIGNMENT_CREATED", null, role.name());
         log.info("assignUser: atribuicao de convite criada id='{}', productId='{}', role='{}'", saved.getId(), product.getId(), role);
@@ -144,6 +157,7 @@ public class ProductAssignmentService {
         return invitePort.invite(
                 product.getTenantId(),
                 product.getId(),
+                product.getKey(),
                 product.getName(),
                 inviteEmail,
                 role.name(),

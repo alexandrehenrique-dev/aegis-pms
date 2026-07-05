@@ -8,8 +8,8 @@ public interface ProductAssignmentInvitePort {
 
     IdentityUser invite(UUID tenantId, UUID productId, String inviteEmail);
 
-    default IdentityUser invite(UUID tenantId, UUID productId, String productName, String inviteEmail,
-                                String role, String inviterName) {
+    default IdentityUser invite(UUID tenantId, UUID productId, String productKey, String productName,
+                                String inviteEmail, String role, String inviterName) {
         return invite(tenantId, productId, inviteEmail);
     }
 }

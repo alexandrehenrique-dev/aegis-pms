@@ -7,13 +7,13 @@ import { settingsService } from "../services/settingsService";
 import { useAuth } from "../../../core/auth/useAuth";
 
 const SUBJECTS = ["Editor", "Viewer", "Product Manager", "Tenant Admin"];
-const PRODUCTS = ["Maestro Beton", "Conecta Talentos"];
 const MODULES = ["Conteúdo", "Assets", "Forms", "Analytics"];
 
 export function AccessPreviewPanel() {
-  const { effectiveTenant } = useAuth();
+  const { effectiveTenant, tenantProducts } = useAuth();
+  const productOptions = tenantProducts.map((p) => p.name);
   const [subject, setSubject] = useState(SUBJECTS[0]);
-  const [product, setProduct] = useState(PRODUCTS[0]);
+  const [product, setProduct] = useState(productOptions[0] ?? "");
   const [module, setModule] = useState(MODULES[0]);
   const [pickOpen, setPickOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -45,7 +45,7 @@ export function AccessPreviewPanel() {
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Entrada</h2>
           <SelectLike label="Usuário ou role" value={subject} options={SUBJECTS} onChange={setSubject} />
-          <SelectLike label="Produto" value={product} options={PRODUCTS} onChange={setProduct} />
+          <SelectLike label="Produto" value={product} options={productOptions.length > 0 ? productOptions : ["—"]} onChange={setProduct} />
           <SelectLike label="Módulo" value={module} options={MODULES} onChange={setModule} />
         </Card>
         <div className="grid gap-4 md:grid-cols-2">

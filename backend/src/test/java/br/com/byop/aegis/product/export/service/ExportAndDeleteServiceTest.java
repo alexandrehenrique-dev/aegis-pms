@@ -6,6 +6,7 @@ import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductStatus;
 import br.com.byop.aegis.product.domain.ProductTypeKey;
 import br.com.byop.aegis.product.export.domain.ExportToken;
+import br.com.byop.aegis.product.export.dto.ExportRecipient;
 import br.com.byop.aegis.product.export.dto.ProductExportData;
 import br.com.byop.aegis.product.export.dto.StoredExport;
 import br.com.byop.aegis.product.export.repository.ExportTokenRepository;
@@ -82,7 +83,7 @@ class ExportAndDeleteServiceTest {
                 .thenReturn(storedExport);
         when(productRepository.findAllByTenantId(TENANT_ID)).thenReturn(List.of());
 
-        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, CALLER_NAME, true);
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), true);
 
         ArgumentCaptor<ExportToken> tokenCaptor = ArgumentCaptor.forClass(ExportToken.class);
         InOrder order = inOrder(exportIntegrityService, exportTokenRepository, productExportEmailService, productExportDeletionService);
@@ -107,7 +108,7 @@ class ExportAndDeleteServiceTest {
                 .thenReturn(storedExport());
         when(productRepository.findAllByTenantId(TENANT_ID)).thenReturn(List.of(remainingProduct));
 
-        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, CALLER_NAME, true);
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), true);
 
         verify(tenantExportRemovalPort, never()).deleteTenantAfterExports(TENANT_ID);
     }
@@ -121,7 +122,7 @@ class ExportAndDeleteServiceTest {
         when(exportStorageService.store(eq(zip), any(UUID.class), eq(data.filename()), eq(AssetStorageStrategy.LOCAL)))
                 .thenReturn(storedExport());
 
-        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, CALLER_NAME, false);
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), false);
 
         verify(productRepository, never()).findAllByTenantId(TENANT_ID);
         verify(tenantExportRemovalPort, never()).deleteTenantAfterExports(TENANT_ID);
@@ -134,7 +135,7 @@ class ExportAndDeleteServiceTest {
                 .thenThrow(new IllegalStateException("serialize failed"));
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
 
-        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, CALLER_NAME, false);
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), false);
 
         assertThat(product.getStatus()).isEqualTo(ProductStatus.EXPORT_FAILED);
         verify(productRepository).save(product);
@@ -152,7 +153,7 @@ class ExportAndDeleteServiceTest {
                 .when(productExportEmailService)
                 .sendExportFailure(CALLER_EMAIL, product.getName());
 
-        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, CALLER_NAME, false);
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), false);
 
         assertThat(product.getStatus()).isEqualTo(ProductStatus.EXPORT_FAILED);
         verify(productRepository).save(product);
@@ -164,7 +165,7 @@ class ExportAndDeleteServiceTest {
                 .thenThrow(new IllegalStateException("serialize failed"));
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.empty());
 
-        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, CALLER_NAME, false);
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), false);
 
         verify(productRepository, never()).save(any(Product.class));
         verify(productExportEmailService, never()).sendExportFailure(eq(CALLER_EMAIL), any(String.class));
@@ -182,7 +183,7 @@ class ExportAndDeleteServiceTest {
         doThrow(new IllegalStateException("delete failed")).when(productExportDeletionService).deleteExportedProduct(data);
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
 
-        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, CALLER_NAME, false);
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), false);
 
         assertThat(product.getStatus()).isEqualTo(ProductStatus.DELETE_FAILED);
         verify(productRepository).save(product);
@@ -205,7 +206,7 @@ class ExportAndDeleteServiceTest {
                 .when(productExportEmailService)
                 .sendExportFailure(CALLER_EMAIL, product.getName());
 
-        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, CALLER_NAME, false);
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), false);
 
         assertThat(product.getStatus()).isEqualTo(ProductStatus.DELETE_FAILED);
         verify(productRepository).save(product);
@@ -222,7 +223,7 @@ class ExportAndDeleteServiceTest {
         doThrow(new IllegalStateException("delete failed")).when(productExportDeletionService).deleteExportedProduct(data);
         when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.empty());
 
-        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, CALLER_NAME, false);
+        service().exportAndDelete(PRODUCT_ID, CALLER_SUBJECT, CALLER_EMAIL, List.of(new ExportRecipient(CALLER_EMAIL, CALLER_NAME)), false);
 
         verify(productRepository, never()).save(any(Product.class));
         verify(productExportEmailService, never()).sendExportFailure(eq(CALLER_EMAIL), any(String.class));

@@ -3,6 +3,7 @@ import { modules as moduleCatalogMocks } from "../../dashboard/mocks/dashboard.m
 import { slugify } from "../../../shared/utils/slugify";
 import { logApiCall } from "../../../shared/services/devLog";
 import { pagesService } from "../../pages/services/pagesService";
+import { tenantsService } from "../../../core/tenants/services/tenantsService";
 import { DEFAULT_BLOCK_CONTENT } from "../../pages/blockDefaults";
 import { PRODUCT_PAGE_SKELETONS } from "../../../core/products/productTemplates";
 import { IS_API_MODE } from "../../../infra/apiMode";
@@ -190,6 +191,10 @@ export const productsService = {
       tenantId: req.tenantId,
     };
     productsStore.push(created);
+
+    // Mantém productCount do tenant sincronizado — o backend faz via JOIN,
+    // no mock precisamos atualizar manualmente.
+    if (req.tenantId) tenantsService.incrementProductCount(req.tenantId);
 
     const skeleton = PRODUCT_PAGE_SKELETONS[req.type as ProductTypeKey];
     if (skeleton) {

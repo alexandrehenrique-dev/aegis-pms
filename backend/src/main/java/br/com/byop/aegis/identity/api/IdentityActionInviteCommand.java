@@ -10,6 +10,7 @@ public record IdentityActionInviteCommand(
         UUID tenantId,
         String tenantName,
         List<String> productNames,
+        String productSlug,
         String role,
         String inviterName
 ) {

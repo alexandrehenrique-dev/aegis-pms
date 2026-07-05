@@ -22,6 +22,13 @@ export type AuthContextValue = {
   updateProduct: (productId: string, req: UpdateProductRequest) => void;
   removeProduct: (productId: string, req: DeleteProductRequest) => void;
   toggleFavorite: (productId: string) => void;
+  /**
+   * Adiciona um produto dinamicamente ao contexto de autenticação — chamado após
+   * `productsService.create()` para que o produto apareça imediatamente no sidebar
+   * e em `effectiveProduct` sem necessidade de re-login. Se `tenantId` bater com
+   * o tenant efetivo atual, também seleciona o produto como ativo.
+   */
+  addProduct: (tenantId: string, product: ProductOption) => void;
 };
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);

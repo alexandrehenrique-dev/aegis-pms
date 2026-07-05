@@ -41,4 +41,12 @@ public interface ProductModuleRepository extends JpaRepository<ProductModule, UU
      * @return {@code true} quando o modulo existe e esta habilitado
      */
     boolean existsByProductIdAndModuleKeyAndEnabledTrue(UUID productId, ModuleKey moduleKey);
+
+    /**
+     * Conta os modulos habilitados de um produto.
+     *
+     * @param productId identificador do produto
+     * @return numero de modulos com {@code enabled = true}
+     */
+    long countByProductIdAndEnabledTrue(UUID productId);
 }

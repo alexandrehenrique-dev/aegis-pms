@@ -2,6 +2,7 @@ package br.com.byop.aegis.identity.auth.service;
 
 import br.com.byop.aegis.identity.api.IdentityAuthActionAuditEvent;
 import br.com.byop.aegis.identity.api.IdentityUser;
+import br.com.byop.aegis.identity.api.IdentityUserInviteActivatedEvent;
 import br.com.byop.aegis.identity.api.IdentityUserLifecycleService;
 import br.com.byop.aegis.identity.auth.client.KeycloakAdminClient;
 import br.com.byop.aegis.identity.auth.domain.AuthActionToken;
@@ -21,6 +22,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -58,8 +61,10 @@ class AuthActivationServiceTest {
         assertThat(response.userEmail()).isEqualTo("guest@byop.dev");
         assertThat(response.tenantName()).isEqualTo("BYOP");
         assertThat(response.productNames()).containsExactly("Aegis");
+        assertThat(response.productSlug()).isNull();
         assertThat(response.role()).isEqualTo("EDITOR");
         assertThat(response.inviterName()).isEqualTo("Admin");
+        assertThat(response.requiresPasswordSetup()).isTrue();
     }
 
     @Test
@@ -74,6 +79,7 @@ class AuthActivationServiceTest {
         verify(keycloakAdminClient).resetPassword("user-id", "Senha123");
         verify(keycloakAdminClient).setUserEnabled("user-id", true);
         verify(keycloakAdminClient).clearRequiredActions("user-id");
+        verify(eventPublisher).publishEvent(any(IdentityUserInviteActivatedEvent.class));
         assertPublishedAuditAction("USER_INVITE_ACTIVATED");
     }
 
@@ -150,6 +156,7 @@ class AuthActivationServiceTest {
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
                 "BYOP",
                 "[\"Aegis\"]",
+                null,
                 "EDITOR",
                 "Admin"
         );
@@ -168,9 +175,13 @@ class AuthActivationServiceTest {
     }
 
     private void assertPublishedAuditAction(String action) {
-        ArgumentCaptor<IdentityAuthActionAuditEvent> captor =
-                ArgumentCaptor.forClass(IdentityAuthActionAuditEvent.class);
-        verify(eventPublisher).publishEvent(captor.capture());
-        assertThat(captor.getValue().action()).isEqualTo(action);
+        // Usa atLeastOnce() para ser robusto quando activate() publica múltiplos
+        // eventos (IdentityUserInviteActivatedEvent + IdentityAuthActionAuditEvent).
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher, atLeastOnce()).publishEvent(captor.capture());
+        assertThat(captor.getAllValues())
+                .filteredOn(e -> e instanceof IdentityAuthActionAuditEvent)
+                .extracting(e -> ((IdentityAuthActionAuditEvent) e).action())
+                .containsExactly(action);
     }
 }

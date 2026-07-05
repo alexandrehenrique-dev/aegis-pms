@@ -151,7 +151,7 @@ export function AssetTagManager() {
           {assetTags.map((t, i) => (
             <Card key={t}>
               <div className="flex items-center justify-between"><h3 className="font-semibold">#{t}</h3><Badge tone={i % 3 === 0 ? "green" : "neutral"}>{i + 2} assets</Badge></div>
-              <p className="mt-2 text-sm text-muted-foreground">Tag em uso no produto Maestro Beton.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Tag em uso no produto {product?.name ?? "atual"}.</p>
               <div className="mt-4 flex gap-2">
                 <Button onClick={() => { setEditingTag(t); setEditValue(t); }}>Editar</Button>
                 <Button onClick={() => setRemovingTag(t)}>Remover</Button>

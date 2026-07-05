@@ -8,7 +8,10 @@ export type InviteStatus = "loading" | "valid" | "expired" | "revoked" | "used" 
 export type AuthUser = { id: string; name: string; email: string; role: UserRole; initials: string };
 export type TenantOption = { id: string; name: string; plan: string; productCount: number; lastAccess: string; status: "ativo" | "suspenso" };
 export type ProductOption = {
-  id: string; name: string; type: string; status: ProductStatus; modules: number; isFavorite?: boolean; isRecent?: boolean;
+  id: string;
+  /** Slug do produto — chave de URL gerada no backend (ex.: "maestro-beton"). */
+  key?: string;
+  name: string; type: string; status: ProductStatus; modules: number; isFavorite?: boolean; isRecent?: boolean;
   /** Módulos selecionados (chaves de `core/products/moduleDefaults.ts`) — editável via ProductSelectScreen, mesma UI da criação. */
   modulesList?: string[];
 };

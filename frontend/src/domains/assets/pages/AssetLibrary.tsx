@@ -26,7 +26,7 @@ export function AssetLibrary() {
 
   return (
     <>
-      <PageHeader title="Assets" module="Assets" desc="Gerencie imagens, vídeos, documentos e arquivos vinculados a este produto." badge="Maestro Beton">
+      <PageHeader title="Assets" module="Assets" desc="Gerencie imagens, vídeos, documentos e arquivos vinculados a este produto." badge={product?.name}>
         <PermGate allowed={canEdit}><Button onClick={() => navigate("/assets/tags")}>Organizar tags</Button></PermGate>
         <Button onClick={() => setView(view === "grid" ? "list" : "grid")}>{view === "grid" ? "Lista" : "Grid"}</Button>
         <PermGate allowed={canEdit}><Button primary onClick={() => navigate("/assets/upload")}><Plus size={15} />Upload de asset</Button></PermGate>

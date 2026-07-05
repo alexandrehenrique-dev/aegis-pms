@@ -1,4 +1,5 @@
 import { useState, type ComponentType } from "react";
+import { useNavigate } from "react-router";
 import { Badge, Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { toast } from "../../../core/notifications/toast";
 import { productsService } from "../services/productsService";
@@ -6,6 +7,17 @@ import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import type { ModuleState } from "../../../shared/types";
 import type { ModuleCatalogItem } from "../contracts/responses";
 import { KNOWLEDGE_GRAPH_DEPENDENCY } from "../../../core/products/moduleDefaults";
+
+/** Rota de destino ao abrir um módulo já habilitado */
+const MODULE_ROUTES: Record<string, string> = {
+  "Conteúdo":       "/content",
+  "Assets":         "/assets",
+  "Forms":          "/forms",
+  "Analytics":      "/analytics",
+  "SEO":            "/settings/product",
+  "Knowledge Graph":"/knowledge",
+  "Pages":          "/pages",
+};
 
 function ModuleCard({ Icon, name, desc, state, maturity, dep, impact, selected, onToggleSelect, onAction }: {
   Icon: ComponentType<{ size?: number; className?: string }>; name: string; desc: string; state: ModuleState; maturity: string; dep: string; impact: string;
@@ -32,6 +44,7 @@ function ModuleCard({ Icon, name, desc, state, maturity, dep, impact, selected, 
 }
 
 export function ModuleCatalog({ compact = false, productId }: { compact?: boolean; productId?: string }) {
+  const navigate = useNavigate();
   const { data: loaded, loading, error } = useAsyncData(() => productsService.listModuleCatalog(), []);
   const [modules, setModules] = useState<ModuleCatalogItem[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -57,7 +70,12 @@ export function ModuleCatalog({ compact = false, productId }: { compact?: boolea
 
   const handleAction = async (m: ModuleCatalogItem) => {
     if (m.state === "habilitado") {
-      toast.success("Módulo já habilitado", { description: m.name });
+      const route = MODULE_ROUTES[m.name];
+      if (route) {
+        navigate(route);
+      } else {
+        toast.success("Módulo habilitado", { description: m.name });
+      }
       return;
     }
     if (m.state === "futuro") {

@@ -8,6 +8,7 @@ import br.com.byop.aegis.product.domain.ProductTypeKey;
 import br.com.byop.aegis.product.exception.ProductNotFoundException;
 import br.com.byop.aegis.product.export.contract.DeleteProductRequest;
 import br.com.byop.aegis.product.export.dto.DeleteAcceptedResponse;
+import br.com.byop.aegis.product.export.dto.ExportRecipient;
 import br.com.byop.aegis.product.export.exception.ExportAlreadyInProgressException;
 import br.com.byop.aegis.product.export.exception.InvalidProductDeleteConfirmationException;
 import br.com.byop.aegis.product.export.exception.ProductDeleteForbiddenException;
@@ -15,6 +16,7 @@ import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -86,7 +88,7 @@ class ProductDeleteServiceTest {
         service().deleteProduct(caller, PRODUCT_ID, request);
 
         verify(productRepository).save(product);
-        verify(exportAndDeleteService).exportAndDelete(PRODUCT_ID, caller.subject(), caller.email(), caller.name(), false);
+        verify(exportAndDeleteService).exportAndDelete(PRODUCT_ID, caller.subject(), caller.email(), List.of(new ExportRecipient(caller.email(), caller.name())), false);
     }
 
     @Test
@@ -102,7 +104,7 @@ class ProductDeleteServiceTest {
         service().deleteProduct(caller, PRODUCT_ID, request);
 
         verify(productRepository).save(product);
-        verify(exportAndDeleteService).exportAndDelete(PRODUCT_ID, caller.subject(), caller.email(), caller.name(), false);
+        verify(exportAndDeleteService).exportAndDelete(PRODUCT_ID, caller.subject(), caller.email(), List.of(new ExportRecipient(caller.email(), caller.name())), false);
     }
 
     @Test
@@ -168,7 +170,7 @@ class ProductDeleteServiceTest {
                 .isInstanceOf(InvalidProductDeleteConfirmationException.class);
 
         verify(productRepository, never()).save(product);
-        verify(exportAndDeleteService, never()).exportAndDelete(PRODUCT_ID, caller.subject(), caller.email(), caller.name(), false);
+        verify(exportAndDeleteService, never()).exportAndDelete(PRODUCT_ID, caller.subject(), caller.email(), List.of(new ExportRecipient(caller.email(), caller.name())), false);
     }
 
     @Test

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,6 +33,7 @@ class IdentityActionTokenServiceTest {
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
                 "BYOP",
                 List.of("Aegis"),
+                null,
                 "EDITOR",
                 "Admin"
         );
@@ -45,6 +47,38 @@ class IdentityActionTokenServiceTest {
         );
         when(tokenService.createInvite(command)).thenReturn(token);
 
+        AuthActionToken result = service.sendInviteActivation(command);
+
+        assertThat(result).isEqualTo(token);
+        verify(emailService).sendInviteActivation(token);
+    }
+
+    @Test
+    void shouldReturnTokenEvenWhenEmailFails() {
+        IdentityActionInviteCommand command = new IdentityActionInviteCommand(
+                "user-id",
+                "user@byop.dev",
+                "User Name",
+                UUID.fromString("11111111-1111-1111-1111-111111111111"),
+                "BYOP",
+                List.of("Aegis"),
+                null,
+                "EDITOR",
+                "Admin"
+        );
+        AuthActionToken token = new AuthActionToken(
+                "user-id",
+                "user@byop.dev",
+                "User Name",
+                AuthActionType.INVITE,
+                NOW,
+                NOW.plusSeconds(3600)
+        );
+        when(tokenService.createInvite(command)).thenReturn(token);
+        doThrow(new IllegalStateException("SMTP unavailable"))
+                .when(emailService).sendInviteActivation(token);
+
+        // Falha de e-mail NÃO deve propagar — token é retornado normalmente
         AuthActionToken result = service.sendInviteActivation(command);
 
         assertThat(result).isEqualTo(token);

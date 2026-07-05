@@ -258,6 +258,7 @@ public class TenantUserService {
 
     private void sendInviteActivation(IdentityUser user, TenantMembershipReference membership, String productNames,
                                       String role, String inviterName) {
+        // productSlug é null para convites no nível do tenant — sem produto específico
         identityActionTokenService.sendInviteActivation(new IdentityActionInviteCommand(
                 user.id(),
                 user.email(),
@@ -265,6 +266,7 @@ public class TenantUserService {
                 membership.tenantId(),
                 membership.tenantName(),
                 splitProductNames(productNames),
+                null,
                 role,
                 inviterName
         ));

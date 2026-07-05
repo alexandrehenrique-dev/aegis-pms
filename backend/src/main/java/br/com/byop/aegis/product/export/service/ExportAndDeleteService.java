@@ -5,6 +5,7 @@ import br.com.byop.aegis.audit.api.AuditService;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.export.config.ExportAsyncConfig;
 import br.com.byop.aegis.product.export.domain.ExportToken;
+import br.com.byop.aegis.product.export.dto.ExportRecipient;
 import br.com.byop.aegis.product.export.dto.ProductExportData;
 import br.com.byop.aegis.product.export.dto.StoredExport;
 import br.com.byop.aegis.product.export.repository.ExportTokenRepository;
@@ -15,6 +16,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -58,10 +60,20 @@ public class ExportAndDeleteService {
         this.auditService = auditService;
     }
 
+    /**
+     * Exporta e exclui um produto de forma assíncrona.
+     *
+     * @param callerSubject subject do usuário que disparou a ação (para auditoria e manifesto)
+     * @param callerEmail   e-mail do usuário que disparou a ação (para manifesto e ExportToken)
+     * @param recipients    lista de destinatários que receberão o e-mail de conclusão/falha;
+     *                      um e-mail é enviado por destinatário
+     */
     @Async(ExportAsyncConfig.EXPORT_TASK_EXECUTOR)
-    public void exportAndDelete(UUID productId, String callerSubject, String callerEmail, String callerName,
+    public void exportAndDelete(UUID productId, String callerSubject, String callerEmail,
+                                List<ExportRecipient> recipients,
                                 boolean deleteTenantWhenEmpty) {
-        log.debug("exportAndDelete: productId='{}', deleteTenantWhenEmpty={}", productId, deleteTenantWhenEmpty);
+        log.debug("exportAndDelete: productId='{}', destinatarios='{}', deleteTenantWhenEmpty={}",
+                productId, recipients.size(), deleteTenantWhenEmpty);
         ProductExportData data;
         try {
             data = productExportSerializer.serialize(productId, callerSubject, callerEmail);
@@ -71,10 +83,11 @@ public class ExportAndDeleteService {
             token.markAvailable(stored.zipPath());
             exportIntegrityService.validateStoredZip(data, stored, token);
             exportTokenRepository.save(token);
-            productExportEmailService.sendExportReady(data, stored, token.getId(), callerEmail, callerName);
-            log.info("exportAndDelete: export concluido productId='{}', exportTokenId='{}'", productId, token.getId());
+            recipients.forEach(r -> productExportEmailService.sendExportReady(data, stored, token.getId(), r.email(), r.name()));
+            log.info("exportAndDelete: export concluido productId='{}', exportTokenId='{}', destinatarios='{}'",
+                    productId, token.getId(), recipients.size());
         } catch (Exception exception) {
-            handleExportFailure(productId, callerEmail, exception);
+            handleExportFailure(productId, recipients, exception);
             return;
         }
 
@@ -84,11 +97,11 @@ public class ExportAndDeleteService {
             deleteTenantIfReady(data, deleteTenantWhenEmpty);
             log.info("exportAndDelete: produto excluido apos export productId='{}'", productId);
         } catch (Exception exception) {
-            handleDeleteFailure(productId, callerEmail, exception);
+            handleDeleteFailure(productId, recipients, exception);
         }
     }
 
-    private void handleExportFailure(UUID productId, String callerEmail, Exception exception) {
+    private void handleExportFailure(UUID productId, List<ExportRecipient> recipients, Exception exception) {
         log.error("Product export failed for product {}", productId, exception);
         Product product = productRepository.findById(productId).orElse(null);
         if (product == null) {
@@ -96,14 +109,16 @@ public class ExportAndDeleteService {
         }
         product.markExportFailed();
         productRepository.save(product);
-        try {
-            productExportEmailService.sendExportFailure(callerEmail, product.getName());
-        } catch (Exception emailException) {
-            log.warn("Unable to send export failure e-mail for product {}", productId, emailException);
-        }
+        recipients.forEach(r -> {
+            try {
+                productExportEmailService.sendExportFailure(r.email(), product.getName());
+            } catch (Exception emailException) {
+                log.warn("Unable to send export failure e-mail for product {} to {}", productId, r.email());
+            }
+        });
     }
 
-    private void handleDeleteFailure(UUID productId, String callerEmail, Exception exception) {
+    private void handleDeleteFailure(UUID productId, List<ExportRecipient> recipients, Exception exception) {
         log.error("Product delete failed after export for product {}", productId, exception);
         Product product = productRepository.findById(productId).orElse(null);
         if (product == null) {
@@ -111,11 +126,13 @@ public class ExportAndDeleteService {
         }
         product.markDeleteFailed();
         productRepository.save(product);
-        try {
-            productExportEmailService.sendExportFailure(callerEmail, product.getName());
-        } catch (Exception emailException) {
-            log.warn("Unable to send delete failure e-mail for product {}", productId, emailException);
-        }
+        recipients.forEach(r -> {
+            try {
+                productExportEmailService.sendExportFailure(r.email(), product.getName());
+            } catch (Exception emailException) {
+                log.warn("Unable to send delete failure e-mail for product {} to {}", productId, r.email());
+            }
+        });
     }
 
     private void recordDeletionAudit(ProductExportData data, String callerSubject) {

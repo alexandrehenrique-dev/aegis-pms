@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { authActionErrorCode, authActivationService, type InviteTokenData } from "../services/authActivationService";
 import { AuthEnvBadge, AuthLogo, PasswordStrengthBar } from "../components/AuthChrome";
 import { getPasswordStrength } from "../passwordStrength";
@@ -43,7 +43,12 @@ export function InviteScreen() {
     setLoading(true);
     authActivationService
       .activateAccount(token, pwd)
-      .then(() => navigate("/login", { state: { toast: "Conta ativada! Faça login para continuar." } }))
+      .then(() => {
+        // Passa o slug do produto como `next` para que o LoginScreen redirecione
+        // o usuário diretamente ao produto após o login, sem passar por /select-product.
+        const next = invite?.productSlug ? `/products/${invite.productSlug}` : undefined;
+        navigate("/login", { state: { toast: "Conta ativada! Faça login para continuar.", next } });
+      })
       .catch((err) => {
         const code = authActionErrorCode(err);
         if (code === "WEAK_PASSWORD") setError("A senha deve ter ao menos 8 caracteres, incluindo letras e números.");
@@ -77,6 +82,7 @@ export function InviteScreen() {
             </>
           ) : invite ? (
             <>
+              {/* Card de contexto do convite — igual para ambos os fluxos */}
               <div className="mb-6 rounded-xl bg-[#ede9fe] p-4">
                 <p className="text-sm font-semibold text-[#7c3aed]">Convite para {invite.tenantName}</p>
                 <p className="mt-1 text-sm text-muted-foreground">Olá, <b>{invite.userName}</b>. {invite.inviterName} convidou você para operar na plataforma Aegis PMS.</p>
@@ -86,27 +92,55 @@ export function InviteScreen() {
                   <div className="flex justify-between"><span>E-mail</span><b>{invite.userEmail}</b></div>
                 </div>
               </div>
-              <h2 className="mb-1 font-semibold">Definir senha e ativar conta</h2>
-              <p className="mb-4 text-sm text-muted-foreground">Escolha uma senha para acessar a plataforma.</p>
-              <div className="space-y-3">
-                <label className="block">
-                  <span className="mb-1 block text-sm font-medium">Nova senha</span>
-                  <input type="password" autoFocus value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="••••••••" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" />
-                  {pwd && <PasswordStrengthBar password={pwd} />}
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-sm font-medium">Confirmar senha</span>
-                  <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" />
-                </label>
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="mt-0.5 h-4 w-4 rounded accent-primary" />
-                  <span className="text-sm text-muted-foreground">Aceito os <span className="text-primary">Termos de Uso</span> e a <span className="text-primary">Política de Privacidade</span> da plataforma Aegis PMS.</span>
-                </label>
-                {error && <div className="rounded-lg border border-destructive/20 bg-[#FDEBE8] p-3 text-sm text-destructive">{error}</div>}
-                <button onClick={handleActivate} disabled={loading || !pwd || !confirm} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50">
-                  {loading ? <><Loader2 size={16} className="animate-spin" />Ativando conta...</> : "Ativar conta"}
-                </button>
-              </div>
+
+              {!invite.requiresPasswordSetup ? (
+                /* ── Usuário existente: já tem conta, não precisa de senha ── */
+                <>
+                  <div className="mb-4 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                    <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-600" />
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-800">Você já tem uma conta!</p>
+                      <p className="mt-0.5 text-sm text-emerald-700">
+                        Seu acesso ao produto <b>{invite.productNames[0]}</b> foi configurado. Faça login normalmente para começar.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigate("/login", {
+                      state: { next: invite.productSlug ? `/products/${invite.productSlug}` : undefined },
+                    })}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm text-primary-foreground transition hover:bg-primary/90"
+                  >
+                    Fazer login e acessar produto
+                  </button>
+                </>
+              ) : (
+                /* ── Usuário novo: precisa criar senha ── */
+                <>
+                  <h2 className="mb-1 font-semibold">Definir senha e ativar conta</h2>
+                  <p className="mb-4 text-sm text-muted-foreground">Escolha uma senha para acessar a plataforma.</p>
+                  <div className="space-y-3">
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium">Nova senha</span>
+                      <input type="password" autoFocus value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="••••••••" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                      {pwd && <PasswordStrengthBar password={pwd} />}
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium">Confirmar senha</span>
+                      <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                    </label>
+                    <label className="flex cursor-pointer items-start gap-3">
+                      <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="mt-0.5 h-4 w-4 rounded accent-primary" />
+                      <span className="text-sm text-muted-foreground">Aceito os <span className="text-primary">Termos de Uso</span> e a <span className="text-primary">Política de Privacidade</span> da plataforma Aegis PMS.</span>
+                    </label>
+                    {error && <div className="rounded-lg border border-destructive/20 bg-[#FDEBE8] p-3 text-sm text-destructive">{error}</div>}
+                    <button onClick={handleActivate} disabled={loading || !pwd || !confirm} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50">
+                      {loading ? <><Loader2 size={16} className="animate-spin" />Ativando conta...</> : "Ativar conta"}
+                    </button>
+                  </div>
+                </>
+              )}
+
               <button onClick={() => navigate("/login")} className="mt-4 flex w-full items-center justify-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"><ArrowLeft size={14} />Voltar ao login</button>
             </>
           ) : null}

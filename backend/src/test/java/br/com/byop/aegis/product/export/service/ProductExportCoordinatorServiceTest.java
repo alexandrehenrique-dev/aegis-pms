@@ -1,8 +1,11 @@
 package br.com.byop.aegis.product.export.service;
 
+import br.com.byop.aegis.identity.api.IdentityUserDirectory;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductStatus;
 import br.com.byop.aegis.product.domain.ProductTypeKey;
+import br.com.byop.aegis.product.export.dto.ExportRecipient;
+import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import java.util.List;
@@ -15,6 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,6 +35,12 @@ class ProductExportCoordinatorServiceTest {
     private ProductRepository productRepository;
 
     @Mock
+    private ProductAssignmentRepository assignmentRepository;
+
+    @Mock
+    private IdentityUserDirectory identityUserDirectory;
+
+    @Mock
     private ExportAndDeleteService exportAndDeleteService;
 
     @Test
@@ -39,30 +50,29 @@ class ProductExportCoordinatorServiceTest {
         deletedProduct.markDeleted();
         AuthenticatedUser caller = caller();
         when(productRepository.findAllByTenantId(TENANT_ID)).thenReturn(List.of(activeProduct, deletedProduct));
+        // assignmentRepository returns empty by default (no PRODUCT_MANAGER) → recipient falls back to caller
 
         service().startTenantProductExports(TENANT_ID, caller);
 
         assertThat(activeProduct.getStatus()).isEqualTo(ProductStatus.DELETING);
         verify(productRepository).save(activeProduct);
         verify(productRepository, never()).save(deletedProduct);
+        // Sem PRODUCT_MANAGER atribuído, recipients = [caller] (fallback)
         verify(exportAndDeleteService).exportAndDelete(
-                ACTIVE_PRODUCT_ID,
-                caller.subject(),
-                caller.email(),
-                caller.name(),
-                true
+                eq(ACTIVE_PRODUCT_ID),
+                eq(caller.subject()),
+                eq(caller.email()),
+                eq(List.of(new ExportRecipient(caller.email(), caller.name()))),
+                eq(true)
         );
+        // Produto já deletado não deve disparar exportação
         verify(exportAndDeleteService, never()).exportAndDelete(
-                DELETED_PRODUCT_ID,
-                caller.subject(),
-                caller.email(),
-                caller.name(),
-                true
+                eq(DELETED_PRODUCT_ID), any(), any(), any(), any(), any()
         );
     }
 
     private ProductExportCoordinatorService service() {
-        return new ProductExportCoordinatorService(productRepository, exportAndDeleteService);
+        return new ProductExportCoordinatorService(productRepository, assignmentRepository, identityUserDirectory, exportAndDeleteService);
     }
 
     private Product product(UUID productId, String key) {

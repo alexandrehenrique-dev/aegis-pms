@@ -32,6 +32,7 @@ export function TenantSelectScreen() {
   const refresh = () => setReloadKey((k) => k + 1);
   const { data: allTenants } = useAsyncData(() => tenantsService.listTenants(), [reloadKey]);
 
+  const [hiddenTenantIds, setHiddenTenantIds] = useState<Set<string>>(new Set());
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [showCreateNotification, setShowCreateNotification] = useState(false);
   const [editingTenant, setEditingTenant] = useState<TenantOption | null>(null);
@@ -44,7 +45,9 @@ export function TenantSelectScreen() {
 
   // Super Admin gerencia a plataforma inteira (tenantsService); demais
   // papéis veem só os tenants aos quais já têm acesso (userTenants do login).
-  const tenants = isSuperAdmin ? (allTenants ?? []) : userTenants;
+  const tenants = (isSuperAdmin ? (allTenants ?? []) : userTenants)
+    .filter((t) => !hiddenTenantIds.has(t.id))
+    .sort((a, b) => (a.status === "suspenso" ? 1 : 0) - (b.status === "suspenso" ? 1 : 0));
   const filtered = tenants.filter((t) => t.name.toLowerCase().includes(q.toLowerCase()));
 
   const handleSelect = (t: TenantOption) => {
@@ -68,10 +71,13 @@ export function TenantSelectScreen() {
     setDeleting(true);
     try {
       await tenantsService.remove(pendingDelete.id, { confirmationText });
-      toast.success(`${pendingDelete.name} foi excluído.`, { description: "Produtos e usuários deste tenant perderam acesso." });
+      // Remove otimisticamente da lista — o backend inicia exclusão async
+      setHiddenTenantIds((prev) => new Set([...prev, pendingDelete.id]));
+      toast.success(`${pendingDelete.name} excluído.`, { description: "Exclusão iniciada. Produtos e usuários perderão acesso em instantes." });
       setPendingDelete(null);
       setConfirmationText("");
-      refresh();
+    } catch {
+      toast.error("Erro ao excluir tenant. Tente novamente.");
     } finally {
       setDeleting(false);
     }

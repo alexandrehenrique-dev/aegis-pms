@@ -15,9 +15,22 @@ export type InviteTokenData = {
   userEmail: string;
   tenantName: string;
   productNames: string[];
+  /**
+   * Slug do produto principal do convite — usado pelo InviteScreen para montar
+   * o link direto `/products/<slug>` que o LoginScreen usa como `next` redirect.
+   * Nulo quando o convite é de nível-tenant sem produto específico.
+   */
+  productSlug: string | null;
   role: string;
   inviterName: string;
   expiresAt: string;
+  /**
+   * `true` → usuário ainda não tem senha (novo na plataforma) — InviteScreen
+   * exibe formulário de criação de senha.
+   * `false` → usuário já tem conta ativa — InviteScreen exibe tela de
+   * confirmação com link direto para login, sem pedir redefinição de senha.
+   */
+  requiresPasswordSetup: boolean;
 };
 
 /** Código de erro devolvido pelo backend no corpo `{ error, message }` (ver `AuthActionErrorResponse`). */
@@ -30,14 +43,19 @@ export function authActionErrorCode(err: unknown): AuthActionErrorCode | undefin
 export const authActivationService = {
   validateInviteToken(token: string): Promise<InviteTokenData> {
     if (!IS_API_MODE) {
+      // Em mock mode, convites sempre são para usuários novos (sem conta ainda).
+      // Para simular o fluxo de usuário existente, o backend real retornaria
+      // requiresPasswordSetup: false quando o subject já existe no Keycloak.
       return Promise.resolve({
         userName: "Usuário Mock",
         userEmail: "dev@mock.local",
         tenantName: "Dev Tenant",
         productNames: ["Maestro Beton"],
+        productSlug: "maestro-beton",
         role: "editor",
         inviterName: "Ana Martins",
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        requiresPasswordSetup: true,
       });
     }
     return apiClient.post<InviteTokenData>("/auth/invite/validate", { token });

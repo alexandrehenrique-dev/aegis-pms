@@ -23,7 +23,7 @@ class AuthActionTokenTest {
         );
         UUID tenantId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
-        token.addInviteContext(tenantId, "BYOP", "[\"Aegis\"]", "EDITOR", "Admin");
+        token.addInviteContext(tenantId, "BYOP", "[\"Aegis\"]", null, "EDITOR", "Admin");
 
         assertThat(token.getId()).isNotNull();
         assertThat(token.getKeycloakId()).isEqualTo("keycloak-id");

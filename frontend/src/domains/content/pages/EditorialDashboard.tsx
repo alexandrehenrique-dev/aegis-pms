@@ -31,7 +31,7 @@ function EditorialTimeline() {
       {(editEvents ?? []).map((t, i) => (
         <div key={t} className="flex gap-3 rounded-xl p-3 hover:bg-muted">
           <span className="mt-1 h-2.5 w-2.5 rounded-full bg-primary" />
-          <div><p className="text-sm font-medium">{t}</p><p className="text-xs text-muted-foreground">há {i + 1} h · BYOP → Maestro Beton → Conteúdo</p></div>
+          <div><p className="text-sm font-medium">{t}</p><p className="text-xs text-muted-foreground">há {i + 1} h · {product?.name ?? "Produto"} → Conteúdo</p></div>
         </div>
       ))}
     </div>
@@ -41,12 +41,13 @@ function EditorialTimeline() {
 export function EditorialDashboard() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
+  const { product } = useCurrentProduct();
   const canEdit = viewAsRole !== "viewer";
   const [showNewContent, setShowNewContent] = useState(false);
   return (
     <>
       <AnimatePresence>{showNewContent && <NewContentModal onClose={() => setShowNewContent(false)} />}</AnimatePresence>
-      <PageHeader title="Conteúdo" module="Conteúdo" desc="Gerencie artigos, traduções, revisões e publicações deste produto." badge="Maestro Beton">
+      <PageHeader title="Conteúdo" module="Conteúdo" desc="Gerencie artigos, traduções, revisões e publicações deste produto." badge={product?.name}>
         <PermGate allowed={canEdit}><Button onClick={() => navigate("/content/workflow")}>Ver workflow</Button></PermGate>
         <PermGate allowed={canEdit}><Button data-tour="content-novo" primary onClick={() => setShowNewContent(true)}><Plus size={15} />Novo conteúdo</Button></PermGate>
       </PageHeader>

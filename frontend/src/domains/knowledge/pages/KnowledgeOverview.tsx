@@ -2,14 +2,16 @@ import { useNavigate } from "react-router";
 import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
 import { PermGate } from "../../../app/guards/PermGate";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
+import { useAuth } from "../../../core/auth/useAuth";
 
 function KnowledgeTimeline() {
+  const { effectiveProduct } = useAuth();
   return (
     <div className="space-y-1">
       {["hero-maestro.jpg vinculado à Página Home", "Formulário Orçamento conectado à Página Home", "SEO Home associado ao conteúdo publicado", "Lead Camila criado via Submission #93"].map((t, i) => (
         <div key={t} className="flex gap-3 rounded-xl p-3 hover:bg-muted">
           <span className="mt-1 h-2.5 w-2.5 rounded-full bg-primary" />
-          <div><p className="text-sm font-medium">{t}</p><p className="text-xs text-muted-foreground">há {i + 1} h · Knowledge Graph · Maestro Beton</p></div>
+          <div><p className="text-sm font-medium">{t}</p><p className="text-xs text-muted-foreground">há {i + 1} h · Knowledge Graph · {effectiveProduct?.name ?? "Produto"}</p></div>
         </div>
       ))}
     </div>
@@ -19,10 +21,11 @@ function KnowledgeTimeline() {
 export function KnowledgeOverview() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
+  const { effectiveProduct } = useAuth();
   const canExplore = viewAsRole !== "viewer";
   return (
     <>
-      <PageHeader title="Knowledge Graph" desc="Mapa operacional de relações, dependências e impactos do produto." badge="Maestro Beton">
+      <PageHeader title="Knowledge Graph" desc="Mapa operacional de relações, dependências e impactos do produto." badge={effectiveProduct?.name}>
         <PermGate allowed={canExplore}><Button onClick={() => navigate("/knowledge/search")}>Buscar entidade</Button></PermGate>
         <PermGate allowed={canExplore}><Button primary onClick={() => navigate("/knowledge/graph")}>Explorar grafo</Button></PermGate>
       </PageHeader>

@@ -19,6 +19,8 @@ export function EditTenantModal({ tenant, onClose, onSaved }: { tenant: TenantOp
       await tenantsService.update(tenant.id, { name, plan, status });
       toast.success("Tenant atualizado com sucesso!");
       onSaved();
+    } catch {
+      toast.error("Erro ao atualizar tenant. Tente novamente.");
     } finally {
       setSaving(false);
     }

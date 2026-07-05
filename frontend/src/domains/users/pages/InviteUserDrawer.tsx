@@ -1,22 +1,32 @@
-import { useState } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { Loader2 } from "lucide-react";
 import { Button, Card, Field, PageHeader, SelectLike } from "../../../shared/components/Primitives";
 import { toast } from "../../../core/notifications/toast";
 import { usersService } from "../services/usersService";
 import { PermissionImpactSummary } from "../components/PermissionImpactSummary";
 import { emailError, textLengthError } from "../../../shared/utils/validation";
+import { useAuth } from "../../../core/auth/useAuth";
 
 const ROLES = ["Editor", "Viewer", "Product Manager", "Tenant Admin"];
-const PRODUCTS = ["Maestro Beton", "Conecta Talentos", "Todos os produtos"];
 const MODULES = ["Conteúdo, Assets, Forms", "Conteúdo, Analytics", "Todos os módulos"];
 
 export function InviteUserDrawer() {
+  const navigate = useNavigate();
+  const { tenantProducts, effectiveTenant } = useAuth();
+
+  // Constrói lista de produtos dinâmica a partir do tenant atual.
+  // "Todos os produtos" é sempre adicionado como última opção.
+  const productOptions = useMemo(() => {
+    const names = tenantProducts.map((p) => p.name);
+    return names.length > 0 ? [...names, "Todos os produtos"] : ["Todos os produtos"];
+  }, [tenantProducts]);
+
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [name, setName] = useState("João Alves");
-  const [email, setEmail] = useState("joao@byop.com");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [role, setRole] = useState(ROLES[0]);
-  const [allowedProducts, setAllowedProducts] = useState(PRODUCTS[0]);
+  const [allowedProducts, setAllowedProducts] = useState(productOptions[0]);
   const [allowedModules, setAllowedModules] = useState(MODULES[0]);
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean }>({});
 
@@ -29,9 +39,9 @@ export function InviteUserDrawer() {
     if (hasErrors) return;
     setSending(true);
     try {
-      await usersService.invite({ name, email, role, allowedProducts });
-      setSent(true);
+      await usersService.invite({ name, email, role, allowedProducts }, effectiveTenant?.id);
       toast.success("Convite enviado!", { description: `${name} receberá um email com instruções de acesso.` });
+      navigate("/users");
     } finally {
       setSending(false);
     }
@@ -40,8 +50,8 @@ export function InviteUserDrawer() {
   return (
     <>
       <PageHeader title="Convidar Usuário" desc="Convide com papéis, produtos permitidos e resumo de risco." badge="Convite">
-        <Button>Cancelar</Button>
-        <Button primary onClick={handleSend} disabled={sending || sent || hasErrors}>{sending && <Loader2 size={15} className="animate-spin" />}{sent ? <><CheckCircle2 size={15} />Enviado</> : sending ? "Enviando..." : "Enviar convite"}</Button>
+        <Button onClick={() => navigate("/users")}>Cancelar</Button>
+        <Button primary onClick={handleSend} disabled={sending || hasErrors}>{sending && <Loader2 size={15} className="animate-spin" />}{sending ? "Enviando..." : "Enviar convite"}</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>
@@ -49,7 +59,7 @@ export function InviteUserDrawer() {
             <Field label="Nome" value={name} onChange={setName} onBlur={() => setTouched((t) => ({ ...t, name: true }))} error={touched.name ? nameErr : undefined} />
             <Field label="Email" value={email} onChange={setEmail} onBlur={() => setTouched((t) => ({ ...t, email: true }))} error={touched.email ? emailErr : undefined} />
             <SelectLike label="Papel" value={role} options={ROLES} onChange={setRole} />
-            <SelectLike label="Produtos permitidos" value={allowedProducts} options={PRODUCTS} onChange={setAllowedProducts} />
+            <SelectLike label="Produtos permitidos" value={allowedProducts} options={productOptions} onChange={setAllowedProducts} />
             <SelectLike label="Módulos permitidos" value={allowedModules} options={MODULES} onChange={setAllowedModules} />
             <Field label="Mensagem opcional" value="Você foi convidado para operar conteúdo do produto." textarea />
           </div>

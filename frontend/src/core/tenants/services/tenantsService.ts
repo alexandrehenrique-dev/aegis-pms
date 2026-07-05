@@ -85,9 +85,20 @@ export const tenantsService = {
     return tenant;
   },
 
+  /**
+   * Incrementa o contador de produtos de um tenant no mock store — chamado por
+   * `productsService.create()` após criar um produto. Em API mode não faz nada:
+   * o backend recalcula o count em `GET /tenants` via JOIN com `products`.
+   */
+  incrementProductCount(tenantId: string): void {
+    if (IS_API_MODE) return;
+    const tenant = tenantsStore.find((t) => t.id === tenantId);
+    if (tenant) tenant.productCount += 1;
+  },
+
   /** Destrutivo e irreversível no backend real: remove o tenant e cascateia para seus produtos/usuários. A UI deve sempre confirmar com um modal de severidade antes de chamar isto. */
   async remove(id: string, req: DeleteTenantRequest): Promise<void> {
-    if (IS_API_MODE) return apiClient.delete(`/tenants/${id}`);
+    if (IS_API_MODE) return apiClient.delete(`/tenants/${id}`, { confirmationText: req.confirmationText });
     const index = tenantsStore.findIndex((t) => t.id === id);
     if (index < 0) return;
     logApiCall("DELETE", `/api/v1/admin/tenants/${id}`, req);

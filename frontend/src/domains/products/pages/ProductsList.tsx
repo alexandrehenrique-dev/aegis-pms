@@ -6,10 +6,13 @@ import { ProductStatusBadge } from "../../../shared/components/ProductStatusBadg
 import { ProductCard } from "../components/ProductCard";
 import { productsService } from "../services/productsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { useAuth } from "../../../core/auth/useAuth";
+import { getProductSlug } from "../../../shared/utils/productSlugs";
 import type { ProductStatus } from "../../../shared/types";
 
 export function ProductsList() {
   const navigate = useNavigate();
+  const { switchProduct } = useAuth();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [q, setQ] = useState("");
   const [sf, setSf] = useState<ProductStatus | "todos">("todos");
@@ -50,7 +53,7 @@ export function ProductsList() {
               <div><p className="font-semibold">{p.name}</p><p className="text-sm text-muted-foreground">{p.type} · {p.last}</p></div>
               <div className="flex items-center gap-2">
                 <ProductStatusBadge status={p.status} />
-                <Button onClick={() => navigate(p.modules ? "/products/maestro-beton" : "/products/maestro-beton?empty=1")}>Abrir</Button>
+                <Button onClick={() => { if (p.id) switchProduct(p.id); navigate(`/products/${getProductSlug(p.name)}${p.modules ? "" : "?empty=1"}`); }}>Abrir</Button>
               </div>
             </div>
           ))}
