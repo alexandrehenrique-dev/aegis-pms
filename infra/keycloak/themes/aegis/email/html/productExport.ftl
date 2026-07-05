@@ -2,30 +2,114 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Exportação de dados — ${productName}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Exportação pronta — ${productName} · Aegis PMS</title>
 </head>
-<body style="font-family: Arial, sans-serif; background: #f5f5f5; padding: 24px;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 28px; border-radius: 8px;">
-    <h1 style="font-size: 20px;">Aegis PMS</h1>
-    <p>Olá, <strong>${userName}</strong>.</p>
-    <p>A exportação do produto <strong>${productName}</strong> está pronta para download.</p>
-    <p>Tenant: <strong>${tenantName}</strong></p>
-    <p>Arquivo ZIP: <strong>${fileSizeMb} MB</strong></p>
-    <ul>
-      <li>Conteúdos: ${entityCounts.contentEntries}</li>
-      <li>Páginas: ${entityCounts.pages}</li>
-      <li>Formulários: ${entityCounts.forms}</li>
-      <li>Submissões: ${entityCounts.formSubmissions}</li>
-      <li>Assets: ${entityCounts.assets}</li>
-      <li>Nós do Knowledge Graph: ${entityCounts.knowledgeGraphNodes}</li>
-      <li>Eventos de auditoria: ${entityCounts.auditEvents}</li>
-    </ul>
-    <p>
-      <a href="${downloadUrl}" style="display:inline-block;background:#4f46e5;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;">
-        Baixar dados
-      </a>
-    </p>
-    <p>Este link expira em <strong>${expiresAt}</strong>. O ZIP não está anexado a este e-mail.</p>
-  </div>
+<body style="margin:0;padding:0;background-color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f7;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+
+          <!-- ── Header ── -->
+          <tr>
+            <td align="center" style="background-color:#7c3aed;padding:22px 40px;">
+              <table align="center" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:50px;">
+                <tr>
+                  <td style="padding:10px 14px 10px 14px;vertical-align:middle;">
+                    <img src="data:image/png;base64,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" width="40" height="40" alt="Aegis PMS" style="display:block;border:0;border-radius:6px;">
+                  </td>
+                  <td style="padding:10px 20px 10px 2px;vertical-align:middle;font-size:17px;font-weight:700;color:#1d1d1f;letter-spacing:-0.4px;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">
+                    Aegis <span style="color:#7c3aed;">PMS</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- ── Body ── -->
+          <tr>
+            <td style="padding:36px 40px 28px;color:#374151;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">
+              <p style="margin:0 0 16px;font-size:15px;font-weight:400;color:#374151;line-height:1.65;">Olá, <strong>${userName}</strong>.</p>
+              <p style="margin:0 0 16px;font-size:15px;font-weight:400;color:#374151;line-height:1.65;">A exportação do produto <strong>${productName}</strong> está pronta para download.</p>
+              <!-- Export summary -->
+              <table cellpadding="0" cellspacing="0" width="100%" style="margin:20px 0;background-color:#f5f5f7;border:1px solid #e5e7eb;border-radius:10px;">
+                <tr>
+                  <td style="padding:18px 20px;">
+                    <p style="margin:0 0 12px;font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.9px;">Resumo da exportação</p>
+                    <table cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="padding:4px 0;font-size:13px;color:#6e6e73;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Produto</td>
+                        <td style="padding:4px 0;font-size:13px;font-weight:600;color:#1d1d1f;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">${productName}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:13px;color:#6e6e73;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Workspace</td>
+                        <td style="padding:4px 0;font-size:13px;font-weight:600;color:#1d1d1f;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">${tenantName}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:13px;color:#6e6e73;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Tamanho do arquivo</td>
+                        <td style="padding:4px 0;font-size:13px;font-weight:600;color:#1d1d1f;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">${fileSizeMb} MB</td>
+                      </tr>
+                      <tr><td colspan="2" style="padding-top:10px;border-top:1px solid #e5e7eb;"></td></tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:12px;color:#9ca3af;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Conteúdos</td>
+                        <td style="padding:4px 0;font-size:12px;color:#374151;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">${entityCounts.contentEntries}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:12px;color:#9ca3af;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Páginas</td>
+                        <td style="padding:4px 0;font-size:12px;color:#374151;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">${entityCounts.pages}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:12px;color:#9ca3af;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Formulários</td>
+                        <td style="padding:4px 0;font-size:12px;color:#374151;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">${entityCounts.forms}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:12px;color:#9ca3af;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Submissões</td>
+                        <td style="padding:4px 0;font-size:12px;color:#374151;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">${entityCounts.formSubmissions}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:12px;color:#9ca3af;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Assets</td>
+                        <td style="padding:4px 0;font-size:12px;color:#374151;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">${entityCounts.assets}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:12px;color:#9ca3af;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Nós do Knowledge Graph</td>
+                        <td style="padding:4px 0;font-size:12px;color:#374151;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">${entityCounts.knowledgeGraphNodes}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:12px;color:#9ca3af;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Eventos de auditoria</td>
+                        <td style="padding:4px 0;font-size:12px;color:#374151;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">${entityCounts.auditEvents}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <!-- CTA -->
+              <table cellpadding="0" cellspacing="0" style="margin:24px 0;">
+                <tr>
+                  <td style="background-color:#7c3aed;border-radius:8px;mso-padding-alt:0 32px;">
+                    <a href="${downloadUrl}" style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:0.1px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Baixar arquivo ZIP</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;line-height:1.6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">
+                Este link expira em <strong>${expiresAt}</strong>.<br>
+                O arquivo ZIP não está anexado a este e-mail — use o botão acima para baixá-lo.
+              </p>
+            </td>
+          </tr>
+          <!-- ── Footer ── -->
+          <tr>
+            <td style="background-color:#f5f5f7;border-top:1px solid #e5e7eb;padding:18px 40px;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#6e6e73;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">
+                Aegis PMS · Sistema de Gestão de Produtos
+              </p>
+              <p style="margin:6px 0 0;font-size:11px;color:#9ca3af;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">
+                Você recebeu este e-mail porque solicitou uma exportação de produto no Aegis PMS.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
