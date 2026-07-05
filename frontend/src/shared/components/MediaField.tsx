@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Image as ImageIcon, X } from "lucide-react";
 import { Button, Field } from "./Primitives";
 import { AssetPickerModal, type AssetTypeFilter } from "../../domains/assets/components/AssetPickerModal";
+import { assetsService } from "../../domains/assets/services/assetsService";
+import { useCurrentProduct } from "../../core/products/useCurrentProduct";
+import { useAsyncData } from "../hooks/useAsyncData";
 import type { AssetSummary } from "../../domains/assets/contracts/responses";
 
 const FILTER_LABEL: Record<AssetTypeFilter, string> = { imagem: "imagem", PDF: "PDF", áudio: "áudio", "vídeo": "vídeo", qualquer: "arquivo" };
@@ -18,21 +21,35 @@ function suggestAltFromFilename(filename: string): string {
  * `AssetPickerModal` real em vez de um campo de texto puro; "Trocar" reabre
  * o picker, "Remover" limpa a seleção.
  */
+/**
+ * `onChange` recebe o `id` do asset (E.11.1, BUG-SPRINT consolidado) — nunca
+ * mais o `name`/filename, que não é resolvível a uma URL real. Em mock mode,
+ * assets de seed sem `id` atribuído caem no fallback pelo `name` (ver
+ * `findAssetByIdSync`/`assetsService.getAsset`), então o valor pode ser um
+ * UUID (asset enviado nesta sessão) ou um `name` de seed — ambos resolvidos
+ * pelo mesmo lookup.
+ */
 export function MediaField({ label, value, onChange, typeFilter = "qualquer", onSelectAsset }: {
   label: string;
   value: string;
-  onChange: (assetName: string) => void;
+  onChange: (assetId: string) => void;
   typeFilter?: AssetTypeFilter;
   onSelectAsset?: (asset: AssetSummary) => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const { product } = useCurrentProduct();
+  const { data: resolved } = useAsyncData(
+    () => (value && product?.id ? assetsService.getAsset(product.id, value) : Promise.resolve(undefined)),
+    [value, product?.id],
+  );
+  const displayName = resolved?.friendlyName ?? resolved?.name ?? value;
 
   return (
     <div>
       <span className="mb-1 block text-sm font-medium">{label}</span>
       {value ? (
         <div className="flex items-center justify-between gap-2 rounded-lg border border-border p-2">
-          <span className="flex items-center gap-2 truncate text-sm"><ImageIcon size={14} className="shrink-0 text-muted-foreground" />{value}</span>
+          <span className="flex items-center gap-2 truncate text-sm"><ImageIcon size={14} className="shrink-0 text-muted-foreground" />{displayName}</span>
           <div className="flex shrink-0 gap-1">
             <Button onClick={() => setPickerOpen(true)}>Trocar</Button>
             <button onClick={() => onChange("")} aria-label="Remover seleção" className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><X size={14} /></button>
@@ -47,7 +64,7 @@ export function MediaField({ label, value, onChange, typeFilter = "qualquer", on
         lockFilter={typeFilter !== "qualquer"}
         onClose={() => setPickerOpen(false)}
         onSelect={(asset) => {
-          onChange(asset.name);
+          onChange(asset.id ?? asset.name);
           onSelectAsset?.(asset);
           setPickerOpen(false);
         }}

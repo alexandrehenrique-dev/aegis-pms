@@ -1,6 +1,7 @@
 import type { MiniBlock } from "../contracts/responses";
 import type { Section } from "../contracts/responses";
 import { Markdown } from "../../../shared/components/Markdown";
+import { resolveAssetSrc } from "../../../shared/utils/resolveAssetSrc";
 
 function asStr(v: unknown, fallback = ""): string {
   return typeof v === "string" ? v : fallback;
@@ -40,14 +41,21 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
     case "hero": {
       const image = (c.image as Record<string, unknown>) ?? {};
       const hasImage = typeof image.src === "string" && image.src.length > 0;
+      const resolvedSrc = hasImage ? resolveAssetSrc(image.src as string) : undefined;
+      const ctas = asArray(c.ctas);
       return (
         <div className="rounded-xl bg-muted p-8 text-center">
-          {hasImage && <div className="mx-auto mb-4 max-w-md rounded-lg bg-border/60 p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>}
+          {hasImage && (resolvedSrc
+            ? <img src={resolvedSrc} alt={asStr(image.alt, "sem descrição")} className="mx-auto mb-4 max-h-64 w-full max-w-md rounded-lg object-cover" />
+            : <div className="mx-auto mb-4 max-w-md rounded-lg bg-border/60 p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>)}
           <h2 className="text-3xl font-semibold">{asStr(c.title, section.label)}</h2>
           {c.subtitle ? <p className="mt-2 text-muted-foreground">{asStr(c.subtitle)}</p> : null}
-          <div className="mt-4 flex justify-center gap-2">
-            {c.ctaPrimary ? <button className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground">{asStr((c.ctaPrimary as Record<string, unknown>)?.label, "Saiba mais")}</button> : null}
-            {asStr((c.ctaSecondary as Record<string, unknown>)?.label) ? <button className="rounded-lg border border-border px-4 py-2 text-sm">{asStr((c.ctaSecondary as Record<string, unknown>)?.label)}</button> : null}
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {ctas.map((cta, i) => (
+              asStr(cta.label) ? (
+                <button key={i} className={i === 0 ? "rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground" : "rounded-lg border border-border px-4 py-2 text-sm"}>{asStr(cta.label)}</button>
+              ) : null
+            ))}
           </div>
         </div>
       );
@@ -74,16 +82,21 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
     }
 
     case "image": {
-      const image = (c.image as Record<string, unknown>) ?? {};
-      return <div className="rounded-xl bg-muted p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>;
+      const src = resolveAssetSrc(typeof c.src === "string" ? c.src : undefined);
+      return src
+        ? <img src={src} alt={asStr(c.alt, "sem descrição")} className="w-full rounded-xl object-cover" />
+        : <div className="rounded-xl bg-muted p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(c.alt, "sem descrição")}]</div>;
     }
 
     case "image-text": {
       const image = (c.image as Record<string, unknown>) ?? {};
+      const src = resolveAssetSrc(typeof image.src === "string" ? image.src : undefined);
       const reverse = c.imagePosition === "right";
       return (
         <div className={`grid gap-4 p-6 md:grid-cols-2 ${reverse ? "md:[&>*:first-child]:order-2" : ""}`}>
-          <div className="rounded-xl bg-muted p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>
+          {src
+            ? <img src={src} alt={asStr(image.alt, "sem descrição")} className="rounded-xl object-cover" />
+            : <div className="rounded-xl bg-muted p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>}
           <div>
             <h3 className="text-xl font-semibold">{asStr(c.title)}</h3>
             <div className="mt-2 text-sm text-muted-foreground"><Markdown forceLightProse={forceLightProse}>{asStr(c.body)}</Markdown></div>
@@ -114,9 +127,14 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
       const items = asArray(c.items);
       return (
         <div className="grid grid-cols-3 gap-2 p-6">
-          {items.map((item, i) => (
-            <div key={i} className="aspect-square rounded-lg bg-muted text-center text-[10px] text-muted-foreground flex items-center justify-center p-1">{asStr(item.alt, "imagem")}</div>
-          ))}
+          {items.map((item, i) => {
+            const src = resolveAssetSrc(typeof item.src === "string" ? item.src : undefined);
+            return src ? (
+              <img key={i} src={src} alt={asStr(item.alt, "imagem")} className="aspect-square rounded-lg object-cover" />
+            ) : (
+              <div key={i} className="aspect-square rounded-lg bg-muted text-center text-[10px] text-muted-foreground flex items-center justify-center p-1">{asStr(item.alt, "imagem")}</div>
+            );
+          })}
         </div>
       );
     }

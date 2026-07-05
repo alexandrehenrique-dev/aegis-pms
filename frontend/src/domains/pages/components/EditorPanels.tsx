@@ -215,7 +215,15 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
     ...(itemsCrudConfig ? [itemsCrudConfig.key] : []),
     ...(hasFormIdSelector ? ["formId"] : []),
   ]);
-  const fieldableContent = Object.fromEntries(Object.entries(content).filter(([k]) => !excludedKeys.has(k)));
+  const fieldableContent = (() => {
+    const base = Object.fromEntries(Object.entries(content).filter(([k]) => !excludedKeys.has(k)));
+    // E.10.1 — blocos hero criados antes deste fix (ou pelo scaffold de produto,
+    // que ainda nao populava `image`) nao tinham a chave `image`; sem ela o
+    // picker de imagem nunca aparecia no editor. Injeta o valor vazio só para
+    // renderização — não persiste até o usuário editar algum campo do bloco.
+    if (section.type === "hero" && !isPlainObject(base.image)) return { ...base, image: { src: "", alt: "" } };
+    return base;
+  })();
   const stringFields = Object.entries(fieldableContent).filter(([, v]) => typeof v === "string") as [string, string][];
   const nestedObjectFields = Object.entries(fieldableContent).filter(([, v]) => isPlainObject(v)) as [string, Record<string, unknown>][];
   const arrayFields = Object.entries(fieldableContent).filter(([, v]) => isArrayOfObjects(v)) as [string, Record<string, unknown>[]][];
@@ -245,6 +253,12 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
       <div className="grid gap-3 md:grid-cols-2">
         {stringFields.map(([k, v]) => {
           const onFieldChange = (nv: string) => onChangeContent({ [k]: nv });
+          if (k === "src") {
+            return <MediaField key={k} label={k} value={v} typeFilter="imagem" onChange={onFieldChange} />;
+          }
+          if (k === "fileAssetId") {
+            return <MediaField key={k} label={k} value={v} typeFilter="qualquer" onChange={onFieldChange} />;
+          }
           if (MARKDOWN_FIELD_KEYS.has(k)) {
             return <MarkdownField key={k} label={k} value={v} onChange={onFieldChange} />;
           }

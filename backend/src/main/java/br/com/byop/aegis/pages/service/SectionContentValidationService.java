@@ -226,12 +226,19 @@ public class SectionContentValidationService {
         }
     }
 
+    /**
+     * {@code fileAssetId}/{@code spotifyUrl} ausentes ou em branco (Etapa 26,
+     * mesmo criterio de {@link #validateFormReference}) representam um audio
+     * "ainda nao configurado" — estado valido ao criar o bloco pelo editor
+     * (E.9.2, BUG-SPRINT consolidado); preenchidos, continuam validados
+     * normalmente.
+     */
     private void validateAudio(UUID productId, Map<String, Object> content) {
         String source = requireNonBlankString(content, KEY_SOURCE, "AUDIO_SOURCE_REQUIRED");
         if (SOURCE_UPLOAD.equals(source)) {
-            requireAsset(productId, content, "AUDIO_ASSET_INVALID", CATEGORY_AUDIO);
+            requireAssetOrBlank(productId, content, "AUDIO_ASSET_INVALID", CATEGORY_AUDIO);
         } else if (SOURCE_SPOTIFY_TRACK.equals(source) || SOURCE_SPOTIFY_PLAYLIST.equals(source)) {
-            requirePattern(content, KEY_SPOTIFY_URL, SPOTIFY_URL_PATTERN, "AUDIO_SPOTIFY_URL_INVALID");
+            requirePatternOrBlank(content, KEY_SPOTIFY_URL, SPOTIFY_URL_PATTERN, "AUDIO_SPOTIFY_URL_INVALID");
         } else {
             throw invalid("AUDIO_SOURCE_INVALID", "source must be upload, spotify-track or spotify-playlist");
         }
@@ -260,11 +267,15 @@ public class SectionContentValidationService {
         }
     }
 
+    /** {@code fileAssetId}/{@code youtubeUrl} em branco: mesmo criterio de {@link #validateAudio}. */
     private void validateVideoItem(UUID productId, Map<String, Object> content, String errorPrefix) {
         String source = requireNonBlankString(content, KEY_SOURCE, errorPrefix + "_SOURCE_REQUIRED");
         if (SOURCE_UPLOAD.equals(source)) {
-            requireAsset(productId, content, errorPrefix + "_ASSET_INVALID", CATEGORY_VIDEO);
+            requireAssetOrBlank(productId, content, errorPrefix + "_ASSET_INVALID", CATEGORY_VIDEO);
         } else if (SOURCE_YOUTUBE.equals(source)) {
+            if (isBlank(content.get(KEY_YOUTUBE_URL))) {
+                return;
+            }
             String url = requireNonBlankString(content, KEY_YOUTUBE_URL, errorPrefix + "_YOUTUBE_URL_REQUIRED");
             if (!YOUTUBE_WATCH_PATTERN.matcher(url).matches() && !YOUTUBE_SHORT_PATTERN.matcher(url).matches()) {
                 throw invalid(errorPrefix + "_YOUTUBE_URL_INVALID", "youtubeUrl does not match the expected pattern");
@@ -340,6 +351,14 @@ public class SectionContentValidationService {
         }
     }
 
+    /** {@code fileAssetId} ausente/em branco: ver {@link #validateAudio}. */
+    private void requireAssetOrBlank(UUID productId, Map<String, Object> content, String errorCode, String expectedCategory) {
+        if (isBlank(content.get(KEY_FILE_ASSET_ID))) {
+            return;
+        }
+        requireAsset(productId, content, errorCode, expectedCategory);
+    }
+
     private void requireAsset(UUID productId, Map<String, Object> content, String errorCode, String expectedCategory) {
         UUID assetId = requireUuid(content, KEY_FILE_ASSET_ID, errorCode);
         AssetReference asset;
@@ -354,6 +373,14 @@ public class SectionContentValidationService {
         if (expectedCategory != null && !expectedCategory.equals(asset.category())) {
             throw invalid(errorCode, "fileAssetId does not reference an asset of category " + expectedCategory);
         }
+    }
+
+    /** {@code key} ausente/em branco: ver {@link #validateAudio}. */
+    private void requirePatternOrBlank(Map<String, Object> content, String key, Pattern pattern, String errorCode) {
+        if (isBlank(content.get(key))) {
+            return;
+        }
+        requirePattern(content, key, pattern, errorCode);
     }
 
     private void requirePattern(Map<String, Object> content, String key, Pattern pattern, String errorCode) {

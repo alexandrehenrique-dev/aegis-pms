@@ -6,6 +6,7 @@ import { MediaField } from "../../../shared/components/MediaField";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { toast } from "../../../core/notifications/toast";
 import { formatDateTime } from "../../../shared/utils/formatDateTime";
+import { resolveAssetSrc } from "../../../shared/utils/resolveAssetSrc";
 import { eventsService } from "../services/eventsService";
 import type { CreateEventRequest, EventVisibility, PageEvent } from "../contracts/events";
 
@@ -22,9 +23,12 @@ function PublicPreview({ event }: { event: CreateEventRequest }) {
   if (event.visibility === "public-summary") {
     return <p className="text-sm"><b>{event.title || "Evento"}</b> — {formatDateTime(event.date)}</p>;
   }
+  const photoSrc = event.image ? resolveAssetSrc(event.image) : undefined;
   return (
     <div className="text-sm">
-      {event.image && <div className="mb-2 rounded-lg bg-muted p-6 text-center text-xs text-muted-foreground">[foto: {event.image}]</div>}
+      {event.image && (photoSrc
+        ? <img src={photoSrc} alt={event.title || "Evento"} className="mb-2 w-full rounded-lg object-cover" />
+        : <div className="mb-2 rounded-lg bg-muted p-6 text-center text-xs text-muted-foreground">[foto do evento]</div>)}
       <p className="font-medium">{event.title || "Evento"}</p>
       <p className="text-muted-foreground">{formatDateTime(event.date)} · {event.location || "local a definir"}</p>
       <p className="mt-1 text-muted-foreground">{event.description}</p>
