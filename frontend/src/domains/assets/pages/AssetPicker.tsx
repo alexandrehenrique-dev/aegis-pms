@@ -3,20 +3,32 @@ import { Search } from "lucide-react";
 import { Badge, Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { assetsService } from "../services/assetsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
-import { AssetTypeIcon } from "../components/AssetBits";
+import { AssetPreview, AssetTypeIcon } from "../components/AssetBits";
 import { toast } from "../../../core/notifications/toast";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
+import { useAssetObjectUrl } from "../hooks/useAssetObjectUrl";
+import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
+import { PermGate } from "../../../app/guards/PermGate";
 
 export function AssetPicker() {
   const { product } = useCurrentProduct();
+  const { viewAsRole } = useViewAsRole();
   const productId = product?.id ?? "";
-  const [selected, setSelected] = useState("hero-maestro-beton.jpg");
+  const canEdit = viewAsRole !== "viewer";
+  const [selected, setSelected] = useState<string | null>(null);
   const { data: assets, loading, error } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId]);
   const [visibleAssets, setVisibleAssets] = useState(assets ?? []);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const selectedAsset = visibleAssets.find((a) => a.name === selected);
+  const selectedAsset = visibleAssets.find((a) => (a.id ?? a.name) === selected);
+  const selectedAssetId = selectedAsset?.id ?? selectedAsset?.name;
+  const canPreviewSelected = selectedAsset?.type === "imagem" || selectedAsset?.type === "PDF";
+  const { url: selectedPreviewUrl, loading: selectedPreviewLoading } = useAssetObjectUrl(selectedAssetId, Boolean(selectedAssetId && canPreviewSelected));
 
-  useEffect(() => setVisibleAssets(assets ?? []), [assets]);
+  useEffect(() => {
+    const nextAssets = assets ?? [];
+    setVisibleAssets(nextAssets);
+    setSelected((current) => current ?? (nextAssets[0]?.id ?? nextAssets[0]?.name ?? null));
+  }, [assets]);
 
   const handleQuickUpload = () => fileInputRef.current?.click();
 
@@ -27,20 +39,21 @@ export function AssetPicker() {
     const refreshed = await assetsService.listAssets(productId);
     setVisibleAssets(refreshed);
     toast.success(`${files.length} arquivo(s) enviado(s)!`);
-    setSelected(files[0].name);
+    const uploaded = refreshed.find((asset) => asset.name === files[0].name);
+    setSelected(uploaded?.id ?? uploaded?.name ?? null);
     e.target.value = "";
   };
 
   const handleConfirmSelection = () => {
-    toast.success("Asset selecionado!", { description: selected });
+    toast.success("Asset selecionado!", { description: selectedAsset?.name });
   };
 
   return (
     <>
       <input ref={fileInputRef} type="file" multiple hidden onChange={handleFilesSelected} />
       <PageHeader title="Asset Picker" module="Assets" desc="Componente reutilizável para Editor, SEO, Forms e configurações futuras." badge="Picker">
-        <Button onClick={handleQuickUpload}>Upload rápido</Button>
-        <Button primary onClick={handleConfirmSelection}>Confirmar seleção</Button>
+        <PermGate allowed={canEdit}><Button onClick={handleQuickUpload}>Upload rápido</Button></PermGate>
+        <Button primary disabled={!selectedAsset} onClick={handleConfirmSelection}>Confirmar seleção</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>
@@ -49,8 +62,10 @@ export function AssetPicker() {
           {loading ? <SkeletonLines /> : error || !assets ? <PartialErrorWidget /> : (
             <div className="grid gap-3 md:grid-cols-2">
               {visibleAssets.slice(0, 6).map((a) => (
-                <button key={a.name} onClick={() => setSelected(a.name)} className={`rounded-xl border p-3 text-left ${selected === a.name ? "border-primary bg-muted" : "border-border"}`}>
-                  <AssetTypeIcon type={a.type} />
+                <button key={a.id ?? a.name} onClick={() => setSelected(a.id ?? a.name)} className={`rounded-xl border p-3 text-left ${(a.id ?? a.name) === selected ? "border-primary bg-muted" : "border-border"}`}>
+                  <div className="mb-3 aspect-video overflow-hidden rounded-xl bg-muted">
+                    <AssetPreview a={a} assetId={a.id ?? a.name} />
+                  </div>
                   <p className="mt-2 font-medium">{a.name}</p>
                   <p className="text-sm text-muted-foreground">{a.type} · {a.size}</p>
                 </button>
@@ -60,10 +75,20 @@ export function AssetPicker() {
         </Card>
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Preview lateral</h2>
-          <div className="aspect-video rounded-xl bg-muted p-4"><AssetTypeIcon type={selectedAsset?.type ?? ""} /></div>
-          <p className="mt-3 font-medium">{selected}</p>
+          <div className="aspect-video overflow-hidden rounded-xl bg-muted p-4">
+            {selectedAsset?.type === "imagem" && selectedPreviewUrl ? (
+              <img src={selectedPreviewUrl} alt={selectedAsset.name} className="h-full w-full rounded-lg object-contain" />
+            ) : selectedAsset?.type === "PDF" && selectedPreviewUrl ? (
+              <iframe src={selectedPreviewUrl} title={selectedAsset.name} className="h-full w-full rounded-lg border border-border bg-white" />
+            ) : selectedPreviewLoading ? (
+              <div className="grid h-full place-items-center text-sm text-muted-foreground">Carregando preview...</div>
+            ) : (
+              <AssetTypeIcon type={selectedAsset?.type ?? ""} />
+            )}
+          </div>
+          <p className="mt-3 font-medium">{selectedAsset?.name ?? "Nenhum asset selecionado"}</p>
           <p className="text-sm text-muted-foreground">Asset selecionado vinculado ao produto ativo.</p>
-          <Button primary onClick={handleConfirmSelection}>Usar asset</Button>
+          <Button primary disabled={!selectedAsset} onClick={handleConfirmSelection}>Usar asset</Button>
         </Card>
       </div>
     </>

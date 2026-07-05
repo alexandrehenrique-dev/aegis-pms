@@ -10,7 +10,7 @@ import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 function UploadProgressItem({ name, p }: { name: string; p: number }) {
   return (
     <div className="rounded-xl border border-border p-3">
-      <div className="flex justify-between text-sm"><b>{name}</b><span>{p}%</span></div>
+      <div className="flex justify-between text-sm"><b>{name}</b><span>{p === 0 ? "aguardando" : `${p}%`}</span></div>
       <div className="mt-2 h-2 rounded-full bg-muted"><div className="h-2 rounded-full bg-primary" style={{ width: `${p}%` }} /></div>
     </div>
   );
@@ -54,9 +54,13 @@ export function AssetUploadScreen() {
   const handleCompleteUpload = async () => {
     setCompleting(true);
     try {
-      await assetsService.uploadFiles(productId, selectedFiles);
+      await assetsService.uploadFiles(productId, selectedFiles, (fileName, percent) => {
+        setFiles((current) => current.map((file) => file.name === fileName ? { ...file, p: percent } : file));
+      });
       toast.success("Upload concluído!", { description: `${selectedFiles.length} arquivo(s) vinculado(s) ao produto.` });
       navigate("/assets");
+    } catch {
+      toast.error("Upload não concluído.", { description: "Verifique o tipo/tamanho do arquivo e tente novamente." });
     } finally {
       setCompleting(false);
     }

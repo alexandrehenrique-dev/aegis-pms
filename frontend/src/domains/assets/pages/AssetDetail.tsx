@@ -11,6 +11,7 @@ import { assetsService } from "../services/assetsService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AssetTypeIcon } from "../components/AssetBits";
+import { useAssetObjectUrl } from "../hooks/useAssetObjectUrl";
 import type { AssetDetailResponse } from "../contracts/responses";
 
 function formatBytes(bytes: number): string {
@@ -27,22 +28,31 @@ function assetType(asset: AssetDetailResponse): string {
 }
 
 function AssetPreviewPanel({ asset }: { asset: AssetDetailResponse }) {
-  const previewUrl = assetsService.getDownloadUrl(asset.id);
   const type = assetType(asset);
+  const canPreview = asset.mimeType.startsWith("image/")
+    || asset.mimeType.startsWith("video/")
+    || asset.mimeType.startsWith("audio/")
+    || asset.mimeType === "application/pdf";
+  const { url: previewUrl, loading } = useAssetObjectUrl(asset.id, canPreview);
+  const loadingPreview = (
+    <div className="grid place-items-center text-center text-sm text-muted-foreground">
+      Carregando preview...
+    </div>
+  );
   return (
     <Card>
       <div className="flex min-h-[360px] items-center justify-center rounded-2xl border border-border bg-muted/30 p-4">
-        {asset.mimeType.startsWith("image/") ? (
+        {loading && !previewUrl ? loadingPreview : asset.mimeType.startsWith("image/") && previewUrl ? (
           <img src={previewUrl} alt={asset.altText ?? asset.name} className="max-h-[520px] max-w-full rounded-xl object-contain" />
-        ) : asset.mimeType.startsWith("video/") ? (
+        ) : asset.mimeType.startsWith("video/") && previewUrl ? (
           <video src={previewUrl} controls className="max-h-[520px] max-w-full rounded-xl" />
-        ) : asset.mimeType.startsWith("audio/") ? (
+        ) : asset.mimeType.startsWith("audio/") && previewUrl ? (
           <div className="w-full max-w-xl rounded-xl border border-border bg-card p-6">
             <AssetTypeIcon type={type} />
             <p className="mt-4 font-medium">{asset.name}</p>
             <audio src={previewUrl} controls className="mt-4 w-full" />
           </div>
-        ) : asset.mimeType === "application/pdf" ? (
+        ) : asset.mimeType === "application/pdf" && previewUrl ? (
           <iframe src={previewUrl} title={asset.name} className="h-[520px] w-full rounded-xl border border-border bg-white" />
         ) : (
           <div className="grid place-items-center text-center">
@@ -69,8 +79,8 @@ export function AssetDetail() {
   const productId = product?.id ?? "";
   const canEdit = viewAsRole !== "viewer";
   const replaceInputRef = useRef<HTMLInputElement>(null);
-  const [confirmArchive, setConfirmArchive] = useState(false);
-  const [archiving, setArchiving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { data: asset, loading, error } = useAsyncData(
     () => (productId && assetId ? assetsService.getAsset(productId, assetId) : Promise.resolve(undefined)),
     [productId, assetId],
@@ -94,14 +104,21 @@ export function AssetDetail() {
     e.target.value = "";
   };
 
-  const handleArchive = async () => {
-    setArchiving(true);
+  const handleDownload = async () => {
+    await assetsService.downloadAsset(asset.id, asset.name);
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
     try {
-      await assetsService.archiveAsset(productId, asset.id);
-      toast.success("Asset arquivado.", { description: asset.name });
-      setConfirmArchive(false);
+      await assetsService.deleteAsset(productId, asset.id);
+      toast.success("Asset excluído.", { description: asset.name });
+      setConfirmDelete(false);
+      navigate("/assets");
+    } catch {
+      toast.error("Não foi possível excluir o asset.", { description: "Remova usos existentes ou tente novamente com um asset sem vínculo." });
     } finally {
-      setArchiving(false);
+      setDeleting(false);
     }
   };
 
@@ -109,14 +126,12 @@ export function AssetDetail() {
     <>
       <input ref={replaceInputRef} type="file" hidden onChange={handleFileReplaced} />
       <AnimatePresence>
-        {confirmArchive && <ConfirmDialog title="Arquivar este asset?" desc="O asset deixará de aparecer nas listagens ativas. Referências em uso podem precisar revisão." danger loading={archiving} onConfirm={handleArchive} onCancel={() => setConfirmArchive(false)} />}
+        {confirmDelete && <ConfirmDialog title="Excluir este asset?" desc="Assets em uso não podem ser excluídos até que as referências sejam removidas." danger loading={deleting} onConfirm={handleDelete} onCancel={() => setConfirmDelete(false)} />}
       </AnimatePresence>
       <PageHeader title={asset.name} module="Assets" desc="Preview, metadados, tags, uso no sistema e ações do asset." badge={asset.status}>
         <PermGate allowed={canEdit}><Button onClick={() => navigate(`/assets/${asset.id}/metadata`)}>Editar metadados</Button></PermGate>
         <Button onClick={handleCopyReference}>Copiar referência</Button>
-        <a href={assetsService.getDownloadUrl(asset.id)} download={asset.name} target="_blank" rel="noreferrer">
-          <Button primary>Baixar</Button>
-        </a>
+        <Button primary onClick={handleDownload}>Baixar</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
         <div className="space-y-4"><AssetPreviewPanel asset={asset} /><AssetUsagePanel /></div>
@@ -138,7 +153,7 @@ export function AssetDetail() {
           <PermGate allowed={canEdit}>
             <div className="mt-4 space-y-2">
               <Button onClick={handleReplaceFile}>Substituir arquivo</Button>
-              <Button onClick={() => setConfirmArchive(true)}>Arquivar</Button>
+              <Button onClick={() => setConfirmDelete(true)}>Excluir</Button>
             </div>
           </PermGate>
         </Card>

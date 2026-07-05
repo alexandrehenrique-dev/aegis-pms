@@ -16,7 +16,7 @@ import type { CreateProductRequest, DeleteProductRequest, UpdateProductRequest }
 import type { ListModulesResponse, ListProductsResponse, ProductSummary } from "../contracts/responses";
 
 // Store em memória só para a sessão do navegador — quando o backend existir
-// (Sprint 07 troca a implementação, não a interface), isto desaparece e
+// (a implementação real troca a fonte de dados, não a interface), isto desaparece e
 // listProducts/create passam a falar com a API real via apiClient.
 const productsStore: ProductSummary[] = [...productMocks];
 

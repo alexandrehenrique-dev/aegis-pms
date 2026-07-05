@@ -1,7 +1,7 @@
 import { assets, assetTags } from "../mocks/assets.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
 import { IS_API_MODE } from "../../../infra/apiMode";
-import { apiClient, resolveBaseUrl } from "../../../shared/services/apiClient";
+import { apiClient } from "../../../shared/services/apiClient";
 import type { AssetDetailResponse, AssetSummary, ListAssetsResponse, ListAssetTagsResponse } from "../contracts/responses";
 
 const assetsStore: AssetSummary[] = assets.map(([name, type, size, status, tags, usage, uploadedAt]) => ({
@@ -9,6 +9,7 @@ const assetsStore: AssetSummary[] = assets.map(([name, type, size, status, tags,
 }));
 
 const assetTagsStore: string[] = [...assetTags];
+type UploadProgressHandler = (fileName: string, percent: number) => void;
 
 function inferAssetType(file: File): string {
   if (file.type.startsWith("image/")) return "imagem";
@@ -88,25 +89,27 @@ export const assetsService = {
     if (IS_API_MODE) return apiClient.put(`/products/${productId}/assets/${assetId}/metadata`, metadata);
     logApiCall("PUT", `/api/v1/products/${productId}/assets/${assetId}/metadata`, metadata);
   },
-  async archiveAsset(productId: string, assetId: string): Promise<void> {
-    if (IS_API_MODE) return apiClient.delete(`/products/${productId}/assets/${assetId}`);
+  async deleteAsset(productId: string, assetId: string, force = false): Promise<void> {
+    if (IS_API_MODE) return apiClient.delete(`/products/${productId}/assets/${assetId}`, { force });
     const a = assetsStore.find((x) => x.name === assetId || x.id === assetId);
     if (!a) return;
     logApiCall("DELETE", `/api/v1/products/${productId}/assets/${assetId}`);
-    a.status = "arquivado";
+    const index = assetsStore.indexOf(a);
+    assetsStore.splice(index, 1);
   },
-  async uploadFiles(productId: string, files: File[]): Promise<void> {
-    await Promise.all(files.map(async (file) => {
+  async uploadFiles(productId: string, files: File[], onProgress?: UploadProgressHandler): Promise<void> {
+    for (const file of files) {
       if (IS_API_MODE) {
         const fd = new FormData();
         fd.append("file", file);
-        await apiClient.upload(`/products/${productId}/assets`, fd);
-        return;
+        await apiClient.uploadWithProgress(`/products/${productId}/assets`, fd, (percent) => onProgress?.(file.name, percent));
+        continue;
       }
       const assetId = `mock-asset-${Date.now()}`;
       logApiCall("POST", `/api/v1/products/${productId}/assets`, { name: file.name, size: file.size });
       assetsStore.push({ id: assetId, name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
-    }));
+      onProgress?.(file.name, 100);
+    }
   },
   /** Upload de um arquivo real do sistema do usuário (Sprint 18, Tarefa D.2) — reaproveitado por qualquer picker fora do contexto de assets (ex.: anexo do `FeedbackModal`), nunca um endpoint de upload próprio por domínio. Devolve o `assetId` (mock: o próprio `name`) para referenciar o asset criado. */
   async upload(file: File, productId: string): Promise<{ assetId: string }> {
@@ -121,10 +124,21 @@ export const assetsService = {
     assetsStore.push({ id: assetId, name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
     return { assetId };
   },
-  getDownloadUrl(assetId: string): string {
-    return `${resolveBaseUrl()}/assets/${assetId}/download`;
+  async loadAssetFile(assetId: string): Promise<Blob> {
+    if (IS_API_MODE) return apiClient.getBlob(`/assets/${assetId}/file`);
+    return new Blob([], { type: "application/octet-stream" });
   },
-  getFileUrl(assetId: string): string {
-    return `${resolveBaseUrl()}/assets/${assetId}/file`;
+  async downloadAsset(assetId: string, fileName: string): Promise<void> {
+    const blob = IS_API_MODE
+      ? await apiClient.getBlob(`/assets/${assetId}/download`)
+      : new Blob([], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   },
 };

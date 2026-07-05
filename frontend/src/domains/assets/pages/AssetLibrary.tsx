@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Search } from "lucide-react";
 import { Badge, Button, EmptyState, PageHeader, PartialErrorWidget, SkeletonLines } from "../../../shared/components/Primitives";
@@ -18,11 +18,18 @@ export function AssetLibrary() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [q, setQ] = useState("");
   const { data: assets, loading, error } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId]);
+  const [visibleAssets, setVisibleAssets] = useState(assets ?? []);
+
+  useEffect(() => setVisibleAssets(assets ?? []), [assets]);
 
   if (loading) return <SkeletonLines />;
   if (error || !assets) return <PartialErrorWidget />;
 
-  const rows = assets.filter((a) => (a.name + a.tags + a.type).toLowerCase().includes(q.toLowerCase()));
+  const handleDeleted = (assetId: string) => {
+    setVisibleAssets((current) => current.filter((asset) => (asset.id ?? asset.name) !== assetId));
+  };
+
+  const rows = visibleAssets.filter((a) => (a.name + a.tags + a.type).toLowerCase().includes(q.toLowerCase()));
 
   return (
     <>
@@ -45,7 +52,7 @@ export function AssetLibrary() {
         </div>
       </div>
       {rows.length === 0 ? <EmptyState title="Busca sem resultado" description="Nenhum asset corresponde aos filtros atuais." /> : view === "grid" ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{rows.map((a) => <AssetCard key={a.name} a={a} productId={productId} />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{rows.map((a) => <AssetCard key={a.name} a={a} productId={productId} canEdit={canEdit} onDeleted={handleDeleted} />)}</div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <table className="hidden w-full text-left text-sm lg:table">
@@ -65,7 +72,7 @@ export function AssetLibrary() {
               ))}
             </tbody>
           </table>
-          <div className="grid gap-2 p-3 lg:hidden">{rows.map((a) => <AssetCard key={a.name} a={a} productId={productId} />)}</div>
+          <div className="grid gap-2 p-3 lg:hidden">{rows.map((a) => <AssetCard key={a.name} a={a} productId={productId} canEdit={canEdit} onDeleted={handleDeleted} />)}</div>
         </div>
       )}
     </>

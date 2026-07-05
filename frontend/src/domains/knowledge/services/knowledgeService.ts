@@ -67,7 +67,7 @@ export const knowledgeService = {
     if (IS_API_MODE) warnMissingEndpoint("GET", `/api/v1/products/${productId}/graph/edges`);
     return productEdges(productId);
   },
-  // Pontos de integração real (Sprint 07) — sem endpoint formalizado ainda em
+  // Pontos de integração real — sem endpoint formalizado ainda em
   // docs/trace/00_endpoints_esperados.md (só o GET de orphans existe, Seção B.5);
   // path inferido por convenção REST sobre o recurso já documentado.
   async markInsightReviewed(productId: string, text: string): Promise<void> {
