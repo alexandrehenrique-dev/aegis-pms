@@ -888,6 +888,121 @@ A `MediaField` foi projetada para retornar o nome do asset para exibição, mas 
 
 ---
 
+## E.7 — event-list: evento selecionado não aparece no preview (BlockRenderer placeholder + debounce não flushado)
+
+**Módulos afetados:** `frontend/src/domains/pages/components/BlockRenderer.tsx`, `frontend/src/domains/pages/pages/PageEditor.tsx`
+
+**Comportamento observado:** Usuário cria evento, seleciona-o na lista do editor (checkmark visível), clica "Salvar rascunho", abre Preview — preview exibe "Nenhum evento selecionado ainda (ver editor)."
+
+**Diagnóstico — duas causas raiz independentes:**
+
+**E.7.1 — "Salvar rascunho" não flusheia o debounce de conteúdo**
+
+`PageEditor` tem dois mecanismos de persistência separados que NÃO se comunicam:
+
+- **Debounce de conteúdo** (`handleChangeContent`): persiste mudanças de bloco `CONTENT_SAVE_DEBOUNCE_MS` após a última tecla via `pagesService.updateSection`. É este mecanismo que persiste `selectedEventIds`.
+- **`triggerSave()`** (botão "Salvar rascunho"): atualiza apenas o indicador visual de status (`saveStatus`), **nunca chama `pagesService.updateSection`** nem cancela/flusheia o debounce pendente.
+
+```typescript
+// PageEditor.tsx — triggerSave() é apenas cosmético:
+const triggerSave = () => {
+  setSaveStatus("dirty");
+  if (saveTimer.current) clearTimeout(saveTimer.current);
+  saveTimer.current = setTimeout(() => {
+    setSaveStatus("saving");
+    setTimeout(() => { setSaveStatus("saved"); ... }, 1100);
+  }, 1800);
+};
+```
+
+O botão "Preview" navega para `/content/${page?.slug}/preview` (rota separada), que busca dados frescos do backend. Se o debounce ainda não disparou quando o usuário vai para o preview, `selectedEventIds` não está persistido → preview mostra lista vazia.
+
+O toast "Salvo automaticamente" visível na primeira screenshot corresponde ao indicador visual de `triggerSave()`, **não** a uma persistência real de conteúdo.
+
+**E.7.2 — `BlockRenderer` para `event-list` é placeholder**
+
+Mesmo que `selectedEventIds` esteja corretamente persistido no backend, o `BlockRenderer` não renderiza os eventos:
+
+```tsx
+// BlockRenderer.tsx — apenas conta, nunca renderiza dados reais:
+case "event-list": {
+  const selectedCount = Array.isArray(c.selectedEventIds) ? c.selectedEventIds.length : 0;
+  return (
+    <div className="p-6">
+      <h3 className="text-xl font-semibold">{asStr(c.title, "Agenda")}</h3>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {selectedCount > 0
+          ? `${selectedCount} evento(s) selecionado(s) para este bloco.`  // não renderiza os eventos
+          : "Nenhum evento selecionado ainda (ver editor)."}
+      </p>
+    </div>
+  );
+}
+```
+
+O renderer correto deveria buscar os eventos via `eventsService.listEvents(productId)`, filtrar pelos IDs em `selectedEventIds` e renderizar cards com título, data, local e tipo.
+
+**Implementação necessária:**
+
+**E.7.1 — Flushipar debounce ao salvar/navegar para preview:**
+
+```typescript
+// PageEditor.tsx — triggerSave deve também persistir conteúdo pendente:
+const triggerSave = async () => {
+  // Flushipar debounce pendente ANTES de atualizar indicador visual
+  if (contentDebounceTimer.current) {
+    clearTimeout(contentDebounceTimer.current);
+    contentDebounceTimer.current = null;
+    const pending = pendingContentPatch.current;
+    pendingContentPatch.current = null;
+    if (pending && page) {
+      await pagesService.updateSection(page.productSlug, page.id, pending.sectionId, {
+        content: { ...selectedSection?.content, ...pending.patch },
+      });
+      await refreshPage(page);
+    }
+  }
+  setSaveStatus("dirty");
+  if (saveTimer.current) clearTimeout(saveTimer.current);
+  saveTimer.current = setTimeout(() => { setSaveStatus("saving"); ... }, 1800);
+};
+```
+
+Alternativamente, bloquear a navegação para preview enquanto `saveStatus === "dirty"` e exibir aviso.
+
+**E.7.2 — `BlockRenderer` deve renderizar cards de evento reais:**
+
+```tsx
+// BlockRenderer.tsx — event-list deve buscar e renderizar eventos reais:
+case "event-list": {
+  // Componente assíncrono ou usar hook — buscar eventos filtrados por selectedEventIds
+  const selectedIds: string[] = Array.isArray(c.selectedEventIds) ? c.selectedEventIds as string[] : [];
+  // Renderizar: título da agenda + lista de cards com título, data, local, badge de tipo
+  // Para o preview estático, mostrar os dados já presentes em c.events (desnormalizados)
+  // OU transformar BlockRenderer em componente que aceita productId e faz fetch
+}
+```
+
+Opção recomendada: desnormalizar os dados do evento no conteúdo do bloco no momento da seleção (guardar `{ id, title, date, location, type }` em vez de só o ID), eliminando a necessidade de fetch no renderer.
+
+**Critério de aceite:**
+- [ ] Clicar "Salvar rascunho" persiste mudanças de bloco pendentes antes de atualizar indicador visual.
+- [ ] Preview de `event-list` exibe cards reais dos eventos selecionados (título, data, local, tipo).
+- [ ] Navegar para preview com conteúdo não salvo: alerta ou flush automático.
+- [ ] Selecionar evento no editor → abrir preview → evento visível sem etapas extras.
+
+**Smoke test:**
+```
+1. Editor → bloco event-list → "Gerenciar eventos" → criar evento → fechar drawer
+2. Selecionar evento na lista (checkmark)
+3. Clicar "Salvar rascunho" imediatamente
+4. Clicar "Preview"
+5. Esperado: evento aparece no bloco de agenda com título e data
+6. (Antes da fix) Esperado atual: "Nenhum evento selecionado ainda"
+```
+
+---
+
 ## Seção Z — Critérios de aceite globais da sprint
 
 ### Z.1 — Gates obrigatórios
