@@ -55,13 +55,14 @@ class KeycloakProductAssignmentInvitePortTest {
         KeycloakProductAssignmentInvitePort port =
                 new KeycloakProductAssignmentInvitePort(invitationService, actionTokenService, tenantAccessService);
 
-        IdentityUser user = port.invite(tenantId, productId, "Aegis", "guest@byop.dev", "EDITOR", "Admin");
+        IdentityUser user = port.invite(tenantId, productId, "aegis", "Aegis", "guest@byop.dev", "EDITOR", "Admin");
 
         ArgumentCaptor<IdentityActionInviteCommand> captor = ArgumentCaptor.forClass(IdentityActionInviteCommand.class);
         verify(actionTokenService).sendInviteActivation(captor.capture());
         assertThat(user).isEqualTo(invited);
         assertThat(captor.getValue().tenantName()).isEqualTo("BYOP");
         assertThat(captor.getValue().productNames()).containsExactly("Aegis");
+        assertThat(captor.getValue().productSlug()).isEqualTo("aegis");
         assertThat(captor.getValue().role()).isEqualTo("EDITOR");
         assertThat(captor.getValue().inviterName()).isEqualTo("Admin");
     }

@@ -1,5 +1,6 @@
 package br.com.byop.aegis.tenant.api;
 
+import br.com.byop.aegis.identity.api.IdentityUserInviteActivatedEvent;
 import br.com.byop.aegis.tenant.domain.Tenant;
 import br.com.byop.aegis.tenant.domain.TenantMembership;
 import br.com.byop.aegis.tenant.domain.TenantMembershipStatus;
@@ -257,6 +258,30 @@ class TenantUserAccessServiceTest {
                 .isInstanceOf(TenantNotFoundException.class);
         assertThatThrownBy(() -> service.restore(TENANT_ID, "missing"))
                 .isInstanceOf(TenantNotFoundException.class);
+    }
+
+    @Test
+    void shouldDoNothingOnActivationEventWhenNoInvitedMembershipsExist() {
+        when(membershipRepository.findAllByUserSubjectAndStatus("user-1", TenantMembershipStatus.INVITED))
+                .thenReturn(List.of());
+
+        service.onUserInviteActivated(new IdentityUserInviteActivatedEvent("user-1"));
+
+        verify(membershipRepository).findAllByUserSubjectAndStatus("user-1", TenantMembershipStatus.INVITED);
+    }
+
+    @Test
+    void shouldActivateInvitedMembershipsOnUserInviteActivatedEvent() {
+        TenantMembership invited = membership(tenant(TENANT_ID, "BYOP"), "user-1", "EDITOR");
+        invited.invite(); // transiciona para INVITED
+        when(membershipRepository.findAllByUserSubjectAndStatus("user-1", TenantMembershipStatus.INVITED))
+                .thenReturn(List.of(invited));
+        when(membershipRepository.save(any(TenantMembership.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.onUserInviteActivated(new IdentityUserInviteActivatedEvent("user-1"));
+
+        assertThat(invited.getStatus()).isEqualTo(TenantMembershipStatus.ACTIVE);
+        verify(membershipRepository).save(invited);
     }
 
     private Tenant tenant(UUID tenantId, String name) {

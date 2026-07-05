@@ -115,6 +115,7 @@ class AuthActionEmailServiceTest {
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
                 "BYOP",
                 "[\"Aegis\"]",
+                null,
                 "EDITOR",
                 "Admin"
         );

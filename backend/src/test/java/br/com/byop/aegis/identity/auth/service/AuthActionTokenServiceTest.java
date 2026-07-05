@@ -51,6 +51,7 @@ class AuthActionTokenServiceTest {
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
                 "BYOP",
                 List.of("Aegis"),
+                null,
                 "EDITOR",
                 "Admin"
         );
@@ -208,6 +209,7 @@ class AuthActionTokenServiceTest {
                 UUID.fromString("11111111-1111-1111-1111-111111111111"),
                 "BYOP",
                 productNames,
+                null,
                 "EDITOR",
                 "Admin"
         );
