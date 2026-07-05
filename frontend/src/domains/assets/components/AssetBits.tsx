@@ -7,27 +7,66 @@ import { assetsService } from "../services/assetsService";
 import { useAssetObjectUrl } from "../hooks/useAssetObjectUrl";
 import type { AssetSummary } from "../contracts/responses";
 
+type PreviewKind = "image" | "pdf" | "video" | "audio" | "document";
+
+function previewKind(type: string): PreviewKind {
+  const normalized = type.trim().toLowerCase();
+  if (normalized === "imagem" || normalized === "image") return "image";
+  if (normalized === "pdf") return "pdf";
+  if (normalized === "vídeo" || normalized === "video") return "video";
+  if (normalized === "áudio" || normalized === "audio") return "audio";
+  return "document";
+}
+
 export function AssetStatusBadge({ status }: { status: string }) {
   return <Badge tone={status === "ativo" ? "green" : status === "processando" ? "amber" : status === "erro" ? "red" : "neutral"}>{status}</Badge>;
 }
 
 /** Ícone genérico de arquivo para qualquer tipo que não seja imagem (Sprint 12, Tarefa L.1) — antes, qualquer tipo não listado (DOCX, ZIP etc.) caía no ícone de imagem por padrão, o que é enganoso. */
 export function AssetTypeIcon({ type }: { type: string }) {
-  const icon = type === "imagem" ? <Image size={18} /> : type === "vídeo" ? <Video size={18} /> : type === "áudio" ? <Gauge size={18} /> : type === "PDF" ? <FileText size={18} /> : <File size={18} />;
+  const kind = previewKind(type);
+  const icon = kind === "image" ? <Image size={18} /> : kind === "video" ? <Video size={18} /> : kind === "audio" ? <Gauge size={18} /> : kind === "pdf" ? <FileText size={18} /> : <File size={18} />;
   return <div className="grid h-10 w-10 place-items-center rounded-xl bg-muted text-primary">{icon}</div>;
 }
 
+function canRenderInlinePreview(type: string) {
+  return previewKind(type) !== "document";
+}
+
 export function AssetPreview({ a, assetId }: { a: AssetSummary; assetId: string }) {
-  const { url, loading } = useAssetObjectUrl(assetId, a.type === "imagem");
-  if (a.type === "imagem") {
-    if (url) return <img src={url} alt={a.name} className="h-full w-full rounded-xl object-cover" loading="lazy" />;
+  const kind = previewKind(a.type);
+  const { url, loading } = useAssetObjectUrl(assetId, canRenderInlinePreview(a.type));
+  if (url) {
+    if (kind === "image") return <img src={url} alt={a.name} className="h-full w-full rounded-xl object-cover" loading="lazy" />;
+    if (kind === "pdf") {
+      return (
+        <iframe
+          src={`${url}#page=1&toolbar=0&navpanes=0&scrollbar=0`}
+          title={a.name}
+          className="h-full w-full rounded-xl border-0 bg-white"
+        />
+      );
+    }
+    if (kind === "video") {
+      return <video src={url} preload="metadata" muted playsInline className="h-full w-full rounded-xl bg-black object-cover" />;
+    }
+    if (kind === "audio") {
+      return (
+        <div className="flex h-full w-full flex-col justify-between rounded-xl bg-muted p-4">
+          <AssetTypeIcon type={a.type} />
+          <audio src={url} controls className="w-full" />
+        </div>
+      );
+    }
+  }
+  if (canRenderInlinePreview(a.type)) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-xl bg-muted text-xs text-muted-foreground">
         {loading ? "Carregando preview..." : "Preview indisponível"}
       </div>
     );
   }
-  const tone = a.type === "PDF" ? "bg-[#fee2e2] text-[#dc2626]" : a.type === "vídeo" ? "bg-[#dbeafe] text-[#1d4ed8]" : a.type === "áudio" ? "bg-[#ede9fe] text-[#7c3aed]" : "bg-muted text-muted-foreground";
+  const tone = kind === "pdf" ? "bg-[#fee2e2] text-[#dc2626]" : kind === "video" ? "bg-[#dbeafe] text-[#1d4ed8]" : kind === "audio" ? "bg-[#ede9fe] text-[#7c3aed]" : "bg-muted text-muted-foreground";
   return (
     <div className={`flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl ${tone}`}>
       <AssetTypeIcon type={a.type} />

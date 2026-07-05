@@ -10,6 +10,15 @@ import { useAssetObjectUrl } from "../hooks/useAssetObjectUrl";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { PermGate } from "../../../app/guards/PermGate";
 
+function previewKind(type: string | undefined) {
+  const normalized = (type ?? "").trim().toLowerCase();
+  if (normalized === "imagem" || normalized === "image") return "image";
+  if (normalized === "pdf") return "pdf";
+  if (normalized === "vídeo" || normalized === "video") return "video";
+  if (normalized === "áudio" || normalized === "audio") return "audio";
+  return "document";
+}
+
 export function AssetPicker() {
   const { product } = useCurrentProduct();
   const { viewAsRole } = useViewAsRole();
@@ -21,7 +30,8 @@ export function AssetPicker() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedAsset = visibleAssets.find((a) => (a.id ?? a.name) === selected);
   const selectedAssetId = selectedAsset?.id ?? selectedAsset?.name;
-  const canPreviewSelected = selectedAsset?.type === "imagem" || selectedAsset?.type === "PDF";
+  const selectedKind = previewKind(selectedAsset?.type);
+  const canPreviewSelected = selectedKind !== "document";
   const { url: selectedPreviewUrl, loading: selectedPreviewLoading } = useAssetObjectUrl(selectedAssetId, Boolean(selectedAssetId && canPreviewSelected));
 
   useEffect(() => {
@@ -76,10 +86,14 @@ export function AssetPicker() {
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Preview lateral</h2>
           <div className="aspect-video overflow-hidden rounded-xl bg-muted p-4">
-            {selectedAsset?.type === "imagem" && selectedPreviewUrl ? (
-              <img src={selectedPreviewUrl} alt={selectedAsset.name} className="h-full w-full rounded-lg object-contain" />
-            ) : selectedAsset?.type === "PDF" && selectedPreviewUrl ? (
-              <iframe src={selectedPreviewUrl} title={selectedAsset.name} className="h-full w-full rounded-lg border border-border bg-white" />
+            {selectedKind === "image" && selectedPreviewUrl ? (
+              <img src={selectedPreviewUrl} alt={selectedAsset?.name ?? "Preview do asset"} className="h-full w-full rounded-lg object-contain" />
+            ) : selectedKind === "pdf" && selectedPreviewUrl ? (
+              <iframe src={`${selectedPreviewUrl}#page=1&toolbar=0&navpanes=0&scrollbar=0`} title={selectedAsset?.name ?? "Preview do PDF"} className="h-full w-full rounded-lg border border-border bg-white" />
+            ) : selectedKind === "video" && selectedPreviewUrl ? (
+              <video src={selectedPreviewUrl} preload="metadata" muted playsInline className="h-full w-full rounded-lg bg-black object-cover" />
+            ) : selectedKind === "audio" && selectedPreviewUrl ? (
+              <div className="flex h-full flex-col justify-between rounded-lg bg-card p-3"><AssetTypeIcon type="áudio" /><audio src={selectedPreviewUrl} controls className="w-full" /></div>
             ) : selectedPreviewLoading ? (
               <div className="grid h-full place-items-center text-sm text-muted-foreground">Carregando preview...</div>
             ) : (
