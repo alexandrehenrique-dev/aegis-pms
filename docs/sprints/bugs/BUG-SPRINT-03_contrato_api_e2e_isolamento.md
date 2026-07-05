@@ -504,11 +504,11 @@ POST /auth/activate
 Backend:
 1. `PATCH /tenants/{tenantId}/users/{userId}/block` — bloqueia usuário (Keycloak `enabled=false` + email).
 2. `DELETE /tenants/{tenantId}/users/{userId}` — remove membership + assignments + email.
-3. Verificar permissões: apenas `SUPER_ADMIN` e `TENANT_ADMIN` podem executar estas ações.
+3. Verificar permissões: apenas `SUPER_ADMIN`, `TENANT_ADMIN` e `PRODUCT_MANAGER` podem executar estas ações (ver escopo abaixo).
 4. Nenhum usuário pode bloquear/remover a si mesmo.
-5. Templates de email:
-   - `userBlocked.ftl` — notificação de bloqueio com contato do suporte.
-   - `userRemoved.ftl` — notificação de remoção do tenant.
+5. Templates de email (já criados em `infra/keycloak/themes/aegis/email/html/`):
+   - `userBlocked.ftl` — notificação de bloqueio com status "Conta suspensa" (laranja), campo opcional de motivo via `${reason}`, e link de suporte via `${supportEmail}`. Variáveis: `${userName}`, `${tenantName}`, `${reason}` (opcional), `${supportEmail}`.
+   - `userRemoved.ftl` — notificação de remoção permanente do workspace com card vermelho. Variáveis: `${userName}`, `${tenantName}`, `${supportEmail}`.
 6. Ambas as ações geram evento de auditoria (`USER_BLOCKED`, `USER_REMOVED_FROM_TENANT`).
 7. JaCoCo 100% nos novos services/controllers.
 
@@ -529,8 +529,9 @@ Frontend:
 
 **Permissões:**
 - Super Admin: pode bloquear/remover qualquer usuário de qualquer tenant.
-- Tenant Admin: pode bloquear/remover usuários do seu tenant (exceto outros Tenant Admins).
-- Editor / Product Manager: sem acesso a estas ações.
+- Tenant Admin: pode bloquear/remover usuários do seu tenant (exceto outros Tenant Admins e Super Admins).
+- Product Manager: pode bloquear/remover usuários atribuídos ao(s) produto(s) que gerencia (exceto Tenant Admins e Super Admins).
+- Editor: sem acesso a estas ações.
 - Ninguém bloqueia a si mesmo.
 
 **Critério de aceite:**
@@ -557,7 +558,51 @@ Frontend:
 9. AuditTimeline → verificar eventos USER_BLOCKED e USER_UNBLOCKED com detalhes corretos
 ```
 
-<!-- PRÓXIMO BUG: inserir abaixo desta linha -->
+---
+
+### E.3 — Seed não popula conteúdos dos produtos (pages, blocos, assets)
+
+**Sintoma:** Os produtos criados pela seed de desenvolvimento (ex.: Maestro Beton, Conecta Talentos) aparecem corretamente na listagem e no sidebar, mas não possuem nenhum conteúdo associado — pages, blocos de conteúdo, assets e demais dados de produto estão ausentes. O produto existe mas está vazio.
+
+**Impacto:** Impossível validar fluxos de Conteúdo, Assets e demais módulos de produto sem criar conteúdo manualmente a cada reset de ambiente. Aumenta fricção nos testes de integração e de smoke.
+
+**Causa provável:** A seed atual (`DataSeeder` ou equivalente) cria apenas as entidades de nível de tenant/produto (`Tenant`, `Product`, `TenantMembership`, `ProductAssignment`) mas não semeia dados filhos: `Page`, `Block`, `Asset`, etc.
+
+**Implementação necessária:**
+
+1. Auditar o `DataSeeder` e identificar quais entidades filho existem no domínio mas não são criadas:
+   - `Page` (com `slug`, `title`, `status: PUBLISHED`)
+   - `Block` (vinculado a uma `Page`, com `type` e `content` mínimos)
+   - `Asset` (com `name`, `type: image`, `status: ativo`, URL de placeholder)
+   - Qualquer outra entidade que popule módulos visíveis no produto
+
+2. Para cada produto da seed, criar ao menos:
+   - 2–3 Pages com status PUBLISHED
+   - 1–2 Blocks por Page (ex.: um bloco de texto e um bloco de imagem)
+   - 2–3 Assets (imagens de placeholder referenciáveis nos blocos)
+
+3. Garantir que a seed seja idempotente: verificar existência antes de inserir (para não duplicar em re-execuções).
+
+4. Verificar que os dados da seed aparecem corretamente no frontend em modo `IS_API_MODE=true`.
+
+**Critério de aceite:**
+- [ ] Após rodar a seed, cada produto tem ao menos 2 Pages visíveis na aba Conteúdo.
+- [ ] Cada Page tem ao menos 1 Block renderizado no editor.
+- [ ] A aba Assets exibe ao menos 2–3 assets por produto.
+- [ ] Re-executar a seed não duplica os dados.
+- [ ] Frontend em `IS_API_MODE=true`: navegar para Maestro Beton → Conteúdo → lista de pages não está vazia.
+
+**Smoke test:**
+```
+1. Reset do banco → ./scripts/seed.sh (ou mvn spring-boot:run com seed ativa)
+2. Login como super-admin → selecionar Maestro Beton
+3. Menu → Conteúdo → verificar lista de pages (esperado: ≥2 páginas visíveis)
+4. Clicar em uma page → verificar blocos renderizados
+5. Menu → Assets → verificar lista de assets (esperado: ≥2 assets)
+6. Repetir para Conecta Talentos
+```
+
+<!-- PRÓXIMOS BUGS: inserir abaixo desta linha -->
 
 ---
 
