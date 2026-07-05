@@ -20,6 +20,7 @@ export function InviteScreen() {
   const [terms, setTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [acceptingExisting, setAcceptingExisting] = useState(false);
 
   useEffect(() => {
     if (!token) { setStatus("revoked"); return; }
@@ -56,6 +57,25 @@ export function InviteScreen() {
         else setError("Ocorreu um erro. Tente novamente.");
       })
       .finally(() => setLoading(false));
+  };
+
+  const handleAcceptExisting = () => {
+    if (!token) return;
+    setError("");
+    setAcceptingExisting(true);
+    authActivationService
+      .acceptExistingUserInvite(token)
+      .then(() => {
+        const next = invite?.productSlug ? `/products/${invite.productSlug}` : undefined;
+        navigate("/login", { state: { toast: "Convite aceito! Faça login para acessar o produto.", next } });
+      })
+      .catch((err) => {
+        const code = authActionErrorCode(err);
+        if (code === "TOKEN_EXPIRED") setStatus("expired");
+        else if (code === "TOKEN_ALREADY_USED") setStatus("used");
+        else setError("Ocorreu um erro. Tente novamente.");
+      })
+      .finally(() => setAcceptingExisting(false));
   };
 
   const statusMsgs: Partial<Record<InviteStatus, string>> = {
@@ -105,13 +125,13 @@ export function InviteScreen() {
                       </p>
                     </div>
                   </div>
+                  {error && <div className="mb-4 rounded-lg border border-destructive/20 bg-[#FDEBE8] p-3 text-sm text-destructive">{error}</div>}
                   <button
-                    onClick={() => navigate("/login", {
-                      state: { next: invite.productSlug ? `/products/${invite.productSlug}` : undefined },
-                    })}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm text-primary-foreground transition hover:bg-primary/90"
+                    onClick={handleAcceptExisting}
+                    disabled={acceptingExisting}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
                   >
-                    Fazer login e acessar produto
+                    {acceptingExisting ? <><Loader2 size={16} className="animate-spin" />Processando...</> : "Fazer login e acessar produto"}
                   </button>
                 </>
               ) : (
