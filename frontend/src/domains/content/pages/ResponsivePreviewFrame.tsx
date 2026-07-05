@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Loader2 } from "lucide-react";
-import { Button, Card, EmptyState, PageHeader, SelectLike, SkeletonLines } from "../../../shared/components/Primitives";
+import { Badge, Button, Card, EmptyState, PageHeader, SelectLike, SkeletonLines } from "../../../shared/components/Primitives";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
@@ -43,17 +43,18 @@ function WikiDevArticlePreview({ article, productId }: { article: { title: strin
 
 export function ResponsivePreviewFrame() {
   const navigate = useNavigate();
-  const { id: pageSlug } = useParams<{ id: string }>();
+  const { id: previewId } = useParams<{ id: string }>();
   const [vp, setVp] = useState("desktop");
   const [lang, setLang] = useState(LANGUAGES[0]);
   const [submitting, setSubmitting] = useState(false);
   const { product } = useCurrentProduct();
   const productId = product ? product.id : "p1";
   const { data: productContent } = useAsyncData(() => contentService.listContentByProduct(productId), [productId]);
+  const contentPreview = productContent?.find((c) => c.id === previewId);
   const wikidevArticle = product?.name === "WikiDev" ? productContent?.find((c) => c.body) : undefined;
   const { data: page, loading: loadingPage } = useAsyncData(
-    () => (pageSlug ? pagesService.getPageBySlug(productId, pageSlug) : Promise.resolve(undefined)),
-    [productId, pageSlug],
+    () => (previewId ? pagesService.getPageBySlug(productId, previewId) : Promise.resolve(undefined)),
+    [productId, previewId],
   );
   const { data: globals } = useAsyncData(() => globalsService.getGlobals(productId), [productId]);
 
@@ -69,7 +70,7 @@ export function ResponsivePreviewFrame() {
 
   return (
     <>
-      <PageHeader title={`${page?.title ?? "Preview"} — Preview`} module="Conteúdo" desc="Preview responsivo do conteúdo antes de revisão/publicação." badge="Preview">
+      <PageHeader title={`${contentPreview?.title ?? page?.title ?? "Preview"} — Preview`} module="Conteúdo" desc="Preview responsivo do conteúdo antes de revisão/publicação." badge={contentPreview?.status ?? "Preview"}>
         <Button onClick={() => navigate(-1)}>Voltar ao editor</Button>
         <Button primary onClick={handleSubmitForReview} disabled={submitting}>{submitting && <Loader2 size={15} className="animate-spin" />}{submitting ? "Enviando..." : "Enviar para revisão"}</Button>
       </PageHeader>
@@ -80,7 +81,18 @@ export function ResponsivePreviewFrame() {
           <SelectLike label="Idioma" value={lang} options={LANGUAGES} onChange={setLang} />
         </div>
         <div className={`light isolate mx-auto rounded-2xl border border-border bg-white p-5 shadow-[0_8px_30px_rgba(28,28,28,.05)] ${vp === "mobile" ? "max-w-[375px]" : vp === "tablet" ? "max-w-[768px]" : "max-w-5xl"}`}>
-          {wikidevArticle?.body ? (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">Aegis · {product?.name ?? "Produto"}</p>
+              <h1 className="mt-1 text-2xl font-semibold">{contentPreview?.title ?? page?.title ?? "Preview"}</h1>
+            </div>
+            <Badge>{contentPreview?.status ?? page?.status ?? "preview"}</Badge>
+          </div>
+          {contentPreview?.body ? (
+            <article className="mx-auto max-w-3xl py-6">
+              <ArticleBody body={contentPreview.body} forceLightProse />
+            </article>
+          ) : wikidevArticle?.body ? (
             <WikiDevArticlePreview article={{ title: wikidevArticle.title, body: wikidevArticle.body }} productId={productId} />
           ) : loadingPage ? (
             <SkeletonLines />
@@ -91,7 +103,7 @@ export function ResponsivePreviewFrame() {
               {globals && <GlobalFooter globals={globals} />}
             </div>
           ) : (
-            <EmptyState title="Preview indisponível" description={`Nenhuma página com slug "${pageSlug}" encontrada neste produto.`} />
+            <EmptyState title="Preview indisponível" description={`Nenhuma página ou conteúdo com referência "${previewId}" foi encontrado neste produto.`} />
           )}
         </div>
       </Card>
