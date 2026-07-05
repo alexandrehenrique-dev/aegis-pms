@@ -415,6 +415,148 @@ test("AssetDetail reflete tipo real do asset", async ({ page }) => {
 
 ---
 
+### E.1 — Fluxo de ativação de conta não coleta nome e sobrenome exigidos pelo Keycloak
+
+**Sintoma:** Ao ativar uma conta via link de convite, o Keycloak exige `firstName` e `lastName` para considerar o perfil completo. O modal de ativação atual só possui campos de senha e confirmação de senha. O usuário consegue definir a senha mas o perfil fica incompleto no Keycloak, podendo causar erros em operações futuras que dependem do nome (ex.: envio de email, exibição no sistema).
+
+**Fluxos afetados (o agente deve mapear todos antes de implementar):**
+1. `InviteScreen.tsx` — ativação via link de convite (usuário novo, `requiresPasswordSetup: true`)
+2. `ConfirmPasswordReset` — redefinição de senha (verificar se também exige nome)
+3. Qualquer outro fluxo que chame `authActivationService.activateAccount()` ou `keycloakAdminClient.setPassword()`
+
+**Investigação necessária:**
+1. Verificar no Keycloak Admin quais campos são obrigatórios para o perfil do usuário no realm `aegis`.
+2. Verificar se `PUT /admin/realms/aegis/users/{id}` é chamado com `firstName` e `lastName` no momento da ativação — se não, o perfil fica incompleto.
+3. Verificar o backend: `AuthActivationService.activate()` — ele atualiza o perfil além de definir a senha?
+
+**Fix necessário:**
+
+Backend:
+1. `AuthActivationService.activate()` deve receber `firstName` e `lastName` além de `password`.
+2. Após definir a senha no Keycloak, chamar `keycloakAdminClient.updateUserProfile(keycloakId, firstName, lastName)`.
+3. DTO `AuthActivateRequest` deve incluir os novos campos com validação (`@NotBlank`, `@Size(max=100)`).
+4. Novo endpoint (ou ajuste do existente): `POST /auth/activate` aceita `{ token, password, firstName, lastName }`.
+
+Frontend — `InviteScreen.tsx`:
+1. Adicionar campos "Nome" e "Sobrenome" acima dos campos de senha no formulário de ativação.
+2. Validação: ambos obrigatórios, mínimo 2 caracteres.
+3. Pré-preencher com `invite.userName` se o backend já retornar o nome (separar em `firstName`/`lastName`).
+4. `authActivationService.activateAccount()` deve passar `{ token, password, firstName, lastName }`.
+
+Frontend — outros fluxos:
+- Verificar `ConfirmPasswordReset` — se o Keycloak também exige nome neste fluxo, adicionar os campos.
+- Verificar se há outros pontos de ativação no código.
+
+**Novo contrato do endpoint:**
+```json
+POST /auth/activate
+{
+  "token": "uuid",
+  "password": "senha123",
+  "firstName": "Alexandre",
+  "lastName": "Silva"
+}
+```
+
+**Critério de aceite:**
+- [ ] InviteScreen exibe campos Nome, Sobrenome, Senha, Confirmar Senha.
+- [ ] Submeter com nome vazio → erro de validação visível no campo.
+- [ ] Ativar conta → perfil no Keycloak tem `firstName` e `lastName` preenchidos.
+- [ ] Email de boas-vindas (se existir) usa o nome real, não placeholder.
+- [ ] tsc --noEmit: zero erros.
+- [ ] JaCoCo: `AuthActivationService.activate()` coberto 100% com os novos campos.
+- [ ] Bruno: `POST /auth/activate` com e sem `firstName` — validar 200 e 400.
+
+**Smoke test:**
+```
+1. Enviar convite para novo email
+2. Abrir link do email no MailHog
+3. Verificar que formulário exibe 4 campos: Nome, Sobrenome, Senha, Confirmar Senha
+4. Preencher todos → Ativar conta
+5. Login com a conta ativada
+6. Verificar no Keycloak Admin: firstName e lastName preenchidos corretamente
+7. Sidebar do sistema exibe o nome real do usuário
+```
+
+---
+
+### E.2 — Super Admin não consegue remover ou bloquear usuário; sem notificação por email
+
+**Sintoma:** Na tela de usuários (`UserTable`), o Super Admin não tem ação para bloquear ou remover um usuário do tenant ou da plataforma. Ações disponíveis são apenas "Abrir" e "Permissões". Falta operação crítica de gestão de acesso.
+
+**Escopo das ações necessárias (dois níveis):**
+
+**Bloquear usuário** (reversível):
+- Desabilita o usuário no Keycloak (`enabled: false`) — impede login imediato.
+- Mantém todos os dados, assignments e memberships intactos.
+- Status na tabela muda para "bloqueado".
+- Email enviado ao usuário: "Seu acesso à plataforma foi temporariamente suspenso."
+- Super Admin (ou Tenant Admin com permissão) pode reverter.
+
+**Remover usuário do tenant** (permanente no tenant, reversível na plataforma):
+- Remove `TenantMembership` e todos os `ProductAssignment` do tenant.
+- NÃO remove o usuário do Keycloak (pode ter acesso a outros tenants).
+- Email enviado: "Seu acesso ao tenant [Nome] foi revogado."
+- Ação irreversível sem novo convite.
+
+**Implementação necessária:**
+
+Backend:
+1. `PATCH /tenants/{tenantId}/users/{userId}/block` — bloqueia usuário (Keycloak `enabled=false` + email).
+2. `DELETE /tenants/{tenantId}/users/{userId}` — remove membership + assignments + email.
+3. Verificar permissões: apenas `SUPER_ADMIN` e `TENANT_ADMIN` podem executar estas ações.
+4. Nenhum usuário pode bloquear/remover a si mesmo.
+5. Templates de email:
+   - `userBlocked.ftl` — notificação de bloqueio com contato do suporte.
+   - `userRemoved.ftl` — notificação de remoção do tenant.
+6. Ambas as ações geram evento de auditoria (`USER_BLOCKED`, `USER_REMOVED_FROM_TENANT`).
+7. JaCoCo 100% nos novos services/controllers.
+
+Frontend:
+1. `UserTable`: adicionar botão de ação expandido (dropdown "⋮") com:
+   - "Bloquear acesso" — abre dialog de confirmação com motivo opcional.
+   - "Remover do tenant" — abre dialog de confirmação com aviso de irreversibilidade.
+2. Dialog de confirmação de bloqueio:
+   - Texto: "Isso impedirá o login imediatamente. O usuário receberá um email de notificação."
+   - Campo opcional: "Motivo (visível apenas para admins)".
+   - Botões: "Cancelar" / "Bloquear usuário" (vermelho).
+3. Dialog de confirmação de remoção:
+   - Texto: "Esta ação é irreversível. O usuário perderá acesso a todos os produtos deste tenant."
+   - Digitação do email para confirmar (UX de segurança).
+   - Botões: "Cancelar" / "Remover permanentemente" (vermelho).
+4. Após ação bem-sucedida: toast + atualizar lista de usuários.
+5. Usuário bloqueado na tabela: badge "bloqueado" (vermelho) na coluna Status + ação "Desbloquear".
+
+**Permissões:**
+- Super Admin: pode bloquear/remover qualquer usuário de qualquer tenant.
+- Tenant Admin: pode bloquear/remover usuários do seu tenant (exceto outros Tenant Admins).
+- Editor / Product Manager: sem acesso a estas ações.
+- Ninguém bloqueia a si mesmo.
+
+**Critério de aceite:**
+- [ ] Super Admin vê dropdown "⋮" em cada linha da UserTable com opções Bloquear e Remover.
+- [ ] Bloquear usuário → dialog de confirmação → confirmar → usuário fica com status "bloqueado" → email chega no MailHog.
+- [ ] Usuário bloqueado tenta login → Keycloak rejeita → tela de erro no frontend.
+- [ ] Remover usuário → dialog com digitação de email → confirmar → usuário some da tabela → email chega.
+- [ ] Usuário removido tenta login → consegue (conta existe no Keycloak) mas não tem tenants para acessar.
+- [ ] Auditoria: ambas as ações aparecem no AuditTimeline com actor e detalhes.
+- [ ] JaCoCo: novos métodos cobertos 100%.
+- [ ] Bruno: `PATCH /block` e `DELETE` com 200, 403 (sem permissão), 404 (usuário não encontrado).
+- [ ] tsc --noEmit: zero erros.
+
+**Smoke test:**
+```
+1. Login: super-admin → CLIENTES BETA → Usuários
+2. Linha "Alexandre Teste" → ⋮ → "Bloquear acesso"
+3. Confirmar no dialog
+4. Verificar: badge "bloqueado" na tabela
+5. Verificar MailHog: email de bloqueio chegou para alexandre.henrique@byop.io
+6. Tentar login como Alexandre Teste → deve falhar com mensagem de conta suspensa
+7. Voltar como super-admin → Desbloquear
+8. Login como Alexandre Teste → deve funcionar normalmente
+9. AuditTimeline → verificar eventos USER_BLOCKED e USER_UNBLOCKED com detalhes corretos
+```
+
 <!-- PRÓXIMO BUG: inserir abaixo desta linha -->
 
 ---
