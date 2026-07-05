@@ -79,6 +79,13 @@ public class AuthController {
         return authActivationService.activate(request.token(), request.password());
     }
 
+    @PostMapping("/invite/accept-existing")
+    public AuthMessageResponse acceptExistingUserInvite(
+            @Valid @RequestBody AuthActionTokenRequest request
+    ) {
+        return authActivationService.acceptExistingUser(request.token());
+    }
+
     @PostMapping("/reset-password/request")
     public AuthMessageResponse requestPasswordReset(
             @Valid @RequestBody AuthPasswordResetRequest request
