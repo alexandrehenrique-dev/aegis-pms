@@ -79,7 +79,7 @@ export function FormsDashboard() {
             )}
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <ConversionCard />
+            <ConversionCard value={averageConversion} />
             <Card>
               <h2 className="mb-3 text-lg font-semibold">Estados previstos</h2>
               <div className="grid gap-3">
@@ -90,7 +90,7 @@ export function FormsDashboard() {
             </Card>
           </div>
         </div>
-        <Card><h2 className="mb-3 text-lg font-semibold">Timeline Forms</h2><FormsTimeline /><PartialErrorWidget /></Card>
+        <Card><h2 className="mb-3 text-lg font-semibold">Timeline Forms</h2><FormsTimeline /></Card>
       </div>
     </>
   );

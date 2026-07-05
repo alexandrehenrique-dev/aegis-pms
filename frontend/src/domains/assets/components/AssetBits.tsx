@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { Archive, Copy, Eye, File, FileText, Gauge, Image, MoreHorizontal } from "lucide-react";
+import { Archive, Copy, Eye, File, FileText, Gauge, Image, MoreHorizontal, Video } from "lucide-react";
 import { Badge, Button, Card } from "../../../shared/components/Primitives";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../shared/components/ui/dropdown-menu";
 import { toast } from "../../../core/notifications/toast";
@@ -12,8 +12,21 @@ export function AssetStatusBadge({ status }: { status: string }) {
 
 /** Ícone genérico de arquivo para qualquer tipo que não seja imagem (Sprint 12, Tarefa L.1) — antes, qualquer tipo não listado (DOCX, ZIP etc.) caía no ícone de imagem por padrão, o que é enganoso. */
 export function AssetTypeIcon({ type }: { type: string }) {
-  const icon = type === "imagem" ? <Image size={18} /> : type === "vídeo" ? <Eye size={18} /> : type === "áudio" ? <Gauge size={18} /> : type === "PDF" ? <FileText size={18} /> : <File size={18} />;
+  const icon = type === "imagem" ? <Image size={18} /> : type === "vídeo" ? <Video size={18} /> : type === "áudio" ? <Gauge size={18} /> : type === "PDF" ? <FileText size={18} /> : <File size={18} />;
   return <div className="grid h-10 w-10 place-items-center rounded-xl bg-muted text-primary">{icon}</div>;
+}
+
+function AssetPreview({ a, assetId }: { a: AssetSummary; assetId: string }) {
+  if (a.type === "imagem") {
+    return <img src={assetsService.getFileUrl(assetId)} alt={a.name} className="h-full w-full rounded-xl object-cover" loading="lazy" />;
+  }
+  const tone = a.type === "PDF" ? "bg-[#fee2e2] text-[#dc2626]" : a.type === "vídeo" ? "bg-[#dbeafe] text-[#1d4ed8]" : a.type === "áudio" ? "bg-[#ede9fe] text-[#7c3aed]" : "bg-muted text-muted-foreground";
+  return (
+    <div className={`flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl ${tone}`}>
+      <AssetTypeIcon type={a.type} />
+      <span className="text-xs font-semibold uppercase">{a.type}</span>
+    </div>
+  );
 }
 
 export function AssetCard({ a, productId }: { a: AssetSummary; productId: string }) {
@@ -32,11 +45,11 @@ export function AssetCard({ a, productId }: { a: AssetSummary; productId: string
 
   return (
     <Card>
-      <div className="mb-4 aspect-[4/3] rounded-xl border border-border bg-[linear-gradient(135deg,#EEF3F0,#FFFFFF)] p-3">
-        <div className="flex justify-between">
-          <AssetTypeIcon type={a.type} />
+      <div className="mb-4 aspect-[4/3] rounded-xl border border-border bg-card p-3">
+        <div className="relative h-full">
+          <AssetPreview a={a} assetId={assetId} />
           <DropdownMenu>
-            <DropdownMenuTrigger asChild><button className="rounded-lg bg-card p-1"><MoreHorizontal size={17} /></button></DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild><button className="absolute right-2 top-2 rounded-lg bg-card/90 p-1 shadow-sm"><MoreHorizontal size={17} /></button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => navigate(`/assets/${assetId}`)}><Eye size={14} />Abrir</DropdownMenuItem>
               <DropdownMenuItem onSelect={handleCopyReference}><Copy size={14} />Copiar referência</DropdownMenuItem>
@@ -44,13 +57,12 @@ export function AssetCard({ a, productId }: { a: AssetSummary; productId: string
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="mt-10 h-12 rounded-lg bg-white/70" />
       </div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><h3 className="truncate font-semibold">{a.name}</h3><p className="text-sm text-muted-foreground">{a.type} · {a.size}</p></div>
         <AssetStatusBadge status={a.status} />
       </div>
-      <div className="mt-3 flex flex-wrap gap-1">{a.tags.split(", ").map((t) => <Badge key={t}>{t}</Badge>)}</div>
+      {a.tags && <div className="mt-3 flex flex-wrap gap-1">{a.tags.split(", ").filter(Boolean).map((t) => <Badge key={t}>{t}</Badge>)}</div>}
       <p className="mt-3 text-sm text-muted-foreground">Uso: {a.usage}</p>
       <div className="mt-4 flex gap-2">
         <Button onClick={() => navigate(`/assets/${assetId}`)}>Abrir</Button>

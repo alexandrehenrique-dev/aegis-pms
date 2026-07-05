@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Search } from "lucide-react";
-import { Badge, Button, EmptyState, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
+import { Badge, Button, EmptyState, PageHeader, PartialErrorWidget, SkeletonLines } from "../../../shared/components/Primitives";
 import { PermGate } from "../../../app/guards/PermGate";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { assetsService } from "../services/assetsService";
@@ -43,11 +43,6 @@ export function AssetLibrary() {
           <Badge>Tag</Badge>
           <Badge>Data de upload</Badge>
         </div>
-      </div>
-      <div className="mb-4 grid gap-3 md:grid-cols-3">
-        <div><p className="mb-2 text-sm font-medium">Loading skeleton</p><SkeletonLines /></div>
-        <PartialErrorWidget />
-        <PermissionHint />
       </div>
       {rows.length === 0 ? <EmptyState title="Busca sem resultado" description="Nenhum asset corresponde aos filtros atuais." /> : view === "grid" ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{rows.map((a) => <AssetCard key={a.name} a={a} productId={productId} />)}</div>

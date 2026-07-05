@@ -124,4 +124,7 @@ export const assetsService = {
   getDownloadUrl(assetId: string): string {
     return `${resolveBaseUrl()}/assets/${assetId}/download`;
   },
+  getFileUrl(assetId: string): string {
+    return `${resolveBaseUrl()}/assets/${assetId}/file`;
+  },
 };
