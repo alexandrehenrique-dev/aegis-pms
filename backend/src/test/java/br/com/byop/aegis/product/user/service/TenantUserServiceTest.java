@@ -140,6 +140,7 @@ class TenantUserServiceTest {
         when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
 
         assertThat(service.inviteUser(caller, TENANT_ID, request).status()).isEqualTo("convidado");
+        verify(productUserAccessService).inviteTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of(PRODUCT_ID));
         org.mockito.ArgumentCaptor<IdentityActionInviteCommand> inviteCaptor =
                 org.mockito.ArgumentCaptor.forClass(IdentityActionInviteCommand.class);
         verify(identityActionTokenService).sendInviteActivation(inviteCaptor.capture());

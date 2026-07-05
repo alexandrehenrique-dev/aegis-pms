@@ -6,6 +6,7 @@ import br.com.byop.aegis.product.domain.ProductAssignmentRole;
 import br.com.byop.aegis.product.domain.ProductAssignmentStatus;
 import br.com.byop.aegis.product.domain.ProductTypeKey;
 import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
+import br.com.byop.aegis.product.repository.ProductRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +19,9 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,6 +32,9 @@ class ProductUserAccessServiceTest {
 
     @Mock
     private ProductAssignmentRepository assignmentRepository;
+
+    @Mock
+    private ProductRepository productRepository;
 
     @InjectMocks
     private ProductUserAccessService service;
@@ -106,7 +113,39 @@ class ProductUserAccessServiceTest {
         assertThat(assignment.getStatus()).isEqualTo(ProductAssignmentStatus.REMOVED);
     }
 
+    @Test
+    void shouldCreateInvitedAssignmentsForTenantInvite() {
+        Product product = product();
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+        when(assignmentRepository.findByProductIdAndUserSubject(PRODUCT_ID, "user-1")).thenReturn(java.util.Optional.empty());
+
+        service.inviteTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of(PRODUCT_ID));
+
+        org.mockito.ArgumentCaptor<ProductAssignment> assignmentCaptor =
+                org.mockito.ArgumentCaptor.forClass(ProductAssignment.class);
+        verify(assignmentRepository).save(assignmentCaptor.capture());
+        ProductAssignment saved = assignmentCaptor.getValue();
+        assertThat(saved.getProductId()).isEqualTo(PRODUCT_ID);
+        assertThat(saved.getUserSubject()).isEqualTo("user-1");
+        assertThat(saved.getRole()).isEqualTo(ProductAssignmentRole.EDITOR);
+        assertThat(saved.getStatus()).isEqualTo(ProductAssignmentStatus.INVITED);
+    }
+
+    @Test
+    void shouldSkipTenantInviteAssignmentsForTenantRole() {
+        service.inviteTenantAssignments(TENANT_ID, "user-1", "TENANT_ADMIN", List.of(PRODUCT_ID));
+
+        verify(assignmentRepository, never()).save(any());
+    }
+
     private ProductAssignment assignment(String subject, ProductAssignmentRole role) {
+        Product product = product();
+        ProductAssignment assignment = new ProductAssignment(product, subject, role);
+        ReflectionTestUtils.setField(assignment, "id", UUID.nameUUIDFromBytes(subject.getBytes()));
+        return assignment;
+    }
+
+    private Product product() {
         Product product = new Product(
                 TENANT_ID,
                 "aegis-pms",
@@ -116,8 +155,6 @@ class ProductUserAccessServiceTest {
                 AssetStorageStrategy.LOCAL
         );
         ReflectionTestUtils.setField(product, "id", PRODUCT_ID);
-        ProductAssignment assignment = new ProductAssignment(product, subject, role);
-        ReflectionTestUtils.setField(assignment, "id", UUID.nameUUIDFromBytes(subject.getBytes()));
-        return assignment;
+        return product;
     }
 }

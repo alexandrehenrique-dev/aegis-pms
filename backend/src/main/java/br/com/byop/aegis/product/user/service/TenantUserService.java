@@ -110,6 +110,8 @@ public class TenantUserService {
 
         String role = parseRole(request.role());
         TenantMembershipReference membership = tenantUserAccessService.invite(tenantId, user.id(), role);
+        List<UUID> allowedProductIds = inviteProductIds(request);
+        productUserAccessService.inviteTenantAssignments(tenantId, user.id(), role, allowedProductIds);
         sendInviteActivation(user, membership, inviteProductNames(tenantId, request), role, caller.name());
         notificationOnboardingService.assignOnboarding(user.id());
         recordAudit(tenantId, caller.subject(), "USER_INVITED_TO_TENANT", user.id(), user.displayName(),
@@ -285,8 +287,8 @@ public class TenantUserService {
     }
 
     private String inviteProductNames(UUID tenantId, InviteTenantUserRequest request) {
-        List<UUID> productIds = request.allowedProductIds();
-        if (productIds == null || productIds.isEmpty()) {
+        List<UUID> productIds = inviteProductIds(request);
+        if (productIds.isEmpty()) {
             return request.allowedProducts();
         }
 
@@ -304,6 +306,10 @@ public class TenantUserService {
                         .getName())
                 .reduce((left, right) -> left + ", " + right)
                 .orElse("");
+    }
+
+    private List<UUID> inviteProductIds(InviteTenantUserRequest request) {
+        return request.allowedProductIds() == null ? List.of() : request.allowedProductIds();
     }
 
     private List<String> splitProductNames(String productNames) {
