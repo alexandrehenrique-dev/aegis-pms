@@ -13,14 +13,21 @@ docs {
 Objetivo: identificar e excluir SOMENTE tenants marcados como teste, para nunca
 apagar tenants reais (ex.: CLIENTES BETA) mesmo que existam dezenas deles no futuro.
 
-Criterio de exclusao (ver collection.bru / testTenantPrefix): o nome do tenant
-comeca com o prefixo "TEST-". Esse prefixo e aplicado NA CRIACAO por toda collection
-Bruno que cria um tenant (ver bruno/01-tenants, 16-audit, 26-product-templates,
-27-feedback, 28-backup-exportacao-exclusao, 29-auth-action-tokens) — nunca na hora
-de excluir. Uma allowlist/denylist por nome especifico ("CLIENTES BETA") seria
-fragil se um dia existirem dezenas de tenants reais; a marca de origem e o
-criterio correto. Ainda assim, mantemos uma checagem explicita extra contra
-"CLIENTES BETA" como cinto-e-suspensorio.
+Criterio de exclusao principal (ver collection.bru / testTenantPrefix): o nome
+do tenant comeca com o prefixo "TEST-". Esse prefixo e aplicado NA CRIACAO por
+toda collection Bruno que cria um tenant (ver bruno/01-tenants, 16-audit,
+26-product-templates, 27-feedback, 28-backup-exportacao-exclusao,
+29-auth-action-tokens) — nunca na hora de excluir. Uma allowlist/denylist por
+nome especifico ("CLIENTES BETA") seria fragil se um dia existirem dezenas de
+tenants reais; a marca de origem e o criterio correto.
+
+Compatibilidade temporaria para sujeira antiga: tambem sao candidatos apenas
+nomes legados de teste com padroes fechados ("Tenant listener-commit",
+"Tenant listener-rollback", "Tenant <uuid>" e "Tenant E2E <timestamp>"). Esses
+padroes vieram de testes/smokes antigos que agora passaram a criar tenants com
+prefixo TEST-. Nomes reais sem marcador de teste nunca entram como candidatos.
+Ainda assim, mantemos uma checagem explicita extra contra "CLIENTES BETA" por
+nome e por key como cinto-e-suspensorio.
 
 DELETE /api/v1/tenants/{id} e ASSINCRONO — retorna 202 e apenas INICIA a exportacao
 por produto (ProductExportCoordinatorService); o tenant so some de fato depois que
@@ -30,8 +37,8 @@ e-mail via MailHog). Por isso este step so confirma que a exclusao foi ACEITA
 A confirmacao "nenhum tenant real foi tocado" e feita pelo health-check final,
 que so verifica a presenca de CLIENTES BETA (nao a ausencia imediata dos de teste).
 
-Idempotente: se rodar de novo e nao houver mais tenants com o prefixo TEST-, o
-loop simplesmente nao encontra candidatos e nao faz nenhuma chamada DELETE.
+Idempotente: se rodar de novo e nao houver mais tenants com marcador de teste,
+o loop simplesmente nao encontra candidatos e nao faz nenhuma chamada DELETE.
 
 IMPORTANTE: este step usa `fetch()` dentro do post-response script para fazer
 uma chamada DELETE por tenant candidato — `fetch` so existe no sandbox
@@ -41,13 +48,30 @@ uma chamada DELETE por tenant candidato — `fetch` so existe no sandbox
 
 script:post-response {
   const prefix = bru.getVar('testTenantPrefix') || 'TEST-';
-  const protectedName = 'clientes beta';
   const tenants = Array.isArray(res.body) ? res.body : [];
 
-  const candidates = tenants.filter((t) => {
-    const name = String(t.name || '');
-    return name.startsWith(prefix) && name.trim().toLowerCase() !== protectedName;
-  });
+  function normalize(value) {
+    return String(value || '').trim();
+  }
+
+  function isProtectedTenant(tenant) {
+    const name = normalize(tenant.name).toLowerCase();
+    const key = normalize(tenant.key).toLowerCase();
+    return name === 'clientes beta' || key === 'clientes-beta';
+  }
+
+  function isLegacyTestTenantName(name) {
+    return /^Tenant listener-(commit|rollback)$/i.test(name)
+      || /^Tenant [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name)
+      || /^Tenant E2E [0-9]+$/i.test(name);
+  }
+
+  function isTestTenant(tenant) {
+    const name = normalize(tenant.name);
+    return name.startsWith(prefix) || isLegacyTestTenantName(name);
+  }
+
+  const candidates = tenants.filter((tenant) => isTestTenant(tenant) && !isProtectedTenant(tenant));
 
   const baseUrl = bru.getEnvVar('baseUrl');
   const token = bru.getVar('token');
@@ -72,6 +96,7 @@ script:post-response {
 
   bru.setVar('teardownCandidateCount', candidates.length);
   bru.setVar('teardownAcceptedCount', accepted);
+  bru.setVar('teardownCandidateNames', JSON.stringify(candidates.map((tenant) => tenant.name)));
   bru.setVar('teardownFailures', JSON.stringify(failures));
 }
 
@@ -85,6 +110,11 @@ tests {
     if (beta) {
       expect(String(beta.name)).to.equal('CLIENTES BETA');
     }
+  });
+  test("tenants reais sem marcador de teste nao entram na limpeza", function() {
+    const candidateNames = JSON.parse(bru.getVar('teardownCandidateNames') || '[]');
+    expect(candidateNames).to.not.include('CLIENTES BETA');
+    expect(candidateNames).to.not.include('BYOP');
   });
   test("exclusao aceita (202) para todos os candidatos de teste", function() {
     expect(bru.getVar('teardownFailures')).to.equal('[]');

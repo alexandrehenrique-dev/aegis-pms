@@ -34,7 +34,7 @@ async function main() {
     ok = report("Selecionar 'Enterprise' atualiza o campo Plano", await page.locator('label:has-text("Plano")').getByText("Enterprise").isVisible()) && ok;
 
     const suffix = Date.now();
-    await page.locator('label:has-text("Nome do tenant") input').fill(`Tenant E2E ${suffix}`);
+    await page.locator('label:has-text("Nome do tenant") input').fill(`TEST-E2E Tenant ${suffix}`);
     await page.locator('label:has-text("E-mail do Tenant Admin inicial") input').fill(`admin-e2e-${suffix}@byop.io`);
     await page.getByRole("button", { name: "Criar tenant", exact: true }).click();
     await page.waitForTimeout(800);

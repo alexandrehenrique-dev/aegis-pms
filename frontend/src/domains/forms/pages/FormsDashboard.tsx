@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { Plus } from "lucide-react";
-import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
+import { Button, Card, EmptyState, KPIWidget, PageHeader, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
 import { PermGate } from "../../../app/guards/PermGate";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { useAuth } from "../../../core/auth/useAuth";
