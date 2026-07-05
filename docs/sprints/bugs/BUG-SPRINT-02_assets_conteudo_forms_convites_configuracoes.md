@@ -169,6 +169,11 @@ public ResponseEntity<Resource> downloadAsset(@PathVariable UUID assetId) {
 - [ ] Fazer upload de `foto.jpg` → "Nome amigável" sugere "foto", demais campos vazios.
 - [ ] tsc --noEmit: zero erros.
 
+**Follow-up 2026-07-05 — progresso de upload grande:**
+- `AssetUploadScreen` passou a controlar status por arquivo (`aguardando`, `enviando`, `processando`, `concluído`, `erro`) e não depende mais exclusivamente do primeiro evento nativo de progresso para sair de `aguardando`.
+- Uploads são processados arquivo a arquivo via `assetsService.uploadFile`, com progresso mínimo visual enquanto o request está ativo, progresso real quando o browser informa `xhr.upload.onprogress`, e barra em `100%` somente após resposta bem-sucedida da API.
+- Em falha de rede, limite de tamanho ou erro da API, a linha do arquivo muda para `erro` e o toast orienta nova tentativa, evitando espera infinita.
+
 ---
 
 ### A.5 — AssetPicker (upload rápido) — asset enviado não aparece para seleção imediata

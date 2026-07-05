@@ -97,18 +97,21 @@ export const assetsService = {
     const index = assetsStore.indexOf(a);
     assetsStore.splice(index, 1);
   },
+  async uploadFile(productId: string, file: File, onProgress?: (percent: number) => void): Promise<void> {
+    if (IS_API_MODE) {
+      const fd = new FormData();
+      fd.append("file", file);
+      await apiClient.uploadWithProgress(`/products/${productId}/assets`, fd, onProgress);
+      return;
+    }
+    const assetId = `mock-asset-${Date.now()}`;
+    logApiCall("POST", `/api/v1/products/${productId}/assets`, { name: file.name, size: file.size });
+    assetsStore.push({ id: assetId, name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
+    onProgress?.(100);
+  },
   async uploadFiles(productId: string, files: File[], onProgress?: UploadProgressHandler): Promise<void> {
     for (const file of files) {
-      if (IS_API_MODE) {
-        const fd = new FormData();
-        fd.append("file", file);
-        await apiClient.uploadWithProgress(`/products/${productId}/assets`, fd, (percent) => onProgress?.(file.name, percent));
-        continue;
-      }
-      const assetId = `mock-asset-${Date.now()}`;
-      logApiCall("POST", `/api/v1/products/${productId}/assets`, { name: file.name, size: file.size });
-      assetsStore.push({ id: assetId, name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
-      onProgress?.(file.name, 100);
+      await this.uploadFile(productId, file, (percent) => onProgress?.(file.name, percent));
     }
   },
   /** Upload de um arquivo real do sistema do usuário (Sprint 18, Tarefa D.2) — reaproveitado por qualquer picker fora do contexto de assets (ex.: anexo do `FeedbackModal`), nunca um endpoint de upload próprio por domínio. Devolve o `assetId` (mock: o próprio `name`) para referenciar o asset criado. */
