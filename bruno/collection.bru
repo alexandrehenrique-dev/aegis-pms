@@ -3,6 +3,11 @@ headers {
 }
 
 script:pre-request {
+  // Prefixo obrigatorio no "name" de qualquer tenant criado por uma collection
+  // Bruno — e o unico criterio que a collection 99-teardown usa para decidir o
+  // que pode excluir. Nunca prefixar CLIENTES BETA (nem qualquer tenant real)
+  // com isso.
+  if (!bru.getVar('testTenantPrefix')) { bru.setVar('testTenantPrefix', 'TEST-'); }
   if (!bru.getVar('username')) { bru.setVar('username', 'loki'); }
   if (!bru.getVar('password')) { bru.setVar('password', '123456'); }
   if (!bru.getVar('tenantKey')) { bru.setVar('tenantKey', 'byop-' + Date.now()); }
@@ -20,7 +25,7 @@ script:pre-request {
   if (!bru.getVar('inviteActivationPassword')) { bru.setVar('inviteActivationPassword', 'Senha123'); }
   if (!bru.getVar('newPassword')) { bru.setVar('newPassword', 'NovaSenha456'); }
   if (!bru.getVar('resetPasswordEmail')) { bru.setVar('resetPasswordEmail', bru.getVar('username') + '@byop.io'); }
-  if (!bru.getVar('tenantName')) { bru.setVar('tenantName', 'BYOP'); }
+  if (!bru.getVar('tenantName')) { bru.setVar('tenantName', 'TEST-BYOP'); }
   if (!bru.getVar('assetTagName')) { bru.setVar('assetTagName', 'institucional-' + Date.now()); }
   if (!bru.getVar('graphRefSeed')) { bru.setVar('graphRefSeed', String(Date.now())); }
   if (!bru.getVar('auditTenantKey')) { bru.setVar('auditTenantKey', 'audit-throwaway-' + Date.now()); }

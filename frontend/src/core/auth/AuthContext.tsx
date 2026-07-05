@@ -76,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const visibleTenantIds = new Set(tenants.map((t) => t.id));
         const productsByTenant = products.reduce<Record<string, ProductOption[]>>((acc, product) => {
           if (!product.id || !product.tenantId || !visibleTenantIds.has(product.tenantId)) return acc;
-          (acc[product.tenantId] ??= []).push({ id: product.id, key: product.key, name: product.name, type: product.type, status: product.status, modules: product.modules, modulesList: product.modulesList });
+          (acc[product.tenantId] ??= []).push({ id: product.id, key: product.key, name: product.name, type: product.type, status: product.status, modules: product.modules, modulesList: product.modulesList, callerAssignedRole: product.callerAssignedRole });
           return acc;
         }, {});
         // Enriquece productCount com o número real de produtos carregados —
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.location.href = "/login";
       })
       .finally(() => setRestoring(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setNotificationsCurrentUser(authUser?.id ?? null);
@@ -126,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           status: product.status,
           modules: product.modules,
           modulesList: product.modulesList,
+          callerAssignedRole: product.callerAssignedRole,
         });
         return acc;
       }, {});

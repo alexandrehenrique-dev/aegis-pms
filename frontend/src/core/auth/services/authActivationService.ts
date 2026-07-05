@@ -66,6 +66,12 @@ export const authActivationService = {
     return apiClient.post("/auth/activate", { token, password });
   },
 
+  /** Aceite de convite por usuário que já tem conta (requiresPasswordSetup: false) — sem senha para definir. */
+  acceptExistingUserInvite(token: string): Promise<void> {
+    if (!IS_API_MODE) return Promise.resolve();
+    return apiClient.post("/auth/invite/accept-existing", { token });
+  },
+
   requestPasswordReset(email: string): Promise<void> {
     if (!IS_API_MODE) return Promise.resolve();
     return apiClient.post("/auth/reset-password/request", { email });

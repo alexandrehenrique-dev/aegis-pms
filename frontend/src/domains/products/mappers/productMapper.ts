@@ -13,6 +13,7 @@ export type ProductSummaryDto = {
   createdAt?: string;
   updatedAt?: string;
   enabledModuleCount?: number;
+  callerAssignedRole?: string | null;
 };
 
 const PRODUCT_STATUS: Record<string, ProductStatus> = {
@@ -48,6 +49,7 @@ export function mapProductSummary(dto: ProductSummaryDto): ProductSummary {
     last: dto.updatedAt ?? dto.createdAt ?? "—",
     score: "—",
     tenantId: dto.tenantId,
+    callerAssignedRole: dto.callerAssignedRole ?? null,
   };
 }
 

@@ -46,6 +46,14 @@ public class ProductExportStorageAdapter implements ProductExportStoragePort {
     }
 
     @Override
+    public boolean isStorageConfigured(AssetStorageStrategy strategy) {
+        if (strategy != AssetStorageStrategy.S3) {
+            return true;
+        }
+        return s3Properties.bucket() != null && !s3Properties.bucket().isBlank();
+    }
+
+    @Override
     public ProductExportStoredFile storeExport(Path temporaryZip, UUID tokenId, String filename, AssetStorageStrategy strategy) {
         if (strategy == AssetStorageStrategy.S3) {
             return storeS3(temporaryZip, tokenId, filename);

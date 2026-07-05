@@ -2,6 +2,7 @@ package br.com.byop.aegis.product.export.service;
 
 import br.com.byop.aegis.audit.api.AuditRecordCommand;
 import br.com.byop.aegis.audit.api.AuditService;
+import br.com.byop.aegis.product.api.ProductExportStoragePort;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.export.config.ExportAsyncConfig;
 import br.com.byop.aegis.product.export.domain.ExportToken;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class ExportAndDeleteService {
 
     private static final String ACTION_PRODUCT_DELETED = "USER_DATA_EXPORTED_AND_PRODUCT_DELETED";
+    private static final String ACTION_PRODUCT_DELETED_WITHOUT_BACKUP = "USER_DATA_DELETED_WITHOUT_EXPORT_STORAGE_NOT_CONFIGURED";
     private static final String TARGET_TYPE_PRODUCT = "Product";
 
     private final ProductRepository productRepository;
@@ -36,6 +38,7 @@ public class ExportAndDeleteService {
     private final ProductExportDeletionService productExportDeletionService;
     private final ExportIntegrityService exportIntegrityService;
     private final TenantExportRemovalPort tenantExportRemovalPort;
+    private final ProductExportStoragePort storagePort;
     private final AuditService auditService;
 
     public ExportAndDeleteService(ProductRepository productRepository,
@@ -47,6 +50,7 @@ public class ExportAndDeleteService {
                                   ProductExportDeletionService productExportDeletionService,
                                   ExportIntegrityService exportIntegrityService,
                                   TenantExportRemovalPort tenantExportRemovalPort,
+                                  ProductExportStoragePort storagePort,
                                   AuditService auditService) {
         this.productRepository = productRepository;
         this.productExportSerializer = productExportSerializer;
@@ -57,6 +61,7 @@ public class ExportAndDeleteService {
         this.productExportDeletionService = productExportDeletionService;
         this.exportIntegrityService = exportIntegrityService;
         this.tenantExportRemovalPort = tenantExportRemovalPort;
+        this.storagePort = storagePort;
         this.auditService = auditService;
     }
 
@@ -77,6 +82,17 @@ public class ExportAndDeleteService {
         ProductExportData data;
         try {
             data = productExportSerializer.serialize(productId, callerSubject, callerEmail);
+        } catch (Exception exception) {
+            handleExportFailure(productId, recipients, exception);
+            return;
+        }
+
+        if (!storagePort.isStorageConfigured(data.assetStorageStrategy())) {
+            handleDeleteWithoutBackup(data, recipients, callerSubject, deleteTenantWhenEmpty);
+            return;
+        }
+
+        try {
             Path zip = exportZipBuilder.build(data);
             ExportToken token = new ExportToken(productId, data.productKey(), "pending", data.assetStorageStrategy().name().toLowerCase(), callerEmail);
             StoredExport stored = exportStorageService.store(zip, token.getId(), data.filename(), data.assetStorageStrategy());
@@ -93,12 +109,40 @@ public class ExportAndDeleteService {
 
         try {
             productExportDeletionService.deleteExportedProduct(data);
-            recordDeletionAudit(data, callerSubject);
+            recordDeletionAudit(data, callerSubject, ACTION_PRODUCT_DELETED);
             deleteTenantIfReady(data, deleteTenantWhenEmpty);
             log.info("exportAndDelete: produto excluido apos export productId='{}'", productId);
         } catch (Exception exception) {
             handleDeleteFailure(productId, recipients, exception);
         }
+    }
+
+    /**
+     * Exclui o produto sem tentar exportar quando o backend de storage da sua
+     * estratégia não está configurado (ex.: S3 sem bucket neste ambiente) — sem
+     * isto, {@code exportZipBuilder.build()} falharia ao ler os assets e o produto
+     * ficaria preso em EXPORT_FAILED para sempre, sem nunca ser excluído.
+     */
+    private void handleDeleteWithoutBackup(ProductExportData data, List<ExportRecipient> recipients,
+                                           String callerSubject, boolean deleteTenantWhenEmpty) {
+        log.warn("exportAndDelete: armazenamento da estrategia '{}' nao configurado — excluindo productId='{}' sem backup de assets",
+                data.assetStorageStrategy(), data.productId());
+        try {
+            productExportDeletionService.deleteExportedProductSkippingAssetFiles(data);
+            recordDeletionAudit(data, callerSubject, ACTION_PRODUCT_DELETED_WITHOUT_BACKUP);
+            deleteTenantIfReady(data, deleteTenantWhenEmpty);
+            log.info("exportAndDelete: produto excluido sem backup productId='{}'", data.productId());
+        } catch (Exception exception) {
+            handleDeleteFailure(data.productId(), recipients, exception);
+            return;
+        }
+        recipients.forEach(r -> {
+            try {
+                productExportEmailService.sendProductDeletedWithoutBackup(r.email(), r.name(), data.productName());
+            } catch (Exception _) {
+                log.warn("Unable to send no-backup warning e-mail for product {} to {}", data.productId(), r.email());
+            }
+        });
     }
 
     private void handleExportFailure(UUID productId, List<ExportRecipient> recipients, Exception exception) {
@@ -112,7 +156,7 @@ public class ExportAndDeleteService {
         recipients.forEach(r -> {
             try {
                 productExportEmailService.sendExportFailure(r.email(), product.getName());
-            } catch (Exception emailException) {
+            } catch (Exception _) {
                 log.warn("Unable to send export failure e-mail for product {} to {}", productId, r.email());
             }
         });
@@ -129,24 +173,24 @@ public class ExportAndDeleteService {
         recipients.forEach(r -> {
             try {
                 productExportEmailService.sendExportFailure(r.email(), product.getName());
-            } catch (Exception emailException) {
+            } catch (Exception _) {
                 log.warn("Unable to send delete failure e-mail for product {} to {}", productId, r.email());
             }
         });
     }
 
-    private void recordDeletionAudit(ProductExportData data, String callerSubject) {
+    private void recordDeletionAudit(ProductExportData data, String callerSubject, String action) {
         auditService.recordEvent(new AuditRecordCommand(
                 data.tenantId(),
                 data.productId(),
                 callerSubject,
-                ACTION_PRODUCT_DELETED,
+                action,
                 TARGET_TYPE_PRODUCT,
                 data.productId().toString(),
                 data.productName(),
                 null,
                 null,
-                Map.of("exportTokenCreated", true)
+                Map.of("exportTokenCreated", action.equals(ACTION_PRODUCT_DELETED))
         ));
     }
 

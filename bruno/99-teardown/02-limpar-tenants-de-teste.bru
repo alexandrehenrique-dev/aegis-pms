@@ -1,0 +1,92 @@
+meta {
+  name: Limpar tenants de teste
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants
+  body: none
+}
+
+docs {
+Objetivo: identificar e excluir SOMENTE tenants marcados como teste, para nunca
+apagar tenants reais (ex.: CLIENTES BETA) mesmo que existam dezenas deles no futuro.
+
+Criterio de exclusao (ver collection.bru / testTenantPrefix): o nome do tenant
+comeca com o prefixo "TEST-". Esse prefixo e aplicado NA CRIACAO por toda collection
+Bruno que cria um tenant (ver bruno/01-tenants, 16-audit, 26-product-templates,
+27-feedback, 28-backup-exportacao-exclusao, 29-auth-action-tokens) — nunca na hora
+de excluir. Uma allowlist/denylist por nome especifico ("CLIENTES BETA") seria
+fragil se um dia existirem dezenas de tenants reais; a marca de origem e o
+criterio correto. Ainda assim, mantemos uma checagem explicita extra contra
+"CLIENTES BETA" como cinto-e-suspensorio.
+
+DELETE /api/v1/tenants/{id} e ASSINCRONO — retorna 202 e apenas INICIA a exportacao
+por produto (ProductExportCoordinatorService); o tenant so some de fato depois que
+todos os produtos terminarem de exportar (fluxo real usa Keycloak Admin API, zip e
+e-mail via MailHog). Por isso este step so confirma que a exclusao foi ACEITA
+(202) para cada tenant de teste — nao espera nem afirma que eles ja sumiram.
+A confirmacao "nenhum tenant real foi tocado" e feita pelo health-check final,
+que so verifica a presenca de CLIENTES BETA (nao a ausencia imediata dos de teste).
+
+Idempotente: se rodar de novo e nao houver mais tenants com o prefixo TEST-, o
+loop simplesmente nao encontra candidatos e nao faz nenhuma chamada DELETE.
+
+IMPORTANTE: este step usa `fetch()` dentro do post-response script para fazer
+uma chamada DELETE por tenant candidato — `fetch` so existe no sandbox
+"developer" do Bruno CLI (nao no "safe"/QuickJS, que e o default). Rodar com:
+  bru run 99-teardown --env local -r --sandbox developer
+}
+
+script:post-response {
+  const prefix = bru.getVar('testTenantPrefix') || 'TEST-';
+  const protectedName = 'clientes beta';
+  const tenants = Array.isArray(res.body) ? res.body : [];
+
+  const candidates = tenants.filter((t) => {
+    const name = String(t.name || '');
+    return name.startsWith(prefix) && name.trim().toLowerCase() !== protectedName;
+  });
+
+  const baseUrl = bru.getEnvVar('baseUrl');
+  const token = bru.getVar('token');
+  let accepted = 0;
+  const failures = [];
+
+  for (const tenant of candidates) {
+    const response = await fetch(baseUrl + '/api/v1/tenants/' + tenant.id, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
+      },
+      body: JSON.stringify({ confirmationText: tenant.name }),
+    });
+    if (response.status === 202) {
+      accepted += 1;
+    } else {
+      failures.push({ id: tenant.id, name: tenant.name, status: response.status });
+    }
+  }
+
+  bru.setVar('teardownCandidateCount', candidates.length);
+  bru.setVar('teardownAcceptedCount', accepted);
+  bru.setVar('teardownFailures', JSON.stringify(failures));
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("CLIENTES BETA nunca e candidata a exclusao", function() {
+    const tenants = Array.isArray(res.body) ? res.body : [];
+    const beta = tenants.find((t) => String(t.name || '').trim().toLowerCase() === 'clientes beta');
+    if (beta) {
+      expect(String(beta.name)).to.equal('CLIENTES BETA');
+    }
+  });
+  test("exclusao aceita (202) para todos os candidatos de teste", function() {
+    expect(bru.getVar('teardownFailures')).to.equal('[]');
+  });
+}

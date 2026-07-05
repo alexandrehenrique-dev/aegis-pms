@@ -50,10 +50,11 @@ class AuthActivationServiceTest {
     );
 
     @Test
-    void shouldValidateInvite() {
+    void shouldValidateInviteRequiringPasswordSetupForNewUser() {
         AuthActionToken token = inviteToken();
         when(tokenService.validateInvite(TOKEN_ID)).thenReturn(token);
         when(tokenService.productNames(token)).thenReturn(List.of("Aegis"));
+        when(keycloakAdminClient.hasRequiredAction("user-id", "UPDATE_PASSWORD")).thenReturn(true);
 
         AuthInviteValidationResponse response = service.validateInvite(TOKEN_ID);
 
@@ -65,6 +66,31 @@ class AuthActivationServiceTest {
         assertThat(response.role()).isEqualTo("EDITOR");
         assertThat(response.inviterName()).isEqualTo("Admin");
         assertThat(response.requiresPasswordSetup()).isTrue();
+    }
+
+    @Test
+    void shouldValidateInviteNotRequiringPasswordSetupForExistingUser() {
+        AuthActionToken token = inviteToken();
+        when(tokenService.validateInvite(TOKEN_ID)).thenReturn(token);
+        when(tokenService.productNames(token)).thenReturn(List.of("Aegis"));
+        when(keycloakAdminClient.hasRequiredAction("user-id", "UPDATE_PASSWORD")).thenReturn(false);
+
+        AuthInviteValidationResponse response = service.validateInvite(TOKEN_ID);
+
+        assertThat(response.requiresPasswordSetup()).isFalse();
+    }
+
+    @Test
+    void shouldAcceptExistingUserInvite() {
+        AuthActionToken token = inviteToken();
+        when(tokenService.consumeInvite(TOKEN_ID)).thenReturn(token);
+
+        AuthMessageResponse response = service.acceptExistingUser(TOKEN_ID);
+
+        assertThat(response.message()).isEqualTo("Convite aceito. Faça login para acessar o produto.");
+        verify(keycloakAdminClient).clearRequiredActions("user-id");
+        verify(eventPublisher).publishEvent(any(IdentityUserInviteActivatedEvent.class));
+        assertPublishedAuditAction("USER_INVITE_ACCEPTED_EXISTING");
     }
 
     @Test
@@ -180,7 +206,7 @@ class AuthActivationServiceTest {
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
         verify(eventPublisher, atLeastOnce()).publishEvent(captor.capture());
         assertThat(captor.getAllValues())
-                .filteredOn(e -> e instanceof IdentityAuthActionAuditEvent)
+                .filteredOn(IdentityAuthActionAuditEvent.class::isInstance)
                 .extracting(e -> ((IdentityAuthActionAuditEvent) e).action())
                 .containsExactly(action);
     }

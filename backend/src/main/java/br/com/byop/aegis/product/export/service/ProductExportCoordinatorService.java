@@ -10,6 +10,7 @@ import br.com.byop.aegis.product.export.dto.ExportRecipient;
 import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import br.com.byop.aegis.tenant.api.TenantExportRemovalPort;
 import br.com.byop.aegis.tenant.api.TenantProductExportPort;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,15 +27,18 @@ public class ProductExportCoordinatorService implements TenantProductExportPort 
     private final ProductAssignmentRepository assignmentRepository;
     private final IdentityUserDirectory identityUserDirectory;
     private final ExportAndDeleteService exportAndDeleteService;
+    private final TenantExportRemovalPort tenantExportRemovalPort;
 
     public ProductExportCoordinatorService(ProductRepository productRepository,
                                            ProductAssignmentRepository assignmentRepository,
                                            IdentityUserDirectory identityUserDirectory,
-                                           ExportAndDeleteService exportAndDeleteService) {
+                                           ExportAndDeleteService exportAndDeleteService,
+                                           TenantExportRemovalPort tenantExportRemovalPort) {
         this.productRepository = productRepository;
         this.assignmentRepository = assignmentRepository;
         this.identityUserDirectory = identityUserDirectory;
         this.exportAndDeleteService = exportAndDeleteService;
+        this.tenantExportRemovalPort = tenantExportRemovalPort;
     }
 
     @Override
@@ -44,6 +48,16 @@ public class ProductExportCoordinatorService implements TenantProductExportPort 
         List<Product> products = productRepository.findAllByTenantId(tenantId).stream()
                 .filter(product -> product.getStatus() != ProductStatus.DELETED)
                 .toList();
+        if (products.isEmpty()) {
+            // Sem produtos para exportar, o loop abaixo nunca executaria — e e
+            // exatamente a conclusao de "todos os produtos exportados" (verificada
+            // em ExportAndDeleteService.deleteTenantIfReady) que remove o tenant.
+            // Sem este atalho, um tenant sem produtos ficava com a exclusao
+            // "aceita" (202) mas nunca de fato removido.
+            tenantExportRemovalPort.deleteTenantAfterExports(tenantId);
+            log.info("startTenantProductExports: tenantId='{}' sem produtos — removido imediatamente", tenantId);
+            return;
+        }
         products.forEach(product -> startProductExport(product, caller));
         log.info("startTenantProductExports: tenantId='{}', produtosProcessados='{}'", tenantId, products.size());
     }
@@ -76,7 +90,7 @@ public class ProductExportCoordinatorService implements TenantProductExportPort 
                     try {
                         IdentityUser user = identityUserDirectory.getRequiredUser(a.getUserSubject());
                         return new ExportRecipient(user.email(), user.displayName());
-                    } catch (Exception ex) {
+                    } catch (Exception _) {
                         log.warn("resolveRecipients: nao foi possivel resolver usuario productId='{}', subject='{}' — ignorando",
                                 productId, a.getUserSubject());
                         return null;

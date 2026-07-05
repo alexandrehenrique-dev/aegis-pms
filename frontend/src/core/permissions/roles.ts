@@ -89,6 +89,50 @@ function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+const PRODUCT_ASSIGNABLE_ROLES: readonly UserRole[] = ["product_manager", "editor", "viewer"];
+
+/**
+ * Mapeia o papel de PRODUTO do caller (`ProductAssignmentRole` do backend:
+ * "EDITOR" | "PRODUCT_MANAGER" | "VIEWER") para o `UserRole` de plataforma
+ * equivalente, para reaproveitar `roleVisibleNav`/`roleBlockedRoutePrefixes`.
+ * `null` quando não há atribuição (produto sem `ProductAssignment` do caller).
+ */
+export function toProductUserRole(assignedRole: string | null | undefined): UserRole | null {
+  if (!assignedRole) return null;
+  const normalized = assignedRole.toLowerCase();
+  return PRODUCT_ASSIGNABLE_ROLES.find((role) => role === normalized) ?? null;
+}
+
+/**
+ * Nav visível efetiva: o papel de PLATAFORMA (Keycloak) e o papel de PRODUTO
+ * (`ProductAssignment`) são independentes — um usuário pode acumular os dois
+ * (ex.: Super Admin que também é Editor de um produto específico). A sidebar
+ * deve mesclar (nunca substituir) os itens de nav de ambos quando o produto
+ * efetivo é aquele em que o caller tem a atribuição — em qualquer outro
+ * produto sem atribuição, o comportamento continua sendo só o de plataforma.
+ */
+export function effectiveVisibleNav(role: UserRole, productAssignedRole?: string | null): Set<string> {
+  const productRole = toProductUserRole(productAssignedRole);
+  if (!productRole) return roleVisibleNav[role];
+  return new Set([...roleVisibleNav[role], ...roleVisibleNav[productRole]]);
+}
+
+/**
+ * Mesma mesclagem de {@link effectiveVisibleNav} aplicada ao bloqueio de rota:
+ * uma rota bloqueada para o papel de plataforma deixa de ser bloqueada quando
+ * o papel de produto do caller no produto efetivo por si só não a bloquearia.
+ */
+export function isRouteBlockedForEffectiveAccess(
+  role: UserRole,
+  productAssignedRole: string | null | undefined,
+  pathname: string,
+): boolean {
+  if (!isRouteBlocked(role, pathname)) return false;
+  const productRole = toProductUserRole(productAssignedRole);
+  if (!productRole) return true;
+  return isRouteBlocked(productRole, pathname);
+}
+
 /**
  * Regra geral de permissão por widget (Sprint 13, Tarefa N) — `RequireRole`
  * só bloqueia a rota inteira; nenhum widget de dashboard verifica papel por

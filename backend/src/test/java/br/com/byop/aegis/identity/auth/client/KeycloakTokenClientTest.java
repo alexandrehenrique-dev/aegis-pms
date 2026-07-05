@@ -175,6 +175,46 @@ class KeycloakTokenClientTest {
     }
 
     @Test
+    void shouldThrowAccountDisabledOnBadRequestWithNotFullySetUp() {
+        wireMockServer.stubFor(
+                post(urlEqualTo("/realms/aegis/protocol/openid-connect/token"))
+                        .willReturn(badRequest()
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("""
+                                    {
+                                      "error": "invalid_grant",
+                                      "error_description": "Account is not fully set up"
+                                    }
+                                    """))
+        );
+
+        assertThrows(
+                AccountDisabledException.class,
+                () -> client.login("loki", "credential-value")
+        );
+    }
+
+    @Test
+    void shouldThrowKeycloakAuthenticationExceptionOnBadRequestWithoutAccountDisabledReason() {
+        wireMockServer.stubFor(
+                post(urlEqualTo("/realms/aegis/protocol/openid-connect/token"))
+                        .willReturn(badRequest()
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("""
+                                    {
+                                      "error": "invalid_grant",
+                                      "error_description": "Some other bad request"
+                                    }
+                                    """))
+        );
+
+        assertThrows(
+                KeycloakAuthenticationException.class,
+                () -> client.login("loki", "credential-value")
+        );
+    }
+
+    @Test
     void shouldThrowInvalidCredentialsWhenUnauthorizedBodyIsBlank() {
         stubUnauthorizedTokenEndpoint("");
 

@@ -23,9 +23,11 @@ import java.util.UUID;
 public class AuthActivationService {
 
     private static final String ACTIVATE_MESSAGE = "Conta ativada. Faça login para continuar.";
+    private static final String ACCEPT_EXISTING_MESSAGE = "Convite aceito. Faça login para acessar o produto.";
     private static final String RESET_REQUEST_MESSAGE =
             "Se este e-mail existe na plataforma, um link de recuperação será enviado.";
     private static final String RESET_CONFIRM_MESSAGE = "Senha redefinida. Faça login para continuar.";
+    private static final String UPDATE_PASSWORD_ACTION = "UPDATE_PASSWORD";
 
     private final AuthActionTokenService tokenService;
     private final AuthActionEmailService emailService;
@@ -52,9 +54,8 @@ public class AuthActivationService {
     public AuthInviteValidationResponse validateInvite(UUID tokenId) {
         log.debug("validateInvite: validando convite");
         AuthActionToken token = tokenService.validateInvite(tokenId);
-        // requiresPasswordSetup: sempre true para tokens de convite — usuários
-        // existentes com membership ativa não passam pelo fluxo de invite token,
-        // apenas pelo assignExistingUser() que não gera token nem URL de ativação.
+        boolean requiresPasswordSetup = keycloakAdminClient.hasRequiredAction(
+                token.getKeycloakId(), UPDATE_PASSWORD_ACTION);
         return new AuthInviteValidationResponse(
                 token.getUserName(),
                 token.getUserEmail(),
@@ -64,7 +65,7 @@ public class AuthActivationService {
                 token.getRole(),
                 token.getInviterName(),
                 token.getExpiresAt(),
-                true
+                requiresPasswordSetup
         );
     }
 
@@ -80,6 +81,24 @@ public class AuthActivationService {
         audit(token, "USER_INVITE_ACTIVATED");
         log.info("activate: conta ativada para keycloakId='{}'", token.getKeycloakId());
         return new AuthMessageResponse(ACTIVATE_MESSAGE);
+    }
+
+    /**
+     * Aceite de convite por usuário que já tem conta ativa no Keycloak (sem
+     * {@code UPDATE_PASSWORD} pendente) — não passa por {@link #activate}
+     * porque não há senha para definir. Consome o token e publica o mesmo
+     * evento de ativação para transicionar assignments/memberships de
+     * INVITED para ASSIGNED/ACTIVE.
+     */
+    @Transactional
+    public AuthMessageResponse acceptExistingUser(UUID tokenId) {
+        log.debug("acceptExistingUser: aceitando convite de usuário existente");
+        AuthActionToken token = tokenService.consumeInvite(tokenId);
+        keycloakAdminClient.clearRequiredActions(token.getKeycloakId());
+        eventPublisher.publishEvent(new IdentityUserInviteActivatedEvent(token.getKeycloakId()));
+        audit(token, "USER_INVITE_ACCEPTED_EXISTING");
+        log.info("acceptExistingUser: convite aceito para keycloakId='{}'", token.getKeycloakId());
+        return new AuthMessageResponse(ACCEPT_EXISTING_MESSAGE);
     }
 
     @Transactional

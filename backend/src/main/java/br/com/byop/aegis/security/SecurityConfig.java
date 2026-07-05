@@ -32,11 +32,16 @@ public class SecurityConfig {
      *
      * @param http configuração HTTP do Spring Security
      * @return cadeia de filtros de segurança
-     * @throws Exception caso a configuração falhe
+     * @throws Exception propagado por {@link HttpSecurity#build()} — contrato da própria
+     *                    API do Spring Security, não uma condição de erro específica desta classe.
      */
+    @SuppressWarnings({"java:S112", "java:S4502"})
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
+                // CSRF protege sessões autenticadas por cookie; esta API é stateless e autentica
+                // via Bearer JWT (oauth2ResourceServer abaixo), sem cookie de sessão — não há
+                // superfície de ataque CSRF a mitigar aqui.
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration configuration = new CorsConfiguration();

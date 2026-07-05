@@ -5,9 +5,8 @@ import { AlertTriangle, Building2, CheckCircle2, Clock3, HelpCircle, LogOut, Men
 
 import { useAuth } from "../../core/auth/useAuth";
 import { useViewAsRole } from "../../core/permissions/useViewAsRole";
-import { roleDescriptions, roleLabels, roleVisibleNav } from "../../core/permissions/roles";
+import { roleDescriptions, roleLabels, effectiveVisibleNav, isRouteBlockedForEffectiveAccess } from "../../core/permissions/roles";
 import { resolveEnabledModules } from "../../core/products/moduleDefaults";
-import { isRouteBlocked } from "../../core/permissions/roles";
 import { SimulationBanner } from "../../core/permissions/components/SimulationBanner";
 import { ReadOnlyBanner } from "../../core/permissions/components/ReadOnlyBanner";
 import { ToasterHost } from "../../core/notifications/components/ToasterHost";
@@ -15,6 +14,7 @@ import { FeedbackModal } from "../../core/notifications/components/FeedbackModal
 import { useFeedbackModal } from "../../core/notifications/useFeedbackModal";
 import { PendingNotificationGate } from "../../core/notifications/PendingNotificationGate";
 import { feedbackService } from "../../core/notifications/services/feedbackService";
+import { notificationsService } from "../../core/notifications/services/notificationsService";
 
 import { AegisLogo } from "../../shared/components/AegisLogo";
 import { Switcher, type SwitcherItem } from "../../shared/components/Switcher";
@@ -91,6 +91,11 @@ export function AppShell() {
   );
   const openFeedbackCount = (feedbackList ?? []).filter((f) => f.status === "aberto").length;
 
+  // Seção H.3 (BUG-SPRINT-01) — substitui a notificação hardcoded da sidebar
+  // por dados reais; some quando não há nada não-lido em vez de inventar texto.
+  const { data: myNotifications } = useAsyncData(() => notificationsService.listMine(), []);
+  const latestUnread = (myNotifications ?? []).find((n) => !n.read) ?? null;
+
   if (!authUser || !effectiveTenant || !effectiveProduct) return null;
 
   const handleLogout = () => { logout(); navigate("/login"); };
@@ -106,10 +111,15 @@ export function AppShell() {
   // permitir; antes só o papel era checado, então até Super Admin via
   // "Knowledge Graph" num produto sem o módulo habilitado.
   const enabledModules = resolveEnabledModules(effectiveProduct);
-  const visibleNav = nav.filter((item) => roleVisibleNav[viewAsRole].has(item.path) && (!item.moduleKey || enabledModules.includes(item.moduleKey)));
+  // Mescla a nav do papel de plataforma com a do papel do caller NO PRODUTO
+  // efetivo (se houver ProductAssignment própria ali) — ex.: Super Admin que
+  // também é Editor de um produto específico vê Conteúdo/Assets/etc só
+  // quando esse produto está selecionado, sem perder os itens de super_admin.
+  const visibleNavPaths = effectiveVisibleNav(viewAsRole, effectiveProduct.callerAssignedRole);
+  const visibleNav = nav.filter((item) => visibleNavPaths.has(item.path) && (!item.moduleKey || enabledModules.includes(item.moduleKey)));
 
   const tabs = tabsForPath(location.pathname);
-  const blocked = isRouteBlocked(viewAsRole, location.pathname);
+  const blocked = isRouteBlockedForEffectiveAccess(viewAsRole, effectiveProduct.callerAssignedRole, location.pathname);
 
   const showViewerBanner = viewAsRole === "viewer" && !viewerQuietRoutes.some((r) => location.pathname.startsWith(r));
   const showEditorBanner = viewAsRole === "editor" && (location.pathname.includes("/publish") || location.pathname.startsWith("/settings/permissions") || location.pathname.startsWith("/settings/roles"));
@@ -133,11 +143,12 @@ export function AppShell() {
           );
         })}
       </nav>
-      <div className="mt-auto rounded-xl border border-border bg-[var(--byop-violet-soft)] p-3 text-xs">
-        <p className="flex items-center gap-1.5 font-medium text-[var(--byop-violet-dark)]"><Clock3 size={13} />Recentemente</p>
-        <p className="mt-1 text-muted-foreground">{effectiveProduct.name} recebeu respostas e exige revisão.</p>
-      </div>
-      <p className="mt-2 text-center text-[9px] text-muted-foreground/40">Aegis PMS · Sprint 19 · Protótipo</p>
+      {latestUnread && (
+        <div className="mt-auto rounded-xl border border-border bg-[var(--byop-violet-soft)] p-3 text-xs">
+          <p className="flex items-center gap-1.5 font-medium text-[var(--byop-violet-dark)]"><Clock3 size={13} />Recentemente</p>
+          <p className="mt-1 text-muted-foreground">{latestUnread.title}</p>
+        </div>
+      )}
     </aside>
   );
 

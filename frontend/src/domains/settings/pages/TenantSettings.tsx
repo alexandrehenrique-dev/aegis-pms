@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Loader2 } from "lucide-react";
 import { Button, Card, Field, PageHeader, SelectLike } from "../../../shared/components/Primitives";
@@ -29,14 +29,18 @@ export function TenantSettings() {
   const [confirmationText, setConfirmationText] = useState("");
   const [deleting, setDeleting] = useState(false);
 
-  // Sincroniza quando o tenant muda
+  // Sincroniza quando o tenant muda. Guarda por id em vez de depender do objeto
+  // inteiro para não resetar os campos em edição a cada atualização otimista
+  // de `effectiveTenant`.
+  const syncedTenantId = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (!effectiveTenant) return;
+    if (!effectiveTenant || effectiveTenant.id === syncedTenantId.current) return;
+    syncedTenantId.current = effectiveTenant.id;
     setName(effectiveTenant.name);
     setPlan(effectiveTenant.plan);
     setStatus((effectiveTenant.status as TenantStatus) ?? "ativo");
     setDirty(false);
-  }, [effectiveTenant?.id]);
+  }, [effectiveTenant]);
 
   const markDirty = <T,>(setter: (v: T) => void) => (v: T) => { setter(v); setDirty(true); };
 

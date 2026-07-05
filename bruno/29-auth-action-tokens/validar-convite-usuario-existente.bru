@@ -1,0 +1,35 @@
+meta {
+  name: Validar convite de usuario existente (H.1)
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/invite/validate
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "token": "{{existingUserInviteToken}}"
+  }
+}
+
+docs {
+Objetivo (H.1, BUG-SPRINT-01): confirmar que AuthActivationService.validateInvite() retorna
+requiresPasswordSetup=false quando o destinatario do convite ja tem conta ativa no Keycloak
+(sem UPDATE_PASSWORD em requiredActions), em vez do valor sempre-true hardcoded no bug original.
+Resultado esperado: 200 com requiresPasswordSetup false para o e-mail ja ativado.
+Pre-requisito: executar antes "Capturar segundo token de convite no MailHog" (seq 14).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("requiresPasswordSetup false para usuario existente", function() {
+    expect(res.body.userEmail).to.equal(bru.getVar('authActionInviteEmail'));
+    expect(res.body.requiresPasswordSetup).to.equal(false);
+  });
+}

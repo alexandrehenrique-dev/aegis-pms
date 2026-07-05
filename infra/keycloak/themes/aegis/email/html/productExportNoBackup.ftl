@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Novo produto atribuído — Aegis PMS</title>
+  <title>Produto excluído sem backup — ${productName} · Aegis PMS</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f7;padding:40px 16px;">
@@ -30,26 +30,17 @@
           <tr>
             <td style="padding:36px 40px 28px;color:#374151;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">
               <p style="margin:0 0 16px;font-size:15px;font-weight:400;color:#374151;line-height:1.65;">Olá, <strong>${userName}</strong>.</p>
-              <p style="margin:0 0 16px;font-size:15px;font-weight:400;color:#374151;line-height:1.65;">Você foi atribuído como colaborador em um produto no workspace <strong>${tenantName}</strong>.</p>
-              <!-- Card -->
-              <table cellpadding="0" cellspacing="0" width="100%" style="margin:20px 0;background-color:#f0ebff;border:1px solid #ddd6fe;border-radius:10px;">
+              <p style="margin:0 0 16px;font-size:15px;font-weight:400;color:#374151;line-height:1.65;">O produto <strong>${productName}</strong> foi excluído conforme solicitado, mas <strong>não foi possível gerar um backup dos assets</strong> antes da exclusão.</p>
+              <!-- Warning card -->
+              <table cellpadding="0" cellspacing="0" width="100%" style="margin:20px 0;background-color:#fef2f2;border:1px solid #fecaca;border-radius:10px;">
                 <tr>
                   <td style="padding:16px 20px;">
-                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#7c3aed;text-transform:uppercase;letter-spacing:0.8px;">Produto</p>
-                    <p style="margin:0;font-size:17px;font-weight:700;color:#1d1d1f;">${productName}</p>
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#dc2626;text-transform:uppercase;letter-spacing:0.8px;">Motivo</p>
+                    <p style="margin:0;font-size:14px;font-weight:600;color:#1d1d1f;line-height:1.5;">O armazenamento de assets (S3) não está configurado neste ambiente.</p>
                   </td>
                 </tr>
               </table>
-              <p style="margin:0 0 4px;font-size:15px;font-weight:400;color:#374151;line-height:1.65;">Acesse o Aegis PMS para começar a trabalhar neste produto.</p>
-              <!-- CTA -->
-              <table cellpadding="0" cellspacing="0" style="margin:24px 0;">
-                <tr>
-                  <td style="background-color:#7c3aed;border-radius:8px;mso-padding-alt:0 32px;">
-                    <a href="${productUrl}" style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:0.1px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">Acessar produto</a>
-                  </td>
-                </tr>
-              </table>
-              <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.6;">Você recebeu este e-mail porque um administrador atribuiu você a este produto. Se não reconhece esta ação, entre em contato com o administrador do seu workspace.</p>
+              <p style="margin:0 0 16px;font-size:13px;font-weight:400;color:#6e6e73;line-height:1.65;">Os dados do produto (conteúdos, páginas, formulários, assets e demais registros) já foram removidos definitivamente. Se este produto continha assets importantes, eles não puderam ser exportados antes da remoção — entre em contato com o suporte caso precise investigar.</p>
             </td>
           </tr>
           <!-- ── Footer ── -->
@@ -59,7 +50,7 @@
                 Aegis PMS · Sistema de Gestão de Produtos
               </p>
               <p style="margin:6px 0 0;font-size:11px;color:#9ca3af;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">
-                Você recebeu este e-mail porque foi atribuído a um novo produto.
+                Você recebeu este e-mail porque solicitou uma exportação de produto no Aegis PMS.
               </p>
             </td>
           </tr>

@@ -28,7 +28,25 @@ public class ProductExportDeletionService {
     public void deleteExportedProduct(ProductExportData data) {
         log.debug("deleteExportedProduct: productId='{}'", data.productId());
         data.assets().forEach(this::deleteAssetFile);
-        UUID productId = data.productId();
+        deleteProductRows(data.productId());
+        log.info("deleteExportedProduct: produto excluido apos exportacao productId='{}'", data.productId());
+    }
+
+    /**
+     * Mesma exclusão de {@link #deleteExportedProduct}, mas sem tentar apagar os
+     * arquivos de asset no armazenamento — usado quando o backend de storage não
+     * está configurado (ex.: S3 sem bucket) e portanto nunca teve os arquivos
+     * gravados de fato; tentar excluí-los resultaria em erro ou seria um no-op
+     * enganoso.
+     */
+    @Transactional
+    public void deleteExportedProductSkippingAssetFiles(ProductExportData data) {
+        log.debug("deleteExportedProductSkippingAssetFiles: productId='{}'", data.productId());
+        deleteProductRows(data.productId());
+        log.info("deleteExportedProductSkippingAssetFiles: produto excluido sem backup productId='{}'", data.productId());
+    }
+
+    private void deleteProductRows(UUID productId) {
         delete("delete from audit_events where product_id = :productId", productId);
         delete("delete from form_submissions where form_id in (select id from form_definitions where product_id = :productId)", productId);
         delete("delete from form_definitions where product_id = :productId", productId);
@@ -48,7 +66,6 @@ public class ProductExportDeletionService {
         delete("delete from product_modules where product_id = :productId", productId);
         delete("delete from product_assignments where product_id = :productId", productId);
         delete("delete from products where id = :productId", productId);
-        log.info("deleteExportedProduct: produto excluido apos exportacao productId='{}'", productId);
     }
 
     private void deleteAssetFile(ExportAssetFile asset) {

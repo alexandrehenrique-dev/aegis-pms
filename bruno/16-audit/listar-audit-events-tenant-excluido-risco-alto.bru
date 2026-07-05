@@ -31,6 +31,6 @@ tests {
     var deleted = res.body.find(function(event) { return event.action === 'TENANT_DELETED'; });
     expect(deleted).to.not.equal(undefined);
     expect(deleted.risk).to.equal('alto');
-    expect(deleted.target).to.equal('Audit Throwaway Tenant');
+    expect(deleted.target).to.equal('TEST-Audit Throwaway Tenant');
   });
 }

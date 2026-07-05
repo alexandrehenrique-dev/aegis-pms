@@ -40,6 +40,46 @@ class ProductExportStorageAdapterTest {
     private Path tempDir;
 
     @Test
+    void shouldReportStorageConfiguredForNonS3Strategy() {
+        ProductExportStorageAdapter adapter = adapter(mock(S3Client.class), mock(LocalStorageProvider.class), mock(S3StorageProvider.class));
+
+        assertThat(adapter.isStorageConfigured(AssetStorageStrategy.LOCAL)).isTrue();
+    }
+
+    @Test
+    void shouldReportS3ConfiguredWhenBucketIsSet() {
+        ProductExportStorageAdapter adapter = adapter(mock(S3Client.class), mock(LocalStorageProvider.class), mock(S3StorageProvider.class));
+
+        assertThat(adapter.isStorageConfigured(AssetStorageStrategy.S3)).isTrue();
+    }
+
+    @Test
+    void shouldReportS3NotConfiguredWhenBucketIsBlank() {
+        ProductExportStorageAdapter adapter = new ProductExportStorageAdapter(
+                tempDir.toString(),
+                mock(S3Client.class),
+                new S3StorageProperties("", "us-east-1", "", "", 900),
+                mock(LocalStorageProvider.class),
+                mock(S3StorageProvider.class)
+        );
+
+        assertThat(adapter.isStorageConfigured(AssetStorageStrategy.S3)).isFalse();
+    }
+
+    @Test
+    void shouldReportS3NotConfiguredWhenBucketIsNull() {
+        ProductExportStorageAdapter adapter = new ProductExportStorageAdapter(
+                tempDir.toString(),
+                mock(S3Client.class),
+                new S3StorageProperties(null, "us-east-1", "", "", 900),
+                mock(LocalStorageProvider.class),
+                mock(S3StorageProvider.class)
+        );
+
+        assertThat(adapter.isStorageConfigured(AssetStorageStrategy.S3)).isFalse();
+    }
+
+    @Test
     void shouldStoreOpenAndDeleteLocalExport() throws IOException {
         ProductExportStorageAdapter adapter = adapter(mock(S3Client.class), mock(LocalStorageProvider.class), mock(S3StorageProvider.class));
         Path temporaryZip = Files.writeString(tempDir.resolve("source.zip"), "zip");

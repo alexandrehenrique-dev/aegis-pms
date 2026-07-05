@@ -29,8 +29,10 @@ import java.util.UUID;
 public class ProductExportEmailService {
 
     private static final String EXPORT_TEMPLATE = "productExport.ftl";
+    private static final String NO_BACKUP_TEMPLATE = "productExportNoBackup.ftl";
     private static final String EXPORT_SUBJECT = "Exportacao de dados pronta no Aegis PMS";
     private static final String FAILURE_SUBJECT = "Falha na exportacao de dados no Aegis PMS";
+    private static final String NO_BACKUP_SUBJECT = "Produto excluido sem backup no Aegis PMS";
     private static final BigDecimal BYTES_PER_MEGABYTE = BigDecimal.valueOf(1024L * 1024L);
 
     private final JavaMailSender mailSender;
@@ -62,8 +64,23 @@ public class ProductExportEmailService {
                 "entityCounts", data.entityCounts(),
                 "fileSizeMb", fileSizeMb(storedExport.sizeBytes())
         );
-        sendHtml(recipientEmail, EXPORT_SUBJECT, model);
+        sendHtml(EXPORT_TEMPLATE, recipientEmail, EXPORT_SUBJECT, model);
         log.info("sendExportReady: email de exportacao enviado productId='{}', tokenId='{}'", data.productId(), tokenId);
+    }
+
+    /**
+     * Aviso enviado quando um produto é excluído sem que o backup de assets tenha
+     * sido gerado — hoje, o único caso é {@code assetStorageStrategy} S3 sem bucket
+     * configurado neste ambiente (ver {@code ExportAndDeleteService}).
+     */
+    public void sendProductDeletedWithoutBackup(String recipientEmail, String recipientName, String productName) {
+        log.debug("sendProductDeletedWithoutBackup: productName='{}'", productName);
+        Map<String, Object> model = Map.of(
+                "userName", recipientName,
+                "productName", productName
+        );
+        sendHtml(NO_BACKUP_TEMPLATE, recipientEmail, NO_BACKUP_SUBJECT, model);
+        log.info("sendProductDeletedWithoutBackup: email de aviso enviado productName='{}'", productName);
     }
 
     public void sendExportFailure(String recipientEmail, String productName) {
@@ -91,9 +108,9 @@ public class ProductExportEmailService {
         return normalizedBaseUrl + "/api/v1/exports/" + tokenId + "/download";
     }
 
-    private void sendHtml(String recipientEmail, String subject, Map<String, Object> model) {
+    private void sendHtml(String templateName, String recipientEmail, String subject, Map<String, Object> model) {
         try {
-            Template template = freemarker.getTemplate(EXPORT_TEMPLATE);
+            Template template = freemarker.getTemplate(templateName);
             String html = FreeMarkerTemplateUtils.processTemplateIntoString(template, model);
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, StandardCharsets.UTF_8.name());

@@ -19,6 +19,15 @@ public record ProductSummary(
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
         /** Número de módulos habilitados. Usado pelo frontend para determinar se o produto pode ser aberto. */
-        int enabledModuleCount
+        int enabledModuleCount,
+        /**
+         * Papel do próprio caller neste produto especificamente (via {@code ProductAssignment}
+         * com status ASSIGNED), independente do papel de plataforma dele (Keycloak realm role).
+         * {@code null} quando o caller não tem nenhuma atribuição neste produto — ex.: um
+         * Super Admin sem ProductAssignment aqui. Permite ao frontend mesclar a navegação da
+         * sidebar com o papel de produto quando o usuário acumula os dois (ex.: Super Admin
+         * que também é Editor de um produto específico).
+         */
+        String callerAssignedRole
 ) {
 }

@@ -883,3 +883,93 @@ cd frontend && npm run typecheck
 | Sidebar notification: real | ☐ | ☐ | ☐ | ☐ | ☐ |
 | Watermark ausente | ☐ | ☐ | ☐ | ☐ | ☐ |
 | `core/tenants/services/tenantsService.ts` | incrementProductCount() |
+
+---
+
+## Seção I — Notas de validação manual pós-implementação da Seção H (2026-07-05)
+
+### I.1 — "CLIENTES BETA" mostrando 0 produtos após implementar H.1/H.2/H.3 — falso alarme (bundle estático desatualizado)
+
+**Observação durante teste manual:** após religar o backend para validar a Seção H, o card de "CLIENTES BETA" na tela de Gestão de Tenants mostrou "0 produtos", mesmo o tenant tendo 6 produtos reais (`GET /api/v1/products` confirmado via API retornando os 6 produtos com `tenantId` correto).
+
+**Causa raiz:** `backend/src/main/resources/static/` é **gitignorado** — é um artefato de build local (`scripts/build-frontend-for-backend.sh` roda `vite build` e copia `frontend/dist` para lá), não fonte versionada. O bundle que o Spring Boot estava servindo em `localhost:8080` era de uma build anterior, anterior inclusive à correção do productCount da Seção A (`AuthContext.tsx`) — a lógica de `productCount` real já estava correta no código-fonte, só não tinha sido recompilada para o bundle que o backend serve.
+
+**Não é uma regressão da Seção H** — nenhuma mudança de H.1/H.2/H.3 toca `productCount`/`AuthContext.tsx` nesse trecho. É uma armadilha operacional: sempre que o frontend for alterado e o teste manual for feito via `localhost:8080` (backend servindo a SPA, ADR-0009), é preciso rodar `./scripts/build-frontend-for-backend.sh` antes — testar via `vite dev` não tem esse problema porque serve os fontes diretamente.
+
+**Ação tomada:** rebuild executado (`./scripts/build-frontend-for-backend.sh`); confirmado via `curl` que o backend já serve os novos assets com hash atualizado.
+
+**Recomendação:** considerar adicionar este passo ao checklist de "Ordem de execução sugerida para o agente" (topo deste documento) sempre que houver mudança de frontend nesta sprint ou futuras.
+
+### I.2 — Bug corrigido: tenants sem produtos nunca completavam a exclusão assíncrona
+
+**Observação:** ao testar o fluxo de exclusão de tenant via `DELETE /api/v1/tenants/{id}` contra ~36 tenants de teste acumulados, os que tinham 0 produtos ficaram presos indefinidamente com `status: ativo`, mesmo o endpoint tendo retornado 202 (aceito) para todos.
+
+**Causa raiz:** `TenantService.deleteTenant()` chama `tenantProductExportPort.startTenantProductExports(tenantId, caller)`, que em `ProductExportCoordinatorService` iterava `products.forEach(product -> startProductExport(product, caller))`. A remoção efetiva do tenant só acontece em `ExportAndDeleteService.deleteTenantIfReady()`, chamada **apenas dentro do fluxo de exportação de cada produto**. Se o tenant não tem nenhum produto, esse `forEach` nunca executava nem uma vez, então `deleteTenantIfReady()` nunca era chamado — o tenant ficava marcado como "exclusão aceita" para sempre, sem nunca ser de fato removido.
+
+**Fix aplicado:** `ProductExportCoordinatorService.startTenantProductExports()` agora verifica se a lista de produtos filtrada vem vazia e, nesse caso, chama `tenantExportRemovalPort.deleteTenantAfterExports(tenantId)` diretamente (síncrono, dentro da mesma transação da requisição HTTP) em vez de depender do loop de exportação por produto. Teste `shouldRemoveTenantImmediatelyWhenThereAreNoProductsToExport` cobre o novo branch.
+
+**Validado:** criado um tenant descartável via API sem produtos, `DELETE` chamado, tenant confirmado removido em <2s (antes, ficava preso para sempre).
+
+### I.3 — Collection Bruno `99-teardown`
+
+Nova collection em `bruno/99-teardown/` (roda por último, prefixo numérico `99-`) que identifica e exclui, via `DELETE /api/v1/tenants/{id}`, apenas tenants cujo nome comece com `TEST-` — nunca por allowlist/denylist de nome específico. O prefixo é aplicado **na criação**, não na exclusão: toda collection Bruno que cria um tenant (`01-tenants`, `16-audit`, `26-product-templates`, `27-feedback`, `28-backup-exportacao-exclusao`, `29-auth-action-tokens`) e as variáveis de ambiente (`local.bru`, `dev.bru`, `homolog.bru` — **`prod.bru` não foi alterado**, ver nota abaixo) agora usam nomes prefixados com `TEST-`. Ver documentação inline em `bruno/99-teardown/*.bru` para detalhes do fluxo assíncrono e das checagens de segurança contra excluir "CLIENTES BETA".
+
+**Nota:** `bruno/environments/prod.bru` não foi editado (guardrail de segurança da sessão bloqueou automaticamente a edição de arquivo de ambiente de produção sem autorização explícita). Se a suíte Bruno também rodar contra prod, o valor `tenantName: BYOP` lá precisa ser atualizado manualmente para `TEST-BYOP` do mesmo jeito.
+
+### I.4 — Bug corrigido: `productCount` sempre 0 na tela de Super Admin (raiz real, além do bundle desatualizado da I.1)
+
+**Causa raiz:** `frontend/src/core/tenants/mappers/tenantMapper.ts:18` hardcoda `productCount: 0` (o backend `TenantSummary` nunca teve esse campo — decisão de design da Seção A original, que resolveu isso enriquecendo `userTenants` client-side em `AuthContext.tsx`). Só que `TenantSelectScreen.tsx:48` usa `allTenants` (`tenantsService.listTenants()` direto) para o papel **super_admin**, não `userTenants` — um caminho de dados que nunca recebeu o mesmo enriquecimento. Resultado: qualquer usuário Super Admin via a tela "Gestão de Tenants" sempre com "0 produtos" em todos os cards, independente da correção da Seção A já estar ativa para os demais papéis.
+
+**Fix aplicado:** `TenantSelectScreen.tsx` agora busca `productsService.listProducts()` (todos os produtos, já que Super Admin os enxerga todos) e recalcula `productCount` por tenant via `filter(p => p.tenantId === t.id).length`, no mesmo espírito do enriquecimento já usado em `AuthContext.tsx`.
+
+**Validado:** replicada a lógica exata do componente contra a API real — CLIENTES BETA retorna 6 produtos (antes: sempre 0).
+
+### I.5 — Melhoria: exclusão de produto não fica mais presa quando o storage (S3) não está configurado
+
+**Observação:** um tenant de teste (`BYOP Atualizado`) tinha um produto com `assetStorageStrategy: S3`; como este ambiente local não tem bucket S3 configurado (`AEGIS_STORAGE_S3_BUCKET` vazio), a exportação falhava ao tentar ler os assets do S3 durante o build do ZIP, o produto ficava permanentemente em `EXPORT_FAILED`, e o tenant nunca era removido — sem nenhum aviso claro de qual era o problema real.
+
+**Fix aplicado:**
+- `ProductExportStoragePort.isStorageConfigured(AssetStorageStrategy)` — novo método (implementado em `ProductExportStorageAdapter`, checando `s3Properties.bucket()` não nulo/vazio para a estratégia S3; sempre `true` para LOCAL).
+- `ExportAndDeleteService.exportAndDelete()` — antes de tentar montar o ZIP, verifica se o storage da estratégia do produto está configurado. Se não estiver, chama o novo caminho `handleDeleteWithoutBackup()`: exclui o produto (via novo `ProductExportDeletionService.deleteExportedProductSkippingAssetFiles()`, que pula a tentativa de apagar arquivos que nunca chegaram a ser gravados), audita com a ação `USER_DATA_DELETED_WITHOUT_EXPORT_STORAGE_NOT_CONFIGURED` (distinta da exclusão normal) e ainda assim libera a exclusão do tenant quando ele fica vazio.
+- Novo e-mail de aviso `ProductExportEmailService.sendProductDeletedWithoutBackup()`, com template HTML dedicado `infra/keycloak/themes/aegis/email/html/productExportNoBackup.ftl` — reaproveita o cabeçalho/rodapé e a identidade visual (logo, cor `#7c3aed`) do template de exportação existente, com um cartão de aviso no mesmo padrão visual (vermelho/`#fef2f2`) já usado em `productAccessRevoked.ftl`, deixando claro que os dados foram excluídos mas os assets não puderam ser copiados por falta de configuração do S3.
+- Falhas transitórias reais (S3 configurado mas indisponível no momento, erro de rede, etc.) continuam com o comportamento conservador original (`EXPORT_FAILED`, sem excluir) — este novo caminho só é acionado quando o storage está genuinamente **não configurado**, não para qualquer falha de exportação.
+
+**Validado:** `mvn verify` com JaCoCo 100% (branches novos cobertos em `ExportAndDeleteServiceTest`, `ProductExportDeletionServiceTest`, `ProductExportEmailServiceTest`, `ProductExportStorageAdapterTest`).
+
+---
+
+## Seção J — Bug corrigido: sidebar não mesclava papel de produto com papel de plataforma (2026-07-05)
+
+### J.1 — Usuário com papel de plataforma + papel de produto só via a sidebar do papel de plataforma
+
+**Observação:** um usuário real com `ROLE_SUPER_ADMIN` no Keycloak e, além disso, uma `ProductAssignment` de `editor` num produto específico (confirmado na tela "Usuários do tenant") não via nenhum item de edição de conteúdo (Páginas, Conteúdo, Forms, Analytics) na sidebar ao entrar nesse produto — só os itens genéricos de Super Admin (Dashboard, Configurações, Auditoria, Feedbacks).
+
+**Causa raiz:** este app tem **dois sistemas de papel independentes**:
+1. Papel de **plataforma** (Keycloak realm role) — é o que `GET /api/v1/me` retorna; `MeResponseMapper` colapsa múltiplos realm roles do usuário num único papel por prioridade (super_admin > tenant_admin > product_manager > editor > viewer). Um usuário com `ROLE_SUPER_ADMIN` e `ROLE_EDITOR` no Keycloak sempre aparece como `"super_admin"` para o frontend — a segunda role é descartada nesse endpoint.
+2. Papel de **produto** (`ProductAssignmentRole`: `PRODUCT_MANAGER`/`EDITOR`/`VIEWER`) — vínculo por produto, independente do papel de plataforma.
+
+O frontend (`roleVisibleNav`/`roleBlockedRoutePrefixes` em `core/permissions/roles.ts`) só conhecia o papel de plataforma (`viewAsRole`). O comentário já existente em `roleBlockedRoutePrefixes.super_admin` ("Para seus próprios produtos (com ProductAssignment), o backend libera via `ProductAccessResolver` — esta restrição de UI é só o caminho feliz") já sinalizava a lacuna: o *backend* já autorizaria esse acesso, mas a *sidebar* nunca oferecia o link, e navegar direto pela URL era bloqueado no frontend mesmo assim (`isRouteBlocked`).
+
+**Decisão de escopo (confirmada com o usuário):** ao contrário da doc original da Seção H.5 ("`super_admin` + `product_manager` → super_admin prevalece, não filtrado por ProductAssignment"), o comportamento correto é **mesclar**: no produto onde o usuário tem uma `ProductAssignment` própria, a sidebar mostra os itens do papel de produto **além** dos itens do papel de plataforma — nunca em outros produtos sem essa atribuição, onde o comportamento continua sendo só o de plataforma.
+
+**Fix aplicado:**
+- **Backend** — `ProductSummary` ganhou o campo `callerAssignedRole` (nullable): o papel do próprio caller naquele produto especificamente, resolvido via `ProductAssignmentRepository` em `ProductService` (`listProducts`/`getProduct`), sem N+1 (uma consulta `findAllByUserSubjectAndStatus` por listagem, reaproveitada por produto).
+- **Frontend** — `ProductOption`/`ProductSummary` (contratos) ganharam o mesmo campo, propagado em `AuthContext.tsx` até `effectiveProduct`. Duas novas funções em `core/permissions/roles.ts`:
+  - `effectiveVisibleNav(role, productAssignedRole)` — união dos itens de nav do papel de plataforma com os do papel de produto (quando existir), usada em `AppShell.tsx` no lugar do `roleVisibleNav[viewAsRole]` direto.
+  - `isRouteBlockedForEffectiveAccess(role, productAssignedRole, pathname)` — mesma lógica aplicada ao bloqueio de rota, usada tanto em `AppShell.tsx` (banner) quanto em `RequireRole.tsx` (guard real de navegação direta por URL).
+
+**Validado (Playwright, screenshots):**
+- Usuário `loki` (super_admin) com `ProductAssignment` EDITOR num produto de teste → sidebar mostra **Dashboard, Páginas, Conteúdo, Forms, Analytics, Configurações, Auditoria, Feedbacks** (mesclado).
+- Mesmo usuário, produto SEM nenhuma `ProductAssignment` própria (ex.: Maestro Beton) → sidebar mostra só **Dashboard, Configurações, Auditoria, Feedbacks** (comportamento documentado original, preservado).
+- `mvn verify` → JaCoCo 100% (novos branches cobertos em `ProductServiceTest`, incluindo os dois caminhos de `callerRoleForProduct` — atribuição ativa vs. revogada).
+- `npm run typecheck` → 0 erros.
+
+### J.2 — Achado: `mvn verify` polui o mesmo Postgres usado para teste manual (não é o Bruno)
+
+**Observação:** tenants como `Tenant <uuid-aleatorio>` e `Tenant listener-commit`/`listener-rollback` reapareciam na tela "Gestão de Tenants" mesmo depois do `99-teardown` rodar limpo (0 candidatos). Não são criados pelo Bruno — nenhuma collection Bruno usa esse padrão de nome, e todas já usam o prefixo `TEST-` (ver I.3).
+
+**Causa raiz:** vários testes de integração do backend (`TenantStatusNotificationIntegrationTest` e os testes do listener de eventos Spring Modulith, entre outros) criam tenants reais via `TenantService.createTenant()` contra o Postgres configurado em `application.yml` — que, neste ambiente, é o **mesmo banco** usado pelo backend rodando localmente para teste manual (`localhost:5434`), não um banco de teste isolado/efêmero (ex.: Testcontainers). Cada `mvn verify` executado nesta sessão deixou uma nova leva desses tenants no ambiente de teste manual.
+
+**Ação tomada nesta sessão:** limpeza manual via API (mesmo endpoint `DELETE /api/v1/tenants/{id}` do teardown, preservando CLIENTES BETA) sempre que necessário — não há um mecanismo automático para isso hoje.
+
+**Recomendação (fora de escopo desta sprint):** isolar os testes de integração que tocam o banco real com Testcontainers (Postgres efêmero por execução) ou um schema/banco dedicado a testes, para que `mvn verify` nunca mais escreva no Postgres usado para validação manual.
