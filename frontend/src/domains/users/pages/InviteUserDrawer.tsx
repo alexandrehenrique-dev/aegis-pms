@@ -7,6 +7,7 @@ import { usersService } from "../services/usersService";
 import { PermissionImpactSummary } from "../components/PermissionImpactSummary";
 import { emailError, textLengthError } from "../../../shared/utils/validation";
 import { useAuth } from "../../../core/auth/useAuth";
+import type { ApiError } from "../../../shared/services/apiClient";
 
 const ROLES = ["Editor", "Viewer", "Product Manager", "Tenant Admin"];
 const MODULES = ["Conteúdo, Assets, Forms", "Conteúdo, Analytics", "Todos os módulos"];
@@ -45,6 +46,18 @@ export function InviteUserDrawer() {
       await usersService.invite({ name, email, role, allowedProducts, allowedProductIds }, effectiveTenant?.id);
       toast.success("Convite enviado!", { description: `${name} receberá um email com instruções de acesso.` });
       navigate("/users");
+    } catch (error) {
+      const apiError = error as ApiError;
+      const message = apiError.status === 404
+        ? "Produto ou tenant não encontrado."
+        : apiError.status === 403
+          ? "Sem permissão para convidar usuários neste contexto."
+          : apiError.status === 409
+            ? "Este usuário já possui acesso ao tenant."
+            : apiError.status === 0
+              ? "Não foi possível conectar à API. Verifique o backend e tente novamente."
+              : "Erro ao enviar convite. Tente novamente.";
+      toast.error(message);
     } finally {
       setSending(false);
     }
