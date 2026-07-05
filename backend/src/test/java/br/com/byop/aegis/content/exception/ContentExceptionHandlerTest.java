@@ -18,6 +18,7 @@ class ContentExceptionHandlerTest {
         assertThat(handler.handleInvalidContentStatus().error()).isEqualTo("INVALID_CONTENT_STATUS");
         assertThat(handler.handleInvalidDifficultyLevel().error()).isEqualTo("INVALID_DIFFICULTY_LEVEL");
         assertThat(handler.handleInvalidContentReference().error()).isEqualTo("INVALID_KG_REFERENCE");
+        assertThat(handler.handleDuplicateContentTitle().error()).isEqualTo("CONTENT_TITLE_ALREADY_EXISTS");
     }
 
     @Test
@@ -30,5 +31,7 @@ class ContentExceptionHandlerTest {
                 .hasMessage("Knowledge graph node referenced by kg-ref does not exist: node-1");
         assertThat(new InsufficientContentRoleException())
                 .hasMessage("Only SUPER_ADMIN, TENANT_ADMIN or PRODUCT_MANAGER can publish content");
+        assertThat(new DuplicateContentTitleException("Artigo novo"))
+                .hasMessage("Content title already exists in this product: Artigo novo");
     }
 }

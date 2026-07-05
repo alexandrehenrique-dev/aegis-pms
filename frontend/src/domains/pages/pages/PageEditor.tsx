@@ -4,7 +4,7 @@ import { AnimatePresence } from "motion/react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Badge, Button, EmptyState, PageHeader } from "../../../shared/components/Primitives";
-import { UnsavedChangesBanner, ConflictAlert } from "../../../shared/components/Banners";
+import { UnsavedChangesBanner } from "../../../shared/components/Banners";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { FloatingSaveStatus, type SaveStatus } from "../../../shared/components/FloatingSaveStatus";
 import { toast } from "../../../core/notifications/toast";
@@ -184,7 +184,7 @@ export function PageEditor() {
       </div>
       <div className="grid gap-4 xl:grid-cols-[280px_1fr_340px]">
         <ContentStructureTree page={page} selectedId={selectedSectionId} onSelect={setSelectedSectionId} onAddBlock={handleAddBlock} onRequestDelete={setPendingDeleteId} onReorder={handleReorderSections} />
-        <div className="space-y-4"><BlockEditorCanvas section={selectedSection} productSlug={productSlug} onChangeContent={handleChangeContent} onRequestDelete={setPendingDeleteId} /><ConflictAlert /></div>
+        <div className="space-y-4"><BlockEditorCanvas section={selectedSection} productSlug={productSlug} onChangeContent={handleChangeContent} onRequestDelete={setPendingDeleteId} /></div>
         <PropertiesPanel page={page} section={selectedSection} />
       </div>
       {pendingDeleteSection && (

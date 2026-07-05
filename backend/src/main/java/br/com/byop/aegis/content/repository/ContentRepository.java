@@ -34,6 +34,15 @@ public interface ContentRepository extends JpaRepository<Content, UUID> {
     Optional<Content> findByProductIdAndId(UUID productId, UUID id);
 
     /**
+     * Verifica se um produto ja possui conteudo editorial com o mesmo titulo.
+     *
+     * @param productId identificador do produto proprietario
+     * @param title titulo do conteudo
+     * @return true quando o titulo ja existe no produto
+     */
+    boolean existsByProductIdAndTitle(UUID productId, String title);
+
+    /**
      * Busca um conteudo pelo no do Knowledge Graph vinculado dentro de um produto.
      *
      * @param productId identificador do produto proprietario

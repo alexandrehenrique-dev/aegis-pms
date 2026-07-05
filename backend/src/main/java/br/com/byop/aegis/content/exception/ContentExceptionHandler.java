@@ -44,4 +44,10 @@ public class ContentExceptionHandler {
     public CoreErrorResponse handleInvalidContentReference() {
         return new CoreErrorResponse("INVALID_KG_REFERENCE");
     }
+
+    @ExceptionHandler(DuplicateContentTitleException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public CoreErrorResponse handleDuplicateContentTitle() {
+        return new CoreErrorResponse("CONTENT_TITLE_ALREADY_EXISTS");
+    }
 }

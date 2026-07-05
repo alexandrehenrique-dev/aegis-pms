@@ -7,6 +7,7 @@ import { contentService } from "../services/contentService";
 import { pagesService } from "../../pages/services/pagesService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { slugify } from "../../../shared/utils/slugify";
+import type { ApiError } from "../../../shared/services/apiClient";
 
 const PAGE_TYPE = "Página de produto";
 const TYPES = ["Post", "Manifesto", "Reflexão", PAGE_TYPE];
@@ -48,6 +49,17 @@ export function NewContentModal({ onClose }: { onClose: () => void }) {
       toast.success("Artigo criado", { description: `${created.title} entrou como rascunho.` });
       onClose();
       navigate(`/content/${created.id}/editor`);
+    } catch (error) {
+      const apiError = error as ApiError;
+      if (apiError.status === 409) {
+        toast.error(type === PAGE_TYPE ? "Já existe uma página com este título." : "Já existe um conteúdo com este título.", {
+          description: "Escolha outro nome para continuar.",
+        });
+      } else {
+        toast.error("Não foi possível criar o conteúdo.", {
+          description: apiError.message ?? "Tente novamente em alguns instantes.",
+        });
+      }
     } finally {
       setCreating(false);
     }
