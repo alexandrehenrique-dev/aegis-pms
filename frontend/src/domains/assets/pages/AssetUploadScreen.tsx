@@ -7,11 +7,11 @@ import { toast } from "../../../core/notifications/toast";
 import { assetsService } from "../services/assetsService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 
-type UploadStatus = "queued" | "uploading" | "processing" | "done" | "error";
+type UploadStatus = "ready" | "uploading" | "processing" | "done" | "error";
 type UploadFileState = { id: string; name: string; p: number; status: UploadStatus };
 
 const UPLOAD_STATUS_LABEL: Record<UploadStatus, string> = {
-  queued: "aguardando",
+  ready: "pronto para envio",
   uploading: "enviando",
   processing: "processando",
   done: "concluído",
@@ -56,6 +56,7 @@ export function AssetUploadScreen() {
   const [files, setFiles] = useState<UploadFileState[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [completing, setCompleting] = useState(false);
+  const canStartUpload = Boolean(productId) && files.length > 0 && files.every((file) => file.status === "ready" || file.status === "error");
 
   const handleSelectFiles = () => fileInputRef.current?.click();
 
@@ -66,7 +67,7 @@ export function AssetUploadScreen() {
     setSelectedFiles((prev) => [...prev, ...nextFiles]);
     setFiles((prev) => [
       ...prev,
-      ...nextFiles.map((file) => ({ id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`, name: file.name, p: 0, status: "queued" as const })),
+      ...nextFiles.map((file) => ({ id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`, name: file.name, p: 0, status: "ready" as const })),
     ]);
     e.target.value = "";
   };
@@ -77,7 +78,7 @@ export function AssetUploadScreen() {
       return;
     }
     setCompleting(true);
-    setFiles((current) => current.map((file) => ({ ...file, p: 0, status: "queued" })));
+    setFiles((current) => current.map((file) => ({ ...file, p: 0, status: "ready" })));
     try {
       for (const selectedFile of selectedFiles) {
         const fileKey = `${selectedFile.name}-${selectedFile.size}-${selectedFile.lastModified}`;
@@ -123,7 +124,7 @@ export function AssetUploadScreen() {
       <input ref={fileInputRef} type="file" multiple hidden onChange={handleFilesSelected} />
       <PageHeader title="Upload de Asset" module="Assets" desc="Envie arquivos com validação, progresso e metadados iniciais." badge="Upload">
         <Button onClick={() => navigate(-1)}>Cancelar</Button>
-        <Button primary onClick={handleCompleteUpload} disabled={completing || selectedFiles.length === 0}>{completing && <Loader2 size={15} className="animate-spin" />}{completing ? "Concluindo..." : "Concluir upload"}</Button>
+        <Button primary onClick={handleCompleteUpload} disabled={completing || !canStartUpload}>{completing && <Loader2 size={15} className="animate-spin" />}{completing ? "Enviando..." : "Enviar upload"}</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
