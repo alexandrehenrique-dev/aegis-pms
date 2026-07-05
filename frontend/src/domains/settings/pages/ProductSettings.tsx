@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Loader2 } from "lucide-react";
 import { Button, Card, Field, PageHeader, SelectLike } from "../../../shared/components/Primitives";
@@ -23,14 +23,18 @@ export function ProductSettings() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
-  // Sincroniza quando o produto efetivo muda (ex.: troca de produto no switcher)
+  // Sincroniza quando o produto efetivo muda (ex.: troca de produto no switcher).
+  // Guarda por id em vez de depender do objeto inteiro para não resetar os campos
+  // em edição a cada atualização otimista de `product`.
+  const syncedProductId = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (!product) return;
+    if (!product || product.id === syncedProductId.current) return;
+    syncedProductId.current = product.id;
     setName(product.name);
     setType(product.type);
     setStatus(product.status);
     setDirty(false);
-  }, [product?.id]);
+  }, [product]);
 
   const markDirty = <T,>(setter: (v: T) => void) => (v: T) => { setter(v); setDirty(true); };
 
