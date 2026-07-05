@@ -1151,6 +1151,130 @@ O overlay de 1s é suficiente para mock mode. Em modo API, o comportamento ideal
 
 ---
 
+## E.9 — Inserção de blocos falha silenciosamente para a maioria dos tipos (contrato vs DEFAULT_BLOCK_CONTENT + sem catch)
+
+**Módulos afetados:** `frontend/src/domains/pages/pages/PageEditor.tsx`, `frontend/src/domains/pages/blockDefaults.ts`, `backend/.../pages/service/SectionContentValidationService.java`
+
+**Comportamento observado:** Ao selecionar um tipo de bloco no dropdown e clicar "Adicionar bloco", a interface não responde — nenhum bloco é criado, nenhuma mensagem de erro aparece. Afeta a maioria dos tipos: `video-gallery`, `image`, `event-list`, `contact`, `form`, `download`, `audio`, `video`.
+
+**Diagnóstico — duas causas raiz combinadas:**
+
+**E.9.1 — `handleAddBlock` sem `catch`: erros do backend são silenciados**
+
+```typescript
+// PageEditor.tsx — sem try/catch:
+const handleAddBlock = async (type: BlockType) => {
+  if (!page) return;
+  const label = `Novo bloco ${page.sections.length + 1}`;
+  const created = await pagesService.createSection(...); // lança 400 → não tratado
+  await refreshPage(page);   // nunca executado
+  toast.success("Bloco adicionado", ...); // nunca executado
+};
+```
+
+Qualquer erro 400 do backend é propagado como exceção não capturada. Não há `toast.error` — o usuário vê o botão sem reação.
+
+**E.9.2 — `DEFAULT_BLOCK_CONTENT` viola restrições de validação do backend**
+
+O backend (`SectionContentValidationService`) valida o conteúdo na criação da seção. Os defaults do frontend produzem conteúdo inválido para 7 dos 19 tipos de bloco:
+
+| Tipo de bloco | Erro de validação backend | Causa no DEFAULT_BLOCK_CONTENT |
+|---|---|---|
+| `image` | `IMAGE_ALT_REQUIRED` | Backend espera `alt` no nível raiz do content, default envia `{ image: { alt: "..." } }` — estrutura aninhada |
+| `event-list` | `EVENT_LIST_SOURCE_REQUIRED` | Backend exige campo `source` como objeto, default não inclui `source` |
+| `contact` | `FORM_REFERENCE_REQUIRED` | Backend exige `formId` como UUID válido, default envia `formId: ""` |
+| `form` | `FORM_REFERENCE_REQUIRED` | Mesma causa que `contact` |
+| `download` | `DOWNLOAD_ITEM_ASSET_INVALID` | Cada item exige asset UUID válido, default envia `fileAssetId: ""` |
+| `audio` | `AUDIO_ASSET_INVALID` | Source = "upload" exige asset UUID, default envia `fileAssetId: ""` |
+| `video` | `VIDEO_ASSET_INVALID` | Mesma causa que `audio` |
+| `video-gallery` | `VIDEO_GALLERY_ITEMS_COUNT_OUT_OF_RANGE` | Exige ≥1 item, default envia `items: []` |
+
+Tipos que **passam** na validação atual (para referência): `hero`, `text`, `rich-text`, `two-column`, `image-text`, `feature-grid`, `card-list`, `gallery`, `timeline`, `cta-section`, `faq`, `social-links`.
+
+**Causa raiz de design:** o backend valida estritamente na criação (`POST /sections`), mas blocos como `audio`, `video`, `download`, `contact` e `form` precisam de assets ou formulários pré-existentes — é impossível criar um default válido sem dados do produto.
+
+**Implementação necessária:**
+
+**E.9.1 — Adicionar try/catch em `handleAddBlock`:**
+```typescript
+const handleAddBlock = async (type: BlockType) => {
+  if (!page) return;
+  const label = `Novo bloco ${page.sections.length + 1}`;
+  try {
+    const created = await pagesService.createSection(page.productSlug, page.id, {
+      type, label, content: DEFAULT_BLOCK_CONTENT[type],
+    });
+    await refreshPage(page);
+    setSelectedSectionId(created.id);
+    toast.success("Bloco adicionado", { description: `${label} (${type})` });
+    triggerSave();
+  } catch (err: unknown) {
+    const msg = (err as { message?: string }).message ?? "Verifique os campos obrigatórios.";
+    toast.error(`Não foi possível adicionar bloco "${type}"`, { description: msg });
+  }
+};
+```
+
+**E.9.2 — Corrigir defaults com falhas simples:**
+
+```typescript
+// blockDefaults.ts — fixes para tipos com default inválido corrigível:
+"image": { alt: "Descrição da imagem", src: "" },  // mover alt para raiz
+"video-gallery": {
+  items: [{
+    title: "Vídeo 1", source: "youtube",
+    youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  }]
+},
+"event-list": {
+  title: "Agenda",
+  source: { filter: null },  // satisfaz EVENT_LIST_SOURCE_REQUIRED
+  selectedEventIds: [],
+},
+```
+
+**E.9.3 — Blocos que dependem de recursos externos: abordagem recomendada**
+
+Para `contact`, `form`, `download`, `audio` e `video`, não é possível ter um default válido sem dados do produto. Duas opções:
+
+**Opção A (recomendada) — Relaxar validação do backend na criação:**
+Mover a validação estrita de conteúdo para a transição de status (`review`/`published`), não para o `POST /sections`. Na criação, aceitar conteúdo parcial/vazio e salvar como rascunho.
+
+```java
+// SectionController.java — criar sem validar conteúdo:
+// POST /sections → aceita qualquer content (salva como draft)
+// PUT /sections/{id} → valida content
+// POST /pages/{id}/transitions → valida content estritamente antes de publicar
+```
+
+**Opção B — Wizard de pré-criação no frontend:**
+Antes de criar, exibir modal específico por tipo para coletar o mínimo necessário (ex.: para `audio`: picker de asset; para `contact`: picker de formulário). Mais complexo, mas oferece melhor UX.
+
+**Critério de aceite:**
+- [ ] Todos os 19 tipos de bloco podem ser adicionados sem erro.
+- [ ] Falha na criação de bloco exibe toast com mensagem descritiva.
+- [ ] `image` block: `alt` no nível raiz do content.
+- [ ] `event-list` block: inclui campo `source` ao criar.
+- [ ] `video-gallery` block: criado com 1 item placeholder válido.
+- [ ] Blocos dependentes de asset (`audio`, `video`, `download`): ou aceitos sem asset na criação, ou wizard de seleção antes de criar.
+- [ ] Bruno: `POST /pages/{pageId}/sections` para cada tipo → 201 Created.
+
+**Smoke test (a ser executado pelo agente implementador):**
+```
+Para cada tipo em BLOCK_TYPES:
+  1. Abrir editor de uma página em branco
+  2. Selecionar o tipo no dropdown "Adicionar bloco"
+  3. Clicar "Adicionar bloco"
+  4. Esperado: bloco aparece na estrutura + toast de sucesso
+  5. Registrar: passou / falhou / erro exibido
+
+Tipos a testar: hero, text, rich-text, two-column, image, image-text,
+feature-grid, card-list, gallery, timeline, event-list, cta-section,
+faq, contact, form, download, audio, video, video-gallery, social-links
+```
+
+---
+
 ## Seção Z — Critérios de aceite globais da sprint
 
 ### Z.1 — Gates obrigatórios
