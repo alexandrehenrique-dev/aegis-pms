@@ -12,7 +12,8 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
 
-    ProductSummary toSummary(Product product);
+    @Mapping(target = "enabledModuleCount", source = "enabledModuleCount")
+    ProductSummary toSummary(Product product, int enabledModuleCount);
 
     @Mapping(target = "modules", source = "modules")
     ProductDetail toDetail(Product product, List<ProductModuleSummary> modules);

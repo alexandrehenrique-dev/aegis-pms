@@ -8,6 +8,7 @@ import br.com.byop.aegis.product.domain.ProductStatus;
 import br.com.byop.aegis.product.exception.ProductNotFoundException;
 import br.com.byop.aegis.product.export.contract.DeleteProductRequest;
 import br.com.byop.aegis.product.export.dto.DeleteAcceptedResponse;
+import br.com.byop.aegis.product.export.dto.ExportRecipient;
 import br.com.byop.aegis.product.export.exception.ExportAlreadyInProgressException;
 import br.com.byop.aegis.product.export.exception.InvalidProductDeleteConfirmationException;
 import br.com.byop.aegis.product.export.exception.ProductDeleteForbiddenException;
@@ -19,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -54,7 +56,9 @@ public class ProductDeleteService {
         assertDeletionCanStart(product);
         product.markDeleting();
         productRepository.save(product);
-        exportAndDeleteService.exportAndDelete(productId, caller.subject(), caller.email(), caller.name(), false);
+        // Na exclusão direta, quem iniciou é também o destinatário — o próprio usuário quer o backup.
+        exportAndDeleteService.exportAndDelete(productId, caller.subject(), caller.email(),
+                List.of(new ExportRecipient(caller.email(), caller.name())), false);
         log.info("deleteProduct: exclusao iniciada productId='{}'", productId);
         return new DeleteAcceptedResponse("Exportação iniciada. Um link de download será enviado para %s em instantes."
                 .formatted(caller.email()));

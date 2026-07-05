@@ -17,6 +17,8 @@ public record ProductSummary(
         String defaultLocale,
         AssetStorageStrategy assetStorageStrategy,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+        /** Número de módulos habilitados. Usado pelo frontend para determinar se o produto pode ser aberto. */
+        int enabledModuleCount
 ) {
 }

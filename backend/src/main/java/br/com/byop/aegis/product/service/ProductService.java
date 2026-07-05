@@ -101,7 +101,7 @@ public class ProductService {
                 type.name(), product.getDefaultLocale()));
         log.info("createProduct: produto criado id='{}', key='{}', type='{}'", product.getId(), product.getKey(), type);
 
-        return productMapper.toSummary(product);
+        return toSummaryWithModuleCount(product);
     }
 
     /**
@@ -122,7 +122,7 @@ public class ProductService {
         if (caller.authorities().contains(ROLE_SUPER_ADMIN)) {
             return productRepository.findAll()
                     .stream()
-                    .map(productMapper::toSummary)
+                    .map(this::toSummaryWithModuleCount)
                     .toList();
         }
 
@@ -131,7 +131,7 @@ public class ProductService {
                     .stream()
                     .flatMap(tenantId -> productRepository.findAllByTenantId(tenantId).stream())
                     .distinct()
-                    .map(productMapper::toSummary)
+                    .map(this::toSummaryWithModuleCount)
                     .toList();
         }
 
@@ -140,7 +140,7 @@ public class ProductService {
                     .stream()
                     .map(ProductAssignment::getProduct)
                     .distinct()
-                    .map(productMapper::toSummary)
+                    .map(this::toSummaryWithModuleCount)
                     .toList();
         }
 
@@ -150,7 +150,12 @@ public class ProductService {
     @Transactional(readOnly = true)
     public ProductSummary getProduct(AuthenticatedUser caller, UUID productId) {
         log.debug("getProduct: productId='{}'", productId);
-        return productMapper.toSummary(resolveAccessibleProduct(caller, productId));
+        return toSummaryWithModuleCount(resolveAccessibleProduct(caller, productId));
+    }
+
+    private ProductSummary toSummaryWithModuleCount(Product product) {
+        int enabledModuleCount = (int) moduleRepository.countByProductIdAndEnabledTrue(product.getId());
+        return productMapper.toSummary(product, enabledModuleCount);
     }
 
     @Transactional(readOnly = true)
