@@ -16,6 +16,7 @@ import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.security.AuthenticatedUserProvider;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -31,7 +32,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.ObjectMapper;
 
-import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
@@ -141,12 +141,13 @@ public class AssetController {
     }
 
     @GetMapping("/api/v1/assets/{assetId}/download")
-    public ResponseEntity<Void> downloadAsset(@PathVariable("assetId") UUID assetId, Authentication authentication) {
+    public ResponseEntity<byte[]> downloadAsset(@PathVariable("assetId") UUID assetId, Authentication authentication) {
         AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
-        ResolvedAsset resolved = assetService.resolveAsset(assetId, caller);
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(resolved.url()))
-                .build();
+        AssetFileContent file = assetService.loadAssetFile(assetId, caller);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.filename() + "\"")
+                .contentType(MediaType.parseMediaType(file.contentType()))
+                .body(file.content());
     }
 
     @GetMapping("/api/v1/assets/{assetId}/file")
