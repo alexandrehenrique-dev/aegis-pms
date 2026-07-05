@@ -173,6 +173,30 @@ public class KeycloakAdminClient {
         }
     }
 
+    /**
+     * {@code true} quando o usuário ainda tem a required action pendente no Keycloak
+     * (ex.: {@code UPDATE_PASSWORD} para quem nunca definiu senha própria). Usado para
+     * distinguir, na validação de um convite, se o destinatário é um usuário novo
+     * (precisa definir senha) ou já tem conta ativa.
+     */
+    public boolean hasRequiredAction(String keycloakId, String action) {
+        try {
+            String accessToken = adminAccessToken();
+
+            KeycloakUserResponse user = restClient.get()
+                    .uri(userByIdEndpoint(keycloakId))
+                    .headers(headers -> headers.setBearerAuth(accessToken))
+                    .retrieve()
+                    .body(KeycloakUserResponse.class);
+
+            List<String> requiredActions = requireAdminResponse(user).requiredActions();
+            return requiredActions != null && requiredActions.contains(action);
+
+        } catch (RestClientException exception) {
+            throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
+        }
+    }
+
     private String usersEndpoint() {
         return properties.internalBaseUrl()
                 + normalizedAdminRealmsPath()
@@ -434,7 +458,8 @@ public class KeycloakAdminClient {
             String email,
             String firstName,
             String lastName,
-            boolean enabled
+            boolean enabled,
+            List<String> requiredActions
     ) {
     }
 
