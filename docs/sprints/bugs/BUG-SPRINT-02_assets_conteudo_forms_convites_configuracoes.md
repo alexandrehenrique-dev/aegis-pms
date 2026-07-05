@@ -187,6 +187,12 @@ public ResponseEntity<Resource> downloadAsset(@PathVariable UUID assetId) {
 - [ ] Clicar em `foto.jpg` → botão "Usar asset" habilitado.
 - [ ] Clicar "Usar asset" → bloco recebe o asset corretamente.
 
+**Follow-up 2026-07-05 — filtros do Asset Picker:**
+- A tela standalone `/assets/picker` não deve exibir chips decorativos ("Busca", "Filtros", "Seleção única" etc.). Os chips são filtros reais: tipo (`Todos`, `Imagens`, `PDFs`, `Vídeos`, `Áudios`, `Documentos`), `Selecionado` e `Limpar`.
+- A busca filtra por nome, tipo e tags, com estado controlado.
+- A filtragem precisa aceitar o contrato real do backend (`image`, `pdf`, `video`, `audio`, `document`) e os labels legados dos mocks (`imagem`, `PDF`, `vídeo`, `áudio`).
+- A mesma normalização vale para a modal `AssetPickerModal`, porque ela é usada por campos de mídia do editor.
+
 ---
 
 ### A.6 — AssetLibrary: ausência de preview inline e mocks remanescentes

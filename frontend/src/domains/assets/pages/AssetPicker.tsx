@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { Search } from "lucide-react";
-import { Badge, Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Search, X } from "lucide-react";
+import { Button, Card, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { assetsService } from "../services/assetsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AssetPreview, AssetTypeIcon } from "../components/AssetBits";
@@ -19,12 +19,39 @@ function previewKind(type: string | undefined) {
   return "document";
 }
 
+type AssetPickerFilter = "all" | "image" | "pdf" | "video" | "audio" | "document";
+
+const TYPE_FILTERS: Array<{ value: AssetPickerFilter; label: string }> = [
+  { value: "all", label: "Todos" },
+  { value: "image", label: "Imagens" },
+  { value: "pdf", label: "PDFs" },
+  { value: "video", label: "Vídeos" },
+  { value: "audio", label: "Áudios" },
+  { value: "document", label: "Documentos" },
+];
+
+function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+        active ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-muted/70"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function AssetPicker() {
   const { product } = useCurrentProduct();
   const { viewAsRole } = useViewAsRole();
   const productId = product?.id ?? "";
   const canEdit = viewAsRole !== "viewer";
   const [selected, setSelected] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<AssetPickerFilter>("all");
+  const [selectedOnly, setSelectedOnly] = useState(false);
   const { data: assets, loading, error } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId]);
   const [visibleAssets, setVisibleAssets] = useState(assets ?? []);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,6 +60,27 @@ export function AssetPicker() {
   const selectedKind = previewKind(selectedAsset?.type);
   const canPreviewSelected = selectedKind !== "document";
   const { url: selectedPreviewUrl, loading: selectedPreviewLoading } = useAssetObjectUrl(selectedAssetId, Boolean(selectedAssetId && canPreviewSelected));
+  const filteredAssets = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return visibleAssets.filter((asset) => {
+      const assetId = asset.id ?? asset.name;
+      const kind = previewKind(asset.type);
+      const matchesQuery = !normalizedQuery
+        || asset.name.toLowerCase().includes(normalizedQuery)
+        || asset.type.toLowerCase().includes(normalizedQuery)
+        || asset.tags.toLowerCase().includes(normalizedQuery);
+      const matchesType = typeFilter === "all" || kind === typeFilter;
+      const matchesSelection = !selectedOnly || assetId === selected;
+      return matchesQuery && matchesType && matchesSelection;
+    });
+  }, [query, selected, selectedOnly, typeFilter, visibleAssets]);
+  const hasActiveFilters = query.trim() || typeFilter !== "all" || selectedOnly;
+
+  const clearFilters = () => {
+    setQuery("");
+    setTypeFilter("all");
+    setSelectedOnly(false);
+  };
 
   useEffect(() => {
     const nextAssets = assets ?? [];
@@ -67,20 +115,37 @@ export function AssetPicker() {
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>
-          <div className="mb-3 flex items-center gap-2 rounded-xl border border-border px-3 py-2"><Search size={16} /><input placeholder="Buscar asset existente..." className="w-full bg-transparent text-sm outline-none" /></div>
-          <div className="mb-3 flex flex-wrap gap-2"><Badge>Busca</Badge><Badge>Filtros</Badge><Badge>Seleção única</Badge><Badge>Seleção múltipla</Badge><Badge>Sem resultados</Badge></div>
+          <div className="mb-3 flex items-center gap-2 rounded-xl border border-border px-3 py-2">
+            <Search size={16} />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar asset existente..." className="w-full bg-transparent text-sm outline-none" />
+          </div>
+          <div className="mb-3 flex flex-wrap gap-1">
+            {TYPE_FILTERS.map((filter) => (
+              <FilterChip key={filter.value} active={typeFilter === filter.value} onClick={() => setTypeFilter(filter.value)}>
+                {filter.label}
+              </FilterChip>
+            ))}
+            <FilterChip active={selectedOnly} onClick={() => setSelectedOnly((current) => !current)}>Selecionado</FilterChip>
+            {hasActiveFilters && (
+              <FilterChip active={false} onClick={clearFilters}><X size={10} /> Limpar</FilterChip>
+            )}
+          </div>
           {loading ? <SkeletonLines /> : error || !assets ? <PartialErrorWidget /> : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {visibleAssets.slice(0, 6).map((a) => (
-                <button key={a.id ?? a.name} onClick={() => setSelected(a.id ?? a.name)} className={`rounded-xl border p-3 text-left ${(a.id ?? a.name) === selected ? "border-primary bg-muted" : "border-border"}`}>
-                  <div className="mb-3 aspect-video overflow-hidden rounded-xl bg-muted">
-                    <AssetPreview a={a} assetId={a.id ?? a.name} />
-                  </div>
-                  <p className="mt-2 font-medium">{a.name}</p>
-                  <p className="text-sm text-muted-foreground">{a.type} · {a.size}</p>
-                </button>
-              ))}
-            </div>
+            filteredAssets.length === 0 ? (
+              <EmptyState compact title="Nenhum asset encontrado" description="Remova filtros ou busque por outro termo." primaryAction={{ label: "Limpar filtros", onClick: clearFilters }} />
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {filteredAssets.map((a) => (
+                  <button key={a.id ?? a.name} onClick={() => setSelected(a.id ?? a.name)} className={`rounded-xl border p-3 text-left ${(a.id ?? a.name) === selected ? "border-primary bg-muted" : "border-border"}`}>
+                    <div className="mb-3 aspect-video overflow-hidden rounded-xl bg-muted">
+                      <AssetPreview a={a} assetId={a.id ?? a.name} />
+                    </div>
+                    <p className="mt-2 font-medium">{a.name}</p>
+                    <p className="text-sm text-muted-foreground">{a.type} · {a.size}</p>
+                  </button>
+                ))}
+              </div>
+            )
           )}
         </Card>
         <Card>

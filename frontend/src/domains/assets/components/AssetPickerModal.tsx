@@ -14,6 +14,15 @@ export type AssetTypeFilter = "imagem" | "PDF" | "áudio" | "vídeo" | "qualquer
 
 const FILTER_OPTIONS: AssetTypeFilter[] = ["qualquer", "imagem", "PDF", "áudio", "vídeo"];
 
+function previewKind(type: string | undefined) {
+  const normalized = (type ?? "").trim().toLowerCase();
+  if (normalized === "imagem" || normalized === "image") return "image";
+  if (normalized === "pdf") return "pdf";
+  if (normalized === "vídeo" || normalized === "video") return "video";
+  if (normalized === "áudio" || normalized === "audio") return "audio";
+  return "document";
+}
+
 /**
  * Variante modal do `AssetPicker` (Sprint 13, Tarefa C) — diferente da tela
  * standalone (`AssetPicker.tsx`), devolve a seleção via `onSelect`, o que
@@ -39,8 +48,12 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
 
   const filtered = useMemo(() => {
     return visibleAssets.filter((a) => {
-      const matchesType = activeFilter === "qualquer" || a.type === activeFilter;
-      const matchesQuery = !query.trim() || a.name.toLowerCase().includes(query.trim().toLowerCase());
+      const matchesType = activeFilter === "qualquer" || previewKind(a.type) === previewKind(activeFilter);
+      const normalizedQuery = query.trim().toLowerCase();
+      const matchesQuery = !normalizedQuery
+        || a.name.toLowerCase().includes(normalizedQuery)
+        || a.type.toLowerCase().includes(normalizedQuery)
+        || a.tags.toLowerCase().includes(normalizedQuery);
       return matchesType && matchesQuery;
     });
   }, [visibleAssets, activeFilter, query]);
