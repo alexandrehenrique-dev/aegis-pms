@@ -348,7 +348,7 @@ public class KeycloakAdminClient {
     }
 
     private void executeResetPasswordEmail(String userId, String accessToken) {
-        executeActionsEmail(userId, List.of("UPDATE_PASSWORD"), accessToken);
+        executeActionsEmail(userId, List.of(UPDATE_PASSWORD_ACTION), accessToken);
     }
 
     private void executeActionsEmail(String userId, List<String> requiredActions, String accessToken) {
