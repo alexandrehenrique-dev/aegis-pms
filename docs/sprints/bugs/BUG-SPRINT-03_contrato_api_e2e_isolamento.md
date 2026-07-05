@@ -896,15 +896,15 @@ A `MediaField` foi projetada para retornar o nome do asset para exibição, mas 
 
 **Diagnóstico — duas causas raiz independentes:**
 
-**E.7.1 — "Salvar rascunho" não flusheia o debounce de conteúdo**
+**E.7.1 — "Salvar rascunho" é cosmético: sem rota real, sem flush de debounce**
 
-`PageEditor` tem dois mecanismos de persistência separados que NÃO se comunicam:
+`PageEditor` tem dois mecanismos de persistência separados que **não se comunicam**:
 
-- **Debounce de conteúdo** (`handleChangeContent`): persiste mudanças de bloco `CONTENT_SAVE_DEBOUNCE_MS` após a última tecla via `pagesService.updateSection`. É este mecanismo que persiste `selectedEventIds`.
-- **`triggerSave()`** (botão "Salvar rascunho"): atualiza apenas o indicador visual de status (`saveStatus`), **nunca chama `pagesService.updateSection`** nem cancela/flusheia o debounce pendente.
+- **Debounce de conteúdo** (`handleChangeContent`): persiste patches de blocos `CONTENT_SAVE_DEBOUNCE_MS` após a última interação via `pagesService.updateSection`. É este mecanismo que persiste `selectedEventIds`.
+- **`triggerSave()`** (botão "Salvar rascunho"): atualiza apenas o indicador visual de status (`saveStatus`). **Nunca chama nenhum serviço** — não flusheia o debounce, não persiste a página, não chama o backend.
 
 ```typescript
-// PageEditor.tsx — triggerSave() é apenas cosmético:
+// PageEditor.tsx — triggerSave() é 100% cosmético:
 const triggerSave = () => {
   setSaveStatus("dirty");
   if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -915,9 +915,79 @@ const triggerSave = () => {
 };
 ```
 
-O botão "Preview" navega para `/content/${page?.slug}/preview` (rota separada), que busca dados frescos do backend. Se o debounce ainda não disparou quando o usuário vai para o preview, `selectedEventIds` não está persistido → preview mostra lista vazia.
+O botão "Preview" navega para `/content/${page?.slug}/preview` (rota separada), que busca dados frescos do backend. Se o debounce não disparou, `selectedEventIds` não está persistido → preview mostra lista vazia.
 
-O toast "Salvo automaticamente" visível na primeira screenshot corresponde ao indicador visual de `triggerSave()`, **não** a uma persistência real de conteúdo.
+O toast "Salvo automaticamente" visível na screenshot = indicador visual de `triggerSave()`, **não** uma confirmação de persistência real.
+
+**Jornada correta para "Salvar rascunho":**
+
+A rota real já existe no backend (`PUT /api/v1/products/{productId}/pages/{pageId}`) e `pagesService.updatePage()` já a chama em modo API. O botão simplesmente nunca chegou a usá-la. A jornada completa deve ser:
+
+```
+Usuário clica "Salvar rascunho"
+  │
+  ├─ 1. Flush imediato do debounce de conteúdo
+  │       → cancelar timer pendente
+  │       → se há patch pendente: pagesService.updateSection(pageId, sectionId, { content })
+  │
+  ├─ 2. Persistir a página como rascunho
+  │       → pagesService.updatePage(productSlug, pageId, { status: "draft" })
+  │       → PUT /api/v1/products/{productId}/pages/{pageId} com payload completo
+  │
+  ├─ 3. Atualizar estado local com a resposta do backend
+  │       → refreshPage(page) — fonte da verdade é o backend
+  │
+  └─ 4. Feedback real ao usuário
+          → toast.success("Rascunho salvo") em caso de sucesso
+          → toast.error("Falha ao salvar", { description: err.message }) em caso de erro
+          → setSaveStatus("saved") apenas após confirmação do backend
+```
+
+**Implementação:**
+
+```typescript
+// PageEditor.tsx — handleSaveDraft substitui triggerSave no botão:
+const handleSaveDraft = async () => {
+  if (!page) return;
+  setSaveStatus("saving");
+  try {
+    // 1. Flush do debounce de conteúdo pendente
+    if (contentDebounceTimer.current) {
+      clearTimeout(contentDebounceTimer.current);
+      contentDebounceTimer.current = null;
+      const pending = pendingContentPatch.current;
+      pendingContentPatch.current = null;
+      if (pending) {
+        await pagesService.updateSection(page.productSlug, page.id, pending.sectionId, {
+          content: { ...selectedSection?.content, ...pending.patch },
+        });
+      }
+    }
+    // 2. Persistir status "draft" via rota real
+    await pagesService.updatePage(page.productSlug, page.id, { status: "draft" });
+    // 3. Atualizar estado local
+    await refreshPage(page);
+    setSaveStatus("saved");
+    toast.success("Rascunho salvo");
+    setTimeout(() => setSaveStatus("idle"), 3000);
+  } catch (err: unknown) {
+    setSaveStatus("idle");
+    toast.error("Falha ao salvar", {
+      description: (err as { message?: string }).message ?? "Tente novamente.",
+    });
+  }
+};
+```
+
+```tsx
+{/* PageEditor.tsx — botão usa handleSaveDraft, não triggerSave: */}
+<Button onClick={handleSaveDraft} disabled={saveStatus === "saving"}>
+  {saveStatus === "saving" ? <Loader2 size={14} className="animate-spin" /> : null}
+  Salvar rascunho
+</Button>
+```
+
+**Impacto no botão "Preview":** após o flush via `handleSaveDraft`, o preview pode ser aberto imediatamente e encontrará os dados corretos (incluindo `selectedEventIds`) persistidos no backend.
 
 **E.7.2 — `BlockRenderer` para `event-list` é placeholder**
 
@@ -944,31 +1014,12 @@ O renderer correto deveria buscar os eventos via `eventsService.listEvents(produ
 
 **Implementação necessária:**
 
-**E.7.1 — Flushipar debounce ao salvar/navegar para preview:**
+**E.7.1 — Implementar `handleSaveDraft` real (ver jornada completa no diagnóstico acima).**
 
-```typescript
-// PageEditor.tsx — triggerSave deve também persistir conteúdo pendente:
-const triggerSave = async () => {
-  // Flushipar debounce pendente ANTES de atualizar indicador visual
-  if (contentDebounceTimer.current) {
-    clearTimeout(contentDebounceTimer.current);
-    contentDebounceTimer.current = null;
-    const pending = pendingContentPatch.current;
-    pendingContentPatch.current = null;
-    if (pending && page) {
-      await pagesService.updateSection(page.productSlug, page.id, pending.sectionId, {
-        content: { ...selectedSection?.content, ...pending.patch },
-      });
-      await refreshPage(page);
-    }
-  }
-  setSaveStatus("dirty");
-  if (saveTimer.current) clearTimeout(saveTimer.current);
-  saveTimer.current = setTimeout(() => { setSaveStatus("saving"); ... }, 1800);
-};
-```
-
-Alternativamente, bloquear a navegação para preview enquanto `saveStatus === "dirty"` e exibir aviso.
+A implementação está detalhada no diagnóstico do E.7.1. Resumo dos pontos de mudança:
+- Substituir chamada a `triggerSave()` no botão por `handleSaveDraft()` (async)
+- `handleSaveDraft`: flush debounce → `pagesService.updateSection` (se pendente) → `pagesService.updatePage({ status: "draft" })` → `refreshPage` → toast real
+- Manter `triggerSave()` apenas para o auto-save visual do debounce (sem alteração no comportamento do debounce)
 
 **E.7.2 — `BlockRenderer` deve renderizar cards de evento reais:**
 
