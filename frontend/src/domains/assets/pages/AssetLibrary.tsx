@@ -65,7 +65,7 @@ export function AssetLibrary() {
                   <td className="p-3">{a.tags}</td>
                   <td className="p-3">{a.usage}</td>
                   <td className="p-3">{a.uploadedAt}</td>
-                  <td className="p-3"><Button onClick={() => navigate(`/assets/${a.name.replace(/\.[a-z0-9]+$/i, "")}`)}>Abrir</Button></td>
+                  <td className="p-3"><Button onClick={() => navigate(`/assets/${a.id ?? a.name}`)}>Abrir</Button></td>
                 </tr>
               ))}
             </tbody>

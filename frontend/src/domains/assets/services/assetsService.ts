@@ -2,7 +2,7 @@ import { assets, assetTags } from "../mocks/assets.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient, resolveBaseUrl } from "../../../shared/services/apiClient";
-import type { AssetSummary, ListAssetsResponse, ListAssetTagsResponse } from "../contracts/responses";
+import type { AssetDetailResponse, AssetSummary, ListAssetsResponse, ListAssetTagsResponse } from "../contracts/responses";
 
 const assetsStore: AssetSummary[] = assets.map(([name, type, size, status, tags, usage, uploadedAt]) => ({
   name, type, size, status, tags, usage, uploadedAt,
@@ -30,6 +30,23 @@ export const assetsService = {
   async listTags(productId: string): Promise<ListAssetTagsResponse> {
     if (IS_API_MODE) return apiClient.get<ListAssetTagsResponse>(`/products/${productId}/asset-tags`);
     return assetTagsStore;
+  },
+  async getAsset(productId: string, assetId: string): Promise<AssetDetailResponse | undefined> {
+    if (IS_API_MODE) return apiClient.get<AssetDetailResponse>(`/products/${productId}/assets/${assetId}`);
+    const asset = assetsStore.find((item) => item.id === assetId || item.name === assetId);
+    if (!asset) return undefined;
+    return {
+      id: asset.id ?? asset.name,
+      name: asset.name,
+      friendlyName: asset.name,
+      mimeType: asset.type === "imagem" ? "image/*" : asset.type === "vídeo" ? "video/*" : asset.type === "áudio" ? "audio/*" : asset.type === "PDF" ? "application/pdf" : "application/octet-stream",
+      category: asset.type,
+      sizeBytes: 0,
+      status: asset.status,
+      tags: asset.tags ? asset.tags.split(", ").filter(Boolean) : [],
+      createdAt: asset.uploadedAt,
+      updatedAt: asset.uploadedAt,
+    };
   },
   async createTag(productId: string, name: string): Promise<void> {
     if (IS_API_MODE) return apiClient.post(`/products/${productId}/asset-tags`, name);

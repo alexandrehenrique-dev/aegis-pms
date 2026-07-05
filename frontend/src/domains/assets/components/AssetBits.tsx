@@ -18,7 +18,6 @@ export function AssetTypeIcon({ type }: { type: string }) {
 
 export function AssetCard({ a, productId }: { a: AssetSummary; productId: string }) {
   const navigate = useNavigate();
-  const slug = a.name.replace(/\.[a-z0-9]+$/i, "");
   const assetId = a.id ?? a.name;
 
   const handleCopyReference = async () => {
@@ -39,7 +38,7 @@ export function AssetCard({ a, productId }: { a: AssetSummary; productId: string
           <DropdownMenu>
             <DropdownMenuTrigger asChild><button className="rounded-lg bg-card p-1"><MoreHorizontal size={17} /></button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => navigate(`/assets/${slug}`)}><Eye size={14} />Abrir</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate(`/assets/${assetId}`)}><Eye size={14} />Abrir</DropdownMenuItem>
               <DropdownMenuItem onSelect={handleCopyReference}><Copy size={14} />Copiar referência</DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onSelect={handleArchive}><Archive size={14} />Arquivar</DropdownMenuItem>
             </DropdownMenuContent>
@@ -54,7 +53,7 @@ export function AssetCard({ a, productId }: { a: AssetSummary; productId: string
       <div className="mt-3 flex flex-wrap gap-1">{a.tags.split(", ").map((t) => <Badge key={t}>{t}</Badge>)}</div>
       <p className="mt-3 text-sm text-muted-foreground">Uso: {a.usage}</p>
       <div className="mt-4 flex gap-2">
-        <Button onClick={() => navigate(`/assets/${slug}`)}>Abrir</Button>
+        <Button onClick={() => navigate(`/assets/${assetId}`)}>Abrir</Button>
         <a href={assetsService.getDownloadUrl(assetId)} target="_blank" rel="noreferrer">
           <Button>Baixar</Button>
         </a>
