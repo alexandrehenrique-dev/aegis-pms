@@ -5,6 +5,7 @@ import { Bell, Boxes, Clock3, LogOut, MoreVertical, Plus } from "lucide-react";
 import { useAuth } from "../useAuth";
 import { roleLabels } from "../../permissions/roles";
 import { tenantsService } from "../../tenants/services/tenantsService";
+import { productsService } from "../../../domains/products/services/productsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AegisLogo } from "../../../shared/components/AegisLogo";
 import { Badge, Button, EmptyState, Field } from "../../../shared/components/Primitives";
@@ -30,7 +31,19 @@ export function TenantSelectScreen() {
 
   const [reloadKey, setReloadKey] = useState(0);
   const refresh = () => setReloadKey((k) => k + 1);
-  const { data: allTenants } = useAsyncData(() => tenantsService.listTenants(), [reloadKey]);
+  const { data: rawTenants } = useAsyncData(() => tenantsService.listTenants(), [reloadKey]);
+  // tenantsService.listTenants() nunca preenche productCount (é sempre 0 no
+  // mapper) — para o Super Admin, que usa esta lista em vez de userTenants
+  // (que já recebe o enriquecimento equivalente em AuthContext), o count real
+  // precisa ser derivado aqui também a partir dos produtos carregados.
+  const { data: allProducts } = useAsyncData(
+    () => (isSuperAdmin ? productsService.listProducts() : Promise.resolve([])),
+    [isSuperAdmin, reloadKey],
+  );
+  const allTenants = (rawTenants ?? []).map((t) => ({
+    ...t,
+    productCount: (allProducts ?? []).filter((p) => p.tenantId === t.id).length,
+  }));
 
   const [hiddenTenantIds, setHiddenTenantIds] = useState<Set<string>>(new Set());
   const [showCreateWizard, setShowCreateWizard] = useState(false);
