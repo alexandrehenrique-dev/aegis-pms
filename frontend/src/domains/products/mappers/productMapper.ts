@@ -12,6 +12,7 @@ export type ProductSummaryDto = {
   assetStorageStrategy?: string;
   createdAt?: string;
   updatedAt?: string;
+  enabledModuleCount?: number;
 };
 
 const PRODUCT_STATUS: Record<string, ProductStatus> = {
@@ -43,7 +44,7 @@ export function mapProductSummary(dto: ProductSummaryDto): ProductSummary {
     name: dto.name ?? dto.key,
     type: mapProductType(dto.type),
     status: mapProductStatus(dto.status),
-    modules: 0,
+    modules: dto.enabledModuleCount ?? 0,
     last: dto.updatedAt ?? dto.createdAt ?? "—",
     score: "—",
     tenantId: dto.tenantId,

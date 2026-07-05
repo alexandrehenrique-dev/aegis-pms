@@ -6,14 +6,18 @@ import { BackLink } from "../../../shared/components/BackLink";
 import { toast } from "../../../core/notifications/toast";
 import { productsService } from "../services/productsService";
 import { tenantsService } from "../../../core/tenants/services/tenantsService";
+import { productAssignmentsService } from "../../users/services/productAssignmentsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { useAuth } from "../../../core/auth/useAuth";
 import { PRODUCT_TYPES } from "../../../core/products/moduleDefaults";
 import { PRODUCT_PAGE_SKELETONS } from "../../../core/products/productTemplates";
 import { useModuleSelection } from "../hooks/useModuleSelection";
 import { ModuleCheckboxList } from "../components/ModuleCheckboxList";
 import { StorageStrategyStep } from "../components/StorageStrategyStep";
 import { slugify } from "../../../shared/utils/slugify";
+import { getProductSlug } from "../../../shared/utils/productSlugs";
 import { slugError, textLengthError } from "../../../shared/utils/validation";
+import { IS_API_MODE } from "../../../infra/apiMode";
 import type { AssetStorageStrategy } from "../contracts/requests";
 
 function PageSkeletonPreview({ type }: { type: string }) {
@@ -49,6 +53,7 @@ export function CreateProductForm() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const tenantId = params.get("tenantId");
+  const { authUser, effectiveTenant, addProduct } = useAuth();
   const { data: tenant } = useAsyncData(() => (tenantId ? tenantsService.getTenant(tenantId) : Promise.resolve(undefined)), [tenantId]);
 
   const [saving, setSaving] = useState(false);
@@ -96,8 +101,46 @@ export function CreateProductForm() {
         initialModules: selectedList, tenantId: tenantId ?? undefined,
         assetStorageStrategy, s3Bucket: s3Bucket || undefined, s3Region: s3Region || undefined,
       });
-      toast.success("Produto criado com sucesso!", { description: `byop/${slug} · ${selectedList.length} módulos iniciais habilitados` });
-      if (tenantId) navigate(`/admin/tenants/${tenantId}/products/${product.id}/assign-user`);
+
+      const resolvedTenantId = tenantId ?? effectiveTenant?.id ?? "t1";
+
+      // Auto-atribuir o criador como PRODUCT_MANAGER no modo mock.
+      // Em API mode, o backend faz isso em ProductAssignmentService.assignCreator().
+      if (!IS_API_MODE && authUser) {
+        productAssignmentsService.addToStore({
+          id: `auto-${Date.now()}`,
+          tenantId: resolvedTenantId,
+          productId: product.id!,
+          productName: product.name,
+          userName: authUser.name,
+          userEmail: authUser.email,
+          userSubject: authUser.id,
+          role: "PRODUCT_MANAGER",
+          status: "atribuido",
+        });
+      }
+
+      // Injeta o produto no AuthContext para aparecer imediatamente no sidebar e
+      // como effectiveProduct — sem necessidade de re-login. Quando o tenant bate
+      // com effectiveTenant, addProduct também chama setSelectedProduct internamente.
+      addProduct(resolvedTenantId, {
+        id: product.id!,
+        name: product.name,
+        type: product.type,
+        status: product.status,
+        modules: product.modules,
+        modulesList: product.modulesList,
+      });
+
+      toast.success("Produto criado com sucesso!", { description: `${slug} · ${selectedList.length} módulos iniciais habilitados` });
+
+      if (tenantId) {
+        // Fluxo do wizard de tenant-admin: próximo passo é atribuir usuários
+        navigate(`/admin/tenants/${tenantId}/products/${product.id}/assign-user`);
+      } else {
+        // Super-admin ou tenant-admin criando produto próprio: vai direto ao dashboard
+        navigate(`/products/${getProductSlug(product.name)}`);
+      }
     } finally {
       setSaving(false);
     }

@@ -25,24 +25,29 @@ export function ProductDashboard() {
   // Sprint 13, Tarefa N: pendência só aparece se a rota não for bloqueada para o papel atual (ex.: "Configurar SEO" exige /settings, fora do escopo de editor/viewer).
   const pendencias = allPendencias.filter(([, path]) => !isRouteBlocked(viewAsRole, path));
 
+  const productSlug = effectiveProduct ? effectiveProduct.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : "";
+  const productName = effectiveProduct?.name ?? "Produto";
+  const productType = effectiveProduct?.type ?? "";
+  const moduleCount = String(effectiveProduct?.modules ?? "—");
+
   return (
     <>
-      <PageHeader title="Maestro Beton" desc="Cockpit operacional do produto digital: saúde, pendências, módulos e próximos passos." badge="Site Institucional">
-        <Button onClick={() => navigate("/products/maestro-beton/detail")}>Editar produto</Button>
-        <Button onClick={() => navigate("/products/maestro-beton/modules")}>Ver módulos</Button>
-        <Button primary onClick={() => window.open("https://maestro-beton.byop.app", "_blank", "noopener,noreferrer")}><ExternalLink size={15} />Preview público</Button>
+      <PageHeader title={productName} desc="Cockpit operacional do produto digital: saúde, pendências, módulos e próximos passos." badge={productType}>
+        <Button onClick={() => navigate(`/products/${productSlug}/detail`)}>Editar produto</Button>
+        <Button onClick={() => navigate(`/products/${productSlug}/modules`)}>Ver módulos</Button>
+        <Button primary onClick={() => window.open(`https://${productSlug}.byop.app`, "_blank", "noopener,noreferrer")}><ExternalLink size={15} />Preview público</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <KPIWidget label="Status do produto" value="Saudável" detail="Sem incidentes críticos" onClick={() => navigate("/analytics/health")} />
-            <KPIWidget label="Módulos habilitados" value="6" detail="1 dependência pendente" onClick={() => navigate("/products/maestro-beton/modules")} />
-            <KPIWidget label="Conteúdos publicados" value="42" detail="+3 na semana" onClick={() => navigate("/content/list")} />
-            <KPIWidget label="Em revisão" value="7" detail="2 acima do SLA" onClick={() => navigate("/content/workflow")} />
-            <KPIWidget label="Formulários" value="89" detail="12 não lidos" onClick={() => navigate("/forms/submissions")} />
-            <KPIWidget label="Conversão estimada" value="5.2%" detail="+0.8 p.p." onClick={() => navigate("/analytics")} />
-            <KPIWidget label="Assets recentes" value="18" detail="Galeria atualizada" onClick={() => navigate("/assets")} />
-            <KPIWidget label="Erro parcial" value="—" detail="" error onClick={() => navigate("/analytics/states")} />
+            <KPIWidget label="Status do produto" value={effectiveProduct?.status ?? "—"} detail="" onClick={() => navigate("/analytics/health")} />
+            <KPIWidget label="Módulos habilitados" value={moduleCount} detail="" onClick={() => navigate(`/products/${productSlug}/modules`)} />
+            <KPIWidget label="Conteúdos publicados" value="—" detail="" onClick={() => navigate("/content/list")} />
+            <KPIWidget label="Em revisão" value="—" detail="" onClick={() => navigate("/content/workflow")} />
+            <KPIWidget label="Formulários" value="—" detail="" onClick={() => navigate("/forms/submissions")} />
+            <KPIWidget label="Conversão estimada" value="—" detail="" onClick={() => navigate("/analytics")} />
+            <KPIWidget label="Assets recentes" value="—" detail="" onClick={() => navigate("/assets")} />
+            <KPIWidget label="Tipo" value={productType || "—"} detail="" onClick={() => navigate(`/products/${productSlug}/detail`)} />
           </div>
           <QuickActions viewAsRole={viewAsRole} />
           <ModuleCatalog compact productId={effectiveProduct?.id} />

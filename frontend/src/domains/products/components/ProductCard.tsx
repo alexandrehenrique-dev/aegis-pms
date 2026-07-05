@@ -10,11 +10,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from "../../../core/notifications/toast";
 import { productsService } from "../services/productsService";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
+import { useAuth } from "../../../core/auth/useAuth";
 import type { ProductSummary } from "../contracts/responses";
 
 export function ProductCard({ p }: { p: ProductSummary }) {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
+  const { switchProduct } = useAuth();
   // ADR-0018: SUPER_ADMIN não entra no fluxo de conteúdo do produto — o botão
   // leva à mesma rota (metadados/módulos/configurações), mas o rótulo deixa
   // claro que ele está administrando a plataforma, não operando o produto.
@@ -24,8 +26,11 @@ export function ProductCard({ p }: { p: ProductSummary }) {
   const [archiving, setArchiving] = useState(false);
 
   const handleOpen = () => {
-    if (!p.modules) { navigate("/products/maestro-beton?empty=1"); return; }
-    navigate(slug ? `/products/${slug}` : "/products");
+    // Muda o produto selecionado no contexto de auth antes de navegar,
+    // garantindo que ProductDashboard/Detail/ModulesPage recebam o produto certo.
+    if (p.id) switchProduct(p.id);
+    if (!p.modules) { navigate(`/products/${slug}?empty=1`); return; }
+    navigate(`/products/${slug}`);
   };
 
   const handleFavorite = () => {
