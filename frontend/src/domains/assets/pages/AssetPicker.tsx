@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { Badge, Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { assetsService } from "../services/assetsService";
@@ -12,8 +12,11 @@ export function AssetPicker() {
   const productId = product?.id ?? "";
   const [selected, setSelected] = useState("hero-maestro-beton.jpg");
   const { data: assets, loading, error } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId]);
+  const [visibleAssets, setVisibleAssets] = useState(assets ?? []);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const selectedAsset = assets?.find((a) => a.name === selected);
+  const selectedAsset = visibleAssets.find((a) => a.name === selected);
+
+  useEffect(() => setVisibleAssets(assets ?? []), [assets]);
 
   const handleQuickUpload = () => fileInputRef.current?.click();
 
@@ -21,6 +24,8 @@ export function AssetPicker() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     await assetsService.uploadFiles(productId, Array.from(files));
+    const refreshed = await assetsService.listAssets(productId);
+    setVisibleAssets(refreshed);
     toast.success(`${files.length} arquivo(s) enviado(s)!`);
     setSelected(files[0].name);
     e.target.value = "";
@@ -43,7 +48,7 @@ export function AssetPicker() {
           <div className="mb-3 flex flex-wrap gap-2"><Badge>Busca</Badge><Badge>Filtros</Badge><Badge>Seleção única</Badge><Badge>Seleção múltipla</Badge><Badge>Sem resultados</Badge></div>
           {loading ? <SkeletonLines /> : error || !assets ? <PartialErrorWidget /> : (
             <div className="grid gap-3 md:grid-cols-2">
-              {assets.slice(0, 6).map((a) => (
+              {visibleAssets.slice(0, 6).map((a) => (
                 <button key={a.name} onClick={() => setSelected(a.name)} className={`rounded-xl border p-3 text-left ${selected === a.name ? "border-primary bg-muted" : "border-border"}`}>
                   <AssetTypeIcon type={a.type} />
                   <p className="mt-2 font-medium">{a.name}</p>
