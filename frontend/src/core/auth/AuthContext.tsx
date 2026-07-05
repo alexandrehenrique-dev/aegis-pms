@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import type { AuthUser, ProductOption, TenantOption } from "../../shared/types";
 import { setAuthTokenProvider, setRefreshHandler } from "../../shared/services/apiClient";
 import { logApiCall } from "../../shared/services/devLog";
@@ -30,6 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [selectedProduct, setSelectedProduct] = useState<ProductOption | null>(null);
   const [userTenants, setUserTenants] = useState<TenantOption[]>([]);
   const [userProducts, setUserProducts] = useState<Record<string, ProductOption[]>>({});
+  // true enquanto restauramos sessão de um token existente no sessionStorage (F5/reabertura)
+  const [restoring, setRestoring] = useState(() => IS_API_MODE && !!sessionStorage.getItem(ACCESS_TOKEN_KEY));
+  const restorationAttempted = useRef(false);
 
   // Registra a fonte do token do apiClient a partir do sessionStorage —
   // preenchido por `initSession`/limpo por `logout`, independente do modo
@@ -55,6 +59,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Restauração de sessão: se há token no sessionStorage (F5 / reabertura da aba),
+  // rebusca /me para recriar o authUser sem exigir novo login.
+  useEffect(() => {
+    if (!IS_API_MODE || restorationAttempted.current) return;
+    restorationAttempted.current = true;
+    const token = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    if (!token) { setRestoring(false); return; }
+
+    meService.getMe()
+      .then(async (me) => {
+        setAuthUser({ id: me.subject, name: me.name, email: me.email, role: toUserRole(me.role), initials: initialsOf(me.name) });
+        const tenants = await tenantsService.listTenants();
+        setUserTenants(tenants);
+        const products = await productsService.listProducts().catch(() => [] as Awaited<ReturnType<typeof productsService.listProducts>>);
+        const visibleTenantIds = new Set(tenants.map((t) => t.id));
+        const productsByTenant = products.reduce<Record<string, ProductOption[]>>((acc, product) => {
+          if (!product.id || !product.tenantId || !visibleTenantIds.has(product.tenantId)) return acc;
+          (acc[product.tenantId] ??= []).push({ id: product.id, key: product.key, name: product.name, type: product.type, status: product.status, modules: product.modules, modulesList: product.modulesList });
+          return acc;
+        }, {});
+        // Enriquece productCount com o número real de produtos carregados —
+        // o DTO do backend não retorna esse campo, então derivamos do que já temos.
+        setUserTenants(tenants.map(t => ({ ...t, productCount: (productsByTenant[t.id] ?? []).length })));
+        setUserProducts(productsByTenant);
+      })
+      .catch(() => {
+        sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+        sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+        window.location.href = "/login";
+      })
+      .finally(() => setRestoring(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     setNotificationsCurrentUser(authUser?.id ?? null);
   }, [authUser]);
@@ -66,8 +103,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (IS_API_MODE) {
       const me = await meService.getMe();
       setAuthUser({ id: me.subject, name: me.name, email: me.email, role: toUserRole(me.role), initials: initialsOf(me.name) });
+
+      // Carrega tenants e produtos de forma independente — se produtos falhar,
+      // o usuário ainda consegue logar e ver seus tenants (degradação suave).
       const tenants = await tenantsService.listTenants();
-      const products = await productsService.listProducts();
+      setUserTenants(tenants);
+
+      const products = await productsService.listProducts().catch(() => [] as Awaited<ReturnType<typeof productsService.listProducts>>);
       const visibleTenantIds = new Set(tenants.map((tenant) => tenant.id));
       const productsByTenant = products.reduce<Record<string, ProductOption[]>>((acc, product) => {
         if (!product.id || !product.tenantId) return acc;
@@ -78,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const tenantProducts = acc[product.tenantId] ?? (acc[product.tenantId] = []);
         tenantProducts.push({
           id: product.id,
+          key: product.key,
           name: product.name,
           type: product.type,
           status: product.status,
@@ -86,7 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         return acc;
       }, {});
-      setUserTenants(tenants);
+      // Enriquece productCount com o número real de produtos carregados —
+      // o DTO do backend não retorna esse campo, então derivamos do que já temos.
+      setUserTenants(tenants.map(tenant => ({ ...tenant, productCount: (productsByTenant[tenant.id] ?? []).length })));
       setUserProducts(productsByTenant);
     } else {
       setAuthUser(result.user ?? null);
@@ -172,6 +217,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSelectedProduct((sp) => (sp && sp.id === productId ? { ...sp, isFavorite: !sp.isFavorite } : sp));
   }, [effectiveTenant]);
 
+  /**
+   * Adiciona produto criado em tempo-real ao userProducts (e seleciona como ativo
+   * se o tenant for o efetivo atual). Permite que super-admin/tenant-admin vejam o
+   * produto recém-criado no sidebar imediatamente, sem re-login.
+   */
+  const addProduct = useCallback((tenantId: string, product: ProductOption) => {
+    setUserProducts((prev) => ({
+      ...prev,
+      [tenantId]: [...(prev[tenantId] ?? []), product],
+    }));
+    if (effectiveTenant?.id === tenantId) {
+      setSelectedProduct(product);
+    }
+  }, [effectiveTenant]);
+
   /** Exclusão lógica (soft delete) — `DELETE /api/v1/admin/products/{productId}` (docs/AEGIS_PMS_V1.md §8.4/§8.5: produto nunca é apagado fisicamente). */
   const removeProduct = useCallback((productId: string, req: DeleteProductRequest) => {
     if (!effectiveTenant) return;
@@ -185,11 +245,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authUser, selectedTenant, selectedProduct, userTenants, userProducts,
     effectiveTenant, tenantProducts, effectiveProduct,
     initSession, logout, selectTenant: setSelectedTenant, selectProduct: setSelectedProduct,
-    switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite,
+    switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite, addProduct,
   }), [
     authUser, selectedTenant, selectedProduct, userTenants, userProducts, effectiveTenant, tenantProducts, effectiveProduct,
-    initSession, logout, switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite,
+    initSession, logout, switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite, addProduct,
   ]);
+
+  if (restoring) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 size={32} className="animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

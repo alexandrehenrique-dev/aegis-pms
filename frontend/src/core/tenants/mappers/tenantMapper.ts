@@ -17,7 +17,9 @@ export function mapTenantSummary(dto: TenantSummaryDto): TenantOption {
     plan: dto.plan ?? "Starter",
     productCount: 0,
     lastAccess: "—",
-    status: dto.status === "ACTIVE" ? "ativo" : "suspenso",
+    // Backend retorna "ativo"/"suspenso" (TenantMapper.toContractStatus) — aceita
+    // também os valores ingleses para compatibilidade futura.
+    status: (dto.status === "ACTIVE" || dto.status === "ativo") ? "ativo" : "suspenso",
   };
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -19,10 +19,15 @@ export function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<LoginError>("");
 
+  // Captura `next` antes do replaceState da mensagem de toast — o replaceState
+  // limpa todo o state da rota, então precisamos preservar o destino pós-login.
+  const postLoginNext = useRef<string | null>(null);
+
   useEffect(() => {
-    const toastMessage = (location.state as { toast?: string } | null)?.toast;
-    if (toastMessage) {
-      toast.success(toastMessage);
+    const state = location.state as { toast?: string; next?: string } | null;
+    if (state?.next) postLoginNext.current = state.next;
+    if (state?.toast) {
+      toast.success(state.toast);
       window.history.replaceState({}, "", location.pathname);
     }
   }, [location.state, location.pathname]);
@@ -33,7 +38,9 @@ export function LoginScreen() {
     try {
       const result = await authService.login({ username: email, password });
       await initSession(result);
-      navigate("/select-tenant");
+      // Se o usuário veio de um convite com produto específico, vai direto ao produto.
+      // Caso contrário, segue o fluxo normal de seleção de tenant.
+      navigate(postLoginNext.current ?? "/select-tenant");
     } catch (err) {
       setError(loginErrorFromException(err));
     } finally {
