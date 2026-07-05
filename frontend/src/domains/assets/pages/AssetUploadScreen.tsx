@@ -36,11 +36,7 @@ export function AssetUploadScreen() {
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "";
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [files, setFiles] = useState([
-    { name: "hero-maestro-beton.jpg", p: 72 },
-    { name: "release-institucional.pdf", p: 100 },
-    { name: "video-depoimento.mov", p: 38 },
-  ]);
+  const [files, setFiles] = useState<{ name: string; p: number }[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [completing, setCompleting] = useState(false);
 
@@ -71,18 +67,18 @@ export function AssetUploadScreen() {
       <input ref={fileInputRef} type="file" multiple hidden onChange={handleFilesSelected} />
       <PageHeader title="Upload de Asset" module="Assets" desc="Envie arquivos com validação, progresso e metadados iniciais." badge="Upload">
         <Button onClick={() => navigate(-1)}>Cancelar</Button>
-        <Button primary onClick={handleCompleteUpload} disabled={completing}>{completing && <Loader2 size={15} className="animate-spin" />}{completing ? "Concluindo..." : "Concluir upload"}</Button>
+        <Button primary onClick={handleCompleteUpload} disabled={completing || selectedFiles.length === 0}>{completing && <Loader2 size={15} className="animate-spin" />}{completing ? "Concluindo..." : "Concluir upload"}</Button>
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <AssetUploadZone onSelect={handleSelectFiles} />
           <Card>
             <h2 className="mb-3 text-lg font-semibold">Arquivos selecionados</h2>
-            {files.map((f) => <UploadProgressItem key={f.name} name={f.name} p={f.p} />)}
+            {files.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum arquivo selecionado.</p> : files.map((f) => <UploadProgressItem key={f.name} name={f.name} p={f.p} />)}
             <div className="mt-3"><FileValidationAlert /></div>
           </Card>
         </div>
-        <AssetMetadataFormCard />
+        <AssetMetadataFormCard suggestedFileName={selectedFiles[0]?.name} />
       </div>
     </>
   );
