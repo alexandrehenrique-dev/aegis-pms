@@ -606,6 +606,288 @@ Frontend:
 
 ---
 
+## E.4 — Jornada Páginas × Conteúdo: separação correta, UX ausente e dashboard hardcoded
+
+**Módulos afetados:** `frontend/src/domains/content/pages/EditorialDashboard.tsx`, `contentService.ts`, `pagesService.ts`
+
+**Comportamento observado pelo usuário:**
+- Páginas criadas em `Páginas` não aparecem em `Conteúdo`.
+- Conteúdo criado em `Conteúdo` não aparece em `Páginas`.
+- A aba `Workflow` aparece vazia, sem itens.
+
+**Diagnóstico — separação arquitetural é INTENCIONAL:**
+
+Os dois domínios são distintos por design (documentado em comentários do código):
+
+| Domínio | Entidade | Serviço | Workflow | Tabela |
+|---|---|---|---|---|
+| `Páginas` | `Page` (páginas institucionais: home, sobre, contato) | `pagesService` | Nenhum — status simples: `draft\|review\|published\|archived` | `pages` |
+| `Conteúdo` | `Content` (artigos editoriais com ciclo de vida completo) | `contentService` | `DRAFT→IN_REVIEW→PUBLISHED→ARCHIVED` | `contents` |
+
+Criar de um módulo e não aparecer no outro = **comportamento correto**. O problema é a ausência de comunicação clara ao usuário sobre esta distinção.
+
+**Bugs reais encontrados na auditoria:**
+
+**E.4.1 — `EditorialDashboard`: card "Estados globais do módulo" sempre hardcoded**
+
+Arquivo: `frontend/src/domains/content/pages/EditorialDashboard.tsx`
+
+O card "Estados globais do módulo" no dashboard editorial exibe **sempre** os seguintes estados fixos, independentemente de dados reais:
+```tsx
+// Hardcoded — nunca reflete dados reais:
+<EmptyState compact title="Sem conteúdo" description="Crie o primeiro item editorial do produto." />
+<div><p className="mb-2 text-sm font-medium">Loading</p><SkeletonLines /></div>
+<PermissionHint />
+```
+Os KPI widgets acima (`rows`) derivam dados reais corretamente. O card de estados é placeholder nunca substituído.
+
+**E.4.2 — `EditorialAttentionCard`: alertas hardcoded com "Maestro"**
+
+O painel de atenções exibe alertas fixos referenciando "Maestro Beton" para qualquer produto:
+```tsx
+{["Página Home possui SEO incompleto.", "Sobre o Maestro está aguardando revisão.", ...].map(...)}
+```
+Deve vir do backend ou ser removido até haver endpoint real.
+
+**E.4.3 — Workflow vazio: causa raiz é E.3 (seed não popula `Content`)**
+
+O backend `GET /products/{productId}/content/workflow-items` existe e funciona. O endpoint `WorkflowBoard` chama-o corretamente. A lista vem vazia porque o seed não cria entidades `Content` (ver E.3). Em mock mode, `wfInitialItems` são todos "Maestro Beton" — filtro por produto não existe.
+
+**E.4.4 — Ausência de UX diferenciadora entre Páginas e Conteúdo**
+
+Nenhuma tela explica ao usuário a diferença entre os dois domínios. Risco de confusão recorrente.
+
+**Implementação necessária:**
+
+1. **E.4.1** — Substituir o card hardcoded por derivação real de `rows` (contagem por `ContentStatus`):
+   ```tsx
+   const byStatus = rows.reduce((acc, r) => { acc[r.status] = (acc[r.status] ?? 0) + 1; return acc; }, {} as Record<string, number>);
+   // Renderizar: Draft, In Review, Published, Archived com counts reais
+   ```
+
+2. **E.4.2** — Remover `EditorialAttentionCard` ou criar endpoint `GET /products/{productId}/content/attention-items`.
+
+3. **E.4.3** — Resolvido junto com E.3 (seed popula `Content`).
+
+4. **E.4.4** — Adicionar tooltip/banner explicativo na primeira visita a cada módulo: "Páginas são a estrutura do seu site. Conteúdo são artigos e publicações editoriais."
+
+**Critério de aceite:**
+- [ ] Card de estados globais exibe contagens reais por status de Content.
+- [ ] Workflow exibe itens reais após E.3 ser corrigido.
+- [ ] Zero referência a "Maestro Beton" em alertas visíveis ao usuário.
+
+---
+
+## E.5 — Formulários: `FormBuilder` não persiste form criado + filtro mock com slug errado
+
+**Módulos afetados:** `frontend/src/domains/forms/pages/FormBuilder.tsx`, `formsService.ts`, `FormsDashboard.tsx`
+
+**Comportamento observado:** Usuário cria um formulário, mas ele não aparece na lista de formulários. Parece que não foi salvo.
+
+**Diagnóstico — causa raiz (modo API):**
+
+O `FormBuilder` é montado na rota `/forms/new` sem um `formId` no parâmetro de URL:
+
+```tsx
+// FormBuilder.tsx
+const { slug: formId } = useParams<{ slug: string }>(); // undefined em /forms/new
+
+const handleSaveDraft = async () => {
+  if (formId && productId) await formsService.saveFormFields(productId, formId, fields); // pulado!
+  await formsService.saveDraft(productId, formId); // formId = undefined
+};
+
+const handlePublish = async () => {
+  await formsService.publish(productId, formId); // formId = undefined → noop no API mode
+};
+```
+
+`formsService.saveDraft` e `formsService.publish` em API mode ambos verificam `if (IS_API_MODE && formId)` — quando `formId` é `undefined`, **nenhuma chamada API é feita**.
+
+**`formsService.createForm()` nunca é chamado pelo `FormBuilder`** — o formulário nunca é criado no backend. A rota `/forms/new` abre o builder sem primeiro criar o recurso no servidor.
+
+**Diagnóstico — causa raiz (modo mock):**
+
+```typescript
+// formsService.ts — listForms
+const productSlug = currentProductSlugOrId(); // retorna UUID (ex: "p1")
+return formsStore.filter((f) => f.productSlug === productSlug);
+// Mock store tem productSlug = "maestro-beton" → filter retorna []
+```
+
+`currentProductSlugOrId()` retorna o ID do produto (`"p1"`, `"p2"`, etc.), mas os mocks têm `productSlug: "maestro-beton"`. O filtro nunca encontra correspondência.
+
+**E.5.1 — Bugs adicionais identificados:**
+
+- `FormsDashboard` card "Estados previstos" também hardcoded (mesmo padrão do E.4.1).
+- Não há rota `/forms/:formId/builder` para editar formulários existentes — o link da `FormsList` navega para `/forms/new` sempre que cria, e não há deep-link para editar.
+
+**Implementação necessária:**
+
+1. **Fluxo de criação** — Antes de abrir o `FormBuilder`, chamar `formsService.createForm()` e redirecionar para `/forms/:newFormId/builder`:
+   ```tsx
+   // FormsList / FormsDashboard — ao clicar "Novo formulário":
+   const created = await formsService.createForm(productId, { name: "Novo formulário", type: "contato" });
+   navigate(`/forms/${created.id}/builder`);
+   ```
+
+2. **Adicionar rota** em `index.tsx`:
+   ```tsx
+   <Route path="/forms/:slug/builder" element={<FormBuilder />} />
+   // Manter /forms/new apenas como redirect ou remover
+   ```
+
+3. **Corrigir filtro mock** — `listForms` deve comparar por ID do produto, não slug:
+   ```typescript
+   return formsStore.filter((f) => f.productSlug === (currentProductSlugOrId() ?? productId) || f.productSlug === productId);
+   ```
+
+4. **Card "Estados previstos"** — derivar de `formsData` assim como os KPIs.
+
+**Critério de aceite:**
+- [ ] Após criar formulário, ele aparece na lista de formulários com status "Rascunho".
+- [ ] Editar formulário existente via FormBuilder persiste campos corretamente.
+- [ ] Em mock mode, formulários do produto ativo aparecem na lista.
+- [ ] Card de estados no `FormsDashboard` exibe contagens reais.
+
+**Smoke test:**
+```
+1. Clicar "Novo formulário" → deve criar form no backend e redirecionar para /forms/:id/builder
+2. Adicionar 2 campos → "Salvar rascunho" → navegar para /forms/list
+3. Verificar que o formulário aparece na lista com status "Rascunho"
+4. Clicar "Publicar" → status muda para "Publicado"
+```
+
+---
+
+## E.6 — Eventos: salvar falha silenciosamente (contrato + error handling + imageAssetId)
+
+**Módulos afetados:** `frontend/src/domains/pages/components/EventsManagerDrawer.tsx`, `eventsService.ts`, `backend/.../pages/contract/CreateEventRequest.java`
+
+**Comportamento observado:** Usuário preenche o formulário de evento (Título, Data, Descrição), clica "Salvar evento" — nada acontece. O evento não aparece na lista. Também não é possível fazer upload de imagem pelo painel.
+
+**Diagnóstico — 3 causas raiz identificadas:**
+
+**E.6.1 — `@NotBlank location` no backend vs campo opcional no frontend**
+
+O backend exige `location` como obrigatório:
+```java
+// CreateEventRequest.java
+public record CreateEventRequest(
+    @NotBlank String title,
+    @NotNull LocalDateTime datetime,
+    @NotBlank String location,  // ← obrigatório!
+    ...
+) {}
+```
+
+Mas o frontend não valida `location` — o botão "Salvar evento" só bloqueia se `title` estiver vazio:
+```tsx
+// EventForm — botão habilitado mesmo com location vazia:
+<Button primary onClick={() => onSave(draft)} disabled={saving || !draft.title.trim()}>
+```
+
+Se o usuário deixar "Local" em branco (como mostrado na screenshot), o backend retorna 400. O frontend não vê o erro porque:
+
+**E.6.2 — `handleSave` sem `catch` → erro silencioso**
+
+```typescript
+// EventsManagerDrawer.tsx
+const handleSave = async (req: CreateEventRequest) => {
+  setSaving(true);
+  try {
+    await eventsService.createEvent(productSlug, req); // lança exceção 400
+    toast.success("Evento criado", { description: req.title }); // nunca executado
+    setEditing(null);
+    refresh();
+  } finally {
+    setSaving(false); // só executa o finally — nenhuma mensagem de erro
+  }
+};
+```
+
+Sem bloco `catch`, a exceção é silenciada. O usuário vê o botão parar de girar mas nenhum feedback de erro.
+
+**E.6.3 — `imageAssetId`: tipo errado (filename string em vez de UUID)**
+
+`MediaField` retorna `asset.name` (nome do arquivo, ex: `"foto-evento.jpg"`) ao selecionar um asset. O `eventsService.toEventDto` passa esse valor como `imageAssetId`:
+
+```typescript
+function toEventDto(req) {
+  return { ..., imageAssetId: req.image || undefined }; // "foto-evento.jpg" — não é UUID!
+}
+```
+
+O backend espera `UUID imageAssetId`. Spring rejeita a deserialização se o valor não for um UUID válido → 400 mesmo com todos os outros campos corretos.
+
+A `MediaField` foi projetada para retornar o nome do asset para exibição, mas o evento precisa do ID do asset. É necessário usar `onSelectAsset` (que fornece o `AssetSummary` completo) em vez de `onChange` para capturar o `asset.id`.
+
+**Implementação necessária:**
+
+1. **E.6.1** — Tornar `location` opcional no backend (remover `@NotBlank`), ou adicionar validação no frontend + mensagem de erro ao usuário:
+   ```tsx
+   // Opção A — validação no frontend (recomendado para UX):
+   <Button primary onClick={() => onSave(draft)}
+     disabled={saving || !draft.title.trim() || !draft.location.trim()}>
+   // + Field de Local com required visual
+   ```
+
+2. **E.6.2** — Adicionar `catch` no `handleSave`:
+   ```typescript
+   const handleSave = async (req: CreateEventRequest) => {
+     setSaving(true);
+     try {
+       if (editing && editing !== "new") {
+         await eventsService.updateEvent(productSlug, editing.id, req);
+         toast.success("Evento atualizado", { description: req.title });
+       } else {
+         await eventsService.createEvent(productSlug, req);
+         toast.success("Evento criado", { description: req.title });
+       }
+       setEditing(null);
+       refresh();
+     } catch (err: unknown) {
+       const msg = (err as { message?: string }).message ?? "Erro ao salvar evento.";
+       toast.error("Falha ao salvar", { description: msg });
+     } finally {
+       setSaving(false);
+     }
+   };
+   ```
+
+3. **E.6.3** — Capturar `asset.id` (UUID) em vez de `asset.name` para `imageAssetId`:
+   ```tsx
+   // EventForm — patch deve guardar o ID do asset, não o nome:
+   <MediaField
+     label="Foto do evento"
+     value={draft.image ?? ""}
+     typeFilter="imagem"
+     onChange={(name) => patch({ image: name })}          // manter para exibição
+     onSelectAsset={(asset) => patch({ imageAssetId: asset.id, image: asset.name })}
+   />
+   ```
+   E ajustar `CreateEventRequest` frontend para incluir `imageAssetId?: string` separado de `image`.
+
+**Critério de aceite:**
+- [ ] Evento com "Local" vazio → mensagem de validação visível, não envio silencioso.
+- [ ] Evento com erro de backend → toast de erro com mensagem descritiva.
+- [ ] Selecionar imagem via AssetPicker → `imageAssetId` enviado ao backend como UUID válido.
+- [ ] Evento criado aparece na lista após salvar.
+- [ ] Bruno: `POST /products/{productId}/events` com `location` vazia → 400 com `violations`.
+
+**Smoke test:**
+```
+1. Editor de Páginas → bloco event-list → "Gerenciar eventos"
+2. Preencher apenas Título e Descrição (Local vazio) → "Salvar evento"
+3. Esperado: mensagem de validação visível (não silêncio)
+4. Preencher Local → "Salvar evento"
+5. Esperado: toast "Evento criado" e evento aparece na lista
+6. Selecionar imagem via "Selecionar imagem" → salvar
+7. Esperado: backend recebe UUID do asset, não filename
+```
+
+---
+
 ## Seção Z — Critérios de aceite globais da sprint
 
 ### Z.1 — Gates obrigatórios
