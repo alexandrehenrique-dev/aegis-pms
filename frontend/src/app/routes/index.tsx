@@ -89,6 +89,7 @@ const PermissionMatrixView = lazy(() => import("../../domains/settings/pages/Per
 const RoleManagement = lazy(() => import("../../domains/settings/pages/RoleManagement").then((m) => ({ default: m.RoleManagement })));
 const AccessPreviewPanel = lazy(() => import("../../domains/settings/pages/AccessPreviewPanel").then((m) => ({ default: m.AccessPreviewPanel })));
 const SecuritySettingsPanel = lazy(() => import("../../domains/settings/pages/SecuritySettingsPanel").then((m) => ({ default: m.SecuritySettingsPanel })));
+const TeamSettings = lazy(() => import("../../domains/settings/pages/TeamSettings").then((m) => ({ default: m.TeamSettings })));
 
 // --- domains/users ---
 const UserTable = lazy(() => import("../../domains/users/pages/UserTable").then((m) => ({ default: m.UserTable })));
@@ -183,6 +184,7 @@ export function AppRoutes() {
             <Route path="/settings/permissions" element={<PermissionMatrixView />} />
             <Route path="/settings/roles" element={<RoleManagement />} />
             <Route path="/settings/access-preview" element={<AccessPreviewPanel />} />
+            <Route path="/settings/team" element={<TeamSettings />} />
             <Route path="/settings/security" element={<SecuritySettingsPanel />} />
 
             <Route path="/users" element={<UserTable />} />

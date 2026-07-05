@@ -51,7 +51,7 @@ export const moduleTabs: Record<string, [string, string][]> = {
   "/forms": [["/forms", "Dashboard"], ["/forms/submissions", "Submissions"], ["/forms/publication", "Publicação"], ["/forms/analytics", "Analytics"]],
   "/analytics": [["/analytics", "Overview"], ["/analytics/health", "Saúde"], ["/analytics/content", "Conteúdo"], ["/analytics/forms", "Forms"], ["/analytics/channels", "Canais"], ["/analytics/reports", "Relatórios"], ["/analytics/trends", "Tendências"]],
   "/knowledge": [["/knowledge", "Overview"], ["/knowledge/graph", "Graph"], ["/knowledge/relationships", "Relações"], ["/knowledge/search", "Busca"], ["/knowledge/orphans", "Órfãos"], ["/knowledge/insights", "Insights"]],
-  "/settings": [["/settings", "Visão Geral"], ["/settings/product", "Produto"], ["/settings/tenant", "Tenant"], ["/settings/permissions", "Permissões"], ["/settings/security", "Segurança"]],
+  "/settings": [["/settings", "Visão Geral"], ["/settings/product", "Produto"], ["/settings/tenant", "Tenant"], ["/settings/team", "Equipe"], ["/settings/permissions", "Permissões"], ["/settings/security", "Segurança"]],
   "/users": [["/users", "Usuários"]],
   "/audit": [["/audit", "Timeline"]],
 };
