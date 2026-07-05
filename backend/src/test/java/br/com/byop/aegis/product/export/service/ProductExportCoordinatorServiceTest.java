@@ -1,7 +1,10 @@
 package br.com.byop.aegis.product.export.service;
 
+import br.com.byop.aegis.identity.api.IdentityUser;
 import br.com.byop.aegis.identity.api.IdentityUserDirectory;
 import br.com.byop.aegis.product.domain.Product;
+import br.com.byop.aegis.product.domain.ProductAssignment;
+import br.com.byop.aegis.product.domain.ProductAssignmentRole;
 import br.com.byop.aegis.product.domain.ProductStatus;
 import br.com.byop.aegis.product.domain.ProductTypeKey;
 import br.com.byop.aegis.product.export.dto.ExportRecipient;
@@ -19,6 +22,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -59,15 +63,60 @@ class ProductExportCoordinatorServiceTest {
         verify(productRepository, never()).save(deletedProduct);
         // Sem PRODUCT_MANAGER atribuído, recipients = [caller] (fallback)
         verify(exportAndDeleteService).exportAndDelete(
-                eq(ACTIVE_PRODUCT_ID),
-                eq(caller.subject()),
-                eq(caller.email()),
-                eq(List.of(new ExportRecipient(caller.email(), caller.name()))),
-                eq(true)
+                ACTIVE_PRODUCT_ID,
+                caller.subject(),
+                caller.email(),
+                List.of(new ExportRecipient(caller.email(), caller.name())),
+                true
         );
         // Produto já deletado não deve disparar exportação
         verify(exportAndDeleteService, never()).exportAndDelete(
-                eq(DELETED_PRODUCT_ID), any(), any(), any(), any(), any()
+                eq(DELETED_PRODUCT_ID), any(), any(), any(), anyBoolean()
+        );
+    }
+
+    @Test
+    void shouldUseAssignedProductManagerAsRecipient() {
+        Product product = product(ACTIVE_PRODUCT_ID, "active");
+        AuthenticatedUser caller = caller();
+        ProductAssignment manager = new ProductAssignment(product, "manager-subject", ProductAssignmentRole.PRODUCT_MANAGER);
+        IdentityUser managerUser = new IdentityUser("manager-subject", "manager", "manager@byop.dev", "Manager", "User");
+        when(productRepository.findAllByTenantId(TENANT_ID)).thenReturn(List.of(product));
+        when(assignmentRepository.findAllByProductId(ACTIVE_PRODUCT_ID)).thenReturn(List.of(manager));
+        when(identityUserDirectory.getRequiredUser("manager-subject")).thenReturn(managerUser);
+
+        service().startTenantProductExports(TENANT_ID, caller);
+
+        verify(exportAndDeleteService).exportAndDelete(
+                ACTIVE_PRODUCT_ID,
+                caller.subject(),
+                caller.email(),
+                List.of(new ExportRecipient(managerUser.email(), managerUser.displayName())),
+                true
+        );
+    }
+
+    @Test
+    void shouldFallBackToCallerWhenProductManagerCannotBeResolved() {
+        Product product = product(ACTIVE_PRODUCT_ID, "active");
+        AuthenticatedUser caller = caller();
+        ProductAssignment manager = new ProductAssignment(product, "manager-subject", ProductAssignmentRole.PRODUCT_MANAGER);
+        ProductAssignment editor = new ProductAssignment(product, "editor-subject", ProductAssignmentRole.EDITOR);
+        ProductAssignment revokedManager = new ProductAssignment(product, "revoked-manager-subject", ProductAssignmentRole.PRODUCT_MANAGER);
+        revokedManager.revoke();
+        when(productRepository.findAllByTenantId(TENANT_ID)).thenReturn(List.of(product));
+        when(assignmentRepository.findAllByProductId(ACTIVE_PRODUCT_ID))
+                .thenReturn(List.of(manager, editor, revokedManager));
+        when(identityUserDirectory.getRequiredUser("manager-subject")).thenThrow(new RuntimeException("not found"));
+
+        service().startTenantProductExports(TENANT_ID, caller);
+
+        verify(exportAndDeleteService).exportAndDelete(
+                ACTIVE_PRODUCT_ID,
+                caller.subject(),
+                caller.email(),
+                List.of(new ExportRecipient(caller.email(), caller.name())),
+                true
         );
     }
 

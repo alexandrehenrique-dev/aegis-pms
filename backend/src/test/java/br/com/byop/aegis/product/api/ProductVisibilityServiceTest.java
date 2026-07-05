@@ -63,7 +63,8 @@ class ProductVisibilityServiceTest {
                 "pt-BR",
                 AssetStorageStrategy.LOCAL,
                 FIXED_TIMESTAMP,
-                FIXED_TIMESTAMP
+                FIXED_TIMESTAMP,
+                0
         );
     }
 }

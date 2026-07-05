@@ -262,7 +262,8 @@ class ProductControllerTest {
                 "pt-BR",
                 AssetStorageStrategy.S3,
                 OffsetDateTime.parse("2026-06-25T10:00:00-03:00"),
-                OffsetDateTime.parse("2026-06-25T10:10:00-03:00")
+                OffsetDateTime.parse("2026-06-25T10:10:00-03:00"),
+                0
         );
     }
 

@@ -71,7 +71,7 @@ class ProductDeleteServiceTest {
                 PRODUCT_ID,
                 caller.subject(),
                 caller.email(),
-                caller.name(),
+                List.of(new ExportRecipient(caller.email(), caller.name())),
                 false
         );
         verify(tenantAccessService, never()).hasActiveMembership(TENANT_ID, caller.subject());

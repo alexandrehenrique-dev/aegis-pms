@@ -21,6 +21,7 @@ import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
 import br.com.byop.aegis.tenant.api.TenantReference;
+import br.com.byop.aegis.tenant.api.TenantUserAccessService;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -70,6 +71,9 @@ class ProductAssignmentServiceTest {
 
     @Mock
     private AuditService auditService;
+
+    @Mock
+    private TenantUserAccessService tenantUserAccessService;
 
     @InjectMocks
     private ProductAssignmentService service;
@@ -139,7 +143,7 @@ class ProductAssignmentServiceTest {
         saved.revoke();
         ProductAssignmentSummary summary = summary(product, "keycloak-guest-id", "guest@byop.dev", "guest@byop.dev");
         when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
-        when(invitePort.invite(product.getTenantId(), product.getId(), product.getName(),
+        when(invitePort.invite(product.getTenantId(), product.getId(), product.getKey(), product.getName(),
                 "guest@byop.dev", "EDITOR", "Admin"))
                 .thenReturn(invitedUser);
         when(assignmentRepository.save(any(ProductAssignment.class))).thenReturn(saved);
@@ -158,6 +162,27 @@ class ProductAssignmentServiceTest {
         assertThat(captor.getValue().getStatus()).isEqualTo(ProductAssignmentStatus.INVITED);
         verify(emailPort, never()).notifyAssignment(any(ProductAssignmentEmailCommand.class));
         verify(notificationPort).notifyAssignment(product.getTenantId(), product.getId(), "keycloak-guest-id");
+        verify(tenantUserAccessService).invite(product.getTenantId(), "keycloak-guest-id", "EDITOR");
+    }
+
+    @Test
+    void shouldNotCreateDuplicateMembershipWhenInvitedUserAlreadyHasOne() {
+        Product product = product();
+        IdentityUser invitedUser = new IdentityUser("keycloak-guest-id", "guest@byop.dev", "guest@byop.dev", null, null);
+        ProductAssignment saved = assignment(product, "keycloak-guest-id", ProductAssignmentRole.VIEWER);
+        saved.revoke();
+        ProductAssignmentSummary summary = summary(product, "keycloak-guest-id", "guest@byop.dev", "guest@byop.dev");
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(invitePort.invite(product.getTenantId(), product.getId(), product.getKey(), product.getName(),
+                "guest@byop.dev", "EDITOR", "Admin"))
+                .thenReturn(invitedUser);
+        when(assignmentRepository.save(any(ProductAssignment.class))).thenReturn(saved);
+        when(assignmentMapper.toSummary(saved, "guest@byop.dev", "guest@byop.dev")).thenReturn(summary);
+        when(tenantUserAccessService.hasAnyMembership(product.getTenantId(), "keycloak-guest-id")).thenReturn(true);
+
+        service.assignUser(caller(), product.getId(), request(product, null, "guest@byop.dev"));
+
+        verify(tenantUserAccessService, never()).invite(any(UUID.class), any(String.class), any(String.class));
     }
 
     @Test

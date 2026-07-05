@@ -684,6 +684,76 @@ class KeycloakAdminClientTest {
     }
 
     @Test
+    void shouldReturnTrueWhenUserHasRequiredAction() {
+        stubAdminToken();
+        wireMockServer.stubFor(
+                get(urlEqualTo("/admin/realms/aegis/users/user-1"))
+                        .willReturn(okJson("""
+                            {
+                              "id": "user-1",
+                              "username": "loki",
+                              "email": "loki@teste.com",
+                              "enabled": true,
+                              "requiredActions": ["UPDATE_PASSWORD"]
+                            }
+                            """))
+        );
+
+        assertTrue(client.hasRequiredAction("user-1", "UPDATE_PASSWORD"));
+    }
+
+    @Test
+    void shouldReturnFalseWhenUserHasNoRequiredActionsField() {
+        stubAdminToken();
+        wireMockServer.stubFor(
+                get(urlEqualTo("/admin/realms/aegis/users/user-1"))
+                        .willReturn(okJson("""
+                            {
+                              "id": "user-1",
+                              "username": "loki",
+                              "email": "loki@teste.com",
+                              "enabled": true
+                            }
+                            """))
+        );
+
+        assertFalse(client.hasRequiredAction("user-1", "UPDATE_PASSWORD"));
+    }
+
+    @Test
+    void shouldReturnFalseWhenUserDoesNotHaveRequiredAction() {
+        stubAdminToken();
+        wireMockServer.stubFor(
+                get(urlEqualTo("/admin/realms/aegis/users/user-1"))
+                        .willReturn(okJson("""
+                            {
+                              "id": "user-1",
+                              "username": "loki",
+                              "email": "loki@teste.com",
+                              "enabled": true,
+                              "requiredActions": []
+                            }
+                            """))
+        );
+
+        assertFalse(client.hasRequiredAction("user-1", "UPDATE_PASSWORD"));
+    }
+
+    @Test
+    void shouldThrowWhenHasRequiredActionFails() {
+        stubAdminToken();
+        wireMockServer.stubFor(
+                get(urlEqualTo("/admin/realms/aegis/users/user-1"))
+                        .willReturn(serverError())
+        );
+
+        assertThrows(
+                KeycloakAuthenticationException.class,
+                () -> client.hasRequiredAction("user-1", "UPDATE_PASSWORD")
+        );
+    }
+
+    @Test
     void shouldFindUserByEmail() {
         stubAdminToken();
         stubUserLookup("""

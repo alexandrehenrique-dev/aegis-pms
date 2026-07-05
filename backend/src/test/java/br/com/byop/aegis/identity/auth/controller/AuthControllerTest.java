@@ -202,9 +202,11 @@ class AuthControllerTest {
                         "guest@byop.dev",
                         "BYOP",
                         List.of("Aegis"),
+                        null,
                         "EDITOR",
                         "Admin",
-                        Instant.parse("2026-07-05T12:00:00Z")
+                        Instant.parse("2026-07-05T12:00:00Z"),
+                        true
                 ));
 
         mockMvc.perform(post("/api/v1/auth/invite/validate")
@@ -235,6 +237,23 @@ class AuthControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Conta ativada. Faça login para continuar."));
+    }
+
+    @Test
+    void shouldAcceptExistingUserInvite() throws Exception {
+        UUID token = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        when(authActivationService.acceptExistingUser(token))
+                .thenReturn(new AuthMessageResponse("Convite aceito. Faça login para acessar o produto."));
+
+        mockMvc.perform(post("/api/v1/auth/invite/accept-existing")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "token": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Convite aceito. Faça login para acessar o produto."));
     }
 
     @Test
