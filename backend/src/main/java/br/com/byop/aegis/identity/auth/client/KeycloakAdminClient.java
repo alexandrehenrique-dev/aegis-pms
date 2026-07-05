@@ -29,6 +29,7 @@ public class KeycloakAdminClient {
     private static final String ADMIN_API_ERROR = "Error communicating with Keycloak Admin API";
     private static final String EMPTY_ADMIN_RESPONSE = "Empty response from Keycloak Admin API";
     private static final String PASSWORD_CREDENTIAL_TYPE = "password";
+    private static final String UPDATE_PASSWORD_ACTION = "UPDATE_PASSWORD";
 
     private final RestClient restClient;
     private final KeycloakProperties properties;
@@ -264,7 +265,7 @@ public class KeycloakAdminClient {
                         firstName(name),
                         lastName(name),
                         true,
-                        List.of()
+                        List.of(UPDATE_PASSWORD_ACTION)
                 ))
                 .retrieve()
                 .toBodilessEntity();
