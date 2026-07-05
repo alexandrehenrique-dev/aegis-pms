@@ -8,8 +8,10 @@ public record AuthInviteValidationResponse(
         String userEmail,
         String tenantName,
         List<String> productNames,
+        String productSlug,
         String role,
         String inviterName,
-        Instant expiresAt
+        Instant expiresAt,
+        boolean requiresPasswordSetup
 ) {
 }

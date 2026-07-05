@@ -2,6 +2,7 @@ package br.com.byop.aegis.identity.auth.service;
 
 import br.com.byop.aegis.identity.api.IdentityAuthActionAuditEvent;
 import br.com.byop.aegis.identity.api.IdentityUser;
+import br.com.byop.aegis.identity.api.IdentityUserInviteActivatedEvent;
 import br.com.byop.aegis.identity.api.IdentityUserLifecycleService;
 import br.com.byop.aegis.identity.auth.client.KeycloakAdminClient;
 import br.com.byop.aegis.identity.auth.domain.AuthActionToken;
@@ -51,14 +52,19 @@ public class AuthActivationService {
     public AuthInviteValidationResponse validateInvite(UUID tokenId) {
         log.debug("validateInvite: validando convite");
         AuthActionToken token = tokenService.validateInvite(tokenId);
+        // requiresPasswordSetup: sempre true para tokens de convite — usuários
+        // existentes com membership ativa não passam pelo fluxo de invite token,
+        // apenas pelo assignExistingUser() que não gera token nem URL de ativação.
         return new AuthInviteValidationResponse(
                 token.getUserName(),
                 token.getUserEmail(),
                 token.getTenantName(),
                 tokenService.productNames(token),
+                token.getProductSlug(),
                 token.getRole(),
                 token.getInviterName(),
-                token.getExpiresAt()
+                token.getExpiresAt(),
+                true
         );
     }
 
@@ -70,6 +76,7 @@ public class AuthActivationService {
         updatePassword(token.getKeycloakId(), password);
         keycloakAdminClient.setUserEnabled(token.getKeycloakId(), true);
         keycloakAdminClient.clearRequiredActions(token.getKeycloakId());
+        eventPublisher.publishEvent(new IdentityUserInviteActivatedEvent(token.getKeycloakId()));
         audit(token, "USER_INVITE_ACTIVATED");
         log.info("activate: conta ativada para keycloakId='{}'", token.getKeycloakId());
         return new AuthMessageResponse(ACTIVATE_MESSAGE);

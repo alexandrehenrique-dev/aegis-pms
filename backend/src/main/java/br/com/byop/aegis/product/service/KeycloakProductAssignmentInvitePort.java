@@ -32,8 +32,8 @@ public class KeycloakProductAssignmentInvitePort implements ProductAssignmentInv
     }
 
     @Override
-    public IdentityUser invite(UUID tenantId, UUID productId, String productName, String inviteEmail,
-                               String role, String inviterName) {
+    public IdentityUser invite(UUID tenantId, UUID productId, String productKey, String productName,
+                               String inviteEmail, String role, String inviterName) {
         IdentityUser invited = invitationService.inviteByEmail(inviteEmail);
         TenantReference tenant = tenantAccessService.getRequiredReference(tenantId);
         actionTokenService.sendInviteActivation(new IdentityActionInviteCommand(
@@ -43,6 +43,7 @@ public class KeycloakProductAssignmentInvitePort implements ProductAssignmentInv
                 tenant.tenantId(),
                 tenant.name(),
                 List.of(productName),
+                productKey,
                 role,
                 inviterName
         ));

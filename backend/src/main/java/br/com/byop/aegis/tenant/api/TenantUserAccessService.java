@@ -1,5 +1,6 @@
 package br.com.byop.aegis.tenant.api;
 
+import br.com.byop.aegis.identity.api.IdentityUserInviteActivatedEvent;
 import br.com.byop.aegis.tenant.domain.Tenant;
 import br.com.byop.aegis.tenant.domain.TenantMembership;
 import br.com.byop.aegis.tenant.domain.TenantMembershipStatus;
@@ -7,6 +8,7 @@ import br.com.byop.aegis.tenant.exception.TenantNotFoundException;
 import br.com.byop.aegis.tenant.repository.TenantMembershipRepository;
 import br.com.byop.aegis.tenant.repository.TenantRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -165,6 +167,23 @@ public class TenantUserAccessService {
         TenantMembershipReference saved = toReference(membershipRepository.save(membership));
         log.info("remove: membership removida id='{}', tenantId='{}', userSubject='{}'", saved.id(), tenantId, userSubject);
         return saved;
+    }
+
+    /**
+     * Ouve {@link IdentityUserInviteActivatedEvent} e transiciona todas as
+     * {@code TenantMembership} do usuário de {@code INVITED} para {@code ACTIVE}.
+     * Executado na mesma transação do evento para garantir consistência.
+     */
+    @EventListener
+    @Transactional
+    public void onUserInviteActivated(IdentityUserInviteActivatedEvent event) {
+        log.debug("onUserInviteActivated: ativando memberships para keycloakId='{}'", event.keycloakId());
+        membershipRepository.findAllByUserSubjectAndStatus(event.keycloakId(), TenantMembershipStatus.INVITED)
+                .forEach(membership -> {
+                    membership.activate();
+                    membershipRepository.save(membership);
+                    log.info("onUserInviteActivated: membership id='{}' transitada para ACTIVE", membership.getId());
+                });
     }
 
     @Transactional

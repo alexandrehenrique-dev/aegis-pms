@@ -69,6 +69,7 @@ public class AuthActionTokenService {
                 command.tenantId(),
                 command.tenantName(),
                 writeProductNames(command.productNames()),
+                command.productSlug(),
                 command.role(),
                 command.inviterName()
         );

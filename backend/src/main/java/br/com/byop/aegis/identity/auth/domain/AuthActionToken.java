@@ -45,6 +45,9 @@ public class AuthActionToken {
     @Column(name = "product_names", columnDefinition = "TEXT")
     private String productNames;
 
+    @Column(name = "product_slug", length = 120)
+    private String productSlug;
+
     @Column(length = 50)
     private String role;
 
@@ -81,10 +84,12 @@ public class AuthActionToken {
         status = status == null ? AuthActionStatus.PENDING : status;
     }
 
-    public void addInviteContext(UUID tenantId, String tenantName, String productNames, String role, String inviterName) {
+    public void addInviteContext(UUID tenantId, String tenantName, String productNames, String productSlug,
+                                String role, String inviterName) {
         this.tenantId = tenantId;
         this.tenantName = tenantName;
         this.productNames = productNames;
+        this.productSlug = productSlug;
         this.role = role;
         this.inviterName = inviterName;
     }
@@ -136,6 +141,10 @@ public class AuthActionToken {
 
     public String getProductNames() {
         return productNames;
+    }
+
+    public String getProductSlug() {
+        return productSlug;
     }
 
     public String getRole() {
