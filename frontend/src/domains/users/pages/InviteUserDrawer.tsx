@@ -39,7 +39,10 @@ export function InviteUserDrawer() {
     if (hasErrors) return;
     setSending(true);
     try {
-      await usersService.invite({ name, email, role, allowedProducts }, effectiveTenant?.id);
+      const allowedProductIds = allowedProducts === "Todos os produtos"
+        ? tenantProducts.map((product) => product.id)
+        : tenantProducts.filter((product) => product.name === allowedProducts).map((product) => product.id);
+      await usersService.invite({ name, email, role, allowedProducts, allowedProductIds }, effectiveTenant?.id);
       toast.success("Convite enviado!", { description: `${name} receberá um email com instruções de acesso.` });
       navigate("/users");
     } finally {

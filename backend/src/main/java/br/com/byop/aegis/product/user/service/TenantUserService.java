@@ -9,6 +9,8 @@ import br.com.byop.aegis.identity.api.IdentityUserLifecycleService;
 import br.com.byop.aegis.notification.api.NotificationOnboardingService;
 import br.com.byop.aegis.product.api.ProductUserAccess;
 import br.com.byop.aegis.product.api.ProductUserAccessService;
+import br.com.byop.aegis.product.domain.Product;
+import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.product.user.contract.InviteTenantUserRequest;
 import br.com.byop.aegis.product.user.contract.UpdateTenantUserRequest;
 import br.com.byop.aegis.product.user.dto.TenantUserSummary;
@@ -53,6 +55,7 @@ public class TenantUserService {
     private final IdentityActionTokenService identityActionTokenService;
     private final TenantUserAccessService tenantUserAccessService;
     private final ProductUserAccessService productUserAccessService;
+    private final ProductRepository productRepository;
     private final TenantUserMapper userMapper;
     private final AuditService auditService;
     private final NotificationOnboardingService notificationOnboardingService;
@@ -61,6 +64,7 @@ public class TenantUserService {
                              IdentityActionTokenService identityActionTokenService,
                              TenantUserAccessService tenantUserAccessService,
                              ProductUserAccessService productUserAccessService,
+                             ProductRepository productRepository,
                              TenantUserMapper userMapper,
                              AuditService auditService,
                              NotificationOnboardingService notificationOnboardingService) {
@@ -68,6 +72,7 @@ public class TenantUserService {
         this.identityActionTokenService = identityActionTokenService;
         this.tenantUserAccessService = tenantUserAccessService;
         this.productUserAccessService = productUserAccessService;
+        this.productRepository = productRepository;
         this.userMapper = userMapper;
         this.auditService = auditService;
         this.notificationOnboardingService = notificationOnboardingService;
@@ -105,7 +110,7 @@ public class TenantUserService {
 
         String role = parseRole(request.role());
         TenantMembershipReference membership = tenantUserAccessService.invite(tenantId, user.id(), role);
-        sendInviteActivation(user, membership, request.allowedProducts(), role, caller.name());
+        sendInviteActivation(user, membership, inviteProductNames(tenantId, request), role, caller.name());
         notificationOnboardingService.assignOnboarding(user.id());
         recordAudit(tenantId, caller.subject(), "USER_INVITED_TO_TENANT", user.id(), user.displayName(),
                 null, Map.of("role", role, DIFF_KEY_STATUS, STATUS_INVITED));
@@ -277,6 +282,28 @@ public class TenantUserService {
                 .stream()
                 .map(ProductUserAccess::productName)
                 .toList());
+    }
+
+    private String inviteProductNames(UUID tenantId, InviteTenantUserRequest request) {
+        List<UUID> productIds = request.allowedProductIds();
+        if (productIds == null || productIds.isEmpty()) {
+            return request.allowedProducts();
+        }
+
+        List<Product> products = productRepository.findAllById(productIds);
+        if (products.size() != productIds.size()
+                || products.stream().anyMatch(product -> !tenantId.equals(product.getTenantId()))) {
+            throw new InvalidTenantUserOperationException("Invalid allowed product for tenant invite");
+        }
+
+        return productIds.stream()
+                .map(productId -> products.stream()
+                        .filter(product -> product.getId().equals(productId))
+                        .findFirst()
+                        .orElseThrow(() -> new InvalidTenantUserOperationException("Invalid allowed product for tenant invite"))
+                        .getName())
+                .reduce((left, right) -> left + ", " + right)
+                .orElse("");
     }
 
     private List<String> splitProductNames(String productNames) {
