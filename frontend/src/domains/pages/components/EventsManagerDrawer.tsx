@@ -51,7 +51,7 @@ function EventForm({ initial, onSave, onCancel, saving }: { initial: CreateEvent
       </div>
       <div className="flex justify-end gap-2">
         <Button onClick={onCancel}>Cancelar</Button>
-        <Button primary onClick={() => onSave(draft)} disabled={saving || !draft.title.trim()}>{saving ? "Salvando..." : "Salvar evento"}</Button>
+        <Button primary onClick={() => onSave(draft)} disabled={saving || !draft.title.trim() || !draft.location.trim()}>{saving ? "Salvando..." : "Salvar evento"}</Button>
       </div>
     </div>
   );
@@ -87,6 +87,10 @@ export function EventsManagerDrawer({ productSlug, open, onOpenChange }: { produ
       }
       setEditing(null);
       refresh();
+    } catch (err: unknown) {
+      toast.error("Falha ao salvar", {
+        description: (err as { message?: string }).message ?? "Erro ao salvar evento.",
+      });
     } finally {
       setSaving(false);
     }
@@ -94,10 +98,16 @@ export function EventsManagerDrawer({ productSlug, open, onOpenChange }: { produ
 
   const handleDelete = async () => {
     if (!pendingDeleteId) return;
-    await eventsService.deleteEvent(productSlug, pendingDeleteId);
-    toast.success("Evento removido");
-    setPendingDeleteId(null);
-    refresh();
+    try {
+      await eventsService.deleteEvent(productSlug, pendingDeleteId);
+      toast.success("Evento removido");
+      setPendingDeleteId(null);
+      refresh();
+    } catch (err: unknown) {
+      toast.error("Falha ao remover evento", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
+    }
   };
 
   const pendingDeleteEvent = events.find((e) => e.id === pendingDeleteId) ?? null;

@@ -123,18 +123,30 @@ export function PageEditor() {
   const handleAddBlock = async (type: BlockType) => {
     if (!page) return;
     const label = `Novo bloco ${page.sections.length + 1}`;
-    const created = await pagesService.createSection(page.productSlug, page.id, { type, label, content: DEFAULT_BLOCK_CONTENT[type] });
-    await refreshPage(page);
-    setSelectedSectionId(created.id);
-    toast.success("Bloco adicionado", { description: `${label} (${type})` });
-    triggerSave();
+    try {
+      const created = await pagesService.createSection(page.productSlug, page.id, { type, label, content: DEFAULT_BLOCK_CONTENT[type] });
+      await refreshPage(page);
+      setSelectedSectionId(created.id);
+      toast.success("Bloco adicionado", { description: `${label} (${type})` });
+      triggerSave();
+    } catch (err: unknown) {
+      toast.error(`Não foi possível adicionar bloco "${type}"`, {
+        description: (err as { message?: string }).message ?? "Verifique os campos obrigatórios.",
+      });
+    }
   };
 
   const handleReorderSections = async (sectionIds: string[]) => {
     if (!page) return;
-    await pagesService.reorderSections(page.productSlug, page.id, { sectionIds });
-    await refreshPage(page);
-    triggerSave();
+    try {
+      await pagesService.reorderSections(page.productSlug, page.id, { sectionIds });
+      await refreshPage(page);
+      triggerSave();
+    } catch (err: unknown) {
+      toast.error("Não foi possível reordenar os blocos", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
+    }
   };
 
   const handleDeleteBlock = async () => {
@@ -147,6 +159,10 @@ export function PageEditor() {
       toast.success("Bloco removido", { description: pendingDeleteSection?.label });
       setPendingDeleteId(null);
       triggerSave();
+    } catch (err: unknown) {
+      toast.error("Não foi possível remover o bloco", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setDeletingBlock(false);
     }

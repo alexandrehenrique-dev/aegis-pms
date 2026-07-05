@@ -26,6 +26,10 @@ export function PublishPanel() {
       await contentService.archive(id, productId);
       toast.success("Conteúdo arquivado.", { description: "Evento de auditoria registrado." });
       setConfirmArchive(false);
+    } catch (err: unknown) {
+      toast.error("Falha ao arquivar", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setArchiving(false);
     }
@@ -36,6 +40,10 @@ export function PublishPanel() {
       await contentService.publish(id, productId);
       toast.success("Conteúdo publicado!", { description: `${product?.name ?? "Produto"} · conteúdo publicado` });
       setConfirmPublish(false);
+    } catch (err: unknown) {
+      toast.error("Falha ao publicar", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setPublishing(false);
     }
@@ -45,6 +53,10 @@ export function PublishPanel() {
     try {
       await contentService.saveDraft(id, productId);
       toast.success("Rascunho salvo!");
+    } catch (err: unknown) {
+      toast.error("Falha ao salvar rascunho", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setSavingDraft(false);
     }
@@ -54,6 +66,10 @@ export function PublishPanel() {
     try {
       await contentService.schedulePublish(id, productId);
       toast.success("Publicação agendada!");
+    } catch (err: unknown) {
+      toast.error("Falha ao agendar publicação", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setScheduling(false);
     }
@@ -63,6 +79,10 @@ export function PublishPanel() {
     try {
       await contentService.submitForReview(id, productId);
       toast.success("Enviado para revisão!");
+    } catch (err: unknown) {
+      toast.error("Falha ao enviar para revisão", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setSubmittingReview(false);
     }
