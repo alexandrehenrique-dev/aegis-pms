@@ -15,6 +15,7 @@ import { FeedbackModal } from "../../core/notifications/components/FeedbackModal
 import { useFeedbackModal } from "../../core/notifications/useFeedbackModal";
 import { PendingNotificationGate } from "../../core/notifications/PendingNotificationGate";
 import { feedbackService } from "../../core/notifications/services/feedbackService";
+import { notificationsService } from "../../core/notifications/services/notificationsService";
 
 import { AegisLogo } from "../../shared/components/AegisLogo";
 import { Switcher, type SwitcherItem } from "../../shared/components/Switcher";
@@ -91,6 +92,11 @@ export function AppShell() {
   );
   const openFeedbackCount = (feedbackList ?? []).filter((f) => f.status === "aberto").length;
 
+  // Seção H.3 (BUG-SPRINT-01) — substitui a notificação hardcoded da sidebar
+  // por dados reais; some quando não há nada não-lido em vez de inventar texto.
+  const { data: myNotifications } = useAsyncData(() => notificationsService.listMine(), []);
+  const latestUnread = (myNotifications ?? []).find((n) => !n.read) ?? null;
+
   if (!authUser || !effectiveTenant || !effectiveProduct) return null;
 
   const handleLogout = () => { logout(); navigate("/login"); };
@@ -133,11 +139,12 @@ export function AppShell() {
           );
         })}
       </nav>
-      <div className="mt-auto rounded-xl border border-border bg-[var(--byop-violet-soft)] p-3 text-xs">
-        <p className="flex items-center gap-1.5 font-medium text-[var(--byop-violet-dark)]"><Clock3 size={13} />Recentemente</p>
-        <p className="mt-1 text-muted-foreground">{effectiveProduct.name} recebeu respostas e exige revisão.</p>
-      </div>
-      <p className="mt-2 text-center text-[9px] text-muted-foreground/40">Aegis PMS · Sprint 19 · Protótipo</p>
+      {latestUnread && (
+        <div className="mt-auto rounded-xl border border-border bg-[var(--byop-violet-soft)] p-3 text-xs">
+          <p className="flex items-center gap-1.5 font-medium text-[var(--byop-violet-dark)]"><Clock3 size={13} />Recentemente</p>
+          <p className="mt-1 text-muted-foreground">{latestUnread.title}</p>
+        </div>
+      )}
     </aside>
   );
 
