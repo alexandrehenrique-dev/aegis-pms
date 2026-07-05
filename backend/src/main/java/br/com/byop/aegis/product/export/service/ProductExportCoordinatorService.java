@@ -76,7 +76,7 @@ public class ProductExportCoordinatorService implements TenantProductExportPort 
                     try {
                         IdentityUser user = identityUserDirectory.getRequiredUser(a.getUserSubject());
                         return new ExportRecipient(user.email(), user.displayName());
-                    } catch (Exception ex) {
+                    } catch (Exception _) {
                         log.warn("resolveRecipients: nao foi possivel resolver usuario productId='{}', subject='{}' — ignorando",
                                 productId, a.getUserSubject());
                         return null;

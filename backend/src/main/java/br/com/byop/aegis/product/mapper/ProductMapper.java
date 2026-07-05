@@ -12,8 +12,31 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
 
-    @Mapping(target = "enabledModuleCount", source = "enabledModuleCount")
-    ProductSummary toSummary(Product product, int enabledModuleCount);
+    /**
+     * Método escrito à mão (não gerado pelo MapStruct): um mapeamento auto-gerado
+     * com único parâmetro nullable produz um segundo "if (product != null)"
+     * defensivo logicamente inatingível após o guard inicial — branch morto que
+     * o JaCoCo sempre reporta como não coberto. Evitar a geração automática aqui
+     * elimina esse branch em vez de mascará-lo no gate de cobertura.
+     */
+    default ProductSummary toSummary(Product product, int enabledModuleCount) {
+        if (product == null) {
+            return null;
+        }
+        return new ProductSummary(
+                product.getId(),
+                product.getTenantId(),
+                product.getKey(),
+                product.getName(),
+                product.getType(),
+                product.getStatus(),
+                product.getDefaultLocale(),
+                product.getAssetStorageStrategy(),
+                product.getCreatedAt(),
+                product.getUpdatedAt(),
+                enabledModuleCount
+        );
+    }
 
     @Mapping(target = "modules", source = "modules")
     ProductDetail toDetail(Product product, List<ProductModuleSummary> modules);

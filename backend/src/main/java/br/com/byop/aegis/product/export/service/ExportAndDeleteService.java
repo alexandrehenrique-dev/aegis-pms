@@ -112,7 +112,7 @@ public class ExportAndDeleteService {
         recipients.forEach(r -> {
             try {
                 productExportEmailService.sendExportFailure(r.email(), product.getName());
-            } catch (Exception emailException) {
+            } catch (Exception _) {
                 log.warn("Unable to send export failure e-mail for product {} to {}", productId, r.email());
             }
         });
@@ -129,7 +129,7 @@ public class ExportAndDeleteService {
         recipients.forEach(r -> {
             try {
                 productExportEmailService.sendExportFailure(r.email(), product.getName());
-            } catch (Exception emailException) {
+            } catch (Exception _) {
                 log.warn("Unable to send delete failure e-mail for product {} to {}", productId, r.email());
             }
         });
