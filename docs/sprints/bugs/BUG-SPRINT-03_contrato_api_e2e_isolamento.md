@@ -1003,6 +1003,103 @@ Opção recomendada: desnormalizar os dados do evento no conteúdo do bloco no m
 
 ---
 
+## E.8 — Troca de produto sem feedback visual: ausência de loading de transição
+
+**Módulos afetados:** `frontend/src/core/auth/AuthContext.tsx`, `frontend/src/app/layouts/AppShell.tsx`, `frontend/src/core/products/` (novo componente a criar)
+
+**Comportamento observado:** Ao trocar de produto (via `Switcher` no `AppShell`, via `ProductCard` ou via `ProductsList`), a interface atualiza instantaneamente sem nenhuma indicação visual de que o contexto mudou. Em modo API, cada componente re-fetcha dados de forma independente, resultando em um patchwork de skeletons espalhados pela tela sem unidade visual.
+
+**Diagnóstico:**
+
+`switchProduct` é síncrono e não possui nenhum estado de loading:
+
+```typescript
+// AuthContext.tsx — troca imediata, sem loading:
+const switchProduct = useCallback((productId: string) => {
+  if (!effectiveTenant) return;
+  const p = (userProducts[effectiveTenant.id] || []).find((p) => p.id === productId);
+  if (p) setSelectedProduct(p); // síncrono — React re-renderiza na mesma frame
+}, [effectiveTenant, userProducts]);
+```
+
+Efeitos colaterais:
+- Em modo mock: troca é instantânea mas sem confirmação visual de que o produto mudou.
+- Em modo API: cada módulo (Páginas, Conteúdo, Forms, Assets…) busca dados do novo produto de forma independente ao re-montar, exibindo skeletons descoordenados por durações diferentes.
+- Usuário não tem feedback claro de que a troca de contexto ocorreu — especialmente problemático em produtos com nomes similares.
+
+**Implementação necessária:**
+
+Criar um overlay de transição de produto com duração mínima de ~1s, ativado por `switchProduct`:
+
+**1. Adicionar estado de transição ao `AuthContext`:**
+```typescript
+// AuthContext.tsx
+const [productSwitching, setProductSwitching] = useState(false);
+
+const switchProduct = useCallback((productId: string) => {
+  if (!effectiveTenant) return;
+  const p = (userProducts[effectiveTenant.id] || []).find((p) => p.id === productId);
+  if (!p) return;
+  setProductSwitching(true);
+  setSelectedProduct(p);
+  // Mínimo de 1s para garantir feedback visual mesmo em troca rápida (mock/cache)
+  setTimeout(() => setProductSwitching(false), 1000);
+}, [effectiveTenant, userProducts]);
+```
+
+Expor `productSwitching` via `AuthContext`.
+
+**2. Criar `ProductSwitchingOverlay` (novo componente):**
+```tsx
+// frontend/src/core/products/ProductSwitchingOverlay.tsx
+export function ProductSwitchingOverlay({ product }: { product: Product | null }) {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background">
+      <img src="/aegis-logo.svg" alt="Aegis PMS" className="h-16 w-16 animate-pulse" />
+      <p className="text-sm font-medium text-muted-foreground">
+        Carregando {product?.name ?? "produto"}…
+      </p>
+      {/* Skeleton representativo do dashboard */}
+      <div className="mt-4 w-full max-w-xl space-y-3 px-8">
+        <SkeletonLines />
+      </div>
+    </div>
+  );
+}
+```
+
+**3. Renderizar no `AppShell`:**
+```tsx
+// AppShell.tsx
+const { productSwitching, effectiveProduct } = useAuth();
+// ...
+{productSwitching && <ProductSwitchingOverlay product={effectiveProduct} />}
+```
+
+**Dependência de integração com backend:**
+
+O overlay de 1s é suficiente para mock mode. Em modo API, o comportamento ideal é manter o overlay até que o primeiro fetch crítico do novo produto complete (ex.: `listPages` ou `listContent`). Isso requer que `switchProduct` retorne uma `Promise` que resolve quando os dados iniciais do produto estiverem prontos — mudança mais invasiva, a ser avaliada junto com a etapa de integração real (Etapa 30 — Migration SQL).
+
+**Recomendação:** implementar o overlay com timeout fixo de 1s agora (baixo risco, alto valor de UX); refinar para await de fetch real quando a integração com backend estiver estável.
+
+**Critério de aceite:**
+- [ ] Trocar produto via Switcher do header exibe overlay com logo Aegis por ~1s.
+- [ ] Trocar produto via `ProductCard` ou `ProductsList` também exibe overlay.
+- [ ] Overlay some automaticamente após 1s (ou após fetch real, se implementado).
+- [ ] Nome do produto sendo carregado aparece no overlay.
+- [ ] Nenhum flash de dados do produto anterior durante a transição.
+
+**Smoke test:**
+```
+1. Login → selecionar Maestro Beton → aguardar carregamento
+2. Trocar para outro produto via Switcher no header
+3. Esperado: overlay com logo Aegis + "Carregando [Produto]…" por ~1s
+4. Após overlay: dashboard do novo produto carregado corretamente
+5. Repetir via ProductsList → "Abrir"
+```
+
+---
+
 ## Seção Z — Critérios de aceite globais da sprint
 
 ### Z.1 — Gates obrigatórios
