@@ -1,0 +1,40 @@
+meta {
+  name: Health check final
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants
+  body: none
+}
+
+docs {
+Objetivo: confirmar que o teardown nunca tocou em tenants reais. CLIENTES BETA
+(unico tenant real seedado, ver V17__seed_homologacao.sql) precisa continuar
+presente e com o nome intacto.
+
+Nao afirmamos que a lista so contem CLIENTES BETA: DELETE /api/v1/tenants/{id}
+e assincrono (ver step 02), entao tenants de teste recem-marcados para exclusao
+podem ainda aparecer aqui por alguns instantes. O que reporta e o numero de
+tenants com o prefixo TEST- ainda visiveis — informativo, nao falha o teardown.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("CLIENTES BETA presente e intacta", function() {
+    const tenants = Array.isArray(res.body) ? res.body : [];
+    const beta = tenants.find((t) => String(t.name || '').trim().toLowerCase() === 'clientes beta');
+    expect(beta).to.exist;
+    expect(beta.name).to.equal('CLIENTES BETA');
+  });
+  test("reporta tenants de teste ainda pendentes de exclusao (informativo)", function() {
+    const prefix = bru.getVar('testTenantPrefix') || 'TEST-';
+    const tenants = Array.isArray(res.body) ? res.body : [];
+    const stillPending = tenants.filter((t) => String(t.name || '').startsWith(prefix));
+    bru.setVar('teardownStillPendingCount', stillPending.length);
+    expect(stillPending.length).to.be.a('number');
+  });
+}

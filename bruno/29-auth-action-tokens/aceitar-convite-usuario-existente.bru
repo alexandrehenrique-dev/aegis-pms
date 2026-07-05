@@ -1,0 +1,36 @@
+meta {
+  name: Aceitar convite de usuario existente (H.2)
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/invite/accept-existing
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "token": "{{existingUserInviteToken}}"
+  }
+}
+
+docs {
+Objetivo (H.2, BUG-SPRINT-01): usuario existente aceita o convite sem definir senha —
+AuthActivationService.acceptExistingUser() consome o token, limpa requiredActions e publica
+IdentityUserInviteActivatedEvent, transicionando ProductAssignment/TenantMembership de
+INVITED para ASSIGNED/ACTIVE (mesmos listeners do fluxo de ativacao por senha).
+Resultado esperado: 200 com mensagem de convite aceito. Este request consome o token; execute
+uma vez por token.
+Pre-requisito: executar antes "Validar convite de usuario existente" (seq 15).
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("mensagem de convite aceito", function() {
+    expect(res.body.message).to.equal("Convite aceito. Faça login para acessar o produto.");
+  });
+}

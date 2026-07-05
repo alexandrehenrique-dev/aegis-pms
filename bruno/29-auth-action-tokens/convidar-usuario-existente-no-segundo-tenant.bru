@@ -1,0 +1,40 @@
+meta {
+  name: Convidar usuario existente no segundo tenant
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{authActionTenantId2}}/users/invite
+  body: json
+}
+
+body:json {
+  {
+    "name": "Auth Action Bruno",
+    "email": "{{authActionInviteEmail}}",
+    "role": "EDITOR",
+    "allowedProducts": "Aegis",
+    "message": "Segundo convite para usuario que ja tem conta ativa"
+  }
+}
+
+docs {
+Objetivo (H.2, BUG-SPRINT-01): convidar, num tenant novo, o e-mail que a sequencia 1-7 desta
+pasta ja ativou (tem senha propria no Keycloak, sem UPDATE_PASSWORD pendente). O backend encontra
+o usuario existente via KeycloakAdminClient.findUserByEmail() e ainda assim gera um AuthActionToken
+INVITE — é esse token que deve validar com requiresPasswordSetup=false.
+Resultado esperado: 201, status convidado.
+Pre-requisito: executar antes toda a sequencia 1-7 (login, tenant, convite, captura, validacao,
+ativacao) e "Criar segundo tenant para convite de usuario existente" (seq 12).
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("convite gerado para usuario existente", function() {
+    expect(res.body.email).to.equal(bru.getVar('authActionInviteEmail'));
+    expect(res.body.status).to.equal("convidado");
+  });
+}

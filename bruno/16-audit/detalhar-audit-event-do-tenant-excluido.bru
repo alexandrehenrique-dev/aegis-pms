@@ -29,6 +29,6 @@ tests {
     expect(res.body).to.have.property('userAgent');
   });
   test("diffJson contem snapshot before do tenant", function() {
-    expect(res.body.diffJson.before.name).to.equal('Audit Throwaway Tenant');
+    expect(res.body.diffJson.before.name).to.equal('TEST-Audit Throwaway Tenant');
   });
 }

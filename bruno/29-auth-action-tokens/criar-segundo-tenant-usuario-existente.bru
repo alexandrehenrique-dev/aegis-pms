@@ -1,0 +1,44 @@
+meta {
+  name: Criar segundo tenant para convite de usuario existente
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants
+  body: json
+}
+
+body:json {
+  {
+    "key": "{{authActionTenant2Key}}",
+    "name": "TEST-Auth Action Tenant 2",
+    "plan": "FREE",
+    "initialAdminEmail": "{{authActionAdmin2Email}}"
+  }
+}
+
+docs {
+Objetivo: criar um segundo tenant descartavel para convidar, nele, um usuario que ja existe
+no Keycloak (ativado pela sequencia 1-7 desta pasta) — cenario H.2 (convite de usuario existente).
+Resultado esperado: 201 com id do tenant.
+Variaveis produzidas: authActionTenantId2.
+}
+
+script:pre-request {
+  bru.setVar('authActionTenant2Key', 'auth-action-2-' + Date.now());
+  bru.setVar('authActionAdmin2Email', 'auth-action-admin-2-' + Date.now() + '@example.com');
+}
+
+script:post-response {
+  bru.setVar('authActionTenantId2', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("tenant criado", function() {
+    expect(res.body.id).to.be.a("string");
+  });
+}

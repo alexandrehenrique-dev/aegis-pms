@@ -1,0 +1,23 @@
+meta {
+  name: Limpar Mailhog
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{mailhogBaseUrl}}/api/v1/messages
+  body: none
+  auth: none
+}
+
+docs {
+Objetivo: esvaziar a caixa do MailHog acumulada durante toda a bateria de integracao,
+para a proxima rodada nao ter que filtrar e-mails antigos ao capturar tokens de
+convite/reset. Idempotente: rodar contra uma caixa ja vazia tambem retorna 200.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}
