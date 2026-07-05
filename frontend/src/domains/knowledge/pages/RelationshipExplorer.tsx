@@ -38,7 +38,7 @@ export function RelationshipExplorer() {
 
   return (
     <>
-      <PageHeader title="Relationship Explorer" desc="Relações reais entre entidades de negócio do produto Maestro Beton." badge="Relações">
+      <PageHeader title="Relationship Explorer" desc={`Relações reais entre entidades de negócio de ${product?.name ?? "este produto"}.`} badge="Relações">
         <Popover>
           <PopoverTrigger asChild><Button><Filter size={15} />Filtrar</Button></PopoverTrigger>
           <PopoverContent>

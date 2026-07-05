@@ -71,7 +71,7 @@ export function PublicationPanel() {
         </Card>
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Impacto operacional</h2>
-          <p className="text-sm text-muted-foreground">Este formulário captura leads e cria eventos vinculados ao produto Maestro Beton.</p>
+          <p className="text-sm text-muted-foreground">Este formulário captura leads e cria eventos vinculados ao produto {product?.name ?? "atual"}.</p>
           <ConversionCard />
         </Card>
       </div>

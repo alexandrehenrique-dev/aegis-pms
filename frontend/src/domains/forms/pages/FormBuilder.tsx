@@ -40,7 +40,7 @@ function FormBuilderCanvas({ formName, fields, selectedId, onSelect, onRequestRe
       <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-4">
         <div className="mx-auto max-w-xl rounded-2xl border border-border bg-card p-5">
           <h3 className="text-xl font-semibold">{formName}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Fluxo de aquisição vinculado ao produto Maestro Beton.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Formulário vinculado ao produto.</p>
           {fields.map((f, i) => (
             <div key={f.id} className="mt-3 flex items-start gap-1">
               <button onClick={() => onSelect(f.id)} className={`flex-1 rounded-xl border p-3 text-left ${selectedId === f.id ? "border-primary" : "border-border"}`}>

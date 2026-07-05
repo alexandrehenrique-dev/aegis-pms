@@ -34,7 +34,7 @@ export function PublishPanel() {
     setPublishing(true);
     try {
       await contentService.publish(id, productId);
-      toast.success("Conteúdo publicado!", { description: "Maestro Beton · Página Home · v19" });
+      toast.success("Conteúdo publicado!", { description: `${product?.name ?? "Produto"} · conteúdo publicado` });
       setConfirmPublish(false);
     } finally {
       setPublishing(false);
@@ -71,7 +71,7 @@ export function PublishPanel() {
   return (
     <>
       <AnimatePresence>{confirmArchive && <ConfirmDialog title="Arquivar este conteúdo?" desc="O conteúdo será removido da listagem pública. Esta ação gera um evento de auditoria e não pode ser desfeita facilmente." onConfirm={handleArchive} onCancel={() => setConfirmArchive(false)} danger loading={archiving} />}</AnimatePresence>
-      <AnimatePresence>{confirmPublish && <ConfirmDialog title="Publicar agora?" desc="Esta versão ficará visível publicamente em Maestro Beton. A equipe editorial será notificada." onConfirm={handlePublish} onCancel={() => setConfirmPublish(false)} loading={publishing} />}</AnimatePresence>
+      <AnimatePresence>{confirmPublish && <ConfirmDialog title="Publicar agora?" desc={`Esta versão ficará visível publicamente em ${product?.name ?? "este produto"}. A equipe editorial será notificada.`} onConfirm={handlePublish} onCancel={() => setConfirmPublish(false)} loading={publishing} />}</AnimatePresence>
       <PageHeader title="Publish Panel" desc="Checklist e decisão de publicação para a versão atual." badge="Publicação">
         <Button onClick={handleSaveDraft} disabled={savingDraft}>{savingDraft && <Loader2 size={15} className="animate-spin" />}{savingDraft ? "Salvando..." : "Salvar rascunho"}</Button>
         <Button primary onClick={() => setConfirmPublish(true)}>Publicar agora</Button>
