@@ -293,7 +293,10 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
           <EventSelector
             productSlug={productSlug}
             selectedIds={Array.isArray(content.selectedEventIds) ? (content.selectedEventIds as string[]) : []}
-            onChange={(selectedEventIds) => onChangeContent({ selectedEventIds })}
+            onChange={(selectedEventIds, selectedEvents) => onChangeContent({
+              selectedEventIds,
+              selectedEvents: selectedEvents.map((ev) => ({ id: ev.id, title: ev.title, date: ev.date, location: ev.location, type: ev.type })),
+            })}
             refreshKey={eventsRefreshKey}
           />
           <Button onClick={() => setShowEventsManager(true)}><Calendar size={14} />Gerenciar eventos</Button>

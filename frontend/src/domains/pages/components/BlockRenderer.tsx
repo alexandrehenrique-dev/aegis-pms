@@ -2,6 +2,7 @@ import type { MiniBlock } from "../contracts/responses";
 import type { Section } from "../contracts/responses";
 import { Markdown } from "../../../shared/components/Markdown";
 import { resolveAssetSrc } from "../../../shared/utils/resolveAssetSrc";
+import { formatDateTime } from "../../../shared/utils/formatDateTime";
 
 function asStr(v: unknown, fallback = ""): string {
   return typeof v === "string" ? v : fallback;
@@ -42,7 +43,14 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
       const image = (c.image as Record<string, unknown>) ?? {};
       const hasImage = typeof image.src === "string" && image.src.length > 0;
       const resolvedSrc = hasImage ? resolveAssetSrc(image.src as string) : undefined;
-      const ctas = asArray(c.ctas);
+      // Retrocompatibilidade (E.10.2): conteúdo criado antes da canonicalização
+      // para `ctas[]` guarda os CTAs em `ctaPrimary`/`ctaSecondary` — sem este
+      // fallback, um hero já publicado perderia os botões no preview público
+      // assim que este renderer passasse a ler só `ctas[]`.
+      const declaredCtas = asArray(c.ctas);
+      const legacyCtas = [c.ctaPrimary, c.ctaSecondary]
+        .filter((cta): cta is Record<string, unknown> => !!cta && typeof cta === "object" && asStr((cta as Record<string, unknown>).label).trim() !== "");
+      const ctas = declaredCtas.length > 0 ? declaredCtas : legacyCtas;
       return (
         <div className="rounded-xl bg-muted p-8 text-center">
           {hasImage && (resolvedSrc
@@ -154,13 +162,27 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
     }
 
     case "event-list": {
+      const selectedEvents = asArray(c.selectedEvents);
       const selectedCount = Array.isArray(c.selectedEventIds) ? c.selectedEventIds.length : 0;
       return (
         <div className="p-6">
           <h3 className="text-xl font-semibold">{asStr(c.title, "Agenda")}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {selectedCount > 0 ? `${selectedCount} evento(s) selecionado(s) para este bloco.` : "Nenhum evento selecionado ainda (ver editor)."}
-          </p>
+          {selectedEvents.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {selectedEvents.map((ev, i) => (
+                <div key={i} className="rounded-lg border border-border p-3">
+                  <p className="font-medium">{asStr(ev.title, "Evento")}</p>
+                  <p className="text-sm text-muted-foreground">{formatDateTime(asStr(ev.date))} · {asStr(ev.location, "local a definir")}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {selectedCount > 0
+                ? `${selectedCount} evento(s) selecionado(s) — reabra o bloco no editor e salve novamente para atualizar o preview.`
+                : "Nenhum evento selecionado ainda (ver editor)."}
+            </p>
+          )}
         </div>
       );
     }
