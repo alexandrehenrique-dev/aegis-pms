@@ -1275,6 +1275,215 @@ faq, contact, form, download, audio, video, video-gallery, social-links
 
 ---
 
+## E.10 — Hero block: lacunas de editor (imagem, variantes, botões extras)
+
+**Módulos afetados:** `frontend/src/domains/pages/components/EditorPanels.tsx`, `blockDefaults.ts`, `backend/.../pages/domain/BlockDefaults.java`
+
+**Comportamento observado:** O editor do bloco `hero` não exibe campo de imagem para o usuário adicionar/trocar a imagem do hero. Não há seletor de variante (primary vs secondary hero). Os campos de CTA aparecem como strings planas (`ctaUrl`, `ctaLabel`) sem suporte a múltiplos botões.
+
+**E.10.1 — Campo de imagem ausente no editor quando o bloco foi criado sem `image`**
+
+O `BlockEditorCanvas` renderiza `ImageFieldEditor` apenas quando o content tem um objeto com chave `src`. Se o bloco foi criado com o default do backend (`BlockDefaults.java` inicializa hero apenas com `{ title: "Novo título" }`), a chave `image` não existe — portanto o picker de imagem nunca aparece.
+
+```java
+// BlockDefaults.java — linha 59:
+defaults.put(BlockType.HERO, Map.of(KEY_TITLE, "Novo título"));
+// ← sem image, sem ctas
+```
+
+```tsx
+// EditorPanels.tsx — nestedObjectFields só inclui chaves que JÁ existem no content:
+const nestedObjectFields = Object.entries(fieldableContent)
+  .filter(([, v]) => isPlainObject(v)) as [string, Record<string, unknown>][];
+// Se content.image não existe → ImageFieldEditor nunca renderiza
+```
+
+**E.10.2 — Inconsistência de shape entre `blockDefaults.ts` e dados reais**
+
+`blockDefaults.ts` define hero com CTAs como objetos aninhados:
+```typescript
+hero: {
+  title: "Novo título",
+  subtitle: "Novo subtítulo",
+  image: { src: "", alt: "Descrição da imagem" },
+  ctaPrimary: { label: "Saiba mais", href: "#" },
+  ctaSecondary: { label: "", href: "" },
+}
+```
+
+Mas o editor exibe campos planos `ctaUrl` e `ctaLabel` para o bloco hero existente (screenshot) — o conteúdo armazenado usa shape diferente do default. Não há validação de shape no backend para CTAs do hero. O `BlockRenderer` usa `c.ctaPrimary?.label`, que é `undefined` quando o dado real tem `ctaUrl`.
+
+**E.10.3 — Campo `variant` existe no backend mas nunca é exposto no editor**
+
+```java
+// PageSection.java linha 37: private String variant;
+// CreateSectionRequest.java: String variant
+// UpdateSectionRequest.java: String variant
+```
+
+O frontend NUNCA envia ou exibe `variant`. Um "secondary hero" (compacto, sem imagem de fundo, layout menor) seria implementado via `variant: "secondary"`, mas não há UI para selecioná-lo.
+
+**Implementação necessária:**
+
+**E.10.1 — Garantir image picker sempre visível para hero:**
+```tsx
+// EditorPanels.tsx — injetar image key quando ausente para tipo hero:
+const fieldableContent = (() => {
+  const base = Object.fromEntries(Object.entries(content).filter(([k]) => !excludedKeys.has(k)));
+  if (section.type === "hero" && !base.image) {
+    return { ...base, image: { src: "", alt: "" } };
+  }
+  return base;
+})();
+```
+
+Também alinhar `BlockDefaults.java` para incluir estrutura completa:
+```java
+defaults.put(BlockType.HERO, Map.of(
+    KEY_TITLE, "Novo título",
+    "subtitle", "",
+    "image", Map.of("src", "", "alt", ""),
+    "ctas", List.of(Map.of("label", "Saiba mais", "href", "#"))
+));
+```
+
+**E.10.2 — Canonicalizar shape de CTAs para array:**
+```typescript
+// Novo shape canônico (substitui ctaPrimary/ctaSecondary/ctaUrl/ctaLabel):
+hero: {
+  title: "Novo título",
+  subtitle: "Novo subtítulo",
+  image: { src: "", alt: "" },
+  ctas: [
+    { label: "Saiba mais", href: "#" },
+  ],
+  theme: "dark",  // "dark" | "light" | "transparent"
+}
+```
+
+`BlockRenderer` atualizado para usar `asArray(c.ctas).map(...)` em vez de `c.ctaPrimary`/`c.ctaSecondary`.
+
+**E.10.3 — Adicionar seletor de variante no editor:**
+```tsx
+// EditorPanels.tsx — expor variant acima dos campos de content:
+{(section.type === "hero") && (
+  <SelectLike
+    label="Variante"
+    value={section.variant ?? "primary"}
+    options={["primary", "secondary"]}
+    onChange={(v) => onChangeVariant(v)}  // novo prop para atualizar seção via UpdateSectionRequest
+  />
+)}
+```
+
+`secondary hero`: sem campo `image`, layout compacto, `theme` padrão `"light"`.
+
+**Critério de aceite:**
+- [ ] Hero block sempre exibe o picker de imagem no editor (campo `image` injetado quando ausente).
+- [ ] CTAs do hero usam shape `ctas: Array<{ label, href }>` — suporta 1 a 4 botões.
+- [ ] `BlockRenderer` renderiza CTAs a partir de `ctas[]`, não de `ctaPrimary`/`ctaSecondary`.
+- [ ] Variante "secondary" exibe layout compacto sem campo de imagem.
+- [ ] `variant` é persistido via `UpdateSectionRequest` quando alterado.
+
+---
+
+## E.11 — Imagens nunca renderizadas no preview (todos os blocos)
+
+**Módulos afetados:** `frontend/src/shared/components/MediaField.tsx`, `frontend/src/domains/pages/components/BlockRenderer.tsx`
+
+**Comportamento observado:** Imagens selecionadas via picker de assets não aparecem no preview da página. O `BlockRenderer` exibe o texto alternativo entre colchetes (`[imagem: alt text]`) para todos os blocos com imagem: `hero`, `image`, `image-text`, `gallery`. A seleção de um asset aparece nos Assets da plataforma, mas não no preview do PageEditor.
+
+**Causa raiz — 2 problemas independentes encadeados:**
+
+**E.11.1 — `MediaField.onChange` retorna `asset.name` (filename), não `asset.id` (UUID)**
+
+```typescript
+// MediaField.tsx linha 50:
+onChange(asset.name);  // ← retorna "hero-maestro-beton.jpg", não o UUID
+```
+
+O content do bloco armazena `image.src = "hero-maestro-beton.jpg"` — uma string de nome de arquivo que o browser não sabe resolver para uma URL real. Sem o UUID, é impossível chamar o endpoint de download do asset.
+
+**E.11.2 — `BlockRenderer` usa placeholders de texto para todas as imagens**
+
+```tsx
+// BlockRenderer.tsx — bloco "image":
+case "image":
+  return <div>[imagem: {asStr(c.alt, "sem descrição")}]</div>;
+
+// bloco "hero":
+{hasImage && <div>[imagem: {asStr(image.alt)}]</div>}  // placeholder, nunca <img>
+
+// bloco "gallery":
+{items.map((item) => <div>{asStr(item.alt, "imagem")}</div>)}  // placeholder
+```
+
+O `BlockRenderer` foi escrito como preview estrutural, nunca para renderizar imagens reais. A infra para resolver UUIDs em URLs existe (`useAssetObjectUrl(assetId)` em `AssetDetail.tsx`, padrão `resolveBaseUrl() + /assets/{id}/download` em `FeedbackDetailDrawer.tsx`), mas não é usada no `BlockRenderer`.
+
+**Implementação necessária:**
+
+**E.11.1 — `MediaField` deve retornar UUID:**
+```typescript
+// MediaField.tsx — mudar assinatura e callback:
+export function MediaField({
+  label, value, onChange, typeFilter, onSelectAsset
+}: {
+  onChange: (assetId: string) => void;  // agora retorna UUID, não name
+  // ...
+}) {
+  // ...
+  onSelect={(asset) => {
+    onChange(asset.id);           // ← UUID
+    onSelectAsset?.(asset);
+  }}
+}
+```
+
+O `value` prop também muda semântica: de `asset.name` para `asset.id`. Atualizar `ImageFieldEditor` e todos os chamadores.
+
+**E.11.2 — `BlockRenderer` deve renderizar `<img>` real:**
+```tsx
+// Novo hook utilitário:
+function useAssetUrl(assetId: string | undefined): string | null {
+  if (!assetId) return null;
+  if (IS_API_MODE) return `${resolveBaseUrl()}/api/v1/assets/${assetId}/download`;
+  // mock mode: buscar no mock store pelo id e retornar uma URL de placeholder
+  const asset = assetsStore.find((a) => a.id === assetId);
+  return asset ? `https://placehold.co/800x400?text=${encodeURIComponent(asset.name)}` : null;
+}
+
+// BlockRenderer — bloco "image":
+case "image": {
+  const url = useAssetUrl(typeof c.imageAssetId === "string" ? c.imageAssetId : undefined);
+  return url
+    ? <img src={url} alt={asStr(c.alt)} className="w-full rounded-lg object-cover" />
+    : <div className="rounded-lg bg-muted p-6 text-center text-xs text-muted-foreground">[imagem: {asStr(c.alt, "sem descrição")}]</div>;
+}
+```
+
+> **Nota:** `useAssetUrl` não pode ser um hook React dentro de um `switch-case` — extrair para uma função utilitária pura que não use `useState`/`useEffect`, ou criar um componente `<AssetImage assetId={...} alt={...} />` reutilizável.
+
+**Migração de dados:** conteúdo existente que usa `image.src = "filename.jpg"` (string de nome) precisa de migração para `imageAssetId = <uuid>`. Adicionar script de migração ou aceitar que blocos antigos mostrem placeholder até reedição.
+
+**Critério de aceite:**
+- [ ] Selecionar imagem via picker → `image.imageAssetId` armazena UUID do asset.
+- [ ] `BlockRenderer` renderiza `<img>` real para blocos `image`, `image-text`, `hero` (quando `imageAssetId` presente).
+- [ ] Em mock mode: imagem exibe placeholder visual com nome do arquivo.
+- [ ] Em API mode: imagem exibe a imagem real via `GET /api/v1/assets/{id}/download`.
+- [ ] `gallery` itens: cada item com `imageAssetId` → `<img>` real no preview.
+- [ ] Blocos sem `imageAssetId` → placeholder texto (retrocompatibilidade).
+
+**Smoke test:**
+```
+1. Abrir editor de página → bloco "image"
+2. Selecionar asset de imagem via MediaField
+3. Verificar: BlockRenderer exibe <img> real (não texto entre colchetes)
+4. Salvar rascunho → reabrir página → imagem ainda visível
+5. Em mock mode: imagem exibe placehold.co com nome do arquivo
+```
+
+---
+
 ## Seção Z — Critérios de aceite globais da sprint
 
 ### Z.1 — Gates obrigatórios
