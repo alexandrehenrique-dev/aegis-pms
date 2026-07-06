@@ -12,6 +12,8 @@ export type AuthContextValue = {
   effectiveTenant: TenantOption | null;
   tenantProducts: ProductOption[];
   effectiveProduct: ProductOption | null;
+  /** `true` por ~1s após `switchProduct` (E.8, BUG-SPRINT consolidado) — indicador visual de troca de contexto de produto; `AppShell` exibe `ProductSwitchingOverlay` enquanto for `true`. */
+  productSwitching: boolean;
   /** Chamado pelo `LoginScreen` após `authService.login()` — em modo api busca `/me` + `/tenants`; em modo mock usa os dados já resolvidos em `LoginResult`. */
   initSession: (result: LoginResult) => Promise<void>;
   logout: () => void;

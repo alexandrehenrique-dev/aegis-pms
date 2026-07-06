@@ -51,12 +51,15 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
       const legacyCtas = [c.ctaPrimary, c.ctaSecondary]
         .filter((cta): cta is Record<string, unknown> => !!cta && typeof cta === "object" && asStr((cta as Record<string, unknown>).label).trim() !== "");
       const ctas = declaredCtas.length > 0 ? declaredCtas : legacyCtas;
+      // E.10.3 — "light" é a variante compacta (sem imagem, menos respiro);
+      // "dark" (padrão) mantém o hero completo com imagem em destaque.
+      const isLightTheme = c.theme === "light";
       return (
-        <div className="rounded-xl bg-muted p-8 text-center">
-          {hasImage && (resolvedSrc
+        <div className={isLightTheme ? "rounded-xl border border-border p-4 text-center" : "rounded-xl bg-muted p-8 text-center"}>
+          {!isLightTheme && hasImage && (resolvedSrc
             ? <img src={resolvedSrc} alt={asStr(image.alt, "sem descrição")} className="mx-auto mb-4 max-h-64 w-full max-w-md rounded-lg object-cover" />
             : <div className="mx-auto mb-4 max-w-md rounded-lg bg-border/60 p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>)}
-          <h2 className="text-3xl font-semibold">{asStr(c.title, section.label)}</h2>
+          <h2 className={isLightTheme ? "text-xl font-semibold" : "text-3xl font-semibold"}>{asStr(c.title, section.label)}</h2>
           {c.subtitle ? <p className="mt-2 text-muted-foreground">{asStr(c.subtitle)}</p> : null}
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {ctas.map((cta, i) => (

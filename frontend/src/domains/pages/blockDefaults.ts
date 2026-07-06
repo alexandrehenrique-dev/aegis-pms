@@ -18,6 +18,14 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, Record<string, unknown>> =
   hero: {
     title: "Novo título",
     subtitle: "Novo subtítulo",
+    /**
+     * "dark"/"light" (E.10.3, BUG-SPRINT consolidado) — variante visual do
+     * hero. Guardado em `content.theme`, não em `PageSection.variant`: esse
+     * campo já é usado como `label` do bloco na árvore de estrutura
+     * (`pagesService.ts` mapeia `variant` <-> `label`), então reaproveitá-lo
+     * para estilo quebraria os labels já existentes.
+     */
+    theme: "dark",
     image: { src: "", alt: "Descrição da imagem" },
     ctas: [{ label: "Saiba mais", href: "#" }],
   },

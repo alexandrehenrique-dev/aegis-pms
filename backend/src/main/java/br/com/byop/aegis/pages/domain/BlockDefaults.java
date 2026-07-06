@@ -60,7 +60,8 @@ public final class BlockDefaults {
         defaults.put(BlockType.CTA_SECTION, Map.of(KEY_TITLE, ""));
         defaults.put(BlockType.FAQ, Map.of(KEY_ITEMS, List.of()));
         // Com regra minima — usa o minimo estrutural que passa na validacao existente.
-        defaults.put(BlockType.HERO, Map.of(KEY_TITLE, "Novo título", "image", Map.of("src", "", "alt", "Descrição da imagem"),
+        defaults.put(BlockType.HERO, Map.of(KEY_TITLE, "Novo título", "theme", "dark",
+                "image", Map.of("src", "", "alt", "Descrição da imagem"),
                 "ctas", List.of(Map.of("label", "Saiba mais", "href", "#"))));
         defaults.put(BlockType.IMAGE, Map.of("alt", "Imagem", "src", ""));
         defaults.put(BlockType.GALLERY, Map.of(KEY_ITEMS, List.of(Map.of("src", "", "alt", "Imagem"))));

@@ -204,6 +204,7 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
   const isAudio = section.type === "audio";
   const isVideo = section.type === "video";
   const isEventList = section.type === "event-list";
+  const isHero = section.type === "hero";
   const itemsCrudConfig = ITEMS_CRUD_CONFIG[section.type];
   const hasFormIdSelector = section.type === "contact" || section.type === "form";
   const { content } = section;
@@ -212,6 +213,7 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
     ...(isAudio ? ["source", "fileAssetId", "spotifyUrl", "autoplay"] : []),
     ...(isVideo ? ["source", "fileAssetId", "youtubeUrl", "autoplay"] : []),
     ...(isEventList ? ["selectedEventIds"] : []),
+    ...(isHero ? ["theme"] : []),
     ...(itemsCrudConfig ? [itemsCrudConfig.key] : []),
     ...(hasFormIdSelector ? ["formId"] : []),
   ]);
@@ -283,6 +285,14 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
         ))}
         {hasFormIdSelector && (
           <FormIdSelector productSlug={productSlug} value={typeof content.formId === "string" ? content.formId : ""} onChange={(formId) => onChangeContent({ formId })} />
+        )}
+        {isHero && (
+          <SelectLike
+            label="Variante"
+            value={typeof content.theme === "string" ? content.theme : "dark"}
+            options={["dark", "light"]}
+            onChange={(theme) => onChangeContent({ theme })}
+          />
         )}
       </div>
       {isTwoColumn && <TwoColumnEditor content={content} onChange={onChangeContent} />}

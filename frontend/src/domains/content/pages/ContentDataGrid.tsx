@@ -1,17 +1,20 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence } from "motion/react";
-import { Filter, Search } from "lucide-react";
+import { Filter, Search, Trash2 } from "lucide-react";
 import { Badge, Button, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
+import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { PermGate } from "../../../app/guards/PermGate";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
+import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { ContentStatusBadge } from "../components/ContentStatusBadge";
 import { ContentCardMobile } from "../components/ContentCardMobile";
 import { NewContentModal } from "../components/NewContentModal";
+import type { ContentRow } from "../contracts/responses";
 
 function FilterGroup({ label, options, value, onChange }: { label: string; options: string[]; value: string | null; onChange: (v: string | null) => void }) {
   return (
@@ -29,6 +32,7 @@ export function ContentDataGrid() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
   const canEdit = viewAsRole !== "viewer";
+  const canDelete = viewAsRole === "super_admin" || viewAsRole === "tenant_admin";
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>([]);
   const [status, setStatus] = useState<string | null>(null);
@@ -36,9 +40,43 @@ export function ContentDataGrid() {
   const [type, setType] = useState<string | null>(null);
   const [author, setAuthor] = useState<string | null>(null);
   const [showNewContent, setShowNewContent] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [pendingDelete, setPendingDelete] = useState<ContentRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "p1";
-  const { data: contents, loading, error } = useAsyncData(() => contentService.listContent(productId), [productId]);
+  const { data: contents, loading, error } = useAsyncData(() => contentService.listContent(productId), [productId, refreshKey]);
+
+  /** F.1.1 (BUG-SPRINT consolidado) — `from` sempre o status real da linha, nunca "Published" fixo (falhava para conteúdo em "In Review"). */
+  const handleArchive = async (row: ContentRow) => {
+    try {
+      await contentService.transitionContent(row.id, row.status, "Archived", "");
+      toast.success("Conteúdo arquivado", { description: row.title });
+      setRefreshKey((k) => k + 1);
+    } catch (err: unknown) {
+      toast.error("Falha ao arquivar", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
+    }
+  };
+
+  /** F.1.2 (BUG-SPRINT consolidado) — exclusão definitiva, restrita pelo backend a Draft nunca publicado + SUPER_ADMIN/TENANT_ADMIN; o gate de role aqui é só UX, a regra de verdade é sempre no backend. */
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await contentService.deleteContent(pendingDelete.id);
+      toast.success("Conteúdo excluído", { description: pendingDelete.title });
+      setPendingDelete(null);
+      setRefreshKey((k) => k + 1);
+    } catch (err: unknown) {
+      toast.error("Falha ao excluir", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const options = useMemo(() => ({
     statuses: Array.from(new Set((contents ?? []).map((r) => r.status))),
@@ -58,6 +96,18 @@ export function ContentDataGrid() {
   return (
     <>
       <AnimatePresence>{showNewContent && <NewContentModal onClose={() => setShowNewContent(false)} />}</AnimatePresence>
+      <AnimatePresence>
+        {pendingDelete && (
+          <ConfirmDialog
+            title={`Excluir permanentemente "${pendingDelete.title}"?`}
+            desc="Só é possível excluir rascunhos que nunca foram publicados. Esta ação é irreversível."
+            danger
+            loading={deleting}
+            onCancel={() => setPendingDelete(null)}
+            onConfirm={handleDelete}
+          />
+        )}
+      </AnimatePresence>
       <PageHeader title="Lista de Conteúdos" module="Conteúdo" desc="DataGrid operacional de artigos, traduções e versões." badge="Conteúdo">
         <Popover>
           <PopoverTrigger asChild><Button><Filter size={15} />Status / Idioma / Tipo / Autor</Button></PopoverTrigger>
@@ -100,10 +150,18 @@ export function ContentDataGrid() {
                     <td className="p-3">{r.publication}</td>
                     <td className="p-3">{r.version}</td>
                     <td className="p-3">
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1">
                         <PermGate allowed={canEdit}><Button onClick={() => navigate(`/content/${r.id}/editor`)}>Abrir</Button></PermGate>
                         <Button onClick={() => navigate(`/content/${r.id}/preview`)}>Preview</Button>
                         <Button onClick={() => navigate(`/content/${r.id}/versions`)}>Histórico</Button>
+                        {(r.status === "Published" || r.status === "In Review") && (
+                          <PermGate allowed={canEdit}><Button onClick={() => handleArchive(r)}>Arquivar</Button></PermGate>
+                        )}
+                        {r.status === "Draft" && (
+                          <PermGate allowed={canDelete}>
+                            <button onClick={() => setPendingDelete(r)} aria-label={`Excluir ${r.title}`} className="rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button>
+                          </PermGate>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -111,7 +169,9 @@ export function ContentDataGrid() {
               </tbody>
             </table>
           </div>
-          <div className="grid gap-3 lg:hidden">{rows.map((r) => <ContentCardMobile key={r.id} row={r} />)}</div>
+          <div className="grid gap-3 lg:hidden">{rows.map((r) => (
+            <ContentCardMobile key={r.id} row={r} onArchive={() => handleArchive(r)} onRequestDelete={() => setPendingDelete(r)} canDelete={canDelete} />
+          ))}</div>
         </>
       )}
     </>
