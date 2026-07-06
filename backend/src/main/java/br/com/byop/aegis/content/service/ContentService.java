@@ -13,8 +13,10 @@ import br.com.byop.aegis.content.domain.DifficultyLevel;
 import br.com.byop.aegis.content.dto.ContentSummary;
 import br.com.byop.aegis.content.dto.ContentVersionSummary;
 import br.com.byop.aegis.content.dto.WorkflowItemSummary;
+import br.com.byop.aegis.content.exception.ContentDeletionNotAllowedException;
 import br.com.byop.aegis.content.exception.ContentNotFoundException;
 import br.com.byop.aegis.content.exception.DuplicateContentTitleException;
+import br.com.byop.aegis.content.exception.InsufficientContentDeleteRoleException;
 import br.com.byop.aegis.content.exception.InvalidContentReferenceException;
 import br.com.byop.aegis.content.exception.InvalidContentStatusException;
 import br.com.byop.aegis.content.exception.InvalidContentTransitionException;
@@ -40,6 +42,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,6 +57,8 @@ public class ContentService {
     private static final String TARGET_TYPE_CONTENT = "Content";
     private static final String MODULE_CONTENT = "CONTENT";
     private static final String DIFF_KEY_STATUS = "status";
+    private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
+    private static final String ROLE_TENANT_ADMIN = "ROLE_TENANT_ADMIN";
 
     private final ContentRepository contentRepository;
     private final ContentVersionRepository versionRepository;
@@ -165,6 +170,55 @@ public class ContentService {
                 request == null ? null : request.comment()
         );
         return doTransition(productId, contentId, asTransition, caller);
+    }
+
+    /**
+     * Exclui definitivamente um {@code Content} — restrito a rascunho nunca
+     * publicado ({@code DRAFT} com {@code currentVersion == 1}) e a
+     * {@code SUPER_ADMIN}/{@code TENANT_ADMIN} (F.1.2, BUG-SPRINT consolidado
+     * de paginas/conteudo). Qualquer outro estado ja tem caminho de saida
+     * proprio via {@link #transition} para {@code ARCHIVED}, que preserva
+     * historico — a exclusao fisica nunca se aplica a conteudo com historico
+     * editorial real.
+     *
+     * @throws InsufficientContentDeleteRoleException se o chamador nao for SUPER_ADMIN/TENANT_ADMIN
+     * @throws ContentDeletionNotAllowedException se o conteudo ja foi publicado ou tem mais de uma versao
+     */
+    @Transactional
+    public void deleteContent(UUID productId, UUID contentId, AuthenticatedUser caller) {
+        log.debug("deleteContent: productId='{}', contentId='{}'", productId, contentId);
+        if (!canDelete(caller.authorities())) {
+            log.warn("deleteContent: role insuficiente productId='{}', contentId='{}'", productId, contentId);
+            throw new InsufficientContentDeleteRoleException();
+        }
+        Content content = findContentInProduct(productId, contentId);
+        if (!isNeverPublishedDraft(content)) {
+            log.warn("deleteContent: exclusao rejeitada, conteudo ja publicado ou versionado contentId='{}', status='{}', currentVersion='{}'",
+                    contentId, content.getStatus(), content.getCurrentVersion());
+            throw new ContentDeletionNotAllowedException();
+        }
+
+        ProductReference product = productReferenceService.getRequiredReference(productId);
+        recordContentDeletionAudit(product.tenantId(), productId, caller.subject(), content);
+        versionRepository.deleteAllByContentId(contentId);
+        contentRepository.delete(content);
+        log.info("deleteContent: conteudo excluido id='{}', productId='{}'", contentId, productId);
+    }
+
+    private boolean canDelete(Set<String> authorities) {
+        return authorities.contains(ROLE_SUPER_ADMIN) || authorities.contains(ROLE_TENANT_ADMIN);
+    }
+
+    private boolean isNeverPublishedDraft(Content content) {
+        return content.getStatus() == ContentStatus.DRAFT && content.getCurrentVersion() == 1;
+    }
+
+    private void recordContentDeletionAudit(UUID tenantId, UUID productId, String actorSubject, Content content) {
+        auditService.recordEvent(new AuditRecordCommand(
+                tenantId, productId, actorSubject, "CONTENT_DELETED", TARGET_TYPE_CONTENT,
+                content.getId().toString(), content.getTitle(), MODULE_CONTENT,
+                Map.of(DIFF_KEY_STATUS, content.getStatus().contractValue()), null
+        ));
     }
 
     @Transactional(readOnly = true)

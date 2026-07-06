@@ -17,6 +17,7 @@ import { feedbackService } from "../../core/notifications/services/feedbackServi
 import { notificationsService } from "../../core/notifications/services/notificationsService";
 
 import { AegisLogo } from "../../shared/components/AegisLogo";
+import { ProductSwitchingOverlay } from "../../shared/components/ProductSwitchingOverlay";
 import { Switcher, type SwitcherItem } from "../../shared/components/Switcher";
 import { GlobalSearch } from "../../shared/components/GlobalSearch";
 import { Notifications } from "../../shared/components/Notifications";
@@ -38,7 +39,7 @@ const viewerQuietRoutes = [
 ];
 
 export function AppShell() {
-  const { authUser, effectiveTenant, effectiveProduct, logout, userTenants, tenantProducts, switchTenant, switchProduct } = useAuth();
+  const { authUser, effectiveTenant, effectiveProduct, productSwitching, logout, userTenants, tenantProducts, switchTenant, switchProduct } = useAuth();
   const { viewAsRole, setViewAsRole, restore } = useViewAsRole();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -212,6 +213,7 @@ export function AppShell() {
       <SimulationBanner viewAs={viewAsRole} actual={authUser.role} onRestore={restore} />
 
       <PendingNotificationGate />
+      <AnimatePresence>{productSwitching && <ProductSwitchingOverlay key="product-switching" product={effectiveProduct} />}</AnimatePresence>
       <AnimatePresence>{showFeedback && <FeedbackModal key="fb" screenName={location.pathname} onClose={() => setShowFeedback(false)} />}</AnimatePresence>
       <AnimatePresence>
         {mobile && (

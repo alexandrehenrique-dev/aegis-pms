@@ -46,7 +46,13 @@ function matchesPeriod(dateStr: string, period: PeriodFilter, now: Date): boolea
  * componentes buscam a lista de forma independente, e este só buscava
  * uma vez, ao montar.
  */
-export function EventSelector({ productSlug, selectedIds, onChange, refreshKey = 0 }: { productSlug: string; selectedIds: string[]; onChange: (ids: string[]) => void; refreshKey?: number }) {
+export function EventSelector({ productSlug, selectedIds, onChange, refreshKey = 0 }: {
+  productSlug: string;
+  selectedIds: string[];
+  /** `selectedEvents` traz os dados completos dos eventos marcados (E.7.2, BUG-SPRINT consolidado) — permite ao `BlockRenderer` mostrar título/data/local sem um fetch adicional no preview. */
+  onChange: (ids: string[], selectedEvents: PageEvent[]) => void;
+  refreshKey?: number;
+}) {
   const [events, setEvents] = useState<PageEvent[]>([]);
   const [period, setPeriod] = useState<PeriodFilter>("todos");
 
@@ -59,7 +65,10 @@ export function EventSelector({ productSlug, selectedIds, onChange, refreshKey =
     return events.filter((ev) => matchesPeriod(ev.date, period, now));
   }, [events, period]);
 
-  const toggle = (id: string) => onChange(selectedIds.includes(id) ? selectedIds.filter((i) => i !== id) : [...selectedIds, id]);
+  const toggle = (id: string) => {
+    const nextIds = selectedIds.includes(id) ? selectedIds.filter((i) => i !== id) : [...selectedIds, id];
+    onChange(nextIds, events.filter((ev) => nextIds.includes(ev.id)));
+  };
 
   if (events.length === 0) {
     return <p className="text-sm text-muted-foreground">Nenhum evento cadastrado neste produto ainda — use "Gerenciar eventos" para criar o primeiro.</p>;

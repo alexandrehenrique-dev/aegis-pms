@@ -2,22 +2,35 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence } from "motion/react";
 import { AlertTriangle, Plus } from "lucide-react";
-import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
+import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, SkeletonLines } from "../../../shared/components/Primitives";
 import { PermGate } from "../../../app/guards/PermGate";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { contentService } from "../services/contentService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { NewContentModal } from "../components/NewContentModal";
+import type { ContentRow } from "../contracts/responses";
 
-function EditorialAttentionCard() {
+/**
+ * E.4.2 (BUG-SPRINT consolidado) — antes, lista de alertas 100% hardcoded
+ * (incluindo "Sobre o Maestro está aguardando revisão.", uma referência a
+ * "Maestro Beton" exibida para qualquer produto). Deriva itens reais de
+ * `rows` já carregado pelo componente pai — sem endpoint dedicado de
+ * "attention items", nunca inventa dado de negócio.
+ */
+function EditorialAttentionCard({ rows }: { rows: ContentRow[] }) {
+  const items = [
+    ...rows.filter((r) => r.status === "In Review").map((r) => `"${r.title}" está aguardando revisão.`),
+    ...rows.filter((r) => r.status === "Draft").map((r) => `"${r.title}" ainda está em rascunho.`),
+  ];
   return (
     <Card>
       <h2 className="mb-3 text-lg font-semibold">Atenção editorial</h2>
-      {["Página Home possui SEO incompleto.", "Sobre o Maestro está aguardando revisão.", "Galeria possui imagens sem texto alternativo.", "Contato foi publicado há 12 dias."].map((x) => (
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nenhum item pedindo atenção agora.</p>
+      ) : items.map((x) => (
         <div key={x} className="mb-2 rounded-xl border border-border bg-muted/30 p-3 text-sm"><AlertTriangle size={15} className="mb-1 text-[#8A5A12]" />{x}</div>
       ))}
-      <PartialErrorWidget />
     </Card>
   );
 }
@@ -82,15 +95,22 @@ export function EditorialDashboard() {
           </div>
           <Card>
             <h2 className="mb-3 text-lg font-semibold">Estados globais do módulo</h2>
-            <div className="grid gap-3 md:grid-cols-3">
+            {rows.length === 0 ? (
               <EmptyState compact title="Sem conteúdo" description="Crie o primeiro item editorial do produto." />
-              <div><p className="mb-2 text-sm font-medium">Loading</p><SkeletonLines /></div>
-              <PermissionHint />
-            </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+                {([["Draft", drafts], ["In Review", inReview], ["Published", published], ["Archived", archived]] as [string, number][]).map(([label, count]) => (
+                  <div key={label} className="rounded-xl border border-border p-3 text-sm">
+                    <p className="text-muted-foreground">{label}</p>
+                    <p className="text-xl font-semibold">{count}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
         <div className="space-y-4">
-          <EditorialAttentionCard />
+          <EditorialAttentionCard rows={rows} />
           <Card><h2 className="mb-3 text-lg font-semibold">Atividade editorial recente</h2><EditorialTimeline /></Card>
         </div>
       </div>

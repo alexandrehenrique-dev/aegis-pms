@@ -7,11 +7,26 @@ import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 
 export function PublishPanel() {
   const { id } = useParams<{ id: string }>();
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "p1";
+  const { data: content } = useAsyncData(() => (id ? contentService.getContent(productId, id) : Promise.resolve(undefined)), [productId, id]);
+  /**
+   * F.2 (BUG-SPRINT consolidado) — checklist derivado de `ContentRow` real,
+   * não mais um array literal hardcoded. "SEO"/"traduções"/"formulário
+   * vinculado" da versão anterior não existem como campo em `ContentRow`
+   * (ver contracts/responses.ts) — a checagem usa os campos que o Content
+   * realmente tem, para nunca marcar ✓ algo que não foi verificado de fato.
+   */
+  const checklist: [string, boolean][] = [
+    ["Corpo preenchido", !!content?.body && content.body.trim() !== ""],
+    ["Resumo preenchido", !!content?.summary && content.summary.trim() !== ""],
+    ["Metadados preenchidos", Object.keys(content?.metadata ?? {}).length > 0],
+  ];
+  const hasPendingChecks = checklist.some(([, ok]) => !ok);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -26,6 +41,10 @@ export function PublishPanel() {
       await contentService.archive(id, productId);
       toast.success("Conteúdo arquivado.", { description: "Evento de auditoria registrado." });
       setConfirmArchive(false);
+    } catch (err: unknown) {
+      toast.error("Falha ao arquivar", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setArchiving(false);
     }
@@ -36,6 +55,10 @@ export function PublishPanel() {
       await contentService.publish(id, productId);
       toast.success("Conteúdo publicado!", { description: `${product?.name ?? "Produto"} · conteúdo publicado` });
       setConfirmPublish(false);
+    } catch (err: unknown) {
+      toast.error("Falha ao publicar", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setPublishing(false);
     }
@@ -45,6 +68,10 @@ export function PublishPanel() {
     try {
       await contentService.saveDraft(id, productId);
       toast.success("Rascunho salvo!");
+    } catch (err: unknown) {
+      toast.error("Falha ao salvar rascunho", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setSavingDraft(false);
     }
@@ -54,6 +81,10 @@ export function PublishPanel() {
     try {
       await contentService.schedulePublish(id, productId);
       toast.success("Publicação agendada!");
+    } catch (err: unknown) {
+      toast.error("Falha ao agendar publicação", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setScheduling(false);
     }
@@ -63,6 +94,10 @@ export function PublishPanel() {
     try {
       await contentService.submitForReview(id, productId);
       toast.success("Enviado para revisão!");
+    } catch (err: unknown) {
+      toast.error("Falha ao enviar para revisão", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setSubmittingReview(false);
     }
@@ -79,10 +114,10 @@ export function PublishPanel() {
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>
           <h2 className="mb-3 text-lg font-semibold">Checklist pré-publicação</h2>
-          {([["SEO completo", false], ["Traduções completas", false], ["Assets com alt text", false], ["Formulário vinculado", true]] as [string, boolean][]).map(([x, ok]) => (
+          {checklist.map(([x, ok]) => (
             <div key={x} className="mb-2 flex items-center justify-between rounded-lg bg-muted p-3 text-sm"><span>{x}</span>{ok ? <CheckCircle2 className="text-primary" size={16} /> : <AlertTriangle className="text-[#b45309]" size={16} />}</div>
           ))}
-          <div className="mt-4 rounded-xl border border-[#fef3c7] bg-[#fef3c7]/60 p-3 text-sm text-[#b45309]">Pendências detectadas. Revise antes de publicar.</div>
+          {hasPendingChecks && <div className="mt-4 rounded-xl border border-[#fef3c7] bg-[#fef3c7]/60 p-3 text-sm text-[#b45309]">Pendências detectadas. Revise antes de publicar.</div>}
         </Card>
         <Card>
           <h2 className="text-lg font-semibold">Ações</h2>

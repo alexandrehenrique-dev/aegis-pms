@@ -51,7 +51,8 @@ export const formsService = {
   async listForms(productId: string): Promise<ListFormsResponse> {
     if (IS_API_MODE) return apiClient.get<ListFormsResponse>(`/products/${productId}/forms`);
     const productSlug = currentProductSlugOrId();
-    return productSlug ? formsStore.filter((f) => f.productSlug === productSlug) : formsStore;
+    if (!productSlug) return formsStore;
+    return formsStore.filter((f) => f.productSlug === productSlug || f.productSlug === productId);
   },
 
   async getForm(productId: string, formId: string): Promise<FormDetail | FormSummary | undefined> {

@@ -22,6 +22,7 @@ export type ItemCrudConfig = {
  * existentes e não tinha botão de adicionar/remover.
  */
 export const ITEMS_CRUD_CONFIG: Partial<Record<BlockType, ItemCrudConfig>> = {
+  hero: { key: "ctas", newItem: { label: "", href: "" }, rules: { requiredFields: ["label", "href"], maxItems: 4 } },
   gallery: { key: "items", newItem: { src: "", alt: "" }, rules: { requiredFields: ["alt"], maxItems: 50 } },
   "card-list": { key: "items", newItem: { title: "", desc: "" } },
   "feature-grid": { key: "items", newItem: { title: "", desc: "", icon: "" } },

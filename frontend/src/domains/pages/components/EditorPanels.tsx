@@ -204,6 +204,7 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
   const isAudio = section.type === "audio";
   const isVideo = section.type === "video";
   const isEventList = section.type === "event-list";
+  const isHero = section.type === "hero";
   const itemsCrudConfig = ITEMS_CRUD_CONFIG[section.type];
   const hasFormIdSelector = section.type === "contact" || section.type === "form";
   const { content } = section;
@@ -212,10 +213,19 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
     ...(isAudio ? ["source", "fileAssetId", "spotifyUrl", "autoplay"] : []),
     ...(isVideo ? ["source", "fileAssetId", "youtubeUrl", "autoplay"] : []),
     ...(isEventList ? ["selectedEventIds"] : []),
+    ...(isHero ? ["theme"] : []),
     ...(itemsCrudConfig ? [itemsCrudConfig.key] : []),
     ...(hasFormIdSelector ? ["formId"] : []),
   ]);
-  const fieldableContent = Object.fromEntries(Object.entries(content).filter(([k]) => !excludedKeys.has(k)));
+  const fieldableContent = (() => {
+    const base = Object.fromEntries(Object.entries(content).filter(([k]) => !excludedKeys.has(k)));
+    // E.10.1 — blocos hero criados antes deste fix (ou pelo scaffold de produto,
+    // que ainda nao populava `image`) nao tinham a chave `image`; sem ela o
+    // picker de imagem nunca aparecia no editor. Injeta o valor vazio só para
+    // renderização — não persiste até o usuário editar algum campo do bloco.
+    if (section.type === "hero" && !isPlainObject(base.image)) return { ...base, image: { src: "", alt: "" } };
+    return base;
+  })();
   const stringFields = Object.entries(fieldableContent).filter(([, v]) => typeof v === "string") as [string, string][];
   const nestedObjectFields = Object.entries(fieldableContent).filter(([, v]) => isPlainObject(v)) as [string, Record<string, unknown>][];
   const arrayFields = Object.entries(fieldableContent).filter(([, v]) => isArrayOfObjects(v)) as [string, Record<string, unknown>[]][];
@@ -245,6 +255,12 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
       <div className="grid gap-3 md:grid-cols-2">
         {stringFields.map(([k, v]) => {
           const onFieldChange = (nv: string) => onChangeContent({ [k]: nv });
+          if (k === "src") {
+            return <MediaField key={k} label={k} value={v} typeFilter="imagem" onChange={onFieldChange} />;
+          }
+          if (k === "fileAssetId") {
+            return <MediaField key={k} label={k} value={v} typeFilter="qualquer" onChange={onFieldChange} />;
+          }
           if (MARKDOWN_FIELD_KEYS.has(k)) {
             return <MarkdownField key={k} label={k} value={v} onChange={onFieldChange} />;
           }
@@ -270,6 +286,14 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
         {hasFormIdSelector && (
           <FormIdSelector productSlug={productSlug} value={typeof content.formId === "string" ? content.formId : ""} onChange={(formId) => onChangeContent({ formId })} />
         )}
+        {isHero && (
+          <SelectLike
+            label="Variante"
+            value={typeof content.theme === "string" ? content.theme : "dark"}
+            options={["dark", "light"]}
+            onChange={(theme) => onChangeContent({ theme })}
+          />
+        )}
       </div>
       {isTwoColumn && <TwoColumnEditor content={content} onChange={onChangeContent} />}
       {isAudio && <AudioBlockEditor content={content} onChange={onChangeContent} />}
@@ -279,7 +303,10 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
           <EventSelector
             productSlug={productSlug}
             selectedIds={Array.isArray(content.selectedEventIds) ? (content.selectedEventIds as string[]) : []}
-            onChange={(selectedEventIds) => onChangeContent({ selectedEventIds })}
+            onChange={(selectedEventIds, selectedEvents) => onChangeContent({
+              selectedEventIds,
+              selectedEvents: selectedEvents.map((ev) => ({ id: ev.id, title: ev.title, date: ev.date, location: ev.location, type: ev.type })),
+            })}
             refreshKey={eventsRefreshKey}
           />
           <Button onClick={() => setShowEventsManager(true)}><Calendar size={14} />Gerenciar eventos</Button>

@@ -22,4 +22,14 @@ public interface ContentVersionRepository extends JpaRepository<ContentVersion, 
      * @return versoes do conteudo informado, ordenadas por data de criacao ascendente
      */
     List<ContentVersion> findAllByContentIdOrderByCreatedAtAsc(UUID contentId);
+
+    /**
+     * Remove todas as versoes de um conteudo — usado apenas ao excluir um
+     * {@code Content} ainda em rascunho nunca publicado (ver
+     * {@link br.com.byop.aegis.content.service.ContentService#deleteContent}),
+     * onde a unica versao existente e {@code v1} sem nenhum valor historico.
+     *
+     * @param contentId identificador do conteudo proprietario
+     */
+    void deleteAllByContentId(UUID contentId);
 }

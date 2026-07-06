@@ -402,6 +402,20 @@ class SectionContentValidationServiceTest {
     }
 
     @Test
+    void shouldAcceptAudioUploadWithBlankAsset() {
+        Map<String, Object> content = Map.of("source", "upload", "fileAssetId", "");
+
+        service.validateSectionContent(PRODUCT_ID, BlockType.AUDIO, content);
+    }
+
+    @Test
+    void shouldAcceptAudioSpotifyTrackWithBlankUrl() {
+        Map<String, Object> content = Map.of("source", "spotify-track", "spotifyUrl", "");
+
+        service.validateSectionContent(PRODUCT_ID, BlockType.AUDIO, content);
+    }
+
+    @Test
     void shouldRejectAudioWithInvalidSource() {
         Map<String, Object> content = Map.of("source", "youtube");
 
@@ -501,6 +515,20 @@ class SectionContentValidationServiceTest {
     }
 
     @Test
+    void shouldAcceptVideoUploadWithBlankAsset() {
+        Map<String, Object> content = Map.of("source", "upload", "fileAssetId", "");
+
+        service.validateSectionContent(PRODUCT_ID, BlockType.VIDEO, content);
+    }
+
+    @Test
+    void shouldAcceptVideoYoutubeWithBlankUrl() {
+        Map<String, Object> content = Map.of("source", "youtube", "youtubeUrl", "");
+
+        service.validateSectionContent(PRODUCT_ID, BlockType.VIDEO, content);
+    }
+
+    @Test
     void shouldRejectVideoWithInvalidYoutubeUrl() {
         Map<String, Object> content = Map.of("source", "youtube", "youtubeUrl", "https://vimeo.com/12345");
 
@@ -548,6 +576,13 @@ class SectionContentValidationServiceTest {
         assertThatThrownBy(() -> service.validateSectionContent(PRODUCT_ID, BlockType.VIDEO_GALLERY, content))
                 .isInstanceOf(InvalidSectionContentException.class)
                 .extracting("errorCode").isEqualTo("VIDEO_GALLERY_ITEMS_COUNT_OUT_OF_RANGE");
+    }
+
+    @Test
+    void shouldAcceptVideoGalleryItemWithBlankYoutubeUrl() {
+        Map<String, Object> content = Map.of("items", List.of(Map.of("source", "youtube", "youtubeUrl", "", "title", "Clipe 1")));
+
+        service.validateSectionContent(PRODUCT_ID, BlockType.VIDEO_GALLERY, content);
     }
 
     @Test

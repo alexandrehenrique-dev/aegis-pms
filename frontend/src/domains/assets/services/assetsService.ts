@@ -23,6 +23,11 @@ function formatSize(bytes: number): string {
   return bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
+/** Lookup síncrono em mock mode (Sprint 20 — resolveAssetSrc) — cobre `id` real e o fallback pelo `name` para assets seed sem `id` atribuído. Nunca chamado em API mode: BlockRenderer resolve via URL direta nesse caso. */
+export function findAssetByIdSync(assetId: string): AssetSummary | undefined {
+  return assetsStore.find((item) => item.id === assetId || item.name === assetId);
+}
+
 export const assetsService = {
   async listAssets(productId: string): Promise<ListAssetsResponse> {
     if (IS_API_MODE) return apiClient.get<ListAssetsResponse>(`/products/${productId}/assets`);

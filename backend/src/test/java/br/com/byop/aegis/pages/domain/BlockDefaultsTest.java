@@ -46,7 +46,7 @@ class BlockDefaultsTest {
     @ParameterizedTest
     @EnumSource(value = BlockType.class, names = {"HERO", "TEXT", "RICH_TEXT", "TWO_COLUMN", "IMAGE", "IMAGE_TEXT",
             "FEATURE_GRID", "CARD_LIST", "GALLERY", "TIMELINE", "EVENT_LIST", "CTA_SECTION", "FAQ", "CONTACT",
-            "FORM", "DOWNLOAD"})
+            "FORM", "DOWNLOAD", "AUDIO", "VIDEO", "VIDEO_GALLERY", "SOCIAL_LINKS"})
     void shouldPassExistingSectionContentValidation(BlockType type) {
         assertThatCode(() -> validationService.validateSectionContent(PRODUCT_ID, type, BlockDefaults.defaultFor(type)))
                 .doesNotThrowAnyException();
@@ -59,5 +59,7 @@ class BlockDefaultsTest {
                 .allSatisfy(item -> assertThat((String) ((java.util.Map<?, ?>) item).get("src")).isEmpty());
         assertThat(BlockDefaults.defaultFor(BlockType.CONTACT)).containsEntry("formId", "");
         assertThat(BlockDefaults.defaultFor(BlockType.DOWNLOAD)).containsEntry("items", java.util.List.of());
+        assertThat(BlockDefaults.defaultFor(BlockType.AUDIO)).containsEntry("fileAssetId", "").containsEntry("spotifyUrl", "");
+        assertThat(BlockDefaults.defaultFor(BlockType.VIDEO)).containsEntry("fileAssetId", "").containsEntry("youtubeUrl", "");
     }
 }

@@ -4,8 +4,10 @@ import br.com.byop.aegis.content.contract.ContentTransitionRequest;
 import br.com.byop.aegis.content.dto.ContentSummary;
 import br.com.byop.aegis.content.dto.ContentVersionSummary;
 import br.com.byop.aegis.content.dto.WorkflowItemSummary;
+import br.com.byop.aegis.content.exception.ContentDeletionNotAllowedException;
 import br.com.byop.aegis.content.exception.ContentExceptionHandler;
 import br.com.byop.aegis.content.exception.ContentNotFoundException;
+import br.com.byop.aegis.content.exception.InsufficientContentDeleteRoleException;
 import br.com.byop.aegis.content.exception.InsufficientContentRoleException;
 import br.com.byop.aegis.content.exception.InvalidContentTransitionException;
 import br.com.byop.aegis.content.service.ContentService;
@@ -148,6 +150,51 @@ class ContentControllerTest {
                                 {"title":"","type":"article","lang":"pt-BR"}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldDeleteContent() throws Exception {
+        AuthenticatedUser caller = user(Set.of("ROLE_SUPER_ADMIN"));
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+
+        mockMvc.perform(delete("/api/v1/products/{productId}/content/{contentId}", PRODUCT_ID, CONTENT_ID).with(jwt()))
+                .andExpect(status().isNoContent());
+
+        verify(productAccessPort).assertAccessible(PRODUCT_ID, caller);
+        verify(contentService).deleteContent(PRODUCT_ID, CONTENT_ID, caller);
+    }
+
+    @Test
+    void shouldRejectDeleteWhenCallerLacksAdminRole() throws Exception {
+        AuthenticatedUser caller = user(Set.of("ROLE_EDITOR"));
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        doThrow(new InsufficientContentDeleteRoleException()).when(contentService).deleteContent(PRODUCT_ID, CONTENT_ID, caller);
+
+        mockMvc.perform(delete("/api/v1/products/{productId}/content/{contentId}", PRODUCT_ID, CONTENT_ID).with(jwt()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("CONTENT_DELETE_FORBIDDEN"));
+    }
+
+    @Test
+    void shouldRejectDeleteWhenContentIsNotAnUnpublishedDraft() throws Exception {
+        AuthenticatedUser caller = user(Set.of("ROLE_SUPER_ADMIN"));
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        doThrow(new ContentDeletionNotAllowedException()).when(contentService).deleteContent(PRODUCT_ID, CONTENT_ID, caller);
+
+        mockMvc.perform(delete("/api/v1/products/{productId}/content/{contentId}", PRODUCT_ID, CONTENT_ID).with(jwt()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("CONTENT_DELETE_NOT_ALLOWED"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenDeletingContentOutsideProduct() throws Exception {
+        AuthenticatedUser caller = user(Set.of("ROLE_SUPER_ADMIN"));
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        doThrow(new ContentNotFoundException(CONTENT_ID)).when(contentService).deleteContent(PRODUCT_ID, CONTENT_ID, caller);
+
+        mockMvc.perform(delete("/api/v1/products/{productId}/content/{contentId}", PRODUCT_ID, CONTENT_ID).with(jwt()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("CONTENT_NOT_FOUND"));
     }
 
     @Test

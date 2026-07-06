@@ -31,6 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [selectedProduct, setSelectedProduct] = useState<ProductOption | null>(null);
   const [userTenants, setUserTenants] = useState<TenantOption[]>([]);
   const [userProducts, setUserProducts] = useState<Record<string, ProductOption[]>>({});
+  const [productSwitching, setProductSwitching] = useState(false);
+  const productSwitchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // true enquanto restauramos sessão de um token existente no sessionStorage (F5/reabertura)
   const [restoring, setRestoring] = useState(() => IS_API_MODE && !!sessionStorage.getItem(ACCESS_TOKEN_KEY));
   const restorationAttempted = useRef(false);
@@ -179,11 +181,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (t) { setSelectedTenant(t); setSelectedProduct(null); }
   }, [userTenants]);
 
+  /** E.8 (BUG-SPRINT consolidado) — troca de produto era instantânea, sem nenhum indicador visual de mudança de contexto; `productSwitching` fica `true` por ~1s para o `AppShell` exibir `ProductSwitchingOverlay`. */
   const switchProduct = useCallback((productId: string) => {
     if (!effectiveTenant) return;
     const p = (userProducts[effectiveTenant.id] || []).find((p) => p.id === productId);
-    if (p) setSelectedProduct(p);
+    if (!p) return;
+    if (productSwitchTimer.current) clearTimeout(productSwitchTimer.current);
+    setProductSwitching(true);
+    setSelectedProduct(p);
+    productSwitchTimer.current = setTimeout(() => setProductSwitching(false), 1000);
   }, [effectiveTenant, userProducts]);
+
+  useEffect(() => () => { if (productSwitchTimer.current) clearTimeout(productSwitchTimer.current); }, []);
 
   /**
    * Editar Produto a partir de ProductSelectScreen (botão direito → menu de
@@ -244,11 +253,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthContextValue>(() => ({
     authUser, selectedTenant, selectedProduct, userTenants, userProducts,
-    effectiveTenant, tenantProducts, effectiveProduct,
+    effectiveTenant, tenantProducts, effectiveProduct, productSwitching,
     initSession, logout, selectTenant: setSelectedTenant, selectProduct: setSelectedProduct,
     switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite, addProduct,
   }), [
-    authUser, selectedTenant, selectedProduct, userTenants, userProducts, effectiveTenant, tenantProducts, effectiveProduct,
+    authUser, selectedTenant, selectedProduct, userTenants, userProducts, effectiveTenant, tenantProducts, effectiveProduct, productSwitching,
     initSession, logout, switchTenant, switchProduct, updateProduct, removeProduct, toggleFavorite, addProduct,
   ]);
 

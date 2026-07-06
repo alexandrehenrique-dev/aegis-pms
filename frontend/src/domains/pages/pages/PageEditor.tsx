@@ -113,28 +113,85 @@ export function PageEditor() {
     contentDebounceTimer.current = setTimeout(async () => {
       const pending = pendingContentPatch.current;
       pendingContentPatch.current = null;
+      contentDebounceTimer.current = null;
       if (!pending || !page) return;
-      await pagesService.updateSection(page.productSlug, page.id, pending.sectionId, { content: { ...selectedSection?.content, ...pending.patch } });
-      await refreshPage(page);
-      triggerSave();
+      try {
+        await pagesService.updateSection(page.productSlug, page.id, pending.sectionId, { content: { ...selectedSection?.content, ...pending.patch } });
+        await refreshPage(page);
+        triggerSave();
+      } catch (err: unknown) {
+        setSaveStatus("error");
+        toast.error("Falha ao salvar alterações", {
+          description: (err as { message?: string }).message ?? "Tente novamente.",
+        });
+      }
     }, CONTENT_SAVE_DEBOUNCE_MS);
+  };
+
+  /**
+   * E.7.1 (BUG-SPRINT consolidado) — antes, "Salvar rascunho" só chamava
+   * `triggerSave()`, uma animação 100% visual sem nenhuma chamada ao backend.
+   * Se o debounce de `handleChangeContent` ainda não tivesse disparado (ex.:
+   * usuário seleciona um evento e clica em "Salvar rascunho" em menos de
+   * `CONTENT_SAVE_DEBOUNCE_MS`), o patch pendente nunca era persistido antes
+   * do usuário abrir o Preview — daí o preview mostrar "Nenhum evento
+   * selecionado ainda" mesmo depois de "salvar".
+   */
+  const handleSaveDraft = async () => {
+    if (!page) return;
+    setSaveStatus("saving");
+    try {
+      if (contentDebounceTimer.current) {
+        clearTimeout(contentDebounceTimer.current);
+        contentDebounceTimer.current = null;
+        const pending = pendingContentPatch.current;
+        pendingContentPatch.current = null;
+        if (pending) {
+          await pagesService.updateSection(page.productSlug, page.id, pending.sectionId, {
+            content: { ...selectedSection?.content, ...pending.patch },
+          });
+        }
+      }
+      await pagesService.updatePage(page.productSlug, page.id, { status: "draft" });
+      await refreshPage(page);
+      setSaveStatus("saved");
+      toast.success("Rascunho salvo");
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    } catch (err: unknown) {
+      setSaveStatus("error");
+      toast.error("Falha ao salvar", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
+    }
   };
 
   const handleAddBlock = async (type: BlockType) => {
     if (!page) return;
     const label = `Novo bloco ${page.sections.length + 1}`;
-    const created = await pagesService.createSection(page.productSlug, page.id, { type, label, content: DEFAULT_BLOCK_CONTENT[type] });
-    await refreshPage(page);
-    setSelectedSectionId(created.id);
-    toast.success("Bloco adicionado", { description: `${label} (${type})` });
-    triggerSave();
+    try {
+      const created = await pagesService.createSection(page.productSlug, page.id, { type, label, content: DEFAULT_BLOCK_CONTENT[type] });
+      await refreshPage(page);
+      setSelectedSectionId(created.id);
+      toast.success("Bloco adicionado", { description: `${label} (${type})` });
+      triggerSave();
+    } catch (err: unknown) {
+      toast.error(`Não foi possível adicionar bloco "${type}"`, {
+        description: (err as { message?: string }).message ?? "Verifique os campos obrigatórios.",
+      });
+    }
   };
 
   const handleReorderSections = async (sectionIds: string[]) => {
     if (!page) return;
-    await pagesService.reorderSections(page.productSlug, page.id, { sectionIds });
-    await refreshPage(page);
-    triggerSave();
+    try {
+      await pagesService.reorderSections(page.productSlug, page.id, { sectionIds });
+      await refreshPage(page);
+      triggerSave();
+    } catch (err: unknown) {
+      toast.error("Não foi possível reordenar os blocos", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
+    }
   };
 
   const handleDeleteBlock = async () => {
@@ -147,6 +204,10 @@ export function PageEditor() {
       toast.success("Bloco removido", { description: pendingDeleteSection?.label });
       setPendingDeleteId(null);
       triggerSave();
+    } catch (err: unknown) {
+      toast.error("Não foi possível remover o bloco", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setDeletingBlock(false);
     }
@@ -172,10 +233,10 @@ export function PageEditor() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <AnimatePresence>{saveStatus !== "idle" && <FloatingSaveStatus key={saveStatus} status={saveStatus} onRetry={triggerSave} />}</AnimatePresence>
+      <AnimatePresence>{saveStatus !== "idle" && <FloatingSaveStatus key={saveStatus} status={saveStatus} onRetry={handleSaveDraft} />}</AnimatePresence>
       <PageHeader title={`${page?.title ?? "Página"} — Editar`} desc="Edite blocos, propriedades, SEO e publicação com rastreabilidade." badge={page ? page.status : "draft"}>
         <Button onClick={() => navigate(`/content/${page?.slug}/preview`)} disabled={!page}>Preview</Button>
-        <Button onClick={triggerSave}>Salvar rascunho</Button>
+        <Button onClick={handleSaveDraft} disabled={saveStatus === "saving"}>Salvar rascunho</Button>
         <Button primary onClick={handleSubmitForReview}>Enviar para revisão</Button>
       </PageHeader>
       {saveStatus === "dirty" && <UnsavedChangesBanner />}

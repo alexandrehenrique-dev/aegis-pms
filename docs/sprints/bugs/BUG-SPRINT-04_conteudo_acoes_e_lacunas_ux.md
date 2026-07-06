@@ -64,15 +64,15 @@ Mas o `ContentController` **não tem `@DeleteMapping`**:
 
 Chamada a `deleteContent()` retorna 404 ou 405. O botão de exclusão também não aparece na UI (`ContentDataGrid` nem o expõe).
 
-**Decisão de design necessária:** exclusão de conteúdo deve ser suportada? Conteúdo é uma entidade versionada e auditada — o padrão do sistema é usar `ARCHIVED` como estado final. Se exclusão for permitida, deve ser restrita a `SUPER_ADMIN` e `TENANT_ADMIN`, e apenas para conteúdo em `Draft` (nunca publicado). Documentar ADR se necessário.
+**Decisão aprovada:** exclusão é suportada, restrita a `SUPER_ADMIN` e `TENANT_ADMIN`, e apenas para conteúdo em `DRAFT` que **nunca foi publicado** (`currentVersion == 1` e `status == DRAFT`). Conteúdo que já passou por `PUBLISHED` só pode ser arquivado — jamais excluído. Sem ADR adicional; esta regra entra como invariante documentada no contrato.
 
 **Implementação necessária:**
 
 **F.1.1 — Adicionar ação "Arquivar" na lista com status dinâmico:**
 
 ```tsx
-// ContentDataGrid.tsx — adicionar botão condicional por status:
-{r.status === "Published" && (
+// ContentDataGrid.tsx — botão "Arquivar" condicional por status:
+{(r.status === "Published" || r.status === "In Review") && (
   <PermGate allowed={canEdit}>
     <Button onClick={() => handleArchive(r.id, r.status)}>Arquivar</Button>
   </PermGate>
@@ -84,41 +84,108 @@ Chamada a `deleteContent()` retorna 404 ou 405. O botão de exclusão também n�
 async archive(id: string, currentStatus: string, productId = requireCurrentProductId()): Promise<void> {
   if (IS_API_MODE)
     return apiClient.post(`/products/${productId}/content/${id}/transition`, {
-      from: currentStatus,  // dinâmico, não hardcoded "Published"
+      from: currentStatus,  // dinâmico — nunca hardcoded "Published"
       to: "Archived",
     });
+  // mock mode:
+  const item = contentsStore.find((c) => c.id === id);
+  if (item) item.status = "Archived";
 }
 ```
 
-**F.1.2 — Excluir: implementar endpoint no backend (se aprovado em decisão de design):**
+**F.1.2 — Excluir: implementar endpoint no backend e exposição na lista:**
 
 ```java
-// ContentController.java
+// ContentController.java — novo endpoint:
 @DeleteMapping("/api/v1/products/{productId}/content/{contentId}")
 @ResponseStatus(HttpStatus.NO_CONTENT)
 public void deleteContent(@PathVariable UUID productId,
                           @PathVariable UUID contentId,
                           Authentication authentication) {
-  AuthenticatedUser caller = assertProductAccess(authentication, productId);
-  contentService.deleteContent(productId, contentId, caller);
+    AuthenticatedUser caller = assertProductAccess(authentication, productId);
+    contentService.deleteContent(productId, contentId, caller);
 }
 ```
 
-Regras do `ContentService.deleteContent()`:
-- Apenas `SUPER_ADMIN` e `TENANT_ADMIN` podem excluir.
-- Apenas conteúdo em `DRAFT` (nunca publicado) pode ser excluído.
-- Conteúdo `PUBLISHED` ou `ARCHIVED` só pode ser arquivado — nunca excluído.
-- Auditoria obrigatória: registrar evento de deleção.
+```java
+// ContentService.java — lógica completa:
+private static final String ROLE_SUPER_ADMIN  = "ROLE_SUPER_ADMIN";
+private static final String ROLE_TENANT_ADMIN = "ROLE_TENANT_ADMIN";
 
-Também adicionar `@DeleteMapping` ao **Bruno** com assertion de status 204 e verificação de não-retorno em `GET`.
+public void deleteContent(UUID productId, UUID contentId, AuthenticatedUser caller) {
+    boolean isAdmin = caller.authorities().contains(ROLE_SUPER_ADMIN)
+                   || caller.authorities().contains(ROLE_TENANT_ADMIN);
+    if (!isAdmin) {
+        throw new InsufficientContentRoleException(
+            "Apenas SUPER_ADMIN ou TENANT_ADMIN podem excluir conteúdo.");
+    }
+
+    Content content = contentRepository.findByIdAndProductId(contentId, productId)
+        .orElseThrow(() -> new ContentNotFoundException(contentId));
+
+    // Nunca excluir conteúdo que já foi publicado
+    boolean neverPublished = content.getStatus() == ContentStatus.DRAFT
+                          && content.getCurrentVersion() == 1;
+    if (!neverPublished) {
+        throw new InvalidContentTransitionException(
+            "Apenas conteúdo em Draft que nunca foi publicado pode ser excluído. " +
+            "Use a transição para Archived.");
+    }
+
+    auditService.record(productId, caller.subject(), "CONTENT_DELETED", contentId.toString());
+    versionRepository.deleteAllByContentId(contentId);
+    contentRepository.delete(content);
+}
+```
+
+> **Nota de consistência:** o padrão de prefixo `ROLE_` nos authorities varia no codebase — `SettingsService` usa `ROLE_SUPER_ADMIN`, `PermissionMatrixDefaults` usa `SUPER_ADMIN`. Verificar o token real emitido pelo Keycloak e alinhar uma constante compartilhada em `AegisRoles` (oportunidade de refactoring).
+
+```typescript
+// contentService.ts — mock mode para deleteContent():
+async deleteContent(id: string): Promise<void> {
+  if (IS_API_MODE)
+    return apiClient.delete(`/products/${requireCurrentProductId()}/content/${id}`);
+  // mock: remover do store em memória
+  const idx = contentsStore.findIndex((c) => c.id === id);
+  if (idx !== -1) contentsStore.splice(idx, 1);
+}
+```
+
+```tsx
+// ContentDataGrid.tsx — botão "Excluir" apenas para Draft nunca publicado:
+{r.status === "Draft" && (
+  <PermGate allowed={viewAsRole === "super_admin" || viewAsRole === "tenant_admin"}>
+    <Button
+      variant="destructive"
+      onClick={() => {
+        if (confirm("Excluir permanentemente este rascunho?")) {
+          contentService.deleteContent(r.id).then(() => refresh());
+        }
+      }}
+    >
+      Excluir
+    </Button>
+  </PermGate>
+)}
+```
+
+Também adicionar caso ao **Bruno**:
+- `DELETE /products/{productId}/content/{contentId}` com Draft → `204 No Content`
+- mesma rota com conteúdo Published → `400` com mensagem descritiva
+- mesma rota com role editor → `403`
+- `GET` após delete → `404`
+
+**Cobertura JaCoCo:** `ContentService.deleteContent()` + handler no `ContentExceptionHandler` devem atingir 100% — incluir testes para os três ramos (role inválido, status inválido, sucesso).
 
 **Critério de aceite:**
-- [ ] Lista exibe botão "Arquivar" para conteúdos com status `Published`.
-- [ ] Arquivar a partir da lista executa transição corretamente e remove o item da visualização atual.
-- [ ] `archive()` usa `currentStatus` como `from`, não hardcoded `"Published"`.
-- [ ] Decisão documentada sobre suporte a exclusão (ADR ou nota no contrato).
-- [ ] Se exclusão aprovada: `DELETE /content/{contentId}` retorna 204; apenas Draft excluível; apenas roles admin.
-- [ ] Bruno: `POST .../transition` com `from` errado → 422 com erro descritivo.
+- [ ] Lista exibe botão "Arquivar" para conteúdos `Published` e `In Review`.
+- [ ] Lista exibe botão "Excluir" apenas para `Draft` + roles `super_admin`/`tenant_admin`.
+- [ ] `archive()` usa `currentStatus` como `from` — nunca hardcoded.
+- [ ] `DELETE /content/{contentId}` → 204 para Draft nunca publicado / 400 para demais status / 403 para roles sem permissão.
+- [ ] Deleção registra evento de auditoria antes de remover.
+- [ ] Mock mode: `deleteContent()` remove item do store em memória; `archive()` atualiza status local.
+- [ ] Bruno: todos os 4 cenários acima passam.
+- [ ] JaCoCo: 100% nas novas linhas de `deleteContent()`.
 
 **Smoke test:**
 ```
@@ -205,20 +272,248 @@ const handleArchive = async () => {
 
 ---
 
+---
+
+## F.4 — `FormsTimeline`: dados completamente hardcoded
+
+**Módulos afetados:** `frontend/src/domains/forms/components/FormsTimeline.tsx`, `formsService.ts`
+
+**Comportamento observado:** O painel "Timeline Forms" no `FormsDashboard` (e o componente `FormsTimeline` reutilizado em `SubmissionDetails`) exibe sempre os mesmos quatro eventos fictícios, com timestamps calculados como `há {i + 1} h`, independentemente do produto ou de qualquer dado real:
+
+```tsx
+// FormsTimeline.tsx — array literal hardcoded:
+{["Novo orçamento recebido", "Novo contato enviado", "RSVP confirmado", "Formulário publicado"].map((t, i) => (
+  <div key={t}>
+    <p>{t}</p>
+    <p>há {i + 1} h · {effectiveProduct?.name ?? "Produto"} → Forms</p>
+  </div>
+))}
+```
+
+Nenhuma chamada a API ou serviço é feita — o componente é puro mock decorativo.
+
+**Causa raiz:** componente criado como placeholder visual; nunca conectado a uma fonte de dados real.
+
+**Fonte de dados real disponível:** o backend tem o endpoint de auditoria com filtro por módulo:
+
+```
+GET /api/v1/tenants/{tenantId}/audit-events?module=FORM&productId={productId}
+```
+
+O `AuditEventSummary` retorna `{ id, actor, action, target, module, time, risk }` — `action` e `target` compõem a descrição do evento (ex.: `FORM_PUBLISHED` + nome do formulário).
+
+> **Nota de escopo:** eventos de submissão ("Novo orçamento recebido") são operacionais, não de auditoria. Para incluí-los no timeline, seria necessário um endpoint agregado (`GET /products/{productId}/forms/activity`) ou derivar dos dados de `listSubmissions` por formulário. Como a timeline do dashboard serve como **visão de ciclo de vida**, filtrar por `module=FORM` no endpoint de audit já cobre os casos mais relevantes (publicação, despublicação, criação). Submissões recentes pertencem à aba "Submissions".
+
+**Implementação necessária:**
+
+```typescript
+// formsService.ts — novo método:
+async listActivity(tenantId: string, productId: string): Promise<AuditEventSummary[]> {
+  if (IS_API_MODE)
+    return apiClient.get<AuditEventSummary[]>(
+      `/tenants/${tenantId}/audit-events?module=FORM&productId=${productId}`
+    );
+  // mock mode: retornar array vazio — sem dados fabricados
+  return [];
+}
+```
+
+```tsx
+// FormsTimeline.tsx — conectado à API:
+export function FormsTimeline() {
+  const { effectiveProduct, effectiveTenant } = useAuth();
+  const { data: events = [] } = useAsyncData(
+    () =>
+      effectiveTenant?.id && effectiveProduct?.id
+        ? formsService.listActivity(effectiveTenant.id, effectiveProduct.id)
+        : Promise.resolve([]),
+    [effectiveTenant?.id, effectiveProduct?.id]
+  );
+
+  if (events.length === 0)
+    return <p className="text-sm text-muted-foreground">Nenhuma atividade recente.</p>;
+
+  return (
+    <div className="space-y-1">
+      {events.map((e) => (
+        <div key={e.id} className="flex gap-3 rounded-xl p-3 hover:bg-muted">
+          <span className="mt-1 h-2.5 w-2.5 rounded-full bg-primary" />
+          <div>
+            <p className="text-sm font-medium">{e.action}: {e.target}</p>
+            <p className="text-xs text-muted-foreground">{e.time} · {effectiveProduct?.name ?? "Produto"} → Forms</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+**Critério de aceite:**
+- [ ] `FormsTimeline` carrega eventos reais via `GET .../audit-events?module=FORM&productId=...`.
+- [ ] Estado vazio (`[]`) exibe mensagem "Nenhuma atividade recente." em vez de dados falsos.
+- [ ] Em mock mode: retorna `[]` sem fabricar dados.
+- [ ] `SubmissionDetails` reutiliza o mesmo componente corrigido.
+
+---
+
+## F.5 — `PublicationPanel`: tela de publicação completamente estática
+
+**Módulos afetados:** `frontend/src/domains/forms/pages/PublicationPanel.tsx`, `app/routes/index.tsx`
+
+**Comportamento observado:** A tela "Publicação do Formulário" exibe canais de publicação com valores completamente hardcoded — URL, Embed, Script, Iframe, Domínio e Status são strings literais que nunca refletem o formulário ou produto atual:
+
+```tsx
+// PublicationPanel.tsx — linhas 14-15: constantes globais hardcoded
+const EMBED_SNIPPET = "<aegis-form id=contato-comercial />";
+const FORM_ID = "form-contato-comercial";
+
+// linha 71: card de canais completamente estático
+{[
+  ["URL",     "https://maestrobeton.com/forms/contato"],
+  ["Embed",   "<aegis-form id=contato-comercial />"],
+  ["Script",  '<script src="/aegis/forms.js"></script>'],
+  ["Iframe",  '<iframe src="/forms/contato"></iframe>'],
+  ["Domínio", "maestrobeton.com"],
+  ["Status",  "Publicado e rastreável"],
+].map(...)}
+```
+
+**F.5.1 — `FORM_ID` hardcoded: rota sem parâmetro**
+
+A rota atual é `/forms/publication` (sem `:formId`). O `PublicationPanel` nunca sabe qual formulário está sendo exibido:
+
+```typescript
+// routes/index.tsx linha 160:
+<Route path="/forms/publication" element={<PublicationPanel />} />
+// ← sem :formId na rota
+```
+
+Como consequência:
+- `formsService.getDelivery(productId, FORM_ID)` sempre carrega/salva a configuração do formulário "form-contato-comercial", independentemente do formulário selecionado.
+- `formsService.publish(productId, FORM_ID)` publica o formulário errado.
+- `handleCopyEmbed()` copia sempre o mesmo snippet hardcoded.
+
+**F.5.2 — "Canais de publicação" nunca reflete dados reais**
+
+O backend já retorna o campo `publication` no `FormDetail`:
+
+```java
+public record FormDetail(
+    UUID id, String name, String type, String status,
+    List<Map<String, Object>> fields,
+    List<Map<String, Object>> deliveryChannels,
+    String publication,   // ← URL pública do formulário publicado
+    OffsetDateTime createdAt, OffsetDateTime updatedAt
+) {}
+```
+
+Este campo deve ser a fonte do item "URL". Os demais canais (Embed, Iframe) derivam do `id` real do formulário. "Domínio" vem do produto. "Status" vem de `FormDetail.status`.
+
+**F.5.3 — `handlePublish` sem catch**
+
+```typescript
+const handlePublish = async () => {
+  setPublishing(true);
+  try {
+    await formsService.publish(productId, FORM_ID);
+    toast.success("Alterações publicadas!");
+    navigate("/forms/list");
+  } finally {
+    setPublishing(false); // erros silenciados — sem toast.error
+  }
+};
+```
+
+**Implementação necessária:**
+
+**Rota:**
+```typescript
+// routes/index.tsx — adicionar :formId:
+<Route path="/forms/:formId/publication" element={<PublicationPanel />} />
+```
+
+Atualizar todas as navegações para `/forms/publication` para incluir o `formId` real (ex.: link na aba "Publicação" em `FormBuilder` e `FormDetail`).
+
+**Componente:**
+```tsx
+// PublicationPanel.tsx — ler formId da rota e derivar dados do FormDetail:
+const { formId } = useParams<{ formId: string }>();
+const { product } = useCurrentProduct();
+const productId = product?.id ?? "";
+
+const { data: form } = useAsyncData(
+  () => (productId && formId ? formsService.getForm(productId, formId) : Promise.resolve(null)),
+  [productId, formId]
+);
+
+// Derivar canais de dados reais:
+const publicationChannels = form
+  ? [
+      ["URL",     form.publication ?? "—"],
+      ["Embed",   `<aegis-form id="${formId}" />`],
+      ["Script",  '<script src="/aegis/forms.js"></script>'],
+      ["Iframe",  `/forms/${formId}`],
+      ["Domínio", product?.domain ?? product?.name?.toLowerCase() ?? "—"],
+      ["Status",  form.status],
+    ]
+  : [];
+
+// Embed snippet para clipboard:
+const embedSnippet = `<aegis-form id="${formId}" />`;
+
+// handlePublish com catch:
+const handlePublish = async () => {
+  if (!formId) return;
+  setPublishing(true);
+  try {
+    await formsService.publish(productId, formId);
+    toast.success("Alterações publicadas!");
+    navigate("/forms/list");
+  } catch {
+    toast.error("Falha ao publicar. Tente novamente.");
+  } finally {
+    setPublishing(false);
+  }
+};
+```
+
+> **Nota:** o campo `product.domain` pode não existir no contrato atual do frontend. Se ausente, derivar de `product.name` com slugify como fallback até que o campo seja adicionado à `ProductSummary`.
+
+**Critério de aceite:**
+- [ ] Rota alterada para `/forms/:formId/publication`; `useParams` extrai `formId`.
+- [ ] "Canais de publicação" usa `FormDetail.publication` para a URL e `formId` real para Embed/Iframe.
+- [ ] Status exibe valor real de `FormDetail.status` — nunca hardcoded "Publicado e rastreável".
+- [ ] `handlePublish` e `handleSaveDelivery` têm `catch` com `toast.error`.
+- [ ] `handleCopyEmbed` copia snippet com `formId` real.
+- [ ] Navegação de `/forms/list` → aba "Publicação" passa `formId` na URL.
+
+**Smoke test:**
+```
+1. Criar formulário → abrir aba Publicação
+2. Verificar: URL = FormDetail.publication (ou "—" se não publicado)
+3. Verificar: Embed = <aegis-form id="{id-real}" />
+4. Clicar "Copiar embed" → clipboard contém o snippet com id real
+5. Publicar → toast de sucesso → redirect para lista
+6. Publicar com erro simulado → toast de erro visível
+```
+
+---
+
 ## Seção Z — Critérios de aceite globais da sprint
 
 ```bash
 # Backend standalone:
 cd backend && mvn verify -q
-# → BUILD SUCCESS + jacoco-check PASSED
+# → BUILD SUCCESS + jacoco-check PASSED (inclui ContentService.deleteContent() 100%)
 
 # Bruno contrato:
 cd bruno && bru run --env local
-# → 0 FAILED (inclui DELETE /content/{id} se implementado)
+# → 0 FAILED (inclui DELETE /content/{id}: 204/400/403 + audit events FORM filter)
 
 # TypeScript:
 npm run typecheck
-# → 0 erros
+# → 0 erros (inclui FormsTimeline, PublicationPanel com useParams)
 ```
 
 ### Regras de ouro desta sprint
@@ -226,4 +521,6 @@ npm run typecheck
 1. **Ações de ciclo de vida acessíveis sem sair da lista** — arquivar não deve exigir navegar para o editor.
 2. **`from` nas transições sempre dinâmico** — nunca hardcoded com status presumido.
 3. **Todo handler de ação tem catch com toast.error** — sem silêncio em erros.
-4. **Exclusão de conteúdo exige ADR** — decisão documentada antes de implementar.
+4. **Exclusão apenas de Draft nunca publicado, apenas roles admin** — invariante documentada no contrato, sem exceções.
+5. **Nenhum dado exibido ao usuário pode ser literal hardcoded** — se não há endpoint disponível, exibir "—" ou estado vazio, nunca valor inventado.
+6. **Toda rota que exibe um recurso específico leva o ID na URL** — sem constantes globais substituindo `useParams`.

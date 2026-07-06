@@ -102,9 +102,33 @@ function FormPropertiesPanel({ field, onChange }: { field: FormField | undefined
 
 export function FormBuilder() {
   const navigate = useNavigate();
-  const { slug: formId } = useParams<{ slug: string }>();
+  const { slug: routeFormId } = useParams<{ slug: string }>();
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "";
+  const [creating, setCreating] = useState(false);
+
+  /**
+   * E.5.1 (BUG-SPRINT consolidado) — "/forms/new" (sem `:slug`) nunca chamava
+   * `formsService.createForm()`; o builder só editava campos localmente e o
+   * formulário nunca existia de fato. Ao montar sem `routeFormId`, cria o
+   * formulário no service e navega para `/forms/{id}` (mesma rota de edição),
+   * substituindo a entrada de histórico para o botão "Voltar" não reabrir
+   * "/forms/new".
+   */
+  useEffect(() => {
+    if (routeFormId || !productId || creating) return;
+    setCreating(true);
+    formsService.createForm(productId, { name: "Novo formulário", type: "Contato" })
+      .then((created) => navigate(`/forms/${created.id}`, { replace: true }))
+      .catch((err: unknown) => {
+        toast.error("Não foi possível criar o formulário", {
+          description: (err as { message?: string }).message ?? "Tente novamente.",
+        });
+        navigate("/forms/list");
+      });
+  }, [routeFormId, productId, creating, navigate]);
+
+  const formId = routeFormId;
   const { data: form } = useAsyncData(() => (formId && productId ? formsService.getForm(productId, formId) : Promise.resolve(undefined)), [productId, formId]);
   const { data: loadedFields } = useAsyncData(() => (formId && productId ? formsService.getFormFields(productId, formId) : Promise.resolve([])), [productId, formId]);
 
@@ -118,6 +142,8 @@ export function FormBuilder() {
     setFields(loadedFields ?? []);
     setSelectedId(loadedFields?.[0]?.id ?? null);
   }, [loadedFields]);
+
+  if (!formId) return <SkeletonLines />;
 
   const selectedField = fields.find((f) => f.id === selectedId);
   const pendingRemoveField = fields.find((f) => f.id === pendingRemoveId);
@@ -146,6 +172,10 @@ export function FormBuilder() {
       if (formId && productId) await formsService.saveFormFields(productId, formId, fields);
       await formsService.saveDraft(productId, formId);
       toast.success("Rascunho salvo!");
+    } catch (err: unknown) {
+      toast.error("Falha ao salvar rascunho", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setSaving(false);
     }
@@ -157,6 +187,10 @@ export function FormBuilder() {
       await formsService.publish(productId, formId);
       toast.success("Formulário publicado!");
       navigate("/forms/list");
+    } catch (err: unknown) {
+      toast.error("Falha ao publicar formulário", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
     } finally {
       setPublishing(false);
     }

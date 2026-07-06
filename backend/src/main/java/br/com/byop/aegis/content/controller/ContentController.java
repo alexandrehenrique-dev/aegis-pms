@@ -16,6 +16,7 @@ import br.com.byop.aegis.security.AuthenticatedUserProvider;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -72,6 +73,15 @@ public class ContentController {
                                         Authentication authentication) {
         assertProductAccess(authentication, productId);
         return contentService.updateContent(productId, contentId, request);
+    }
+
+    @DeleteMapping("/api/v1/products/{productId}/content/{contentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteContent(@PathVariable("productId") UUID productId,
+                              @PathVariable("contentId") UUID contentId,
+                              Authentication authentication) {
+        AuthenticatedUser caller = assertProductAccess(authentication, productId);
+        contentService.deleteContent(productId, contentId, caller);
     }
 
     @PostMapping("/api/v1/products/{productId}/content/{contentId}/transition")
