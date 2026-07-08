@@ -9,7 +9,14 @@ import { emailError, textLengthError } from "../../../shared/utils/validation";
 import { useAuth } from "../../../core/auth/useAuth";
 import type { ApiError } from "../../../shared/services/apiClient";
 
-const ROLES = ["Editor", "Viewer", "Product Manager", "Tenant Admin"];
+const ROLES = [
+  { label: "Editor", value: "EDITOR" },
+  { label: "Viewer", value: "VIEWER" },
+  { label: "Product Manager", value: "PRODUCT_MANAGER" },
+  { label: "Tenant Admin", value: "TENANT_ADMIN" },
+];
+const ROLE_LABELS = ROLES.map((role) => role.label);
+const ROLE_VALUE_BY_LABEL = Object.fromEntries(ROLES.map((role) => [role.label, role.value]));
 const MODULES = ["Conteúdo, Assets, Forms", "Conteúdo, Analytics", "Todos os módulos"];
 
 export function InviteUserDrawer() {
@@ -26,7 +33,7 @@ export function InviteUserDrawer() {
   const [sending, setSending] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState(ROLES[0]);
+  const [role, setRole] = useState(ROLES[0].label);
   const [allowedProducts, setAllowedProducts] = useState(productOptions[0]);
   const [allowedModules, setAllowedModules] = useState(MODULES[0]);
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean }>({});
@@ -49,7 +56,7 @@ export function InviteUserDrawer() {
       const allowedProductIds = allowedProducts === "Todos os produtos"
         ? tenantProducts.map((product) => product.id)
         : tenantProducts.filter((product) => product.name === allowedProducts).map((product) => product.id);
-      await usersService.invite({ name, email, role, allowedProducts, allowedProductIds }, effectiveTenant?.id);
+      await usersService.invite({ name, email, role: ROLE_VALUE_BY_LABEL[role] ?? role, allowedProducts, allowedProductIds }, effectiveTenant?.id);
       toast.success("Convite enviado!", { description: `${name} receberá um email com instruções de acesso.` });
       navigate("/users");
     } catch (error) {
@@ -80,7 +87,7 @@ export function InviteUserDrawer() {
           <div className="grid gap-3 md:grid-cols-2">
             <Field label="Nome" value={name} onChange={setName} onBlur={() => setTouched((t) => ({ ...t, name: true }))} error={touched.name ? nameErr : undefined} />
             <Field label="Email" value={email} onChange={setEmail} onBlur={() => setTouched((t) => ({ ...t, email: true }))} error={touched.email ? emailErr : undefined} />
-            <SelectLike label="Papel" value={role} options={ROLES} onChange={setRole} />
+            <SelectLike label="Papel" value={role} options={ROLE_LABELS} onChange={setRole} />
             <SelectLike label="Produtos permitidos" value={allowedProducts} options={productOptions} onChange={setAllowedProducts} />
             <SelectLike label="Módulos permitidos" value={allowedModules} options={MODULES} onChange={setAllowedModules} />
             <Field label="Mensagem opcional" value="Você foi convidado para operar conteúdo do produto." textarea />

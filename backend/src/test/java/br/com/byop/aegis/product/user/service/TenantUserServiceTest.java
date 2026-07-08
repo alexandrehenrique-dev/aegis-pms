@@ -156,6 +156,53 @@ class TenantUserServiceTest {
     }
 
     @Test
+    void shouldInviteUserWithDisplayRoleLabel() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "Product Manager",
+                "Maestro Beton",
+                List.of(PRODUCT_ID),
+                null
+        );
+        TenantMembershipReference membership = membership("user-1", "PRODUCT_MANAGER", "convidado");
+        Product product = product(PRODUCT_ID, "maestro-beton", "Maestro Beton");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
+        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
+        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.invite(TENANT_ID, "user-1", "PRODUCT_MANAGER")).thenReturn(membership);
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+        when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
+        when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
+
+        assertThat(service.inviteUser(caller, TENANT_ID, request).status()).isEqualTo("convidado");
+
+        verify(productUserAccessService).inviteTenantAssignments(TENANT_ID, "user-1", "PRODUCT_MANAGER", List.of(PRODUCT_ID));
+        verify(tenantUserAccessService).invite(TENANT_ID, "user-1", "PRODUCT_MANAGER");
+    }
+
+    @Test
+    void shouldRejectInvalidInviteRoleBeforeCreatingIdentityUser() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "Product Owner",
+                "Maestro Beton",
+                List.of(PRODUCT_ID),
+                null
+        );
+        visibleTenant(caller);
+
+        assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
+                .isInstanceOf(InvalidTenantUserOperationException.class);
+
+        verify(identityUserLifecycleService, never()).invite("guest@byop.dev", "Guest User");
+    }
+
+    @Test
     void shouldRejectInviteWhenAllowedProductDoesNotExist() {
         AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
         InviteTenantUserRequest request = new InviteTenantUserRequest(
@@ -166,16 +213,13 @@ class TenantUserServiceTest {
                 List.of(PRODUCT_ID),
                 null
         );
-        TenantMembershipReference membership = membership("user-1", "EDITOR", "convidado");
         visibleTenant(caller);
-        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
-        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
-        when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
         when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
                 .isInstanceOf(InvalidTenantUserOperationException.class);
+
+        verify(identityUserLifecycleService, never()).invite("guest@byop.dev", "Guest User");
     }
 
     @Test
@@ -190,18 +234,15 @@ class TenantUserServiceTest {
                 List.of(PRODUCT_ID),
                 null
         );
-        TenantMembershipReference membership = membership("user-1", "EDITOR", "convidado");
         Product foreignProduct = new Product(otherTenantId, "outro-tenant", "Produto de outro tenant", ProductTypeKey.PRODUTO_SAAS, "pt-BR");
         org.springframework.test.util.ReflectionTestUtils.setField(foreignProduct, "id", PRODUCT_ID);
         visibleTenant(caller);
-        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
-        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
-        when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
         when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(foreignProduct));
 
         assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
                 .isInstanceOf(InvalidTenantUserOperationException.class);
+
+        verify(identityUserLifecycleService, never()).invite("guest@byop.dev", "Guest User");
     }
 
     @Test
@@ -238,12 +279,7 @@ class TenantUserServiceTest {
                 List.of(PRODUCT_ID, otherProductId),
                 null
         );
-        TenantMembershipReference membership = membership("user-1", "EDITOR", "convidado");
         visibleTenant(caller);
-        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
-        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
-        when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
         // Tamanho e tenant batem (passa a guarda da linha 296), mas o segundo
         // produto retornado não corresponde a nenhum id solicitado — força o
         // orElseThrow defensivo em inviteProductNames (linha 305) a disparar.
@@ -252,6 +288,8 @@ class TenantUserServiceTest {
 
         assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
                 .isInstanceOf(InvalidTenantUserOperationException.class);
+
+        verify(identityUserLifecycleService, never()).invite("guest@byop.dev", "Guest User");
     }
 
     @Test
@@ -298,6 +336,15 @@ class TenantUserServiceTest {
                 "splitProductNames",
                 " , Aegis, , Forms "
         )).containsExactly("Aegis", "Forms");
+    }
+
+    @Test
+    void shouldNormalizeRolePrefixDefensively() {
+        assertThat((String) org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                service,
+                "parseRole",
+                "ROLE_PRODUCT_MANAGER"
+        )).isEqualTo("PRODUCT_MANAGER");
     }
 
     @Test
