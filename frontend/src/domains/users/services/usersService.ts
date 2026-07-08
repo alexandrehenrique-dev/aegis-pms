@@ -29,9 +29,17 @@ export const usersService = {
     return usersStore;
   },
 
+  async getUser(userId: string, tenantId?: string): Promise<UserSummary> {
+    if (IS_API_MODE && tenantId) return apiClient.get<UserSummary>(`/tenants/${tenantId}/users/${userId}`);
+    const user = usersStore.find((u) => u.userId === userId);
+    if (!user) throw { status: 404, message: `Usuário ${userId} não encontrado.` };
+    return user;
+  },
+
   /** ADR-0020: true quando `userId` é o único administrador (Tenant/Super Admin) ativo do tenant. */
-  async isLastActiveAdmin(userId: string): Promise<boolean> {
-    const activeAdmins = usersStore.filter((u) => ADMIN_ROLES.includes(u.role) && u.status === "ativo");
+  async isLastActiveAdmin(userId: string, tenantId?: string): Promise<boolean> {
+    const users = IS_API_MODE && tenantId ? await this.listUsers(tenantId) : usersStore;
+    const activeAdmins = users.filter((u) => ADMIN_ROLES.includes(u.role) && u.status === "ativo");
     return activeAdmins.length === 1 && activeAdmins[0].userId === userId;
   },
 

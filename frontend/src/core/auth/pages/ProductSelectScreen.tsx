@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, Building2, ChevronRight, Clock3, LogOut, MoreVertical, Plus, Star } from "lucide-react";
 import { useAuth } from "../useAuth";
-import { getPostLoginLandingPath } from "../../permissions/roles";
+import { getPostLoginLandingPath, toProductUserRole } from "../../permissions/roles";
 import { AegisLogo } from "../../../shared/components/AegisLogo";
 import { ProductStatusBadge } from "../../../shared/components/ProductStatusBadge";
 import { Button, EmptyState } from "../../../shared/components/Primitives";
@@ -98,14 +98,15 @@ export function ProductSelectScreen() {
   const recents = filtered.filter((p) => p.isRecent && !p.isFavorite);
   const others = filtered.filter((p) => !p.isFavorite && !p.isRecent);
 
-  const handleSelect = (p: ProductOption) => { selectProduct(p); navigate(getPostLoginLandingPath(authUser.role, p)); };
+  const roleForProduct = (product: ProductOption) => toProductUserRole(product.callerAssignedRole) ?? authUser.role;
+  const handleSelect = (p: ProductOption) => { selectProduct(p); navigate(getPostLoginLandingPath(roleForProduct(p), p)); };
   const handleBack = () => { selectTenant(null); navigate("/select-tenant"); };
   const handleLogout = () => { logout(); navigate("/login"); };
   const handleProductCreated = (created: { id?: string; name: string; type: string; status: ProductOption["status"]; modules: number }) => {
     setShowCreateProduct(false);
     const product: ProductOption = { id: created.id ?? created.name, name: created.name, type: created.type, status: created.status, modules: created.modules };
     selectProduct(product);
-    navigate(getPostLoginLandingPath(authUser.role, product));
+    navigate(getPostLoginLandingPath(roleForProduct(product), product));
   };
 
   return (

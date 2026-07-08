@@ -1,0 +1,40 @@
+meta {
+  name: Product Manager convida no tenant com produto permitido
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{rbacTenantId}}/users/invite
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{rbacPmToken}}
+}
+
+body:json {
+  {
+    "name": "Bruno RBAC Tenant",
+    "email": "{{brunoRbacTenantInviteEmail}}",
+    "role": "VIEWER",
+    "allowedProducts": "Maestro Beton",
+    "allowedProductIds": [
+      "{{rbacProductId}}"
+    ],
+    "message": "Convite temporario Bruno RBAC"
+  }
+}
+
+script:post-response {
+  bru.setVar('brunoRbacTenantUserId', res.body.userId);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("usuario temporario do tenant capturado", function() {
+    expect(bru.getVar('brunoRbacTenantUserId')).to.be.a('string');
+  });
+}

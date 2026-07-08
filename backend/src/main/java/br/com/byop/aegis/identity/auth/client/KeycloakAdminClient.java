@@ -134,6 +134,15 @@ public class KeycloakAdminClient {
         }
     }
 
+    public void assignRealmRole(String userId, String realmRoleName) {
+        try {
+            String accessToken = adminAccessToken();
+            assignRealmRole(userId, realmRoleName, accessToken);
+        } catch (RestClientException exception) {
+            throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
+        }
+    }
+
     /**
      * O.1 (BUG-SPRINT-05) — ativacao de convite antes nunca atualizava
      * firstName/lastName no Keycloak; um convite criado com {@code name}

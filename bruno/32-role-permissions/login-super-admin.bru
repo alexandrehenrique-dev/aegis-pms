@@ -1,0 +1,32 @@
+meta {
+  name: Login usuario ambiente - super admin operacional
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{keycloakIssuer}}/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: {{clientId}}
+  username: {{username}}
+  password: {{password}}
+}
+
+script:post-response {
+  bru.setVar('token', res.body.access_token);
+  bru.setVar('rbacSuperToken', res.body.access_token);
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("token super admin capturado", function() {
+    expect(bru.getVar('rbacSuperToken')).to.be.a('string');
+  });
+}

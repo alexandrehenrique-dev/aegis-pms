@@ -1,7 +1,7 @@
 meta {
   name: Limpar tenants de teste
   type: http
-  seq: 2
+  seq: 3
 }
 
 get {
@@ -20,10 +20,10 @@ CRIACAO por toda collection Bruno que cria um tenant (ver bruno/01-tenants,
 29-auth-action-tokens) — nunca na hora de excluir.
 
 Compatibilidade para sujeira antiga: tambem sao candidatos padroes fechados
-criados por suites antigas ("Tenant listener-commit", "Tenant listener-rollback",
-"Tenant <uuid>", "Tenant E2E <timestamp>", keys "tenant-<uuid>" e keys
-"test-tenant-listener-*"). Nomes reais sem marcador de teste nunca entram como
-candidatos.
+criados por suites antigas e Maven local ("Tenant listener-commit",
+"Tenant listener-rollback", "Tenant <uuid>", "Tenant E2E <timestamp>",
+"TEST-Maven ...", keys "tenant-<uuid>" e keys "test-tenant-listener-*").
+Nomes reais sem marcador de teste nunca entram como candidatos.
 
 CLIENTES BETA e protegido por id/key/name. Tenants reais criados manualmente
 para usuarios externos devem ser preservados incluindo id, key ou name nas
@@ -84,11 +84,16 @@ script:post-response {
   function isLegacyTestTenantName(name) {
     return /^Tenant listener-(commit|rollback)$/i.test(name)
       || /^Tenant [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name)
-      || /^Tenant E2E [0-9]+$/i.test(name);
+      || /^Tenant E2E [0-9]+$/i.test(name)
+      || /^TEST-Maven /i.test(name)
+      || /^TEST-Form Listener /i.test(name);
   }
 
   function isLegacyTestTenantKey(key) {
     return /^tenant-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key)
+      || /^tenant-submission-/i.test(key)
+      || /^tenant-membership-/i.test(key)
+      || /^tenant-notification-/i.test(key)
       || /^test-tenant-listener-(commit|rollback)-[0-9a-f-]{36}$/i.test(key)
       || /^feedback-(cross-)?tenant-[0-9]+$/i.test(key)
       || /^template-tenant-[0-9]+$/i.test(key)

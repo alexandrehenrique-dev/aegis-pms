@@ -12,8 +12,10 @@ import br.com.byop.aegis.tenant.contract.UpdateTenantRequest;
 import br.com.byop.aegis.tenant.dto.TenantSummary;
 import br.com.byop.aegis.tenant.service.TenantService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 import java.util.Set;
@@ -40,15 +42,27 @@ class TenantStatusNotificationIntegrationTest {
     @Autowired
     private NotificationRepository notificationRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @AfterEach
+    void cleanupGeneratedTenants() {
+        jdbcTemplate.update("""
+                DELETE FROM tenants
+                WHERE key LIKE 'tenant-%'
+                  AND name LIKE 'TEST-Maven Tenant Status %'
+                """);
+    }
+
     @Test
     void shouldNotifyTenantMembersOnSuspensionAndReactivation() {
         String suffix = UUID.randomUUID().toString();
         String adminSubject = "admin-" + suffix;
         AuthenticatedUser caller = caller(adminSubject);
         TenantSummary tenant = tenantService.createTenant(caller,
-                new CreateTenantCommand("tenant-" + suffix, "Tenant " + suffix, "FREE", null));
+                new CreateTenantCommand("tenant-" + suffix, "TEST-Maven Tenant Status " + suffix, "FREE", null));
 
-        tenantService.updateTenant(caller, tenant.id(), new UpdateTenantRequest("Tenant " + suffix, "FREE", "suspenso"));
+        tenantService.updateTenant(caller, tenant.id(), new UpdateTenantRequest("TEST-Maven Tenant Status " + suffix, "FREE", "suspenso"));
 
         List<UserNotificationStatus> afterSuspension =
                 statusRepository.findAllByUserSubjectOrderByNotificationCreatedAtDesc(adminSubject);
@@ -59,7 +73,7 @@ class TenantStatusNotificationIntegrationTest {
         assertThat(suspensionNotification.getPresentationMode()).isEqualTo(NotificationPresentationMode.BELL_ONLY);
         assertThat(suspensionNotification.getCreatedBySubject()).isEqualTo(adminSubject);
 
-        tenantService.updateTenant(caller, tenant.id(), new UpdateTenantRequest("Tenant " + suffix, "FREE", "ativo"));
+        tenantService.updateTenant(caller, tenant.id(), new UpdateTenantRequest("TEST-Maven Tenant Status " + suffix, "FREE", "ativo"));
 
         List<UserNotificationStatus> afterReactivation =
                 statusRepository.findAllByUserSubjectOrderByNotificationCreatedAtDesc(adminSubject);
@@ -76,9 +90,9 @@ class TenantStatusNotificationIntegrationTest {
         String adminSubject = "admin-" + suffix;
         AuthenticatedUser caller = caller(adminSubject);
         TenantSummary tenant = tenantService.createTenant(caller,
-                new CreateTenantCommand("tenant-" + suffix, "Tenant " + suffix, "FREE", null));
+                new CreateTenantCommand("tenant-" + suffix, "TEST-Maven Tenant Status " + suffix, "FREE", null));
 
-        tenantService.updateTenant(caller, tenant.id(), new UpdateTenantRequest("Tenant " + suffix, "PRO", "ativo"));
+        tenantService.updateTenant(caller, tenant.id(), new UpdateTenantRequest("TEST-Maven Tenant Status " + suffix, "PRO", "ativo"));
 
         assertThat(statusRepository.findAllByUserSubjectOrderByNotificationCreatedAtDesc(adminSubject)).isEmpty();
     }

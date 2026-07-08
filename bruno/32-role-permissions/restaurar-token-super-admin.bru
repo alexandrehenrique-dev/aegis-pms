@@ -1,0 +1,24 @@
+meta {
+  name: Restaurar token super admin
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{rbacSuperToken}}
+}
+
+script:post-response {
+  bru.setVar('token', bru.getVar('rbacSuperToken'));
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

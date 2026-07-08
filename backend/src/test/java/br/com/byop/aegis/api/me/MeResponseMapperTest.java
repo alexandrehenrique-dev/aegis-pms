@@ -1,5 +1,6 @@
 package br.com.byop.aegis.api.me;
 
+import br.com.byop.aegis.product.api.ProductUserAccessService;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,7 +9,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -19,11 +23,14 @@ class MeResponseMapperTest {
     @Mock
     private TenantAccessService tenantAccessService;
 
+    @Mock
+    private ProductUserAccessService productUserAccessService;
+
     private MeResponseMapper mapper;
 
     @BeforeEach
     void setUp() {
-        mapper = new MeResponseMapper(tenantAccessService);
+        mapper = new MeResponseMapper(tenantAccessService, productUserAccessService);
     }
 
     @Test
@@ -89,6 +96,37 @@ class MeResponseMapperTest {
         MeResponse response = mapper.toResponse(user);
 
         assertThat(response.role()).isEqualTo("viewer");
+    }
+
+    @Test
+    void shouldResolveProductManagerFromActiveAssignmentWhenTokenHasNoCanonicalRole() {
+        AuthenticatedUser user = userWithAuthorities("ROLE_UNKNOWN");
+        when(productUserAccessService.findHighestAssignedRole("subject-123")).thenReturn(Optional.of("PRODUCT_MANAGER"));
+
+        MeResponse response = mapper.toResponse(user);
+
+        assertThat(response.role()).isEqualTo("product_manager");
+    }
+
+    @Test
+    void shouldResolveTenantAdminFromActiveMembershipWhenTokenHasNoCanonicalRole() {
+        AuthenticatedUser user = userWithAuthorities("ROLE_UNKNOWN");
+        when(tenantAccessService.findActiveTenantAdminTenantIds("subject-123"))
+                .thenReturn(List.of(UUID.fromString("11111111-1111-1111-1111-111111111111")));
+
+        MeResponse response = mapper.toResponse(user);
+
+        assertThat(response.role()).isEqualTo("tenant_admin");
+    }
+
+    @Test
+    void shouldKeepHighestPriorityRoleAcrossTokenAndAegisAuthorization() {
+        AuthenticatedUser user = userWithAuthorities("ROLE_SUPER_ADMIN");
+        when(productUserAccessService.findHighestAssignedRole("subject-123")).thenReturn(Optional.of("VIEWER"));
+
+        MeResponse response = mapper.toResponse(user);
+
+        assertThat(response.role()).isEqualTo("super_admin");
     }
 
     private AuthenticatedUser userWithAuthorities(String... authorities) {

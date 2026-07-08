@@ -87,6 +87,36 @@ class TenantAccessServiceTest {
     }
 
     @Test
+    void shouldCheckActiveTenantAdminMembership() {
+        Tenant tenant = tenant(TENANT_ID, "admin");
+        TenantMembership activeAdmin = membership(tenant, "TENANT_ADMIN", TenantMembershipStatus.ACTIVE);
+        when(membershipRepository.findAllByUserSubjectAndStatus("subject", TenantMembershipStatus.ACTIVE))
+                .thenReturn(List.of(activeAdmin));
+
+        assertThat(service.hasActiveTenantAdminMembership(TENANT_ID, "subject")).isTrue();
+    }
+
+    @Test
+    void shouldRejectActiveMembershipThatIsNotTenantAdmin() {
+        Tenant tenant = tenant(TENANT_ID, "viewer");
+        TenantMembership activeViewer = membership(tenant, "VIEWER", TenantMembershipStatus.ACTIVE);
+        when(membershipRepository.findAllByUserSubjectAndStatus("subject", TenantMembershipStatus.ACTIVE))
+                .thenReturn(List.of(activeViewer));
+
+        assertThat(service.hasActiveTenantAdminMembership(TENANT_ID, "subject")).isFalse();
+    }
+
+    @Test
+    void shouldRejectTenantAdminMembershipFromDifferentTenant() {
+        Tenant otherTenant = tenant(UUID.fromString("22222222-2222-2222-2222-222222222222"), "other");
+        TenantMembership activeAdmin = membership(otherTenant, "TENANT_ADMIN", TenantMembershipStatus.ACTIVE);
+        when(membershipRepository.findAllByUserSubjectAndStatus("subject", TenantMembershipStatus.ACTIVE))
+                .thenReturn(List.of(activeAdmin));
+
+        assertThat(service.hasActiveTenantAdminMembership(TENANT_ID, "subject")).isFalse();
+    }
+
+    @Test
     void shouldFindTenantName() {
         Tenant tenant = tenant(TENANT_ID, "byop");
         when(tenantRepository.findById(TENANT_ID)).thenReturn(Optional.of(tenant));

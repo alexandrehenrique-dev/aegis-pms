@@ -108,6 +108,22 @@ class TenantUserServiceTest {
     }
 
     @Test
+    void shouldListUsersWithFallbackWhenIdentityUserWasDeleted() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        TenantMembershipReference membership = membership("deleted-user", "EDITOR", "ativo");
+        TenantUserSummary summary = summary("deleted-user", "ativo");
+        visibleTenant(caller);
+        when(tenantUserAccessService.listMemberships(TENANT_ID)).thenReturn(List.of(membership));
+        when(identityUserLifecycleService.getRequiredUser("deleted-user"))
+                .thenThrow(new RuntimeException("User not found"));
+        when(productUserAccessService.listTenantAssignments(TENANT_ID, "deleted-user")).thenReturn(List.of());
+        when(userMapper.toSummary(any(TenantMembershipReference.class), any(IdentityUser.class), any()))
+                .thenReturn(summary);
+
+        assertThat(service.listUsers(caller, TENANT_ID)).containsExactly(summary);
+    }
+
+    @Test
     void shouldHideCallerOutsideTenant() {
         AuthenticatedUser caller = caller("outsider", "ROLE_VIEWER");
         when(tenantUserAccessService.getRequiredTenant(TENANT_ID)).thenReturn(new TenantReference(TENANT_ID, "BYOP"));
@@ -140,6 +156,7 @@ class TenantUserServiceTest {
         when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
 
         assertThat(service.inviteUser(caller, TENANT_ID, request).status()).isEqualTo("convidado");
+        verify(identityUserLifecycleService).assignRealmRole("user-1", "AEGIS_EDITOR");
         verify(productUserAccessService).inviteTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of(PRODUCT_ID));
         org.mockito.ArgumentCaptor<IdentityActionInviteCommand> inviteCaptor =
                 org.mockito.ArgumentCaptor.forClass(IdentityActionInviteCommand.class);
@@ -179,6 +196,7 @@ class TenantUserServiceTest {
 
         assertThat(service.inviteUser(caller, TENANT_ID, request).status()).isEqualTo("convidado");
 
+        verify(identityUserLifecycleService).assignRealmRole("user-1", "AEGIS_PRODUCT_MANAGER");
         verify(productUserAccessService).inviteTenantAssignments(TENANT_ID, "user-1", "PRODUCT_MANAGER", List.of(PRODUCT_ID));
         verify(tenantUserAccessService).invite(TENANT_ID, "user-1", "PRODUCT_MANAGER");
     }
@@ -391,14 +409,17 @@ class TenantUserServiceTest {
     @Test
     void shouldAllowProductManagerInviteWhenCallerSharesProduct() {
         AuthenticatedUser caller = caller("pm", "ROLE_PRODUCT_MANAGER");
-        InviteTenantUserRequest request = new InviteTenantUserRequest("Guest User", "guest@byop.dev", "VIEWER", "Aegis", null);
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User", "guest@byop.dev", "VIEWER", "Aegis", List.of(PRODUCT_ID), null);
         TenantMembershipReference membership = membership("user-1", "VIEWER", "convidado");
+        Product product = product(PRODUCT_ID, "aegis", "Aegis");
         visibleTenant(caller);
-        when(productUserAccessService.listSharedUserSubjects(TENANT_ID, "pm")).thenReturn(Set.of("pm"));
+        when(productUserAccessService.listProductManagerProductIds(TENANT_ID, "pm")).thenReturn(Set.of(PRODUCT_ID));
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
         when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
         when(tenantUserAccessService.invite(TENANT_ID, "user-1", "VIEWER")).thenReturn(membership);
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
         when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
         when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
 
@@ -409,12 +430,52 @@ class TenantUserServiceTest {
     @Test
     void shouldRejectProductScopedInviteWhenCallerDoesNotShareProduct() {
         AuthenticatedUser caller = caller("editor", "ROLE_EDITOR");
-        InviteTenantUserRequest request = new InviteTenantUserRequest("Guest User", "guest@byop.dev", "VIEWER", "Aegis", null);
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User", "guest@byop.dev", "VIEWER", "Aegis", List.of(PRODUCT_ID), null);
         visibleTenant(caller);
-        when(productUserAccessService.listSharedUserSubjects(TENANT_ID, "editor")).thenReturn(Set.of("other"));
+        when(productUserAccessService.listProductManagerProductIds(TENANT_ID, "editor")).thenReturn(Set.of());
 
         assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
                 .isInstanceOf(TenantUserNotFoundException.class);
+    }
+
+    @Test
+    void shouldRejectProductManagerInviteWithoutManagedProduct() {
+        AuthenticatedUser caller = caller("pm", "ROLE_PRODUCT_MANAGER");
+        InviteTenantUserRequest request = new InviteTenantUserRequest("Guest User", "guest@byop.dev", "VIEWER", "Aegis", null);
+        visibleTenant(caller);
+
+        assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
+                .isInstanceOf(TenantUserNotFoundException.class);
+    }
+
+    @Test
+    void shouldRejectProductManagerInvitingTenantAdmin() {
+        AuthenticatedUser caller = caller("pm", "ROLE_PRODUCT_MANAGER");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User", "guest@byop.dev", "TENANT_ADMIN", "Aegis", List.of(PRODUCT_ID), null);
+        visibleTenant(caller);
+
+        assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
+                .isInstanceOf(TenantUserNotFoundException.class);
+    }
+
+    @Test
+    void shouldAllowTenantAdminMembershipWithoutRealmRoleToInvite() {
+        AuthenticatedUser caller = caller("tenant-admin", "ROLE_VIEWER");
+        InviteTenantUserRequest request = new InviteTenantUserRequest("Guest User", "guest@byop.dev", "VIEWER", "Aegis", null);
+        TenantMembershipReference membership = membership("user-1", "VIEWER", "convidado");
+        visibleTenant(caller);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "tenant-admin"))
+                .thenReturn(Optional.of(membership("tenant-admin", "TENANT_ADMIN", "ativo")));
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
+        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
+        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.invite(TENANT_ID, "user-1", "VIEWER")).thenReturn(membership);
+        when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
+        when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
+
+        assertThat(service.inviteUser(caller, TENANT_ID, request).status()).isEqualTo("convidado");
     }
 
     @Test

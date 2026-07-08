@@ -33,9 +33,16 @@ async function main() {
     await page.waitForTimeout(1200);
     ok = report("Criar produto mostra toast de sucesso", await page.getByText("Produto criado com sucesso").isVisible()) && ok;
 
-    // Sem tenantId na URL, handleCreate nao navega — so mostra o toast e fica em /products/new. Volta pra lista.
-    await page.getByRole("button", { name: "Cancelar" }).click();
-    await page.waitForTimeout(800);
+    // A tela pode voltar automaticamente depois do create; se ainda houver
+    // "Cancelar", usa o fluxo de UI, senao recarrega a lista mantendo a sessao.
+    const cancelButton = page.getByRole("button", { name: "Cancelar" });
+    if (await cancelButton.isVisible().catch(() => false)) {
+      await cancelButton.click();
+      await page.waitForTimeout(800);
+    } else if (!page.url().endsWith("/products")) {
+      await page.locator("nav").getByRole("button", { name: "Produtos" }).click();
+      await page.waitForTimeout(800);
+    }
 
     // Abre o ProductDashboard de Maestro Beton e ve Modulos — filtra a busca pra so restar 1 card "Abrir".
     await page.locator('input[placeholder*="Buscar"]').fill("Maestro");

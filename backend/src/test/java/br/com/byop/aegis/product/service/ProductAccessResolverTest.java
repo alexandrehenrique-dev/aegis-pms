@@ -87,6 +87,18 @@ class ProductAccessResolverTest {
     }
 
     @Test
+    void shouldAllowTenantAdminMembershipEvenWhenTokenHasNoTenantAdminRealmRoleYet() {
+        Product product = product();
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), "tenant-subject")).thenReturn(true);
+        AuthenticatedUser caller = user("tenant-subject", "ROLE_UNKNOWN");
+        UUID productId = product.getId();
+
+        assertThatCode(() -> accessResolver.assertAccessible(productId, caller))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     void shouldRejectTenantAdminWithoutActiveMembership() {
         Product product = product();
         when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
@@ -122,15 +134,17 @@ class ProductAccessResolverTest {
     }
 
     @Test
-    void shouldRejectUnknownRole() {
+    void shouldAllowAssignedUserEvenWhenTokenHasNoProductRealmRoleYet() {
         Product product = product();
         when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(assignmentRepository.existsByProductIdAndUserSubjectAndStatus(
+                product.getId(), "unknown-subject", ProductAssignmentStatus.ASSIGNED
+        )).thenReturn(true);
         AuthenticatedUser caller = user("unknown-subject", "ROLE_UNKNOWN");
         UUID productId = product.getId();
 
-        assertThatThrownBy(() -> accessResolver.assertAccessible(productId, caller))
-                .isInstanceOf(ProductNotFoundException.class)
-                .hasMessage("Product not found: " + product.getId());
+        assertThatCode(() -> accessResolver.assertAccessible(productId, caller))
+                .doesNotThrowAnyException();
     }
 
     @Test

@@ -1,0 +1,36 @@
+meta {
+  name: Criar Viewer temporario
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{rbacProductId}}/users
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{rbacSuperToken}}
+}
+
+body:json {
+  {
+    "productId": "{{rbacProductId}}",
+    "tenantId": "{{rbacTenantId}}",
+    "inviteEmail": "{{brunoRbacViewerEmail}}",
+    "role": "VIEWER"
+  }
+}
+
+script:post-response {
+  bru.setVar('brunoRbacViewerUserId', res.body.userSubject);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("Viewer temporario capturado", function() {
+    expect(bru.getVar('brunoRbacViewerUserId')).to.be.a('string');
+  });
+}

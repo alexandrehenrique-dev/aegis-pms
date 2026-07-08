@@ -1,0 +1,105 @@
+meta {
+  name: Ativar convites temporarios
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{mailhogBaseUrl}}/api/v2/messages?limit=100
+  body: none
+  auth: none
+}
+
+docs {
+Objetivo: capturar no MailHog os convites dos tres usuarios temporarios de RBAC
+e ativar cada conta pelo fluxo real /api/v1/auth/activate. Isso transiciona
+TenantMembership de convidado para ativo e ProductAssignment de convidado para
+atribuido, sem editar banco e sem atalho administrativo.
+}
+
+script:post-response {
+  const baseUrl = bru.getEnvVar('baseUrl');
+  const targets = [
+    { email: bru.getVar('brunoRbacPmEmail'), firstName: 'Bruno', lastName: 'Product Manager' },
+    { email: bru.getVar('brunoRbacEditorEmail'), firstName: 'Bruno', lastName: 'Editor' },
+    { email: bru.getVar('brunoRbacViewerEmail'), firstName: 'Bruno', lastName: 'Viewer' },
+  ];
+  const items = (res.body && (res.body.items || res.body.Items)) || [];
+  const tokenPattern = /\/invite\?token=([0-9a-fA-F-]{36})/;
+
+  function decodeQuotedPrintable(value) {
+    return String(value || '')
+      .replace(/=\r?\n/g, '')
+      .replace(/=3D/g, '=');
+  }
+
+  function messageRecipients(message) {
+    const to = message.To || message.to || [];
+    if (!Array.isArray(to)) {
+      return [];
+    }
+    return to.map((recipient) => {
+      const mailbox = recipient.Mailbox || recipient.mailbox || '';
+      const domain = recipient.Domain || recipient.domain || '';
+      return domain ? mailbox + '@' + domain : mailbox;
+    });
+  }
+
+  function tokenFor(email) {
+    const message = items.find((item) => messageRecipients(item).includes(email));
+    const rawBody = message && message.Content ? String(message.Content.Body || '') : '';
+    const match = decodeQuotedPrintable(rawBody).match(tokenPattern);
+    return match ? match[1] : undefined;
+  }
+
+  function statusOf(response) {
+    return response && (response.status || response.statusCode);
+  }
+
+  function send(request) {
+    return new Promise((resolve) => {
+      bru.sendRequest(request, function(error, response) {
+        resolve({ error, response });
+      });
+    });
+  }
+
+  const failures = [];
+  for (const target of targets) {
+    const token = tokenFor(target.email);
+    if (!token) {
+      failures.push({ scope: 'mailhog-token', email: target.email });
+      continue;
+    }
+    const activation = await send({
+      method: 'POST',
+      url: baseUrl + '/api/v1/auth/activate',
+      headers: { 'Content-Type': 'application/json' },
+      data: {
+        token,
+        password: bru.getVar('inviteActivationPassword'),
+        firstName: target.firstName,
+        lastName: target.lastName,
+      },
+    });
+    if (activation.error || statusOf(activation.response) !== 200) {
+      failures.push({
+        scope: 'activate',
+        email: target.email,
+        status: statusOf(activation.response),
+        error: activation.error ? String(activation.error) : undefined,
+      });
+    }
+  }
+
+  bru.setVar('brunoRbacActivationFailures', JSON.stringify(failures));
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("convites temporarios ativados sem falhas", function() {
+    expect(bru.getVar('brunoRbacActivationFailures')).to.equal('[]');
+  });
+}

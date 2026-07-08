@@ -10,9 +10,11 @@ import br.com.byop.aegis.submission.api.SubmissionReceivedEvent;
 import br.com.byop.aegis.tenant.domain.Tenant;
 import br.com.byop.aegis.tenant.repository.TenantRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
@@ -38,6 +40,18 @@ class FormResponseCountListenerTest {
 
     @Autowired
     private TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @AfterEach
+    void cleanupGeneratedTenants() {
+        jdbcTemplate.update("""
+                DELETE FROM tenants
+                WHERE key LIKE 'test-tenant-listener-%'
+                  AND name LIKE 'TEST-Form Listener %'
+                """);
+    }
 
     @Test
     void shouldIncrementResponseCountAfterCommit() {

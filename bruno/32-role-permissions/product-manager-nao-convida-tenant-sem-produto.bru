@@ -1,0 +1,31 @@
+meta {
+  name: Product Manager nao convida no tenant sem produto
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tenants/{{rbacTenantId}}/users/invite
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{rbacPmToken}}
+}
+
+body:json {
+  {
+    "name": "Bruno RBAC Denied",
+    "email": "{{brunoRbacDeniedInviteEmail}}",
+    "role": "VIEWER",
+    "allowedProducts": "Maestro Beton",
+    "allowedProductIds": [],
+    "message": "Convite negado Bruno RBAC"
+  }
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+}

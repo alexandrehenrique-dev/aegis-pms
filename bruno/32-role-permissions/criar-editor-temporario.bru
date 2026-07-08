@@ -1,0 +1,36 @@
+meta {
+  name: Criar Editor temporario
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{rbacProductId}}/users
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{rbacSuperToken}}
+}
+
+body:json {
+  {
+    "productId": "{{rbacProductId}}",
+    "tenantId": "{{rbacTenantId}}",
+    "inviteEmail": "{{brunoRbacEditorEmail}}",
+    "role": "EDITOR"
+  }
+}
+
+script:post-response {
+  bru.setVar('brunoRbacEditorUserId', res.body.userSubject);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("Editor temporario capturado", function() {
+    expect(bru.getVar('brunoRbacEditorUserId')).to.be.a('string');
+  });
+}

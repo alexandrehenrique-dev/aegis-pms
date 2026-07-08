@@ -1,7 +1,7 @@
 meta {
   name: Health check final
   type: http
-  seq: 4
+  seq: 5
 }
 
 get {
@@ -16,10 +16,9 @@ presente e com o nome intacto. Tenants reais criados manualmente para usuarios
 externos podem ser preservados via protectedTenantIds, protectedTenantKeys ou
 protectedTenantNames no environment.
 
-Nao afirmamos que a lista so contem CLIENTES BETA: DELETE /api/v1/tenants/{id}
-e assincrono (ver step 02), entao tenants de teste recem-marcados para exclusao
-podem ainda aparecer aqui por alguns instantes. O que reporta e o numero de
-tenants com marcador de teste ainda visiveis — informativo, nao falha o teardown.
+Depois do step de limpeza, tenants com marcador de teste nao devem permanecer
+visiveis. Se algum ficar, este health-check falha para impedir que a sujeira
+local passe despercebida.
 }
 
 tests {
@@ -32,12 +31,13 @@ tests {
     expect(beta).to.exist;
     expect(beta.name).to.equal('CLIENTES BETA');
   });
-  test("reporta tenants de teste ainda pendentes de exclusao (informativo)", function() {
+  test("nenhum tenant temporario conhecido permanece visivel", function() {
     const prefix = bru.getVar('testTenantPrefix') || 'TEST-';
     const tenants = Array.isArray(res.body) ? res.body : [];
     const legacyTestName = /^Tenant listener-(commit|rollback)$/i;
     const legacyUuidName = /^Tenant [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const legacyE2eName = /^Tenant E2E [0-9]+$/i;
+    const mavenTestName = /^(TEST-Maven |TEST-Form Listener )/i;
     const legacyUuidKey = /^tenant-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const legacyListenerKey = /^test-tenant-listener-(commit|rollback)-[0-9a-f-]{36}$/i;
     const stillPending = tenants.filter((t) => {
@@ -47,10 +47,12 @@ tests {
         || legacyTestName.test(name)
         || legacyUuidName.test(name)
         || legacyE2eName.test(name)
+        || mavenTestName.test(name)
         || legacyUuidKey.test(key)
         || legacyListenerKey.test(key);
     });
     bru.setVar('teardownStillPendingCount', stillPending.length);
-    expect(stillPending.length).to.be.a('number');
+    bru.setVar('teardownStillPendingTenants', JSON.stringify(stillPending.map((tenant) => tenant.key)));
+    expect(stillPending).to.deep.equal([]);
   });
 }

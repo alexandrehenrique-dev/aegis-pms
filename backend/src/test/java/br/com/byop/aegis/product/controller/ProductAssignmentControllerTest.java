@@ -56,7 +56,8 @@ class ProductAssignmentControllerTest {
     @Test
     void shouldListProductUsers() throws Exception {
         ProductAssignmentSummary summary = assignmentSummary("user-1", "Editor User", "editor@byop.dev", "atribuido");
-        when(productAssignmentService.listAssignments(PRODUCT_ID)).thenReturn(List.of(summary));
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller());
+        when(productAssignmentService.listAssignments(any(AuthenticatedUser.class), eq(PRODUCT_ID))).thenReturn(List.of(summary));
 
         mockMvc.perform(get("/api/v1/products/{productId}/users", PRODUCT_ID)
                         .with(jwt()))

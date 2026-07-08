@@ -1,0 +1,36 @@
+meta {
+  name: Product Manager convida membro do produto
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{rbacProductId}}/users
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{rbacPmToken}}
+}
+
+body:json {
+  {
+    "productId": "{{rbacProductId}}",
+    "tenantId": "{{rbacTenantId}}",
+    "inviteEmail": "{{brunoRbacProductInviteEmail}}",
+    "role": "VIEWER"
+  }
+}
+
+script:post-response {
+  bru.setVar('brunoRbacProductUserId', res.body.userSubject);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("usuario temporario do produto capturado", function() {
+    expect(bru.getVar('brunoRbacProductUserId')).to.be.a('string');
+  });
+}

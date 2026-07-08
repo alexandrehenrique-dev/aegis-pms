@@ -14,6 +14,8 @@ import java.util.UUID;
 @Component
 public class KeycloakProductAssignmentInvitePort implements ProductAssignmentInvitePort {
 
+    private static final String KEYCLOAK_ROLE_PREFIX = "AEGIS_";
+
     private final IdentityInvitationService invitationService;
     private final IdentityActionTokenService actionTokenService;
     private final TenantAccessService tenantAccessService;
@@ -34,7 +36,7 @@ public class KeycloakProductAssignmentInvitePort implements ProductAssignmentInv
     @Override
     public IdentityUser invite(UUID tenantId, UUID productId, String productKey, String productName,
                                String inviteEmail, String role, String inviterName) {
-        IdentityUser invited = invitationService.inviteByEmail(inviteEmail);
+        IdentityUser invited = invitationService.inviteByEmail(inviteEmail, inviteEmail, KEYCLOAK_ROLE_PREFIX + role);
         TenantReference tenant = tenantAccessService.getRequiredReference(tenantId);
         actionTokenService.sendInviteActivation(new IdentityActionInviteCommand(
                 invited.id(),

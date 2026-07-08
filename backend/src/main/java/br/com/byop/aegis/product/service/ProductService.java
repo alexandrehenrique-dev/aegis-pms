@@ -41,9 +41,6 @@ public class ProductService {
 
     private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
     private static final String ROLE_TENANT_ADMIN = "ROLE_TENANT_ADMIN";
-    private static final String ROLE_PRODUCT_MANAGER = "ROLE_PRODUCT_MANAGER";
-    private static final String ROLE_EDITOR = "ROLE_EDITOR";
-    private static final String ROLE_VIEWER = "ROLE_VIEWER";
     private static final Map<String, ProductTypeKey> PRODUCT_TYPES = buildProductTypes();
 
     private final ProductRepository productRepository;
@@ -127,24 +124,20 @@ public class ProductService {
                     .toList();
         }
 
-        if (caller.authorities().contains(ROLE_TENANT_ADMIN)) {
+        List<UUID> tenantAdminTenantIds = tenantAccessService.findActiveTenantAdminTenantIds(caller.subject());
+        if (caller.authorities().contains(ROLE_TENANT_ADMIN) || !tenantAdminTenantIds.isEmpty()) {
             Map<UUID, ProductAssignmentRole> callerRoles = callerRolesByProductId(caller.subject());
-            return tenantAccessService.findActiveTenantAdminTenantIds(caller.subject())
-                    .stream()
+            return tenantAdminTenantIds.stream()
                     .flatMap(tenantId -> productRepository.findAllByTenantId(tenantId).stream())
                     .distinct()
                     .map(product -> toSummaryWithModuleCount(product, callerRoles.get(product.getId())))
                     .toList();
         }
 
-        if (hasProductRole(caller)) {
-            return assignmentRepository.findAllByUserSubjectAndStatus(caller.subject(), ProductAssignmentStatus.ASSIGNED)
-                    .stream()
-                    .map(assignment -> toSummaryWithModuleCount(assignment.getProduct(), assignment.getRole()))
-                    .toList();
-        }
-
-        return List.of();
+        return assignmentRepository.findAllByUserSubjectAndStatus(caller.subject(), ProductAssignmentStatus.ASSIGNED)
+                .stream()
+                .map(assignment -> toSummaryWithModuleCount(assignment.getProduct(), assignment.getRole()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -200,13 +193,13 @@ public class ProductService {
             return product;
         }
 
-        if (caller.authorities().contains(ROLE_TENANT_ADMIN)
-                && tenantAccessService.hasActiveMembership(product.getTenantId(), caller.subject())) {
+        if ((caller.authorities().contains(ROLE_TENANT_ADMIN)
+                && tenantAccessService.hasActiveMembership(product.getTenantId(), caller.subject()))
+                || tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), caller.subject())) {
             return product;
         }
 
-        if (hasProductRole(caller)
-                && assignmentRepository.existsByProductIdAndUserSubjectAndStatus(
+        if (assignmentRepository.existsByProductIdAndUserSubjectAndStatus(
                 productId, caller.subject(), ProductAssignmentStatus.ASSIGNED)) {
             return product;
         }
@@ -233,11 +226,5 @@ public class ProductService {
 
     private static String normalizeProductType(String value) {
         return String.valueOf(value).trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
-    }
-
-    private boolean hasProductRole(AuthenticatedUser caller) {
-        return caller.authorities().contains(ROLE_PRODUCT_MANAGER)
-                || caller.authorities().contains(ROLE_EDITOR)
-                || caller.authorities().contains(ROLE_VIEWER);
     }
 }

@@ -1,0 +1,29 @@
+meta {
+  name: Editor nao convida membro do produto
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{rbacProductId}}/users
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{rbacEditorToken}}
+}
+
+body:json {
+  {
+    "productId": "{{rbacProductId}}",
+    "tenantId": "{{rbacTenantId}}",
+    "inviteEmail": "{{brunoRbacDeniedInviteEmail}}",
+    "role": "VIEWER"
+  }
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+}

@@ -40,7 +40,7 @@ const viewerQuietRoutes = [
 
 export function AppShell() {
   const { authUser, effectiveTenant, effectiveProduct, productSwitching, logout, userTenants, tenantProducts, switchTenant, switchProduct } = useAuth();
-  const { viewAsRole, setViewAsRole, restore } = useViewAsRole();
+  const { actualRole, viewAsRole, setViewAsRole, restore } = useViewAsRole();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -185,7 +185,7 @@ export function AppShell() {
                   <div className="px-3 py-2.5 mb-1">
                     <p className="font-medium text-sm">{authUser.name}</p>
                     <p className="text-xs text-muted-foreground">{authUser.email}</p>
-                    <div className="mt-1.5"><span className="rounded-full bg-[#ede9fe] px-2 py-1 text-[11px] font-medium text-[#7c3aed]">{roleLabels[authUser.role]}</span></div>
+                    <div className="mt-1.5"><span className="rounded-full bg-[#ede9fe] px-2 py-1 text-[11px] font-medium text-[#7c3aed]">{roleLabels[actualRole]}</span></div>
                   </div>
                   <div className="border-t border-border pt-1">
                     <button onClick={() => { setShowFeedback(true); setShowUserMenu(false); }} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm transition hover:bg-muted"><AlertTriangle size={14} className="text-[#b45309]" />Reportar problema</button>
@@ -210,7 +210,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <SimulationBanner viewAs={viewAsRole} actual={authUser.role} onRestore={restore} />
+      <SimulationBanner viewAs={viewAsRole} actual={actualRole} onRestore={restore} />
 
       <PendingNotificationGate />
       <AnimatePresence>{productSwitching && <ProductSwitchingOverlay key="product-switching" product={effectiveProduct} />}</AnimatePresence>

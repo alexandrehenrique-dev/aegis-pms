@@ -28,6 +28,7 @@ public class AuthActivationService {
             "Se este e-mail existe na plataforma, um link de recuperação será enviado.";
     private static final String RESET_CONFIRM_MESSAGE = "Senha redefinida. Faça login para continuar.";
     private static final String UPDATE_PASSWORD_ACTION = "UPDATE_PASSWORD";
+    private static final String KEYCLOAK_ROLE_PREFIX = "AEGIS_";
 
     private final AuthActionTokenService tokenService;
     private final AuthActionEmailService emailService;
@@ -83,6 +84,7 @@ public class AuthActivationService {
         AuthActionToken token = tokenService.consumeInvite(tokenId);
         updatePassword(token.getKeycloakId(), password);
         keycloakAdminClient.updateUserProfile(token.getKeycloakId(), firstName, lastName);
+        assignRealmRole(token);
         keycloakAdminClient.setUserEnabled(token.getKeycloakId(), true);
         keycloakAdminClient.clearRequiredActions(token.getKeycloakId());
         eventPublisher.publishEvent(new IdentityUserInviteActivatedEvent(token.getKeycloakId()));
@@ -102,6 +104,7 @@ public class AuthActivationService {
     public AuthMessageResponse acceptExistingUser(UUID tokenId) {
         log.debug("acceptExistingUser: aceitando convite de usuário existente");
         AuthActionToken token = tokenService.consumeInvite(tokenId);
+        assignRealmRole(token);
         keycloakAdminClient.clearRequiredActions(token.getKeycloakId());
         eventPublisher.publishEvent(new IdentityUserInviteActivatedEvent(token.getKeycloakId()));
         audit(token, "USER_INVITE_ACCEPTED_EXISTING");
@@ -141,6 +144,12 @@ public class AuthActivationService {
         } catch (KeycloakAuthenticationException _) {
             log.warn("updatePassword: senha rejeitada pelo Keycloak para keycloakId='{}'", keycloakId);
             throw new WeakPasswordException(PasswordPolicy.WEAK_CREDENTIAL_MESSAGE);
+        }
+    }
+
+    private void assignRealmRole(AuthActionToken token) {
+        if (token.getRole() != null && !token.getRole().isBlank()) {
+            keycloakAdminClient.assignRealmRole(token.getKeycloakId(), KEYCLOAK_ROLE_PREFIX + token.getRole());
         }
     }
 

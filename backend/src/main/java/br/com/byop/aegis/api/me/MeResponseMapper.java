@@ -1,9 +1,11 @@
 package br.com.byop.aegis.api.me;
 
+import br.com.byop.aegis.product.api.ProductUserAccessService;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -21,9 +23,11 @@ public class MeResponseMapper {
     );
 
     private final TenantAccessService tenantAccessService;
+    private final ProductUserAccessService productUserAccessService;
 
-    public MeResponseMapper(TenantAccessService tenantAccessService) {
+    public MeResponseMapper(TenantAccessService tenantAccessService, ProductUserAccessService productUserAccessService) {
         this.tenantAccessService = tenantAccessService;
+        this.productUserAccessService = productUserAccessService;
     }
 
     /**
@@ -44,8 +48,15 @@ public class MeResponseMapper {
     }
 
     private String resolvePublicRole(AuthenticatedUser user) {
+        List<String> authorities = new ArrayList<>(user.authorities());
+        if (!tenantAccessService.findActiveTenantAdminTenantIds(user.subject()).isEmpty()) {
+            authorities.add("ROLE_TENANT_ADMIN");
+        }
+        productUserAccessService.findHighestAssignedRole(user.subject())
+                .map(role -> "ROLE_" + role)
+                .ifPresent(authorities::add);
         return ROLE_PRIORITY.stream()
-                .filter(mapping -> user.authorities().contains(mapping.springAuthority()))
+                .filter(mapping -> authorities.contains(mapping.springAuthority()))
                 .map(RoleMapping::publicRole)
                 .findFirst()
                 .orElse("viewer");

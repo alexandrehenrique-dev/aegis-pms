@@ -406,6 +406,37 @@ class KeycloakAdminClientTest {
     }
 
     @Test
+    void shouldAssignRealmRoleWithPublicMethod() {
+        stubAdminToken();
+        wireMockServer.stubFor(get(urlEqualTo("/admin/realms/aegis/roles/AEGIS_PRODUCT_MANAGER"))
+                .willReturn(okJson("""
+                    {
+                      "id": "role-id",
+                      "name": "AEGIS_PRODUCT_MANAGER"
+                    }
+                    """)));
+        wireMockServer.stubFor(post(urlEqualTo("/admin/realms/aegis/users/user-id/role-mappings/realm"))
+                .willReturn(noContent()));
+
+        assertDoesNotThrow(() -> client.assignRealmRole("user-id", "AEGIS_PRODUCT_MANAGER"));
+
+        wireMockServer.verify(postRequestedFor(urlEqualTo("/admin/realms/aegis/users/user-id/role-mappings/realm"))
+                .withRequestBody(containing("AEGIS_PRODUCT_MANAGER")));
+    }
+
+    @Test
+    void shouldThrowWhenPublicAssignRealmRoleFails() {
+        stubAdminToken();
+        wireMockServer.stubFor(get(urlEqualTo("/admin/realms/aegis/roles/AEGIS_PRODUCT_MANAGER"))
+                .willReturn(serverError()));
+
+        assertThrows(
+                KeycloakAuthenticationException.class,
+                () -> client.assignRealmRole("user-id", "AEGIS_PRODUCT_MANAGER")
+        );
+    }
+
+    @Test
     void shouldUpdateUserProfileWithPublicMethod() {
         stubAdminToken();
         wireMockServer.stubFor(put(urlEqualTo("/admin/realms/aegis/users/user-id"))
