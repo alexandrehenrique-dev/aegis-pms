@@ -12,7 +12,9 @@ get {
 docs {
 Objetivo: confirmar que o teardown nunca tocou em tenants reais. CLIENTES BETA
 (unico tenant real seedado, ver V17__seed_homologacao.sql) precisa continuar
-presente e com o nome intacto.
+presente e com o nome intacto. Tenants reais criados manualmente para usuarios
+externos podem ser preservados via protectedTenantIds, protectedTenantKeys ou
+protectedTenantNames no environment.
 
 Nao afirmamos que a lista so contem CLIENTES BETA: DELETE /api/v1/tenants/{id}
 e assincrono (ver step 02), entao tenants de teste recem-marcados para exclusao
@@ -36,12 +38,17 @@ tests {
     const legacyTestName = /^Tenant listener-(commit|rollback)$/i;
     const legacyUuidName = /^Tenant [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const legacyE2eName = /^Tenant E2E [0-9]+$/i;
+    const legacyUuidKey = /^tenant-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const legacyListenerKey = /^test-tenant-listener-(commit|rollback)-[0-9a-f-]{36}$/i;
     const stillPending = tenants.filter((t) => {
       const name = String(t.name || '').trim();
+      const key = String(t.key || '').trim();
       return name.startsWith(prefix)
         || legacyTestName.test(name)
         || legacyUuidName.test(name)
-        || legacyE2eName.test(name);
+        || legacyE2eName.test(name)
+        || legacyUuidKey.test(key)
+        || legacyListenerKey.test(key);
     });
     bru.setVar('teardownStillPendingCount', stillPending.length);
     expect(stillPending.length).to.be.a('number');

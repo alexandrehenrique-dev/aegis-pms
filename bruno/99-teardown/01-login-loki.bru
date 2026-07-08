@@ -1,5 +1,5 @@
 meta {
-  name: Login loki (teardown)
+  name: Login usuario ambiente (teardown)
   type: http
   seq: 1
 }
@@ -22,12 +22,10 @@ Objetivo: autenticar para que esta pasta rode de forma isolada (`bru run 99-tear
 sem depender de {{token}} ja setado por uma execucao anterior da colecao inteira.
 Resultado esperado: 200 com access_token.
 
-Observacao sobre privilegio: este projeto nao tem uma conta "super admin" dedicada
-provisionada em nenhum seed — toda a colecao Bruno (bem como as demais 30 pastas)
-ja usa "loki" para operacoes privilegiadas (criar/excluir tenant). listTenants()
-retorna todos os tenants sem filtro de authority quando o caller tem ROLE_SUPER_ADMIN,
-e por membership (TENANT_ADMIN) caso contrario — como loki cria a maioria dos tenants
-de teste da suite, ele enxerga a lista completa via membership de qualquer forma.
+Observacao sobre privilegio: o environment ativo define {{username}}/{{password}}
+para o usuario operacional local com permissao suficiente para criar/excluir
+tenant. listTenants() retorna todos os tenants sem filtro de authority quando o
+caller tem ROLE_SUPER_ADMIN, e por membership (TENANT_ADMIN) caso contrario.
 }
 
 script:post-response {

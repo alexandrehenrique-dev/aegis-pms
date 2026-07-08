@@ -14,20 +14,21 @@ Objetivo: identificar e excluir SOMENTE tenants marcados como teste, para nunca
 apagar tenants reais (ex.: CLIENTES BETA) mesmo que existam dezenas deles no futuro.
 
 Criterio de exclusao principal (ver collection.bru / testTenantPrefix): o nome
-do tenant comeca com o prefixo "TEST-". Esse prefixo e aplicado NA CRIACAO por
-toda collection Bruno que cria um tenant (ver bruno/01-tenants, 16-audit,
-26-product-templates, 27-feedback, 28-backup-exportacao-exclusao,
-29-auth-action-tokens) — nunca na hora de excluir. Uma allowlist/denylist por
-nome especifico ("CLIENTES BETA") seria fragil se um dia existirem dezenas de
-tenants reais; a marca de origem e o criterio correto.
+ou a key do tenant comeca com marcador de teste. Esse marcador e aplicado NA
+CRIACAO por toda collection Bruno que cria um tenant (ver bruno/01-tenants,
+16-audit, 26-product-templates, 27-feedback, 28-backup-exportacao-exclusao,
+29-auth-action-tokens) — nunca na hora de excluir.
 
-Compatibilidade temporaria para sujeira antiga: tambem sao candidatos apenas
-nomes legados de teste com padroes fechados ("Tenant listener-commit",
-"Tenant listener-rollback", "Tenant <uuid>" e "Tenant E2E <timestamp>"). Esses
-padroes vieram de testes/smokes antigos que agora passaram a criar tenants com
-prefixo TEST-. Nomes reais sem marcador de teste nunca entram como candidatos.
-Ainda assim, mantemos uma checagem explicita extra contra "CLIENTES BETA" por
-nome e por key como cinto-e-suspensorio.
+Compatibilidade para sujeira antiga: tambem sao candidatos padroes fechados
+criados por suites antigas ("Tenant listener-commit", "Tenant listener-rollback",
+"Tenant <uuid>", "Tenant E2E <timestamp>", keys "tenant-<uuid>" e keys
+"test-tenant-listener-*"). Nomes reais sem marcador de teste nunca entram como
+candidatos.
+
+CLIENTES BETA e protegido por id/key/name. Tenants reais criados manualmente
+para usuarios externos devem ser preservados incluindo id, key ou name nas
+variaveis protectedTenantIds, protectedTenantKeys ou protectedTenantNames
+(lista separada por virgula, ponto-e-virgula ou quebra de linha) do environment.
 
 DELETE /api/v1/tenants/{id} e ASSINCRONO — retorna 202 e apenas INICIA a exportacao
 por produto (ProductExportCoordinatorService); o tenant so some de fato depois que
@@ -40,10 +41,9 @@ que so verifica a presenca de CLIENTES BETA (nao a ausencia imediata dos de test
 Idempotente: se rodar de novo e nao houver mais tenants com marcador de teste,
 o loop simplesmente nao encontra candidatos e nao faz nenhuma chamada DELETE.
 
-IMPORTANTE: este step usa `fetch()` dentro do post-response script para fazer
-uma chamada DELETE por tenant candidato — `fetch` so existe no sandbox
-"developer" do Bruno CLI (nao no "safe"/QuickJS, que e o default). Rodar com:
-  bru run 99-teardown --env local -r --sandbox developer
+IMPORTANTE: o post-response usa `bru.sendRequest()` para fazer uma chamada
+DELETE por tenant candidato. Assim funciona no app do Bruno e no CLI, sem
+depender de `fetch`.
 }
 
 script:post-response {
@@ -54,10 +54,31 @@ script:post-response {
     return String(value || '').trim();
   }
 
+  function normalizeKey(value) {
+    return normalize(value).toLowerCase();
+  }
+
+  function parseProtectedList(value) {
+    return normalize(value)
+      .split(/[\n,;]+/)
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  const protectedIds = parseProtectedList(bru.getVar('protectedTenantIds'));
+  const protectedKeys = parseProtectedList(bru.getVar('protectedTenantKeys'));
+  const protectedNames = parseProtectedList(bru.getVar('protectedTenantNames'));
+
   function isProtectedTenant(tenant) {
-    const name = normalize(tenant.name).toLowerCase();
-    const key = normalize(tenant.key).toLowerCase();
-    return name === 'clientes beta' || key === 'clientes-beta';
+    const id = normalizeKey(tenant.id);
+    const name = normalizeKey(tenant.name);
+    const key = normalizeKey(tenant.key);
+    return id === 'a0000000-0000-0000-0000-000000000001'
+      || name === 'clientes beta'
+      || key === 'clientes-beta'
+      || protectedIds.includes(id)
+      || protectedKeys.includes(key)
+      || protectedNames.includes(name);
   }
 
   function isLegacyTestTenantName(name) {
@@ -66,9 +87,54 @@ script:post-response {
       || /^Tenant E2E [0-9]+$/i.test(name);
   }
 
+  function isLegacyTestTenantKey(key) {
+    return /^tenant-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key)
+      || /^test-tenant-listener-(commit|rollback)-[0-9a-f-]{36}$/i.test(key)
+      || /^feedback-(cross-)?tenant-[0-9]+$/i.test(key)
+      || /^template-tenant-[0-9]+$/i.test(key)
+      || /^export-delete-tenant-[0-9]+$/i.test(key)
+      || /^auth-action-[0-9]+$/i.test(key)
+      || /^audit-throwaway-[0-9]+$/i.test(key);
+  }
+
   function isTestTenant(tenant) {
     const name = normalize(tenant.name);
-    return name.startsWith(prefix) || isLegacyTestTenantName(name);
+    const key = normalize(tenant.key);
+    const normalizedPrefix = normalizeKey(prefix);
+    return name.startsWith(prefix)
+      || normalizeKey(key).startsWith(normalizedPrefix.toLowerCase())
+      || isLegacyTestTenantName(name)
+      || isLegacyTestTenantKey(key);
+  }
+
+  function deleteTenant(tenant) {
+    return new Promise((resolve) => {
+      bru.sendRequest({
+        method: 'DELETE',
+        url: baseUrl + '/api/v1/tenants/' + tenant.id,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token,
+        },
+        data: {
+          confirmationText: tenant.name,
+        },
+      }, function(error, response) {
+        if (error) {
+          resolve({
+            ok: false,
+            error: String(error),
+          });
+          return;
+        }
+
+        const status = response && (response.status || response.statusCode);
+        resolve({
+          ok: status === 202,
+          status,
+        });
+      });
+    });
   }
 
   const candidates = tenants.filter((tenant) => isTestTenant(tenant) && !isProtectedTenant(tenant));
@@ -79,24 +145,24 @@ script:post-response {
   const failures = [];
 
   for (const tenant of candidates) {
-    const response = await fetch(baseUrl + '/api/v1/tenants/' + tenant.id, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token,
-      },
-      body: JSON.stringify({ confirmationText: tenant.name }),
-    });
-    if (response.status === 202) {
+    const result = await deleteTenant(tenant);
+    if (result.ok) {
       accepted += 1;
     } else {
-      failures.push({ id: tenant.id, name: tenant.name, status: response.status });
+      failures.push({
+        id: tenant.id,
+        key: tenant.key,
+        name: tenant.name,
+        status: result.status,
+        error: result.error,
+      });
     }
   }
 
   bru.setVar('teardownCandidateCount', candidates.length);
   bru.setVar('teardownAcceptedCount', accepted);
   bru.setVar('teardownCandidateNames', JSON.stringify(candidates.map((tenant) => tenant.name)));
+  bru.setVar('teardownCandidateKeys', JSON.stringify(candidates.map((tenant) => tenant.key)));
   bru.setVar('teardownFailures', JSON.stringify(failures));
 }
 
@@ -113,7 +179,9 @@ tests {
   });
   test("tenants reais sem marcador de teste nao entram na limpeza", function() {
     const candidateNames = JSON.parse(bru.getVar('teardownCandidateNames') || '[]');
+    const candidateKeys = JSON.parse(bru.getVar('teardownCandidateKeys') || '[]');
     expect(candidateNames).to.not.include('CLIENTES BETA');
+    expect(candidateKeys).to.not.include('clientes-beta');
     expect(candidateNames).to.not.include('BYOP');
   });
   test("exclusao aceita (202) para todos os candidatos de teste", function() {
