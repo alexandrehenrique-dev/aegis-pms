@@ -14,7 +14,7 @@ class FormPublicationPolicyTest {
 
     @Test
     void shouldAcceptPublishableFields() {
-        policy.assertPublishable(List.of(
+        policy.assertPublishable("Contato", List.of(
                 Map.of("label", "Email", "type", "Email", "required", true),
                 Map.of("label", "Curriculo", "type", "Upload", "required", false,
                         "acceptedFileTypes", List.of("application/pdf"))
@@ -23,24 +23,49 @@ class FormPublicationPolicyTest {
 
     @Test
     void shouldAcceptFieldsWithoutLabelsWhenOtherRequiredFieldExists() {
-        policy.assertPublishable(List.of(
+        policy.assertPublishable("Contato", List.of(
                 Map.of("required", true, "type", "Texto"),
                 Map.of("type", "Texto")
         ));
     }
 
     @Test
-    void shouldRejectPublicationWithoutRequiredField() {
-        List<Map<String, Object>> fields = List.of(Map.of("label", "Email", "type", "Email"));
+    void shouldRejectPublicationWithBlankName() {
+        List<Map<String, Object>> fields = List.of(Map.of("label", "Email", "type", "Email", "required", true));
 
-        assertThatThrownBy(() -> policy.assertPublishable(fields))
+        assertThatThrownBy(() -> policy.assertPublishable("  ", fields))
                 .isInstanceOf(InvalidFormPublicationException.class)
-                .hasMessage(FormPublicationPolicy.REQUIRED_FIELD_ERROR);
+                .hasMessage(FormPublicationPolicy.NAME_REQUIRED_ERROR);
+    }
+
+    @Test
+    void shouldRejectPublicationWithNullName() {
+        List<Map<String, Object>> fields = List.of(Map.of("label", "Email", "type", "Email", "required", true));
+
+        assertThatThrownBy(() -> policy.assertPublishable(null, fields))
+                .isInstanceOf(InvalidFormPublicationException.class)
+                .hasMessage(FormPublicationPolicy.NAME_REQUIRED_ERROR);
+    }
+
+    @Test
+    void shouldRejectPublicationWithEmptyFields() {
+        assertThatThrownBy(() -> policy.assertPublishable("Contato", List.of()))
+                .isInstanceOf(InvalidFormPublicationException.class)
+                .hasMessage(FormPublicationPolicy.NO_FIELDS_ERROR);
     }
 
     @Test
     void shouldRejectPublicationWithNullFields() {
-        assertThatThrownBy(() -> policy.assertPublishable(null))
+        assertThatThrownBy(() -> policy.assertPublishable("Contato", null))
+                .isInstanceOf(InvalidFormPublicationException.class)
+                .hasMessage(FormPublicationPolicy.NO_FIELDS_ERROR);
+    }
+
+    @Test
+    void shouldRejectPublicationWithoutRequiredField() {
+        List<Map<String, Object>> fields = List.of(Map.of("label", "Email", "type", "Email"));
+
+        assertThatThrownBy(() -> policy.assertPublishable("Contato", fields))
                 .isInstanceOf(InvalidFormPublicationException.class)
                 .hasMessage(FormPublicationPolicy.REQUIRED_FIELD_ERROR);
     }
@@ -52,7 +77,7 @@ class FormPublicationPolicyTest {
                 Map.of("label", " email ", "type", "Texto")
         );
 
-        assertThatThrownBy(() -> policy.assertPublishable(fields))
+        assertThatThrownBy(() -> policy.assertPublishable("Contato", fields))
                 .isInstanceOf(InvalidFormPublicationException.class)
                 .hasMessage(FormPublicationPolicy.DUPLICATE_LABEL_ERROR);
     }
@@ -64,7 +89,7 @@ class FormPublicationPolicyTest {
                 Map.of("label", "Curriculo", "type", "Upload")
         );
 
-        assertThatThrownBy(() -> policy.assertPublishable(fields))
+        assertThatThrownBy(() -> policy.assertPublishable("Contato", fields))
                 .isInstanceOf(InvalidFormPublicationException.class)
                 .hasMessage(FormPublicationPolicy.UPLOAD_ACCEPTED_TYPES_ERROR);
     }
@@ -76,7 +101,7 @@ class FormPublicationPolicyTest {
                 Map.of("label", "Curriculo", "type", "Upload", "acceptedFileTypes", List.of(123))
         );
 
-        assertThatThrownBy(() -> policy.assertPublishable(fields))
+        assertThatThrownBy(() -> policy.assertPublishable("Contato", fields))
                 .isInstanceOf(InvalidFormPublicationException.class)
                 .hasMessage(FormPublicationPolicy.UPLOAD_ACCEPTED_TYPES_ERROR);
     }
@@ -88,7 +113,7 @@ class FormPublicationPolicyTest {
                 Map.of("label", "Curriculo", "type", "Upload", "acceptedFileTypes", "application/pdf")
         );
 
-        assertThatThrownBy(() -> policy.assertPublishable(fields))
+        assertThatThrownBy(() -> policy.assertPublishable("Contato", fields))
                 .isInstanceOf(InvalidFormPublicationException.class)
                 .hasMessage(FormPublicationPolicy.UPLOAD_ACCEPTED_TYPES_ERROR);
     }

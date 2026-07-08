@@ -137,6 +137,20 @@ export const knowledgeService = {
   },
 
   /**
+   * J.3.2 (BUG-SPRINT-05) — quando o grafo de um produto ainda não tem
+   * nenhum nó (conteúdo antigo nunca passou por `ensureNodeForContent`), cria
+   * um nó por conteúdo publicado para que "Vincular a outro conteúdo"
+   * (`EntityPicker`) tenha candidatos reais em vez de ficar vazio até a
+   * primeira edição de cada conteúdo. Idempotente via `ensureNodeForContent`.
+   */
+  async seedNodesFromContent(productId: string, contents: { id: string; title: string; status: string }[]): Promise<void> {
+    const published = contents.filter((c) => c.status === "Published");
+    for (const c of published) {
+      await this.ensureNodeForContent(productId, c.id, c.title, "Página");
+    }
+  },
+
+  /**
    * Cria uma aresta do catálogo fechado de `edgeType` ao linkar uma
    * referência inline (`kg-ref`) durante a autoria — Sprint 11, Tarefa C.3 /
    * Sprint 12, Tarefa H.1 (docs/trace, Seção A: `POST .../graph/edges`).

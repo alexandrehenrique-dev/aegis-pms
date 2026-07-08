@@ -55,15 +55,24 @@ export function ContentEditor() {
     }, CONTENT_SAVE_DEBOUNCE_MS);
   };
 
+  /** J.4.1 (BUG-SPRINT-05) — antes sem try/catch: uma transição inválida (ex.: conteúdo já `Published`) lançava e deixava o usuário preso na tela sem nenhum feedback (nem toast, nem navegação). */
   const handleSubmitForReview = async () => {
-    if (!id) return;
-    await contentService.submitForReview(id, productId);
-    setContent((prev) => (prev ? { ...prev, status: "In Review" } : prev));
-    toast.success("Enviado para revisão.", { description: "A equipe editorial será notificada." });
-    // Tarefa C.1 — antes ficava preso na tela de edição de um conteúdo que já
-    // não está mais em edição; agora volta para o Kanban onde o item aparece
-    // na coluna "Em revisão".
-    navigate("/content/workflow");
+    if (!id || !content) return;
+    try {
+      await contentService.submitForReview(id, productId, content.status);
+      setContent((prev) => (prev ? { ...prev, status: "In Review" } : prev));
+      toast.success("Enviado para revisão.", { description: "A equipe editorial será notificada." });
+      // Tarefa C.1 — antes ficava preso na tela de edição de um conteúdo que já
+      // não está mais em edição; agora volta para o Kanban onde o item aparece
+      // na coluna "Em revisão".
+      navigate("/content/workflow");
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      const message = code === "INVALID_CONTENT_TRANSITION"
+        ? "Esta transição não é permitida para o status atual do conteúdo."
+        : ((err as { message?: string }).message ?? "Tente novamente.");
+      toast.error("Não foi possível enviar para revisão.", { description: message });
+    }
   };
 
   if (!loading && !content) {
@@ -82,7 +91,10 @@ export function ContentEditor() {
       <AnimatePresence>{saveStatus !== "idle" && <FloatingSaveStatus key={saveStatus} status={saveStatus} />}</AnimatePresence>
       <PageHeader title={`${content.title} — Editar`} module="Conteúdo" desc="Edite título, corpo em markdown e metadados deste item editorial." badge={content.status}>
         <Button onClick={() => navigate(`/content/${content.id}/preview`)}>Preview</Button>
-        <Button primary onClick={handleSubmitForReview}>Enviar para revisão</Button>
+        {/* J.4.2 — "Enviar para revisão" só faz sentido a partir de Draft; para os demais status, a transição pertence ao Workflow Board (In Review) ou já não é mais permitida (Published/Archived). */}
+        {content.status === "Draft" && (
+          <Button primary onClick={handleSubmitForReview}>Enviar para revisão</Button>
+        )}
       </PageHeader>
       <ContentArticleEditor content={content} knowledgeGraphEnabled={knowledgeGraphEnabled} productSlug={productId} onChange={handleChange} />
     </>

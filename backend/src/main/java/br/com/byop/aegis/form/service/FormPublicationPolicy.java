@@ -16,9 +16,18 @@ public class FormPublicationPolicy {
     public static final String REQUIRED_FIELD_ERROR = "FORM_REQUIRES_REQUIRED_FIELD";
     public static final String DUPLICATE_LABEL_ERROR = "FORM_DUPLICATE_FIELD_LABEL";
     public static final String UPLOAD_ACCEPTED_TYPES_ERROR = "FORM_UPLOAD_ACCEPTED_FILE_TYPES_REQUIRED";
+    public static final String NAME_REQUIRED_ERROR = "FORM_NAME_REQUIRED";
+    public static final String NO_FIELDS_ERROR = "FORM_HAS_NO_FIELDS";
 
-    public void assertPublishable(List<Map<String, Object>> fields) {
-        if (fields == null || fields.stream().noneMatch(this::isRequired)) {
+    /** H.3.2 (BUG-SPRINT-05) — nome e ao menos um campo são pré-condições de publicação, checadas antes das regras de conteúdo dos campos para que o frontend humanize a mensagem certa. */
+    public void assertPublishable(String name, List<Map<String, Object>> fields) {
+        if (name == null || name.isBlank()) {
+            throw new InvalidFormPublicationException(NAME_REQUIRED_ERROR);
+        }
+        if (fields == null || fields.isEmpty()) {
+            throw new InvalidFormPublicationException(NO_FIELDS_ERROR);
+        }
+        if (fields.stream().noneMatch(this::isRequired)) {
             throw new InvalidFormPublicationException(REQUIRED_FIELD_ERROR);
         }
         assertLabelsAreUnique(fields);

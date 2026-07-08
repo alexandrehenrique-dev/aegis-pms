@@ -223,7 +223,22 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
     // que ainda nao populava `image`) nao tinham a chave `image`; sem ela o
     // picker de imagem nunca aparecia no editor. Injeta o valor vazio só para
     // renderização — não persiste até o usuário editar algum campo do bloco.
-    if (section.type === "hero" && !isPlainObject(base.image)) return { ...base, image: { src: "", alt: "" } };
+    // J.1.1 (BUG-SPRINT-05) — `image` pode existir mas com `src`/`alt` nulos
+    // (ex.: `{ src: null, alt: "4" }`, vindo do backend) — `isPlainObject`
+    // já retorna `true` para esse objeto, então a injeção acima nunca
+    // disparava e o `src` nulo quebrava a checagem `typeof v.src === "string"`
+    // que decide entre `ImageFieldEditor` (picker) e `ObjectFieldsEditor`
+    // (campos de texto genéricos). Normaliza sempre, não só quando ausente.
+    if (section.type === "hero") {
+      const existingImage = isPlainObject(base.image) ? (base.image as Record<string, unknown>) : {};
+      return {
+        ...base,
+        image: {
+          src: typeof existingImage.src === "string" ? existingImage.src : "",
+          alt: typeof existingImage.alt === "string" ? existingImage.alt : "",
+        },
+      };
+    }
     return base;
   })();
   const stringFields = Object.entries(fieldableContent).filter(([, v]) => typeof v === "string") as [string, string][];

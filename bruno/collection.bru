@@ -8,6 +8,20 @@ script:pre-request {
   // que pode excluir. Nunca prefixar CLIENTES BETA (nem qualquer tenant real)
   // com isso.
   if (!bru.getVar('testTenantPrefix')) { bru.setVar('testTenantPrefix', 'TEST-'); }
+
+  // G.1.3 (BUG-SPRINT-05) — bloqueia a criacao de tenant sem o prefixo TEST-
+  // em qualquer ambiente, mesmo que alguem rode a collection com --env prod
+  // por engano: sem essa guarda, um tenantName customizado sem o prefixo
+  // nunca seria elegivel para o teardown automatico e viraria um tenant
+  // fantasma permanente.
+  {
+    const prefix = bru.getVar('testTenantPrefix') || 'TEST-';
+    const tName = bru.getVar('tenantName') || '';
+    if (tName && !tName.startsWith(prefix)) {
+      throw new Error(`[GUARD] tenantName "${tName}" nao tem o prefixo "${prefix}". Corrija antes de rodar.`);
+    }
+  }
+
   if (!bru.getVar('username')) { bru.setVar('username', 'loki'); }
   if (!bru.getVar('password')) { bru.setVar('password', '123456'); }
   if (!bru.getVar('tenantKey')) { bru.setVar('tenantKey', 'byop-' + Date.now()); }

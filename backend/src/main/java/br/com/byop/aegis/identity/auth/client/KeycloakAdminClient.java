@@ -134,6 +134,25 @@ public class KeycloakAdminClient {
         }
     }
 
+    /**
+     * O.1 (BUG-SPRINT-05) — ativacao de convite antes nunca atualizava
+     * firstName/lastName no Keycloak; um convite criado com {@code name}
+     * vazio ou de uma so palavra (ver {@link #firstName(String)}/{@link
+     * #lastName(String)}) deixava o usuario com perfil incompleto, e o realm
+     * bloqueia login ("Account is not fully set up") para perfil incompleto
+     * mesmo com {@code enabled=true}. Chamado em {@code activate()} antes de
+     * habilitar a conta, com o nome/sobrenome coletados explicitamente no
+     * formulario de ativacao (nunca mais derivados de uma unica string).
+     */
+    public void updateUserProfile(String userId, String firstName, String lastName) {
+        try {
+            String accessToken = adminAccessToken();
+            updateUserProfile(userId, firstName, lastName, accessToken);
+        } catch (RestClientException exception) {
+            throw new KeycloakAuthenticationException(ADMIN_API_ERROR, exception);
+        }
+    }
+
     public List<UserResponse> findUsers() {
         try {
             String accessToken = adminAccessToken();
@@ -331,6 +350,16 @@ public class KeycloakAdminClient {
                 .toBodilessEntity();
     }
 
+    private void updateUserProfile(String userId, String firstName, String lastName, String accessToken) {
+        restClient.put()
+                .uri(userByIdEndpoint(userId))
+                .headers(headers -> headers.setBearerAuth(accessToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"firstName\":" + jsonString(firstName) + ",\"lastName\":" + jsonString(lastName) + "}")
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     private void assignRealmRole(String userId, String realmRoleName, String accessToken) {
         KeycloakRealmRoleResponse role = restClient.get()
                 .uri(realmRoleEndpoint(realmRoleName))
@@ -419,6 +448,22 @@ public class KeycloakAdminClient {
             throw new KeycloakAuthenticationException(EMPTY_ADMIN_RESPONSE);
         }
         return response.accessToken();
+    }
+
+    /**
+     * Escapa uma string para uso como valor JSON literal — usado para montar
+     * o corpo de {@link #updateUserProfile(String, String, String, String)}
+     * como JSON string bruto (mesmo padrão de {@link #actionsJson(List)} e
+     * do corpo de {@code enabled}/{@code requiredActions} acima), em vez de
+     * serializar via Jackson/record: nome e sobrenome vêm de input do
+     * usuário e precisam de escape real (aspas, barra invertida), diferente
+     * das actions do catálogo fechado do Keycloak.
+     */
+    private static String jsonString(String value) {
+        String escaped = Objects.toString(value, "")
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"");
+        return "\"" + escaped + "\"";
     }
 
     private static String actionsJson(List<String> requiredActions) {

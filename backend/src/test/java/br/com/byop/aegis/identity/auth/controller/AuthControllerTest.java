@@ -224,7 +224,7 @@ class AuthControllerTest {
     @Test
     void shouldActivateInvite() throws Exception {
         UUID token = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-        when(authActivationService.activate(token, "Senha123"))
+        when(authActivationService.activate(token, "Senha123", "Alexandre", "Henrique"))
                 .thenReturn(new AuthMessageResponse("Conta ativada. Faça login para continuar."));
 
         mockMvc.perform(post("/api/v1/auth/activate")
@@ -232,11 +232,28 @@ class AuthControllerTest {
                         .content("""
                                 {
                                   "token": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                                  "password": "Senha123"
+                                  "password": "Senha123",
+                                  "firstName": "Alexandre",
+                                  "lastName": "Henrique"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Conta ativada. Faça login para continuar."));
+    }
+
+    @Test
+    void shouldRejectActivateWithoutFirstNameOrLastName() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/activate")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "token": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                                  "password": "Senha123",
+                                  "firstName": "",
+                                  "lastName": ""
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -302,7 +319,7 @@ class AuthControllerTest {
         when(authActivationService.validateInvite(token)).thenThrow(new AuthActionTokenExpiredException());
         when(authActivationService.validateInvite(usedToken)).thenThrow(new AuthActionTokenUsedException());
         when(authActivationService.validateInvite(missingToken)).thenThrow(new AuthActionTokenNotFoundException());
-        org.mockito.Mockito.when(authActivationService.activate(token, "fraca"))
+        org.mockito.Mockito.when(authActivationService.activate(token, "fraca", "Alexandre", "Henrique"))
                 .thenThrow(new WeakPasswordException("A senha deve ter ao menos 8 caracteres, incluindo letras e números."));
         org.mockito.Mockito.when(authActivationService.requestPasswordReset("user@byop.dev"))
                 .thenThrow(new AuthRateLimitExceededException(900));
@@ -342,7 +359,9 @@ class AuthControllerTest {
                         .content("""
                                 {
                                   "token": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-                                  "password": "fraca"
+                                  "password": "fraca",
+                                  "firstName": "Alexandre",
+                                  "lastName": "Henrique"
                                 }
                                 """))
                 .andExpect(status().isUnprocessableContent())

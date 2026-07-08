@@ -16,9 +16,11 @@ import type { KGNode } from "../mocks/knowledge.mocks";
 export function EntityPicker({ productId, onSelect }: { productId: string; onSelect: (node: KGNode) => void }) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<KGNode[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    knowledgeService.searchNodes(q, productId).then(setResults);
+    setLoaded(false);
+    knowledgeService.searchNodes(q, productId).then((r) => { setResults(r); setLoaded(true); });
   }, [q, productId]);
 
   return (
@@ -28,7 +30,14 @@ export function EntityPicker({ productId, onSelect }: { productId: string; onSel
         <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar entidade..." className="w-full bg-transparent text-sm outline-none" />
       </div>
       <div className="max-h-56 space-y-1 overflow-auto">
-        {results.length === 0 && <p className="p-2 text-xs text-muted-foreground">Nenhuma entidade encontrada.</p>}
+        {/* J.3.3 (BUG-SPRINT-05) — distingue "grafo vazio" (nenhum resultado mesmo sem busca) de "busca sem resultado", já que o primeiro caso costuma ser conteúdo antigo que ainda não passou por `ensureNodeForContent`. */}
+        {loaded && results.length === 0 && (
+          q.trim() === "" ? (
+            <p className="p-2 text-xs text-muted-foreground">Nenhuma entidade no grafo ainda. Conteúdos publicados aparecem automaticamente após a primeira edição.</p>
+          ) : (
+            <p className="p-2 text-xs text-muted-foreground">Nenhuma entidade encontrada para "{q}".</p>
+          )
+        )}
         {results.map((n) => (
           <button key={n.id} onClick={() => onSelect(n)} className="flex w-full items-center justify-between rounded-lg p-2 text-left text-sm hover:bg-muted">
             <span>{n.label}</span>

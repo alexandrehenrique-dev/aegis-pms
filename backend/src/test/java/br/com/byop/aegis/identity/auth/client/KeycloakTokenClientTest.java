@@ -2,6 +2,7 @@ package br.com.byop.aegis.identity.auth.client;
 
 import br.com.byop.aegis.identity.auth.config.KeycloakProperties;
 import br.com.byop.aegis.identity.auth.exception.AccountDisabledException;
+import br.com.byop.aegis.identity.auth.exception.AccountNotFullySetUpException;
 import br.com.byop.aegis.identity.auth.exception.InvalidCredentialsException;
 import br.com.byop.aegis.identity.auth.exception.KeycloakAuthenticationException;
 import br.com.byop.aegis.identity.auth.exception.RefreshTokenExpiredException;
@@ -175,7 +176,7 @@ class KeycloakTokenClientTest {
     }
 
     @Test
-    void shouldThrowAccountDisabledOnBadRequestWithNotFullySetUp() {
+    void shouldThrowAccountNotFullySetUpOnBadRequestWithNotFullySetUp() {
         wireMockServer.stubFor(
                 post(urlEqualTo("/realms/aegis/protocol/openid-connect/token"))
                         .willReturn(badRequest()
@@ -184,6 +185,46 @@ class KeycloakTokenClientTest {
                                     {
                                       "error": "invalid_grant",
                                       "error_description": "Account is not fully set up"
+                                    }
+                                    """))
+        );
+
+        assertThrows(
+                AccountNotFullySetUpException.class,
+                () -> client.login("loki", "credential-value")
+        );
+    }
+
+    @Test
+    void shouldThrowAccountNotFullySetUpOnUnauthorizedWithNotFullySetUp() {
+        wireMockServer.stubFor(
+                post(urlEqualTo("/realms/aegis/protocol/openid-connect/token"))
+                        .willReturn(unauthorized()
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("""
+                                    {
+                                      "error": "invalid_grant",
+                                      "error_description": "Account is not fully set up"
+                                    }
+                                    """))
+        );
+
+        assertThrows(
+                AccountNotFullySetUpException.class,
+                () -> client.login("loki", "credential-value")
+        );
+    }
+
+    @Test
+    void shouldThrowAccountDisabledOnBadRequestWithDisabledReason() {
+        wireMockServer.stubFor(
+                post(urlEqualTo("/realms/aegis/protocol/openid-connect/token"))
+                        .willReturn(badRequest()
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("""
+                                    {
+                                      "error": "invalid_grant",
+                                      "error_description": "Account disabled"
                                     }
                                     """))
         );

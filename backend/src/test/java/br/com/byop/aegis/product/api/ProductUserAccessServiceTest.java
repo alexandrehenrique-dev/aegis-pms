@@ -138,6 +138,14 @@ class ProductUserAccessServiceTest {
         verify(assignmentRepository, never()).save(any());
     }
 
+    @Test
+    void shouldSkipTenantInviteAssignmentsWhenNoProductsAllowed() {
+        service.inviteTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of());
+
+        verify(assignmentRepository, never()).save(any());
+        verify(productRepository, never()).findAllById(any());
+    }
+
     private ProductAssignment assignment(String subject, ProductAssignmentRole role) {
         Product product = product();
         ProductAssignment assignment = new ProductAssignment(product, subject, role);

@@ -156,6 +156,137 @@ class TenantUserServiceTest {
     }
 
     @Test
+    void shouldRejectInviteWhenAllowedProductDoesNotExist() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "EDITOR",
+                "Maestro Beton",
+                List.of(PRODUCT_ID),
+                null
+        );
+        TenantMembershipReference membership = membership("user-1", "EDITOR", "convidado");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
+        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
+        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
+                .isInstanceOf(InvalidTenantUserOperationException.class);
+    }
+
+    @Test
+    void shouldRejectInviteWhenAllowedProductBelongsToAnotherTenant() {
+        UUID otherTenantId = UUID.fromString("66666666-6666-6666-6666-666666666666");
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "EDITOR",
+                "Maestro Beton",
+                List.of(PRODUCT_ID),
+                null
+        );
+        TenantMembershipReference membership = membership("user-1", "EDITOR", "convidado");
+        Product foreignProduct = new Product(otherTenantId, "outro-tenant", "Produto de outro tenant", ProductTypeKey.PRODUTO_SAAS, "pt-BR");
+        org.springframework.test.util.ReflectionTestUtils.setField(foreignProduct, "id", PRODUCT_ID);
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
+        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
+        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(foreignProduct));
+
+        assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
+                .isInstanceOf(InvalidTenantUserOperationException.class);
+    }
+
+    @Test
+    void shouldTreatNullAllowedProductIdsAsEmpty() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User", "guest@byop.dev", "EDITOR", "Maestro Beton", null, null
+        );
+        TenantMembershipReference membership = membership("user-1", "EDITOR", "convidado");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
+        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
+        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
+        when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
+        when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
+
+        assertThat(service.inviteUser(caller, TENANT_ID, request).status()).isEqualTo("convidado");
+
+        verify(productRepository, never()).findAllById(any());
+        verify(productUserAccessService).inviteTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of());
+    }
+
+    @Test
+    void shouldRejectInviteWhenAllowedProductIsNotFound() {
+        UUID otherProductId = UUID.fromString("33333333-3333-3333-3333-333333333333");
+        UUID unrelatedProductId = UUID.fromString("44444444-4444-4444-4444-444444444444");
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "EDITOR",
+                "Maestro Beton",
+                List.of(PRODUCT_ID, otherProductId),
+                null
+        );
+        TenantMembershipReference membership = membership("user-1", "EDITOR", "convidado");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
+        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
+        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
+        // Tamanho e tenant batem (passa a guarda da linha 296), mas o segundo
+        // produto retornado não corresponde a nenhum id solicitado — força o
+        // orElseThrow defensivo em inviteProductNames (linha 305) a disparar.
+        when(productRepository.findAllById(List.of(PRODUCT_ID, otherProductId)))
+                .thenReturn(List.of(product(PRODUCT_ID, "conecta-talentos", "Conecta Talentos"), product(unrelatedProductId, "aegis", "Aegis")));
+
+        assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
+                .isInstanceOf(InvalidTenantUserOperationException.class);
+    }
+
+    @Test
+    void shouldJoinMultipleAllowedProductNamesOnInvite() {
+        UUID otherProductId = UUID.fromString("55555555-5555-5555-5555-555555555555");
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "EDITOR",
+                "Maestro Beton",
+                List.of(PRODUCT_ID, otherProductId),
+                null
+        );
+        TenantMembershipReference membership = membership("user-1", "EDITOR", "convidado");
+        Product product = product(PRODUCT_ID, "conecta-talentos", "Conecta Talentos");
+        Product otherProduct = product(otherProductId, "aegis", "Aegis");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
+        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
+        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
+        when(productRepository.findAllById(List.of(PRODUCT_ID, otherProductId))).thenReturn(List.of(product, otherProduct));
+        when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
+        when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
+
+        assertThat(service.inviteUser(caller, TENANT_ID, request).status()).isEqualTo("convidado");
+
+        org.mockito.ArgumentCaptor<IdentityActionInviteCommand> inviteCaptor =
+                org.mockito.ArgumentCaptor.forClass(IdentityActionInviteCommand.class);
+        verify(identityActionTokenService).sendInviteActivation(inviteCaptor.capture());
+        assertThat(inviteCaptor.getValue().productNames()).containsExactly("Conecta Talentos", "Aegis");
+    }
+
+    @Test
     void shouldSplitInviteProductNamesDefensively() {
         assertThat((List<String>) org.springframework.test.util.ReflectionTestUtils.invokeMethod(
                 service,

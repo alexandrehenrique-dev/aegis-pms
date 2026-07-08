@@ -30,7 +30,7 @@ async function main() {
     fs.writeFileSync(tmpFile, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
     await page.locator('input[type="file"]').setInputFiles(tmpFile);
     await page.waitForTimeout(500);
-    await page.getByRole("button", { name: "Concluir upload" }).click();
+    await page.getByRole("button", { name: "Enviar upload" }).click();
     await page.waitForTimeout(1000);
     ok = report("Upload concluido volta pra biblioteca com toast de sucesso", page.url().endsWith("/assets")) && ok;
     fs.unlinkSync(tmpFile);

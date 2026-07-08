@@ -3,14 +3,54 @@ import { useNavigate, useParams } from "react-router";
 import { AnimatePresence } from "motion/react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Badge, Button, Card, Field, PageHeader, SelectLike, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../../../shared/components/ui/dialog";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { formsService } from "../services/formsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { toast } from "../../../core/notifications/toast";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
+import type { ApiError } from "../../../shared/services/apiClient";
 import type { FormField } from "../contracts/responses";
 
 const UPLOAD_FORMAT_OPTIONS = ["PDF", "Imagem", "DOCX", "ZIP"];
+const FORM_TYPE_OPTIONS = ["Contato", "Orçamento", "RSVP", "Pesquisa", "Newsletter", "Cadastro"];
+const DEFAULT_FORM_NAME = "Novo formulário";
+
+const PUBLISH_ERROR_MESSAGES: Record<string, string> = {
+  FORM_NAME_REQUIRED: "Defina um nome para o formulário antes de publicar.",
+  FORM_HAS_NO_FIELDS: "Adicione ao menos um campo antes de publicar.",
+  FORM_REQUIRES_REQUIRED_FIELD: "Marque ao menos um campo como obrigatório antes de publicar.",
+  FORM_DUPLICATE_FIELD_LABEL: "Há campos com o mesmo rótulo — renomeie-os antes de publicar.",
+  FORM_UPLOAD_ACCEPTED_FILE_TYPES_REQUIRED: "Todo campo de upload precisa de ao menos um formato aceito.",
+};
+
+/** H.2.3 (BUG-SPRINT-05) — coleta nome (obrigatório) e tipo antes de criar o formulário; nunca mais nasce silenciosamente como "Novo formulário". */
+function CreateFormDialog({ open, creating, onConfirm, onCancel }: {
+  open: boolean; creating: boolean; onConfirm: (name: string, type: string) => void; onCancel: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [type, setType] = useState(FORM_TYPE_OPTIONS[0]);
+  const nameErr = !name.trim() ? "Nome é obrigatório" : undefined;
+  const [touched, setTouched] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onCancel(); }}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Novo formulário</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <Field label="Nome do formulário" value={name} onChange={setName} onBlur={() => setTouched(true)} error={touched ? nameErr : undefined} />
+          <SelectLike label="Tipo" value={type} options={FORM_TYPE_OPTIONS} onChange={setType} />
+        </div>
+        <DialogFooter>
+          <Button onClick={onCancel}>Cancelar</Button>
+          <Button primary disabled={!!nameErr || creating} onClick={() => onConfirm(name.trim(), type)}>
+            {creating && <Loader2 size={15} className="animate-spin" />}{creating ? "Criando..." : "Criar formulário"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function FieldCard({ name, onAdd }: { name: string; onAdd: () => void }) {
   return <button onClick={onAdd} className="flex w-full items-center justify-between rounded-xl border border-border bg-card p-3 text-left text-sm transition hover:bg-muted"><span>{name}</span><Plus size={14} /></button>;
@@ -28,18 +68,18 @@ function FieldPalette({ onAddField }: { onAddField: (name: string) => void }) {
   );
 }
 
-function FormBuilderCanvas({ formName, fields, selectedId, onSelect, onRequestRemove }: {
-  formName: string; fields: FormField[]; selectedId: string | null; onSelect: (id: string) => void; onRequestRemove: (id: string) => void;
+function FormBuilderCanvas({ formName, onFormNameChange, fields, selectedId, onSelect, onRequestRemove }: {
+  formName: string; onFormNameChange: (v: string) => void; fields: FormField[]; selectedId: string | null; onSelect: (id: string) => void; onRequestRemove: (id: string) => void;
 }) {
   return (
     <Card>
       <div className="mb-4 flex items-center justify-between">
         <div><h2 className="text-lg font-semibold">Canvas visual</h2><p className="text-sm text-muted-foreground">Grid, ordem, arraste visual e obrigatoriedade.</p></div>
-        <Badge tone="blue">{formName}</Badge>
+        <Badge tone={formName.trim() && formName !== DEFAULT_FORM_NAME ? "blue" : "amber"}>{formName || "sem nome"}</Badge>
       </div>
       <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-4">
         <div className="mx-auto max-w-xl rounded-2xl border border-border bg-card p-5">
-          <h3 className="text-xl font-semibold">{formName}</h3>
+          <Field label="Nome do formulário" value={formName} onChange={onFormNameChange} />
           <p className="mt-1 text-sm text-muted-foreground">Formulário vinculado ao produto.</p>
           {fields.map((f, i) => (
             <div key={f.id} className="mt-3 flex items-start gap-1">
@@ -108,31 +148,33 @@ export function FormBuilder() {
   const [creating, setCreating] = useState(false);
 
   /**
-   * E.5.1 (BUG-SPRINT consolidado) — "/forms/new" (sem `:slug`) nunca chamava
-   * `formsService.createForm()`; o builder só editava campos localmente e o
-   * formulário nunca existia de fato. Ao montar sem `routeFormId`, cria o
-   * formulário no service e navega para `/forms/{id}` (mesma rota de edição),
-   * substituindo a entrada de histórico para o botão "Voltar" não reabrir
-   * "/forms/new".
+   * H.2.3 (BUG-SPRINT-05) — "/forms/new" (sem `:slug`) antes criava o
+   * formulário silenciosamente com o nome fixo "Novo formulário" e nenhuma UI
+   * para renomeá-lo depois. Agora coleta nome (obrigatório) e tipo num modal
+   * antes de chamar `createForm`; só então navega para `/forms/{id}`
+   * (mesma rota de edição), substituindo a entrada de histórico para o botão
+   * "Voltar" não reabrir "/forms/new".
    */
-  useEffect(() => {
-    if (routeFormId || !productId || creating) return;
+  const handleCreateConfirm = (name: string, type: string) => {
+    if (!productId) return;
     setCreating(true);
-    formsService.createForm(productId, { name: "Novo formulário", type: "Contato" })
+    formsService.createForm(productId, { name, type })
       .then((created) => navigate(`/forms/${created.id}`, { replace: true }))
       .catch((err: unknown) => {
         toast.error("Não foi possível criar o formulário", {
           description: (err as { message?: string }).message ?? "Tente novamente.",
         });
         navigate("/forms/list");
-      });
-  }, [routeFormId, productId, creating, navigate]);
+      })
+      .finally(() => setCreating(false));
+  };
 
   const formId = routeFormId;
   const { data: form } = useAsyncData(() => (formId && productId ? formsService.getForm(productId, formId) : Promise.resolve(undefined)), [productId, formId]);
   const { data: loadedFields } = useAsyncData(() => (formId && productId ? formsService.getFormFields(productId, formId) : Promise.resolve([])), [productId, formId]);
 
   const [fields, setFields] = useState<FormField[]>([]);
+  const [formName, setFormName] = useState(DEFAULT_FORM_NAME);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -143,7 +185,20 @@ export function FormBuilder() {
     setSelectedId(loadedFields?.[0]?.id ?? null);
   }, [loadedFields]);
 
-  if (!formId) return <SkeletonLines />;
+  useEffect(() => {
+    setFormName(form?.name ?? DEFAULT_FORM_NAME);
+  }, [form?.name]);
+
+  if (!formId) {
+    return (
+      <CreateFormDialog
+        open
+        creating={creating}
+        onConfirm={handleCreateConfirm}
+        onCancel={() => navigate("/forms/list")}
+      />
+    );
+  }
 
   const selectedField = fields.find((f) => f.id === selectedId);
   const pendingRemoveField = fields.find((f) => f.id === pendingRemoveId);
@@ -169,7 +224,7 @@ export function FormBuilder() {
   const handleSaveDraft = async () => {
     setSaving(true);
     try {
-      if (formId && productId) await formsService.saveFormFields(productId, formId, fields);
+      if (formId && productId) await formsService.saveFormFields(productId, formId, fields, formName);
       await formsService.saveDraft(productId, formId);
       toast.success("Rascunho salvo!");
     } catch (err: unknown) {
@@ -181,15 +236,26 @@ export function FormBuilder() {
     }
   };
 
+  /** H.3.1 — valida nome e campos no frontend antes de sequer chamar o backend; H.3.2 — mapeia os códigos de erro do backend (defesa em profundidade) para mensagens humanizadas. */
   const handlePublish = async () => {
+    if (!formName.trim() || formName === DEFAULT_FORM_NAME) {
+      toast.error("Defina um nome para o formulário antes de publicar.");
+      return;
+    }
+    if (fields.length === 0) {
+      toast.error("Adicione ao menos um campo antes de publicar.");
+      return;
+    }
     setPublishing(true);
     try {
+      await formsService.saveFormFields(productId, formId, fields, formName);
       await formsService.publish(productId, formId);
       toast.success("Formulário publicado!");
       navigate("/forms/list");
     } catch (err: unknown) {
+      const code = (err as ApiError).code;
       toast.error("Falha ao publicar formulário", {
-        description: (err as { message?: string }).message ?? "Tente novamente.",
+        description: (code && PUBLISH_ERROR_MESSAGES[code]) ?? (err as { message?: string }).message ?? "Tente novamente.",
       });
     } finally {
       setPublishing(false);
@@ -212,13 +278,13 @@ export function FormBuilder() {
       <PageHeader title="Form Builder" module="Forms" desc="Construa o fluxo de captura como ativo operacional do produto." badge="Builder">
         <Button onClick={() => navigate("/forms/list")}>Voltar à lista</Button>
         <Button onClick={handleSaveDraft} disabled={saving}>{saving && <Loader2 size={15} className="animate-spin" />}{saving ? "Salvando..." : "Salvar rascunho"}</Button>
-        <Button onClick={() => navigate("/forms/preview")}>Preview</Button>
+        <Button onClick={() => navigate(`/forms/${formId}/preview`)}>Preview</Button>
         <Button primary onClick={handlePublish} disabled={publishing}>{publishing && <Loader2 size={15} className="animate-spin" />}{publishing ? "Publicando..." : "Publicar"}</Button>
       </PageHeader>
       <div className="mb-4 xl:hidden"><div className="flex gap-2 overflow-auto pb-1">{["1 Campos", "2 Canvas", "3 Propriedades", "4 Preview"].map((x) => <Badge key={x} tone="blue">{x}</Badge>)}</div></div>
       <div className="grid gap-4 xl:grid-cols-[280px_1fr_340px]">
         <FieldPalette onAddField={handleAddField} />
-        <FormBuilderCanvas formName={form?.name ?? "Novo formulário"} fields={fields} selectedId={selectedId} onSelect={setSelectedId} onRequestRemove={setPendingRemoveId} />
+        <FormBuilderCanvas formName={formName} onFormNameChange={setFormName} fields={fields} selectedId={selectedId} onSelect={setSelectedId} onRequestRemove={setPendingRemoveId} />
         <FormPropertiesPanel field={selectedField} onChange={handlePatchField} />
       </div>
     </>

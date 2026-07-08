@@ -154,9 +154,10 @@ export const contentService = {
     if (IS_API_MODE) return apiClient.post(`/products/${productId}/content/${id}/versions/${version}/restore`);
     logApiCall("POST", `/api/v1/products/{productId}/content/${id}/versions/${version}/restore`, { version });
   },
-  async submitForReview(id?: string, productId = requireCurrentProductId()): Promise<void> {
-    if (IS_API_MODE && id) return apiClient.post(`/products/${productId}/content/${id}/transition`, { from: "Draft", to: "In Review" });
-    logApiCall("POST", `/api/v1/products/{productId}/content/${id ?? "{contentId}"}/transition`, { from: "Draft", to: "In Review" });
+  /** `fromStatus` (J.4, BUG-SPRINT-05) — o backend rejeita a transição com `INVALID_CONTENT_TRANSITION` quando diverge do status real do conteúdo; por padrão assume "Draft" (fluxo normal), mas quem já tem o status carregado deve repassá-lo. */
+  async submitForReview(id?: string, productId = requireCurrentProductId(), fromStatus = "Draft"): Promise<void> {
+    if (IS_API_MODE && id) return apiClient.post(`/products/${productId}/content/${id}/transition`, { from: fromStatus, to: "In Review" });
+    logApiCall("POST", `/api/v1/products/{productId}/content/${id ?? "{contentId}"}/transition`, { from: fromStatus, to: "In Review" });
     const row = id ? contentStore.find((c) => c.id === id) : undefined;
     if (row) row.status = "In Review";
   },

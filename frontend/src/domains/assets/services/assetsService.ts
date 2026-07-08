@@ -30,7 +30,15 @@ export function findAssetByIdSync(assetId: string): AssetSummary | undefined {
 
 export const assetsService = {
   async listAssets(productId: string): Promise<ListAssetsResponse> {
-    if (IS_API_MODE) return apiClient.get<ListAssetsResponse>(`/products/${productId}/assets`);
+    if (IS_API_MODE) {
+      try {
+        return await apiClient.get<ListAssetsResponse>(`/products/${productId}/assets`);
+      } catch (err: unknown) {
+        const status = (err as { status?: number }).status;
+        if (status === 403) throw { status: 403, code: "module_disabled", message: "Módulo Assets não habilitado neste produto." };
+        throw err;
+      }
+    }
     return assetsStore;
   },
   async listTags(productId: string): Promise<ListAssetTagsResponse> {

@@ -12,13 +12,19 @@ post {
 body:json {
   {
     "token": "{{inviteActivationToken}}",
-    "password": "fraca"
+    "password": "fraca",
+    "firstName": "Convidado",
+    "lastName": "Teste"
   }
 }
 
 docs {
 Objetivo: confirmar validacao backend de senha fraca no fluxo de ativacao.
 Resultado esperado: 422 WEAK_PASSWORD quando inviteActivationToken estiver preenchido com token pendente valido. O token nao e consumido porque a politica de senha falha antes do consumo.
+
+O.1 (BUG-SPRINT-05): firstName/lastName preenchidos para que a requisicao
+passe da validacao @Valid e chegue de fato na politica de senha (sem eles,
+o erro seria 400 REQUEST_VALIDATION_FAILED, nao 422 WEAK_PASSWORD).
 }
 
 tests {

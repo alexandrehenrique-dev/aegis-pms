@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Search, X } from "lucide-react";
-import { Badge, Button, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
+import { Badge, Button, SkeletonLines } from "../../../shared/components/Primitives";
 import { fade } from "../../../shared/components/motion";
 import { assetsService } from "../services/assetsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
@@ -39,11 +39,13 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
 }) {
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "";
-  const { data: assets, loading, error } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId]);
+  const [retryKey, setRetryKey] = useState(0);
+  const { data: assets, loading, error, rawError } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId, retryKey]);
   const [visibleAssets, setVisibleAssets] = useState<AssetSummary[]>([]);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<AssetTypeFilter>(typeFilter);
   const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [sessionUploadIds, setSessionUploadIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
@@ -65,7 +67,12 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
   const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    await assetsService.uploadFiles(productId, Array.from(files));
+    const uploadedIds: string[] = [];
+    for (const file of Array.from(files)) {
+      const { assetId } = await assetsService.upload(file, productId);
+      uploadedIds.push(assetId);
+    }
+    setSessionUploadIds((prev) => [...prev, ...uploadedIds]);
     const refreshed = await assetsService.listAssets(productId);
     setVisibleAssets(refreshed);
     toast.success(`${files.length} arquivo(s) enviado(s)!`);
@@ -76,16 +83,40 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
   const handleConfirm = () => {
     const asset = visibleAssets.find((a) => a.name === selectedName);
     if (!asset) return;
+    setSessionUploadIds([]);
     onSelect(asset);
   };
 
+  /** J.5.3 — se o usuário fez upload rápido e depois cancelou sem confirmar a seleção, o(s) asset(s) enviados nesta sessão do modal são descartados para não ficarem órfãos vinculados a nada. */
+  const handleCancel = async () => {
+    if (sessionUploadIds.length > 0) {
+      await Promise.all(sessionUploadIds.map((id) => assetsService.deleteAsset(productId, id).catch(() => undefined)));
+      setSessionUploadIds([]);
+    }
+    onClose();
+  };
+
+  const errorInfo = (() => {
+    const code = (rawError as { code?: string } | null)?.code;
+    if (code === "module_disabled") {
+      return {
+        title: "Módulo Assets não habilitado",
+        description: "Este produto não tem o módulo Assets habilitado. Habilite-o em Configurações > Módulos para selecionar arquivos.",
+      };
+    }
+    return {
+      title: "Não foi possível carregar os assets",
+      description: "Ocorreu um erro ao buscar os arquivos deste produto.",
+    };
+  })();
+
   return (
-    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={handleCancel}>
       <motion.div {...fade} className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
         <input ref={fileInputRef} type="file" multiple hidden onChange={handleFilesSelected} />
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Selecionar asset</h3>
-          <button onClick={onClose} aria-label="Fechar" className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted"><X size={16} /></button>
+          <button onClick={handleCancel} aria-label="Fechar" className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted"><X size={16} /></button>
         </div>
 
         <div className="mt-4 flex items-center gap-2 rounded-xl border border-border px-3 py-2">
@@ -102,7 +133,13 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
         </div>
 
         <div className="mt-3 flex-1 overflow-auto">
-          {loading ? <SkeletonLines /> : error || !assets ? <PartialErrorWidget /> : filtered.length === 0 ? (
+          {loading ? <SkeletonLines /> : error || !assets ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-center text-sm">
+              <p className="font-medium text-foreground">{errorInfo.title}</p>
+              <p className="text-muted-foreground">{errorInfo.description}</p>
+              <Button onClick={() => setRetryKey((k) => k + 1)} className="mt-1">Tentar novamente</Button>
+            </div>
+          ) : filtered.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">Nenhum asset encontrado para este filtro.</p>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
@@ -120,7 +157,7 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
         <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
           <Button onClick={() => fileInputRef.current?.click()}>Upload rápido</Button>
           <div className="flex gap-2">
-            <Button onClick={onClose}>Cancelar</Button>
+            <Button onClick={handleCancel}>Cancelar</Button>
             <Button primary disabled={!selectedName} onClick={handleConfirm}>Usar asset</Button>
           </div>
         </div>

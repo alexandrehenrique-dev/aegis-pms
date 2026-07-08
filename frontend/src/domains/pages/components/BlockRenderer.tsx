@@ -1,8 +1,8 @@
 import type { MiniBlock } from "../contracts/responses";
 import type { Section } from "../contracts/responses";
 import { Markdown } from "../../../shared/components/Markdown";
-import { resolveAssetSrc } from "../../../shared/utils/resolveAssetSrc";
-import { formatDateTime } from "../../../shared/utils/formatDateTime";
+import { useAuthenticatedImage } from "../../../shared/hooks/useAuthenticatedImage";
+import { EventListPreview } from "./EventListPreview";
 
 function asStr(v: unknown, fallback = ""): string {
   return typeof v === "string" ? v : fallback;
@@ -10,6 +10,33 @@ function asStr(v: unknown, fallback = ""): string {
 
 function asArray(v: unknown): Record<string, unknown>[] {
   return Array.isArray(v) ? (v as Record<string, unknown>[]) : [];
+}
+
+/** K.2 — resolve a imagem via fetch autenticado (blob URL) antes de renderizar; nunca inserir a URL do `/download` protegido direto em `src`. */
+function AuthImg({ assetId, alt, className }: { assetId: string | undefined; alt: string; className: string }) {
+  const src = useAuthenticatedImage(assetId);
+  return src
+    ? <img src={src} alt={alt} className={className} />
+    : <div className={`flex items-center justify-center bg-muted p-6 text-center text-xs text-muted-foreground ${className}`}>[imagem: {alt}]</div>;
+}
+
+function AuthAudio({ assetId, className }: { assetId: string | undefined; className: string }) {
+  const src = useAuthenticatedImage(assetId);
+  return src
+    ? <audio controls src={src} className={className} />
+    : <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">[áudio não disponível: {assetId ?? "nenhum"}]</div>;
+}
+
+function AuthVideo({ assetId, className }: { assetId: string | undefined; className: string }) {
+  const src = useAuthenticatedImage(assetId);
+  return src
+    ? <video controls src={src} className={className} />
+    : <div className={`flex items-center justify-center rounded-lg border border-border text-sm text-muted-foreground ${className}`}>[vídeo não disponível]</div>;
+}
+
+function toYoutubeEmbed(url: string): string | undefined {
+  const match = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match ? `https://www.youtube.com/embed/${match[1]}` : undefined;
 }
 
 function MiniBlockPreview({ block }: { block: MiniBlock }) {
@@ -35,14 +62,13 @@ function MiniBlockPreview({ block }: { block: MiniBlock }) {
  * fixo. Pensado para ser reaproveitado futuramente pela renderização
  * pública real (fora de escopo desta sprint).
  */
-export function BlockRenderer({ section, forceLightProse = false }: { section: Section; forceLightProse?: boolean }) {
+export function BlockRenderer({ section, forceLightProse = false, productSlug }: { section: Section; forceLightProse?: boolean; productSlug?: string }) {
   const c = section.content;
 
   switch (section.type) {
     case "hero": {
       const image = (c.image as Record<string, unknown>) ?? {};
       const hasImage = typeof image.src === "string" && image.src.length > 0;
-      const resolvedSrc = hasImage ? resolveAssetSrc(image.src as string) : undefined;
       // Retrocompatibilidade (E.10.2): conteúdo criado antes da canonicalização
       // para `ctas[]` guarda os CTAs em `ctaPrimary`/`ctaSecondary` — sem este
       // fallback, um hero já publicado perderia os botões no preview público
@@ -56,9 +82,9 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
       const isLightTheme = c.theme === "light";
       return (
         <div className={isLightTheme ? "rounded-xl border border-border p-4 text-center" : "rounded-xl bg-muted p-8 text-center"}>
-          {!isLightTheme && hasImage && (resolvedSrc
-            ? <img src={resolvedSrc} alt={asStr(image.alt, "sem descrição")} className="mx-auto mb-4 max-h-64 w-full max-w-md rounded-lg object-cover" />
-            : <div className="mx-auto mb-4 max-w-md rounded-lg bg-border/60 p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>)}
+          {!isLightTheme && hasImage && (
+            <AuthImg assetId={image.src as string} alt={asStr(image.alt, "sem descrição")} className="mx-auto mb-4 max-h-64 w-full max-w-md rounded-lg object-cover" />
+          )}
           <h2 className={isLightTheme ? "text-xl font-semibold" : "text-3xl font-semibold"}>{asStr(c.title, section.label)}</h2>
           {c.subtitle ? <p className="mt-2 text-muted-foreground">{asStr(c.subtitle)}</p> : null}
           <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -93,21 +119,17 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
     }
 
     case "image": {
-      const src = resolveAssetSrc(typeof c.src === "string" ? c.src : undefined);
-      return src
-        ? <img src={src} alt={asStr(c.alt, "sem descrição")} className="w-full rounded-xl object-cover" />
-        : <div className="rounded-xl bg-muted p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(c.alt, "sem descrição")}]</div>;
+      const assetId = typeof c.src === "string" ? c.src : undefined;
+      return <AuthImg assetId={assetId} alt={asStr(c.alt, "sem descrição")} className="w-full rounded-xl object-cover" />;
     }
 
     case "image-text": {
       const image = (c.image as Record<string, unknown>) ?? {};
-      const src = resolveAssetSrc(typeof image.src === "string" ? image.src : undefined);
+      const assetId = typeof image.src === "string" ? image.src : undefined;
       const reverse = c.imagePosition === "right";
       return (
         <div className={`grid gap-4 p-6 md:grid-cols-2 ${reverse ? "md:[&>*:first-child]:order-2" : ""}`}>
-          {src
-            ? <img src={src} alt={asStr(image.alt, "sem descrição")} className="rounded-xl object-cover" />
-            : <div className="rounded-xl bg-muted p-10 text-center text-xs text-muted-foreground">[imagem: {asStr(image.alt, "sem descrição")}]</div>}
+          <AuthImg assetId={assetId} alt={asStr(image.alt, "sem descrição")} className="rounded-xl object-cover" />
           <div>
             <h3 className="text-xl font-semibold">{asStr(c.title)}</h3>
             <div className="mt-2 text-sm text-muted-foreground"><Markdown forceLightProse={forceLightProse}>{asStr(c.body)}</Markdown></div>
@@ -138,14 +160,9 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
       const items = asArray(c.items);
       return (
         <div className="grid grid-cols-3 gap-2 p-6">
-          {items.map((item, i) => {
-            const src = resolveAssetSrc(typeof item.src === "string" ? item.src : undefined);
-            return src ? (
-              <img key={i} src={src} alt={asStr(item.alt, "imagem")} className="aspect-square rounded-lg object-cover" />
-            ) : (
-              <div key={i} className="aspect-square rounded-lg bg-muted text-center text-[10px] text-muted-foreground flex items-center justify-center p-1">{asStr(item.alt, "imagem")}</div>
-            );
-          })}
+          {items.map((item, i) => (
+            <AuthImg key={i} assetId={typeof item.src === "string" ? item.src : undefined} alt={asStr(item.alt, "imagem")} className="aspect-square rounded-lg object-cover" />
+          ))}
         </div>
       );
     }
@@ -164,31 +181,8 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
       );
     }
 
-    case "event-list": {
-      const selectedEvents = asArray(c.selectedEvents);
-      const selectedCount = Array.isArray(c.selectedEventIds) ? c.selectedEventIds.length : 0;
-      return (
-        <div className="p-6">
-          <h3 className="text-xl font-semibold">{asStr(c.title, "Agenda")}</h3>
-          {selectedEvents.length > 0 ? (
-            <div className="mt-3 space-y-2">
-              {selectedEvents.map((ev, i) => (
-                <div key={i} className="rounded-lg border border-border p-3">
-                  <p className="font-medium">{asStr(ev.title, "Evento")}</p>
-                  <p className="text-sm text-muted-foreground">{formatDateTime(asStr(ev.date))} · {asStr(ev.location, "local a definir")}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {selectedCount > 0
-                ? `${selectedCount} evento(s) selecionado(s) — reabra o bloco no editor e salve novamente para atualizar o preview.`
-                : "Nenhum evento selecionado ainda (ver editor)."}
-            </p>
-          )}
-        </div>
-      );
-    }
+    case "event-list":
+      return <EventListPreview content={c} productSlug={productSlug} />;
 
     case "cta-section":
       return (
@@ -233,9 +227,11 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
         <div className="p-6">
           {c.title ? <h3 className="mb-2 text-xl font-semibold">{asStr(c.title)}</h3> : null}
           {source === "upload" ? (
-            <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">[player de áudio: {asStr(c.fileAssetId, "nenhum arquivo selecionado")}]</div>
+            <AuthAudio assetId={asStr(c.fileAssetId) || undefined} className="w-full" />
           ) : (
-            <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">[embed Spotify {source === "spotify-track" ? "(faixa)" : "(playlist)"}: {asStr(c.spotifyUrl, "nenhuma URL")}]</div>
+            <a href={asStr(c.spotifyUrl)} target="_blank" rel="noreferrer" className="inline-block rounded-lg border border-border p-3 text-sm text-primary underline">
+              Ouvir no Spotify {source === "spotify-track" ? "(faixa)" : "(playlist)"}
+            </a>
           )}
           {c.autoplay ? <p className="mt-1 text-xs text-muted-foreground">Autoplay ativado.</p> : null}
         </div>
@@ -244,13 +240,16 @@ export function BlockRenderer({ section, forceLightProse = false }: { section: S
 
     case "video": {
       const source = asStr(c.source, "upload");
+      const youtubeEmbedUrl = source === "youtube" ? toYoutubeEmbed(asStr(c.youtubeUrl)) : undefined;
       return (
         <div className="p-6">
           {c.title ? <h3 className="mb-2 text-xl font-semibold">{asStr(c.title)}</h3> : null}
           {source === "upload" ? (
-            <div className="flex aspect-video items-center justify-center rounded-lg border border-border text-sm text-muted-foreground">[player de vídeo: {asStr(c.fileAssetId, "nenhum arquivo selecionado")}]</div>
+            <AuthVideo assetId={asStr(c.fileAssetId) || undefined} className="aspect-video w-full rounded-lg" />
+          ) : youtubeEmbedUrl ? (
+            <iframe src={youtubeEmbedUrl} className="aspect-video w-full rounded-lg" allowFullScreen />
           ) : (
-            <div className="flex aspect-video items-center justify-center rounded-lg border border-border text-sm text-muted-foreground">[embed YouTube: {asStr(c.youtubeUrl, "nenhuma URL")}]</div>
+            <div className="flex aspect-video items-center justify-center rounded-lg border border-border text-sm text-muted-foreground">[URL do YouTube inválida]</div>
           )}
           {c.autoplay ? <p className="mt-1 text-xs text-muted-foreground">Autoplay ativado.</p> : null}
         </div>

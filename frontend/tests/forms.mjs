@@ -44,19 +44,21 @@ async function main() {
     await page.waitForTimeout(800);
     await page.getByRole("button", { name: "Preview", exact: true }).click();
     await page.waitForTimeout(800);
-    ok = report("Preview do formulario abre", page.url().endsWith("/forms/preview")) && ok;
+    // H.3.3 (BUG-SPRINT-05) — preview agora carrega o form real via `/forms/:formId/preview`, nunca mais a rota generica `/forms/preview` sem `formId`.
+    ok = report("Preview do formulario abre com o form real", page.url().match(/\/forms\/[^/]+\/preview$/) !== null) && ok;
 
     await goToNav(page, "Forms");
     await goToTab(page, "Submissions");
     ok = report("Tabela de submissions carrega", page.url().endsWith("/forms/submissions")) && ok;
     await page.getByRole("button", { name: "Abrir" }).first().click();
     await page.waitForTimeout(800);
-    ok = report("Abrir submission entra no detalhe", page.url().includes("/forms/submissions/")) && ok;
+    // H.1.2 — rota corrigida para /forms/:formId/submissions/:id (nunca mais /forms/submissions/1 hardcoded).
+    ok = report("Abrir submission entra no detalhe", page.url().match(/\/forms\/[^/]+\/submissions\/[^/]+$/) !== null) && ok;
 
     await goToNav(page, "Forms");
     await goToTab(page, "Publicação");
     ok = report("Painel de publicacao carrega", page.url().endsWith("/forms/publication")) && ok;
-    ok = report("Publicacao mostra a URL publica do formulario", await page.getByText(/maestrobeton\.com/).first().isVisible()) && ok;
+    ok = report("Publicacao mostra o embed do formulario", await page.getByText(/aegis-form/).first().isVisible()) && ok;
 
     await goToNav(page, "Forms");
     await goToTab(page, "Analytics");

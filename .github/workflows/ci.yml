@@ -89,9 +89,25 @@ jobs:
           docker compose logs aegis-backend
           exit 1
 
+      # PRÉ-LIMPEZA: apagar resíduos de runs anteriores que falharam antes do teardown
+      - name: Pre-test teardown (limpar resíduos anteriores)
+        working-directory: bruno
+        run: npx @usebruno/cli run 99-teardown --env local -r --sandbox developer
+        continue-on-error: true # não bloquear se já está limpo
+
+      # SUITE PRINCIPAL: --sandbox developer é obrigatório para que o teardown
+      # embutido no 99-teardown (que usa fetch() no post-response script)
+      # funcione — o sandbox default "safe" (QuickJS) não tem fetch, então o
+      # teardown roda sem erro aparente mas não apaga nada (G.1).
       - name: Run Bruno collection
         working-directory: bruno
-        run: npx @usebruno/cli run --env local
+        run: npx @usebruno/cli run --env local --sandbox developer
+
+      # PÓS-LIMPEZA: garantir limpeza mesmo que a suite falhe no meio
+      - name: Post-test teardown (garantir limpeza após suite)
+        if: always()
+        working-directory: bruno
+        run: npx @usebruno/cli run 99-teardown --env local -r --sandbox developer
 
       - name: Stop local stack
         if: always()

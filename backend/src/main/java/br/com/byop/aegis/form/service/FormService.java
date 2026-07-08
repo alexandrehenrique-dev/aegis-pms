@@ -94,7 +94,7 @@ public class FormService {
         log.debug("publish: productId='{}', formId='{}'", productId, formId);
         FormDefinition form = findFormInProduct(productId, formId);
         List<Map<String, Object>> fields = readList(form.getFieldsJson());
-        publicationPolicy.assertPublishable(fields);
+        publicationPolicy.assertPublishable(form.getName(), fields);
         form.publish(OffsetDateTime.now(ZoneOffset.UTC).toString());
         formRepository.save(form);
         log.info("publish: formulario publicado id='{}'", form.getId());

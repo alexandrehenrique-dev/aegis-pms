@@ -21,12 +21,23 @@ export function InviteScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [acceptingExisting, setAcceptingExisting] = useState(false);
+  // O.1 (BUG-SPRINT-05) — nome/sobrenome nunca foram coletados na ativação; o
+  // Keycloak fica com perfil incompleto e bloqueia o login mesmo com a conta
+  // habilitada. Pré-preenchidos a partir do nome do convite quando possível.
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
 
   useEffect(() => {
     if (!token) { setStatus("revoked"); return; }
     authActivationService
       .validateInviteToken(token)
-      .then((data) => { setInvite(data); setStatus("valid"); })
+      .then((data) => {
+        setInvite(data);
+        setStatus("valid");
+        const parts = (data.userName ?? "").trim().split(/\s+/).filter(Boolean);
+        setFirstName(parts[0] ?? "");
+        setLastName(parts.slice(1).join(" "));
+      })
       .catch((err) => {
         const code = authActionErrorCode(err);
         if (code === "TOKEN_EXPIRED") setStatus("expired");
@@ -38,12 +49,13 @@ export function InviteScreen() {
   const handleActivate = () => {
     if (!token) return;
     setError("");
+    if (!firstName.trim() || !lastName.trim()) { setError("Nome e sobrenome são obrigatórios."); return; }
     if (pwd !== confirm) { setError("As senhas não coincidem."); return; }
     if (getPasswordStrength(pwd) === "fraca") { setError("Senha muito fraca. Use ao menos 8 caracteres com números."); return; }
     if (!terms) { setError("Você precisa aceitar os termos para continuar."); return; }
     setLoading(true);
     authActivationService
-      .activateAccount(token, pwd)
+      .activateAccount(token, pwd, firstName.trim(), lastName.trim())
       .then(() => {
         // Passa o slug do produto como `next` para que o LoginScreen redirecione
         // o usuário diretamente ao produto após o login, sem passar por /select-product.
@@ -138,11 +150,19 @@ export function InviteScreen() {
                 /* ── Usuário novo: precisa criar senha ── */
                 <>
                   <h2 className="mb-1 font-semibold">Definir senha e ativar conta</h2>
-                  <p className="mb-4 text-sm text-muted-foreground">Escolha uma senha para acessar a plataforma.</p>
+                  <p className="mb-4 text-sm text-muted-foreground">Confirme seu nome e escolha uma senha para acessar a plataforma.</p>
                   <div className="space-y-3">
                     <label className="block">
+                      <span className="mb-1 block text-sm font-medium">Nome *</span>
+                      <input type="text" autoFocus value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Alexandre" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-sm font-medium">Sobrenome *</span>
+                      <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Henrique" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                    </label>
+                    <label className="block">
                       <span className="mb-1 block text-sm font-medium">Nova senha</span>
-                      <input type="password" autoFocus value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="••••••••" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" />
+                      <input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="••••••••" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" />
                       {pwd && <PasswordStrengthBar password={pwd} />}
                     </label>
                     <label className="block">
@@ -154,7 +174,7 @@ export function InviteScreen() {
                       <span className="text-sm text-muted-foreground">Aceito os <span className="text-primary">Termos de Uso</span> e a <span className="text-primary">Política de Privacidade</span> da plataforma Aegis PMS.</span>
                     </label>
                     {error && <div className="rounded-lg border border-destructive/20 bg-[#FDEBE8] p-3 text-sm text-destructive">{error}</div>}
-                    <button onClick={handleActivate} disabled={loading || !pwd || !confirm} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50">
+                    <button onClick={handleActivate} disabled={loading || !pwd || !confirm || !firstName.trim() || !lastName.trim()} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50">
                       {loading ? <><Loader2 size={16} className="animate-spin" />Ativando conta...</> : "Ativar conta"}
                     </button>
                   </div>

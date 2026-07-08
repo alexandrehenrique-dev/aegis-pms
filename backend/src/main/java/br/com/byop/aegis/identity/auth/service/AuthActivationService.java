@@ -69,12 +69,20 @@ public class AuthActivationService {
         );
     }
 
+    /**
+     * O.1 (BUG-SPRINT-05) — {@code firstName}/{@code lastName} agora
+     * obrigatorios e persistidos no Keycloak antes de habilitar a conta.
+     * Sem isso, um convite criado com nome vazio ou de uma so palavra
+     * deixava o perfil incompleto no Keycloak e o realm bloqueava o login
+     * ("Account is not fully set up") mesmo com a conta {@code enabled}.
+     */
     @Transactional
-    public AuthMessageResponse activate(UUID tokenId, String password) {
+    public AuthMessageResponse activate(UUID tokenId, String password, String firstName, String lastName) {
         log.debug("activate: ativando conta via token de convite");
         passwordPolicy.assertStrong(password);
         AuthActionToken token = tokenService.consumeInvite(tokenId);
         updatePassword(token.getKeycloakId(), password);
+        keycloakAdminClient.updateUserProfile(token.getKeycloakId(), firstName, lastName);
         keycloakAdminClient.setUserEnabled(token.getKeycloakId(), true);
         keycloakAdminClient.clearRequiredActions(token.getKeycloakId());
         eventPublisher.publishEvent(new IdentityUserInviteActivatedEvent(token.getKeycloakId()));

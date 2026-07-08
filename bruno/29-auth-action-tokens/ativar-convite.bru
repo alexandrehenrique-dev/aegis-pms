@@ -12,7 +12,9 @@ post {
 body:json {
   {
     "token": "{{inviteActivationToken}}",
-    "password": "{{inviteActivationPassword}}"
+    "password": "{{inviteActivationPassword}}",
+    "firstName": "Convidado",
+    "lastName": "Teste"
   }
 }
 
@@ -21,6 +23,10 @@ Objetivo: consumir token de convite, definir senha no Keycloak, habilitar usuari
 Resultado esperado: 200 com mensagem de ativacao. Este request torna o token USED; execute uma vez por token.
 Pre-requisito manual: preencher inviteActivationToken e inviteActivationPassword forte, por exemplo Senha123.
 Variaveis produzidas: resetPasswordEmail.
+
+O.1 (BUG-SPRINT-05): firstName/lastName agora sao obrigatorios no corpo —
+sem eles o Keycloak fica com perfil incompleto e o login bloqueia mesmo com
+a conta habilitada (ver AuthActivationService.activate).
 }
 
 script:post-response {

@@ -1,6 +1,7 @@
 package br.com.byop.aegis.identity.auth.controller;
 
 import br.com.byop.aegis.identity.auth.exception.AccountDisabledException;
+import br.com.byop.aegis.identity.auth.exception.AccountNotFullySetUpException;
 import br.com.byop.aegis.identity.auth.exception.InvalidCredentialsException;
 import br.com.byop.aegis.identity.auth.exception.KeycloakAuthenticationException;
 import br.com.byop.aegis.identity.auth.exception.RefreshTokenExpiredException;
@@ -104,5 +105,23 @@ class AuthExceptionHandlerTest {
                             """))
                 .andExpect(status().isLocked())
                 .andExpect(jsonPath("$.code").value("ACCOUNT_DISABLED"));
+    }
+
+    @Test
+    void shouldReturnAccountNotFullySetUp() throws Exception {
+
+        when(authService.login("loki", "123456"))
+                .thenThrow(new AccountNotFullySetUpException());
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                            {
+                              "username": "loki",
+                              "password": "123456"
+                            }
+                            """))
+                .andExpect(status().isLocked())
+                .andExpect(jsonPath("$.code").value("ACCOUNT_NOT_FULLY_SET_UP"));
     }
 }
