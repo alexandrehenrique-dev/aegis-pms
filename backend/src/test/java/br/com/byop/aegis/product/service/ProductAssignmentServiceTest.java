@@ -82,12 +82,29 @@ class ProductAssignmentServiceTest {
     void shouldListAssignmentsForProduct() {
         Product product = product();
         ProductAssignment assignment = assignment(product, "user-1", ProductAssignmentRole.EDITOR);
+        IdentityUser user = new IdentityUser("user-1", "editor", "editor@byop.dev", "Editor", "User");
         ProductAssignmentSummary summary = summary(product, "user-1", "Editor", "editor@byop.dev");
         when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
         when(assignmentRepository.findAllByProductId(product.getId())).thenReturn(List.of(assignment));
+        when(userDirectory.getRequiredUser("user-1")).thenReturn(user);
+        when(assignmentMapper.toSummary(assignment, "Editor User", "editor@byop.dev")).thenReturn(summary);
+
+        List<ProductAssignmentSummary> result = service.listAssignments(caller(), product.getId());
+
+        assertThat(result).containsExactly(summary);
+    }
+
+    @Test
+    void shouldListAssignmentsWithSubjectFallbackWhenIdentityLookupFails() {
+        Product product = product();
+        ProductAssignment assignment = assignment(product, "legacy-user", ProductAssignmentRole.PRODUCT_MANAGER);
+        ProductAssignmentSummary summary = summary(product, "legacy-user", null, null);
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(assignmentRepository.findAllByProductId(product.getId())).thenReturn(List.of(assignment));
+        when(userDirectory.getRequiredUser("legacy-user")).thenThrow(new RuntimeException("missing"));
         when(assignmentMapper.toSummary(assignment, null, null)).thenReturn(summary);
 
-        List<ProductAssignmentSummary> result = service.listAssignments(product.getId());
+        List<ProductAssignmentSummary> result = service.listAssignments(caller(), product.getId());
 
         assertThat(result).containsExactly(summary);
     }
@@ -300,10 +317,173 @@ class ProductAssignmentServiceTest {
     void shouldRejectListWhenProductDoesNotExist() {
         UUID productId = UUID.fromString("77777777-7777-7777-7777-777777777777");
         when(productRepository.findById(productId)).thenReturn(Optional.empty());
+        AuthenticatedUser caller = caller();
 
-        assertThatThrownBy(() -> service.listAssignments(productId))
+        assertThatThrownBy(() -> service.listAssignments(caller, productId))
                 .isInstanceOf(ProductNotFoundException.class)
                 .hasMessage("Product not found: " + productId);
+    }
+
+    @Test
+    void shouldAllowAssignedViewerToListProductTeam() {
+        Product product = product();
+        ProductAssignment callerAssignment = assignment(product, "viewer-subject", ProductAssignmentRole.VIEWER);
+        ProductAssignment userAssignment = assignment(product, "user-1", ProductAssignmentRole.EDITOR);
+        IdentityUser user = new IdentityUser("user-1", "editor", "editor@byop.dev", "Editor", "User");
+        ProductAssignmentSummary summary = summary(product, "user-1", "Editor User", "editor@byop.dev");
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(assignmentRepository.existsByProductIdAndUserSubjectAndStatus(
+                product.getId(), "viewer-subject", ProductAssignmentStatus.ASSIGNED
+        )).thenReturn(true);
+        when(assignmentRepository.findAllByProductId(product.getId())).thenReturn(List.of(callerAssignment, userAssignment));
+        when(userDirectory.getRequiredUser("viewer-subject")).thenThrow(new RuntimeException("missing"));
+        when(userDirectory.getRequiredUser("user-1")).thenReturn(user);
+        when(assignmentMapper.toSummary(callerAssignment, null, null)).thenReturn(summary(product, "viewer-subject", null, null));
+        when(assignmentMapper.toSummary(userAssignment, "Editor User", "editor@byop.dev")).thenReturn(summary);
+
+        List<ProductAssignmentSummary> result = service.listAssignments(
+                new AuthenticatedUser("viewer-subject", "viewer@byop.dev", "viewer", "Viewer", Set.of("ROLE_VIEWER")),
+                product.getId()
+        );
+
+        assertThat(result).hasSize(2);
+    }
+
+    @Test
+    void shouldRejectListProductTeamWhenCallerHasNoProductAssignment() {
+        Product product = product();
+        UUID productId = product.getId();
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        AuthenticatedUser caller = new AuthenticatedUser(
+                "viewer-subject",
+                "viewer@byop.dev",
+                "viewer",
+                "Viewer",
+                Set.of("ROLE_VIEWER")
+        );
+
+        assertThatThrownBy(() -> service.listAssignments(caller, productId))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessage("Product not found: " + productId);
+    }
+
+    @Test
+    void shouldAllowTenantAdminMembershipWithoutRealmRoleToListProductTeam() {
+        Product product = product();
+        ProductAssignment assignment = assignment(product, "user-1", ProductAssignmentRole.EDITOR);
+        IdentityUser user = new IdentityUser("user-1", "editor", "editor@byop.dev", "Editor", "User");
+        ProductAssignmentSummary summary = summary(product, "user-1", "Editor User", "editor@byop.dev");
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), "tenant-admin-subject"))
+                .thenReturn(true);
+        when(assignmentRepository.findAllByProductId(product.getId())).thenReturn(List.of(assignment));
+        when(userDirectory.getRequiredUser("user-1")).thenReturn(user);
+        when(assignmentMapper.toSummary(assignment, "Editor User", "editor@byop.dev")).thenReturn(summary);
+
+        List<ProductAssignmentSummary> result = service.listAssignments(
+                new AuthenticatedUser("tenant-admin-subject", "admin@byop.dev", "admin", "Admin", Set.of("ROLE_VIEWER")),
+                product.getId()
+        );
+
+        assertThat(result).containsExactly(summary);
+    }
+
+    @Test
+    void shouldAllowProductManagerToAssignProductTeamMember() {
+        Product product = product();
+        IdentityUser user = new IdentityUser("user-1", "editor", "editor@byop.dev", "Editor", "User");
+        ProductAssignment managerAssignment = assignment(product, "pm-subject", ProductAssignmentRole.PRODUCT_MANAGER);
+        ProductAssignment saved = assignment(product, "user-1", ProductAssignmentRole.EDITOR);
+        ProductAssignmentSummary summary = summary(product, "user-1", "Editor User", "editor@byop.dev");
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(assignmentRepository.findByProductIdAndUserSubject(product.getId(), "pm-subject"))
+                .thenReturn(Optional.of(managerAssignment));
+        when(tenantAccessService.hasActiveMembership(product.getTenantId(), "user-1")).thenReturn(true);
+        when(tenantAccessService.getRequiredReference(product.getTenantId()))
+                .thenReturn(new TenantReference(product.getTenantId(), "Tenant Aegis"));
+        when(userDirectory.getRequiredUser("user-1")).thenReturn(user);
+        when(assignmentRepository.save(any(ProductAssignment.class))).thenReturn(saved);
+        when(assignmentMapper.toSummary(saved, "Editor User", "editor@byop.dev")).thenReturn(summary);
+
+        ProductAssignmentSummary result = service.assignUser(
+                new AuthenticatedUser("pm-subject", "pm@byop.dev", "pm", "PM", Set.of("ROLE_VIEWER")),
+                product.getId(),
+                request(product, "user-1", null)
+        );
+
+        assertThat(result).isEqualTo(summary);
+    }
+
+    @Test
+    void shouldRejectRemovedProductManagerTryingToAssignProductTeamMember() {
+        Product product = product();
+        ProductAssignment removedManagerAssignment = assignment(product, "pm-subject", ProductAssignmentRole.PRODUCT_MANAGER);
+        removedManagerAssignment.remove();
+        UUID productId = product.getId();
+        AssignProductUserRequest request = request(product, "user-1", null);
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(assignmentRepository.findByProductIdAndUserSubject(productId, "pm-subject"))
+                .thenReturn(Optional.of(removedManagerAssignment));
+        AuthenticatedUser caller = new AuthenticatedUser(
+                "pm-subject",
+                "pm@byop.dev",
+                "pm",
+                "PM",
+                Set.of("ROLE_PRODUCT_MANAGER")
+        );
+
+        assertThatThrownBy(() -> service.assignUser(caller, productId, request))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessage("Product not found: " + productId);
+
+        verify(assignmentRepository, never()).save(any(ProductAssignment.class));
+    }
+
+    @Test
+    void shouldRejectEditorTryingToAssignProductTeamMember() {
+        Product product = product();
+        ProductAssignment editorAssignment = assignment(product, "editor-subject", ProductAssignmentRole.EDITOR);
+        UUID productId = product.getId();
+        AssignProductUserRequest request = request(product, "user-1", null);
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(assignmentRepository.findByProductIdAndUserSubject(productId, "editor-subject"))
+                .thenReturn(Optional.of(editorAssignment));
+        AuthenticatedUser caller = new AuthenticatedUser(
+                "editor-subject",
+                "editor@byop.dev",
+                "editor",
+                "Editor",
+                Set.of("ROLE_EDITOR")
+        );
+
+        assertThatThrownBy(() -> service.assignUser(caller, productId, request))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessage("Product not found: " + productId);
+
+        verify(assignmentRepository, never()).save(any(ProductAssignment.class));
+    }
+
+    @Test
+    void shouldAllowTenantAdminMembershipWithoutRealmRoleToRemoveProductTeamMember() {
+        Product product = product();
+        IdentityUser user = new IdentityUser("user-1", "editor", "editor@byop.dev", "Editor", "User");
+        ProductAssignment assignment = assignment(product, "user-1", ProductAssignmentRole.EDITOR);
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), "tenant-admin-subject"))
+                .thenReturn(true);
+        when(assignmentRepository.findByProductIdAndUserSubject(product.getId(), "user-1"))
+                .thenReturn(Optional.of(assignment));
+        when(userDirectory.getRequiredUser("user-1")).thenReturn(user);
+        when(tenantAccessService.getRequiredReference(product.getTenantId()))
+                .thenReturn(new TenantReference(product.getTenantId(), "Tenant Aegis"));
+
+        service.removeAssignment(
+                new AuthenticatedUser("tenant-admin-subject", "admin@byop.dev", "admin", "Admin", Set.of("ROLE_VIEWER")),
+                product.getId(),
+                "user-1"
+        );
+
+        verify(assignmentRepository).delete(assignment);
     }
 
     @Test

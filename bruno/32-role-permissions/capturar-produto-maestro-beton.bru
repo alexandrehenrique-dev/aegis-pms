@@ -1,0 +1,28 @@
+meta {
+  name: Capturar produto Maestro Beton
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products
+  body: none
+}
+
+script:post-response {
+  const products = Array.isArray(res.body) ? res.body : [];
+  const maestro = products.find((product) => product.key === 'maestro-beton');
+  if (maestro) {
+    bru.setVar('rbacProductId', maestro.id);
+    bru.setVar('productId', maestro.id);
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("Maestro Beton capturado", function() {
+    expect(bru.getVar('rbacProductId')).to.be.a('string');
+  });
+}

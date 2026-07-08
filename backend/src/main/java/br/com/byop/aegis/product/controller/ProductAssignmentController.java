@@ -32,8 +32,10 @@ public class ProductAssignmentController {
     }
 
     @GetMapping("/api/v1/products/{productId}/users")
-    public List<ProductAssignmentSummary> listProductUsers(@PathVariable("productId") UUID productId) {
-        return productAssignmentService.listAssignments(productId);
+    public List<ProductAssignmentSummary> listProductUsers(@PathVariable("productId") UUID productId,
+                                                           Authentication authentication) {
+        AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
+        return productAssignmentService.listAssignments(caller, productId);
     }
 
     @PostMapping("/api/v1/products/{productId}/users")

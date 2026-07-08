@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -57,6 +58,20 @@ public class ProductUserAccessService {
     }
 
     @Transactional(readOnly = true)
+    public Set<UUID> listProductManagerProductIds(UUID tenantId, String userSubject) {
+        log.debug("listProductManagerProductIds: tenantId='{}', userSubject='{}'", tenantId, userSubject);
+        return assignmentRepository.findAllByTenantIdAndUserSubjectAndStatus(
+                        tenantId,
+                        userSubject,
+                        ProductAssignmentStatus.ASSIGNED
+                )
+                .stream()
+                .filter(assignment -> assignment.getRole() == ProductAssignmentRole.PRODUCT_MANAGER)
+                .map(ProductAssignment::getProductId)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    @Transactional(readOnly = true)
     public long countDistinctAssignedUsers(Collection<UUID> productIds) {
         log.debug("countDistinctAssignedUsers: productCount='{}'", productIds.size());
         if (productIds.isEmpty()) {
@@ -81,6 +96,16 @@ public class ProductUserAccessService {
                 .map(ProductAssignment::getUserSubject)
                 .distinct()
                 .count();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<String> findHighestAssignedRole(String userSubject) {
+        log.debug("findHighestAssignedRole: userSubject='{}'", userSubject);
+        return assignmentRepository.findAllByUserSubjectAndStatus(userSubject, ProductAssignmentStatus.ASSIGNED)
+                .stream()
+                .map(ProductAssignment::getRole)
+                .min(this::compareProductRolePriority)
+                .map(ProductAssignmentRole::name);
     }
 
     @Transactional
@@ -130,5 +155,17 @@ public class ProductUserAccessService {
 
     private boolean isProductRole(String role) {
         return Arrays.stream(ProductAssignmentRole.values()).anyMatch(productRole -> productRole.name().equals(role));
+    }
+
+    private int compareProductRolePriority(ProductAssignmentRole left, ProductAssignmentRole right) {
+        return Integer.compare(productRolePriority(left), productRolePriority(right));
+    }
+
+    private int productRolePriority(ProductAssignmentRole role) {
+        return switch (role) {
+            case PRODUCT_MANAGER -> 0;
+            case EDITOR -> 1;
+            case VIEWER -> 2;
+        };
     }
 }

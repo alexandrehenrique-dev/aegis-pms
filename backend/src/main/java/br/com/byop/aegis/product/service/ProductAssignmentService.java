@@ -8,6 +8,7 @@ import br.com.byop.aegis.product.contract.AssignProductUserRequest;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductAssignment;
 import br.com.byop.aegis.product.domain.ProductAssignmentRole;
+import br.com.byop.aegis.product.domain.ProductAssignmentStatus;
 import br.com.byop.aegis.product.dto.ProductAssignmentSummary;
 import br.com.byop.aegis.product.exception.InvalidProductAssignmentException;
 import br.com.byop.aegis.product.exception.ProductAssignmentNotFoundException;
@@ -34,6 +35,7 @@ import java.util.UUID;
 public class ProductAssignmentService {
 
     private static final String TARGET_TYPE_PRODUCT_ASSIGNMENT = "ProductAssignment";
+    private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
 
     private final ProductRepository productRepository;
     private final ProductAssignmentRepository assignmentRepository;
@@ -69,12 +71,13 @@ public class ProductAssignmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductAssignmentSummary> listAssignments(UUID productId) {
+    public List<ProductAssignmentSummary> listAssignments(AuthenticatedUser caller, UUID productId) {
         log.debug("listAssignments: productId='{}'", productId);
         Product product = getRequiredProduct(productId);
+        assertCanViewProductTeam(caller, product);
         return assignmentRepository.findAllByProductId(product.getId())
                 .stream()
-                .map(assignment -> assignmentMapper.toSummary(assignment, null, null))
+                .map(this::toSummaryWithUser)
                 .toList();
     }
 
@@ -91,6 +94,7 @@ public class ProductAssignmentService {
         }
 
         ProductAssignmentRole role = parseRole(request.role());
+        assertCanManageProductTeam(caller, product);
         if (hasText(request.userId())) {
             return assignExistingUser(caller, product, request.userId(), role);
         }
@@ -101,6 +105,7 @@ public class ProductAssignmentService {
     public void removeAssignment(AuthenticatedUser caller, UUID productId, String userSubject) {
         log.debug("removeAssignment: productId='{}', userSubject='{}'", productId, userSubject);
         Product product = getRequiredProduct(productId);
+        assertCanManageProductTeam(caller, product);
         ProductAssignment assignment = assignmentRepository.findByProductIdAndUserSubject(product.getId(), userSubject)
                 .orElseThrow(() -> new ProductAssignmentNotFoundException(productId, userSubject));
 
@@ -128,6 +133,17 @@ public class ProductAssignmentService {
         log.info("assignUser: atribuicao criada id='{}', productId='{}', role='{}'", assignment.getId(), product.getId(), role);
 
         return assignmentMapper.toSummary(assignment, user.displayName(), user.email());
+    }
+
+    private ProductAssignmentSummary toSummaryWithUser(ProductAssignment assignment) {
+        try {
+            IdentityUser user = userDirectory.getRequiredUser(assignment.getUserSubject());
+            return assignmentMapper.toSummary(assignment, user.displayName(), user.email());
+        } catch (RuntimeException exception) {
+            log.warn("listAssignments: usuario nao encontrado para userSubject='{}': {}",
+                    assignment.getUserSubject(), exception.getMessage());
+            return assignmentMapper.toSummary(assignment, null, null);
+        }
     }
 
     private ProductAssignmentSummary inviteUser(AuthenticatedUser caller, Product product, String inviteEmail,
@@ -190,6 +206,39 @@ public class ProductAssignmentService {
     private Product getRequiredProduct(UUID productId) {
         return productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
+    }
+
+    private void assertCanViewProductTeam(AuthenticatedUser caller, Product product) {
+        if (isSuperAdmin(caller)
+                || tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), caller.subject())
+                || assignmentRepository.existsByProductIdAndUserSubjectAndStatus(
+                        product.getId(),
+                        caller.subject(),
+                        ProductAssignmentStatus.ASSIGNED
+                )) {
+            return;
+        }
+        throw new ProductNotFoundException(product.getId());
+    }
+
+    private void assertCanManageProductTeam(AuthenticatedUser caller, Product product) {
+        if (isSuperAdmin(caller)
+                || tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), caller.subject())
+                || hasActiveProductManagerAssignment(product, caller.subject())) {
+            return;
+        }
+        throw new ProductNotFoundException(product.getId());
+    }
+
+    private boolean hasActiveProductManagerAssignment(Product product, String userSubject) {
+        return assignmentRepository.findByProductIdAndUserSubject(product.getId(), userSubject)
+                .filter(assignment -> assignment.getStatus() == ProductAssignmentStatus.ASSIGNED)
+                .filter(assignment -> assignment.getRole() == ProductAssignmentRole.PRODUCT_MANAGER)
+                .isPresent();
+    }
+
+    private boolean isSuperAdmin(AuthenticatedUser caller) {
+        return caller.authorities().contains(ROLE_SUPER_ADMIN);
     }
 
     private void validateProductPath(UUID pathProductId, UUID bodyProductId) {

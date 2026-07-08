@@ -1,0 +1,26 @@
+meta {
+  name: Product Manager lista equipe do produto
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{rbacProductId}}/users
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{rbacPmToken}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("PM seed aparece como Product Manager", function() {
+    const users = Array.isArray(res.body) ? res.body : [];
+    const pm = users.find((user) => user.userEmail === bru.getVar('brunoRbacPmEmail'));
+    expect(pm).to.exist;
+    expect(pm.role).to.equal('PRODUCT_MANAGER');
+  });
+}

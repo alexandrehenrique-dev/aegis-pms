@@ -9,10 +9,12 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -47,6 +49,12 @@ class ProductExportDeletionServiceTest {
         verify(jdbcClient, times(19)).sql(anyString());
         verify(statementSpec, times(19)).param("productId", PRODUCT_ID);
         verify(statementSpec, times(19)).update();
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(jdbcClient, times(19)).sql(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues())
+                .noneMatch(sql -> sql.contains("tenant_memberships"))
+                .noneMatch(sql -> sql.contains("user_entity"))
+                .noneMatch(sql -> sql.matches("(?i).*delete\\s+from\\s+users.*"));
     }
 
     @Test

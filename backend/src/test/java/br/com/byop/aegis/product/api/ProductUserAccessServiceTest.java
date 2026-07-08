@@ -70,6 +70,21 @@ class ProductUserAccessServiceTest {
     }
 
     @Test
+    void shouldListOnlyProductManagerProductIds() {
+        ProductAssignment manager = assignment("manager", ProductAssignmentRole.PRODUCT_MANAGER);
+        ProductAssignment editor = assignment("editor", ProductAssignmentRole.EDITOR);
+        when(assignmentRepository.findAllByTenantIdAndUserSubjectAndStatus(
+                TENANT_ID,
+                "manager",
+                ProductAssignmentStatus.ASSIGNED
+        )).thenReturn(List.of(manager, editor));
+
+        Set<UUID> productIds = service.listProductManagerProductIds(TENANT_ID, "manager");
+
+        assertThat(productIds).containsExactly(PRODUCT_ID);
+    }
+
+    @Test
     void shouldCountDistinctAssignedUsers() {
         ProductAssignment pm = assignment("pm-1", ProductAssignmentRole.PRODUCT_MANAGER);
         ProductAssignment editor = assignment("editor-1", ProductAssignmentRole.EDITOR);
@@ -97,6 +112,25 @@ class ProductUserAccessServiceTest {
     @Test
     void shouldReturnZeroDistinctProductManagersWhenNoProductIds() {
         assertThat(service.countDistinctProductManagers(List.of())).isZero();
+    }
+
+    @Test
+    void shouldFindHighestAssignedRoleByProductRolePriority() {
+        ProductAssignment viewer = assignment("user-1-viewer", ProductAssignmentRole.VIEWER);
+        ProductAssignment editor = assignment("user-1-editor", ProductAssignmentRole.EDITOR);
+        ProductAssignment manager = assignment("user-1-manager", ProductAssignmentRole.PRODUCT_MANAGER);
+        when(assignmentRepository.findAllByUserSubjectAndStatus("user-1", ProductAssignmentStatus.ASSIGNED))
+                .thenReturn(List.of(viewer, editor, manager));
+
+        assertThat(service.findHighestAssignedRole("user-1")).contains("PRODUCT_MANAGER");
+    }
+
+    @Test
+    void shouldReturnEmptyHighestAssignedRoleWhenUserHasNoAssignedProducts() {
+        when(assignmentRepository.findAllByUserSubjectAndStatus("user-1", ProductAssignmentStatus.ASSIGNED))
+                .thenReturn(List.of());
+
+        assertThat(service.findHighestAssignedRole("user-1")).isEmpty();
     }
 
     @Test

@@ -1,0 +1,28 @@
+meta {
+  name: Login seed - viewer
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{keycloakIssuer}}/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: {{clientId}}
+  username: {{brunoRbacViewerEmail}}
+  password: {{inviteActivationPassword}}
+}
+
+script:post-response {
+  bru.setVar('rbacViewerToken', res.body.access_token);
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

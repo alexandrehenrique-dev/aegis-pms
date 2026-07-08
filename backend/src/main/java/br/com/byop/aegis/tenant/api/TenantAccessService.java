@@ -58,6 +58,15 @@ public class TenantAccessService implements TenantVisibilityPort {
         );
     }
 
+    @Transactional(readOnly = true)
+    public boolean hasActiveTenantAdminMembership(UUID tenantId, String userSubject) {
+        log.debug("hasActiveTenantAdminMembership: tenantId='{}', userSubject='{}'", tenantId, userSubject);
+        return membershipRepository.findAllByUserSubjectAndStatus(userSubject, TenantMembershipStatus.ACTIVE)
+                .stream()
+                .anyMatch(membership -> tenantId.equals(membership.getTenant().getId())
+                        && TENANT_ADMIN.equals(membership.getRole()));
+    }
+
     @Override
     @Transactional(readOnly = true)
     public String findTenantName(UUID tenantId) {

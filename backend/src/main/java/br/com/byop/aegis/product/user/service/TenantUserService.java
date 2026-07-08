@@ -50,6 +50,7 @@ public class TenantUserService {
     private static final String STATUS_REMOVED_ALIAS = "removed";
     private static final String STATUS_BLOCKED_ALIAS = "suspended";
     private static final String DIFF_KEY_STATUS = "status";
+    private static final String KEYCLOAK_ROLE_PREFIX = "AEGIS_";
 
     private final IdentityUserLifecycleService identityUserLifecycleService;
     private final IdentityActionTokenService identityActionTokenService;
@@ -94,9 +95,9 @@ public class TenantUserService {
     public TenantUserSummary inviteUser(AuthenticatedUser caller, UUID tenantId, InviteTenantUserRequest request) {
         log.debug("inviteUser: tenantId='{}', role='{}'", tenantId, request.role());
         assertTenantVisible(caller, tenantId);
-        assertCanInvite(caller, tenantId);
         String role = parseRole(request.role());
         List<UUID> allowedProductIds = inviteProductIds(request);
+        assertCanInvite(caller, tenantId, allowedProductIds, role);
         String productNames = inviteProductNames(tenantId, allowedProductIds, request.allowedProducts());
         identityUserLifecycleService.findByEmail(request.email())
                 .filter(user -> tenantUserAccessService.hasAnyMembership(tenantId, user.id()))
@@ -111,6 +112,7 @@ public class TenantUserService {
             throw new TenantUserAlreadyExistsException();
         }
 
+        identityUserLifecycleService.assignRealmRole(user.id(), KEYCLOAK_ROLE_PREFIX + role);
         TenantMembershipReference membership = tenantUserAccessService.invite(tenantId, user.id(), role);
         productUserAccessService.inviteTenantAssignments(tenantId, user.id(), role, allowedProductIds);
         sendInviteActivation(user, membership, productNames, role, caller.name());
@@ -224,22 +226,22 @@ public class TenantUserService {
         throw new TenantUserNotFoundException();
     }
 
-    private void assertCanInvite(AuthenticatedUser caller, UUID tenantId) {
+    private void assertCanInvite(AuthenticatedUser caller, UUID tenantId, List<UUID> allowedProductIds, String role) {
         if (isSuperAdmin(caller)) {
             return;
         }
-        if (isTenantAdmin(caller)) {
+        if (isTenantAdmin(caller, tenantId)) {
             return;
         }
-        Set<String> sharedSubjects = productUserAccessService.listSharedUserSubjects(tenantId, caller.subject());
-        if (sharedSubjects.contains(caller.subject())) {
+        if (isProductRole(role) && productUserAccessService.listProductManagerProductIds(tenantId, caller.subject())
+                .containsAll(allowedProductIds) && !allowedProductIds.isEmpty()) {
             return;
         }
         throw new TenantUserNotFoundException();
     }
 
     private Set<String> visibleSubjects(AuthenticatedUser caller, UUID tenantId) {
-        if (isSuperAdmin(caller) || isTenantAdmin(caller)) {
+        if (isSuperAdmin(caller) || isTenantAdmin(caller, tenantId)) {
             return Set.of();
         }
         return productUserAccessService.listSharedUserSubjects(tenantId, caller.subject());
@@ -253,7 +255,20 @@ public class TenantUserService {
     }
 
     private TenantUserSummary toSummary(TenantMembershipReference membership) {
-        return toSummary(membership, identityUserLifecycleService.getRequiredUser(membership.userSubject()));
+        try {
+            return toSummary(membership, identityUserLifecycleService.getRequiredUser(membership.userSubject()));
+        } catch (Exception exception) {
+            log.warn("toSummary: usuario nao encontrado no identity provider tenantId='{}', userSubject='{}': {}",
+                    membership.tenantId(), membership.userSubject(), exception.getMessage());
+            IdentityUser fallback = new IdentityUser(
+                    membership.userSubject(),
+                    membership.userSubject(),
+                    membership.userSubject(),
+                    null,
+                    null
+            );
+            return toSummary(membership, fallback);
+        }
     }
 
     private TenantUserSummary toSummary(TenantMembershipReference membership, IdentityUser user) {
@@ -328,6 +343,23 @@ public class TenantUserService {
 
     private boolean isTenantAdmin(AuthenticatedUser caller) {
         return caller.authorities().contains(ROLE_TENANT_ADMIN);
+    }
+
+    private boolean isTenantAdmin(AuthenticatedUser caller, UUID tenantId) {
+        if (isTenantAdmin(caller)) {
+            return true;
+        }
+        return tenantUserAccessService.findMembership(tenantId, caller.subject())
+                .filter(membership -> TENANT_ADMIN.equals(membership.role()))
+                .filter(membership -> STATUS_ACTIVE.equals(membership.status()))
+                .isPresent();
+    }
+
+    private boolean isProductRole(String role) {
+        return switch (role) {
+            case "PRODUCT_MANAGER", "EDITOR", "VIEWER" -> true;
+            default -> false;
+        };
     }
 
     private String parseRole(String role) {

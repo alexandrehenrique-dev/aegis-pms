@@ -2,6 +2,7 @@ package br.com.byop.aegis.api.me;
 
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.security.AuthenticatedUserProvider;
+import br.com.byop.aegis.product.api.ProductUserAccessService;
 import br.com.byop.aegis.security.SecurityConfig;
 import br.com.byop.aegis.tenant.api.TenantAccessService;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +39,9 @@ class MeControllerTest {
 
     @MockitoBean
     private TenantAccessService tenantAccessService;
+
+    @MockitoBean
+    private ProductUserAccessService productUserAccessService;
 
     @Test
     void shouldReturnUnauthorizedWhenTokenIsMissing() throws Exception {
@@ -63,6 +69,8 @@ class MeControllerTest {
         when(authenticatedUserProvider.from(any(Authentication.class)))
                 .thenReturn(user);
         when(tenantAccessService.hasCompletedTutorial("subject-123")).thenReturn(true);
+        when(tenantAccessService.findActiveTenantAdminTenantIds("subject-123")).thenReturn(List.of());
+        when(productUserAccessService.findHighestAssignedRole("subject-123")).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/v1/me")
                         .with(jwt()))

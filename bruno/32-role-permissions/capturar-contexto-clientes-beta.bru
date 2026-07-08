@@ -1,0 +1,28 @@
+meta {
+  name: Capturar contexto CLIENTES BETA
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants
+  body: none
+}
+
+script:post-response {
+  const tenants = Array.isArray(res.body) ? res.body : [];
+  const beta = tenants.find((tenant) => tenant.key === 'clientes-beta');
+  if (beta) {
+    bru.setVar('rbacTenantId', beta.id);
+    bru.setVar('tenantId', beta.id);
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("CLIENTES BETA capturado", function() {
+    expect(bru.getVar('rbacTenantId')).to.be.a('string');
+  });
+}

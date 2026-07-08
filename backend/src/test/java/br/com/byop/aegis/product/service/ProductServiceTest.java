@@ -283,6 +283,21 @@ class ProductServiceTest {
     }
 
     @Test
+    void shouldListProductsByTenantAdminMembershipEvenWhenTokenHasNoTenantAdminRealmRoleYet() {
+        Tenant tenant = tenant(UUID.fromString("66666666-6666-6666-6666-666666666667"), "membership-only-admin");
+        Product product = product(tenant, "membership-only-product");
+        ProductSummary summary = productSummary(tenant.getId(), savedProductId(), "membership-only-product");
+        when(tenantAccessService.findActiveTenantAdminTenantIds("tenant-admin-subject"))
+                .thenReturn(List.of(tenant.getId()));
+        when(productRepository.findAllByTenantId(tenant.getId())).thenReturn(List.of(product));
+        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
+
+        List<ProductSummary> result = productService.listProducts(user("tenant-admin-subject", "ROLE_UNKNOWN"));
+
+        assertThat(result).containsExactly(summary);
+    }
+
+    @Test
     void shouldIgnoreNonTenantAdminMembershipWhenListingForTenantAdminAuthority() {
         Tenant tenant = tenant(UUID.fromString("88888888-8888-8888-8888-888888888888"), "viewer-tenant");
         when(tenantAccessService.findActiveTenantAdminTenantIds("tenant-admin-subject")).thenReturn(List.of());
@@ -301,10 +316,18 @@ class ProductServiceTest {
     }
 
     @Test
-    void shouldReturnEmptyListWhenCallerHasNoKnownProductScope() {
+    void shouldListAssignedProductsEvenWhenTokenHasNoProductRealmRoleYet() {
+        Tenant tenant = tenant(UUID.fromString("99999999-9999-9999-9999-999999999998"), "legacy-role");
+        Product product = product(tenant, "legacy-role-product");
+        ProductAssignment assignment = new ProductAssignment(product, "unknown-subject", ProductAssignmentRole.PRODUCT_MANAGER);
+        ProductSummary summary = productSummary(tenant.getId(), product.getId(), product.getKey());
+        when(assignmentRepository.findAllByUserSubjectAndStatus("unknown-subject", ProductAssignmentStatus.ASSIGNED))
+                .thenReturn(List.of(assignment));
+        when(productMapper.toSummary(product, 0, "PRODUCT_MANAGER")).thenReturn(summary);
+
         List<ProductSummary> result = productService.listProducts(user("unknown-subject", "ROLE_UNKNOWN"));
 
-        assertThat(result).isEmpty();
+        assertThat(result).containsExactly(summary);
     }
 
     @Test
@@ -426,6 +449,21 @@ class ProductServiceTest {
         assertThatThrownBy(() -> productService.getProduct(caller, productId))
                 .isInstanceOf(ProductNotFoundException.class)
                 .hasMessage("Product not found: " + productId);
+    }
+
+    @Test
+    void shouldGetProductByTenantAdminMembershipEvenWhenTokenHasNoTenantAdminRealmRoleYet() {
+        Tenant tenant = tenant(UUID.fromString("adadadad-adad-adad-adad-adadadadadad"), "membership-admin");
+        Product product = product(tenant, "membership-admin-product");
+        UUID productId = product.getId();
+        ProductSummary summary = productSummary(tenant.getId(), productId, "membership-admin-product");
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(tenantAccessService.hasActiveTenantAdminMembership(tenant.getId(), "tenant-subject")).thenReturn(true);
+        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
+
+        ProductSummary result = productService.getProduct(user("tenant-subject", "ROLE_VIEWER"), productId);
+
+        assertThat(result).isEqualTo(summary);
     }
 
     @Test

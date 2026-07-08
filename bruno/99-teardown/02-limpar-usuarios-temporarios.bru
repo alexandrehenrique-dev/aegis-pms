@@ -1,0 +1,239 @@
+meta {
+  name: Limpar usuarios temporarios
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tenants
+  body: none
+}
+
+docs {
+Objetivo: remover usuarios temporarios criados pelas collections Bruno e por
+matrizes manuais de validacao local. A limpeza tem duas camadas:
+
+1. Aegis API: remove memberships dos tenants com DELETE /tenants/{tenantId}/users/{userId}.
+2. Keycloak Admin API: remove usuarios do realm aegis que tenham e-mail de teste.
+
+Somente e-mails com prefixos fechados de teste entram na limpeza. Usuarios reais
+como super-admin@byop.io, pm@byop.io, editor@byop.io, viewer@byop.io,
+alexandregrill@gmail.com e alexandre.henrique.dev@gmail.com nao correspondem a
+esses prefixos e permanecem intactos.
+}
+
+script:post-response {
+  const tenants = Array.isArray(res.body) ? res.body : [];
+  const baseUrl = bru.getEnvVar('baseUrl');
+  const issuer = bru.getEnvVar('keycloakIssuer');
+  const token = bru.getVar('token');
+  const adminUsername = bru.getVar('keycloakAdminUsername');
+  const adminPassword = bru.getVar('keycloakAdminPassword');
+  const temporaryEmailPattern = /^(guest-|tenant-user-|notification-user-|auth-action-|auth-action-admin-|bruno-rbac-|matrix-).+@example\.com$/i;
+  const searchPrefixes = [
+    'guest-',
+    'tenant-user-',
+    'notification-user-',
+    'auth-action-',
+    'auth-action-admin-',
+    'bruno-rbac-',
+    'matrix-',
+  ];
+
+  function statusOf(response) {
+    return response && (response.status || response.statusCode);
+  }
+
+  function bodyOf(response) {
+    const body = response && (response.body !== undefined ? response.body : response.data);
+    if (typeof body === 'string') {
+      try {
+        return JSON.parse(body);
+      } catch (_) {
+        return {};
+      }
+    }
+    return body || {};
+  }
+
+  function send(request) {
+    return new Promise((resolve) => {
+      bru.sendRequest(request, function(error, response) {
+        resolve({ error, response });
+      });
+    });
+  }
+
+  async function listTenantUsers(tenantId) {
+    const result = await send({
+      method: 'GET',
+      url: baseUrl + '/api/v1/tenants/' + tenantId + '/users',
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    if (result.error || statusOf(result.response) !== 200) {
+      return {
+        users: [],
+        failure: {
+          scope: 'aegis-list',
+          tenantId,
+          status: statusOf(result.response),
+          error: result.error ? String(result.error) : undefined,
+        },
+      };
+    }
+    const users = bodyOf(result.response);
+    return { users: Array.isArray(users) ? users : [] };
+  }
+
+  async function removeTenantUser(tenantId, user) {
+    const result = await send({
+      method: 'DELETE',
+      url: baseUrl + '/api/v1/tenants/' + tenantId + '/users/' + user.userId,
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    const status = statusOf(result.response);
+    return {
+      ok: !result.error && (status === 204 || status === 404),
+      status,
+      error: result.error ? String(result.error) : undefined,
+    };
+  }
+
+  async function keycloakAdminToken() {
+    if (!issuer || !adminUsername || !adminPassword) {
+      return { token: null, failure: { scope: 'keycloak-token', error: 'keycloak admin credentials missing' } };
+    }
+    const adminBaseUrl = issuer.replace(/\/realms\/[^/]+\/?$/, '');
+    const result = await send({
+      method: 'POST',
+      url: adminBaseUrl + '/realms/master/protocol/openid-connect/token',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      data: 'grant_type=password&client_id=admin-cli&username='
+        + encodeURIComponent(adminUsername)
+        + '&password='
+        + encodeURIComponent(adminPassword),
+    });
+    if (result.error || statusOf(result.response) !== 200) {
+      return {
+        token: null,
+        failure: {
+          scope: 'keycloak-token',
+          status: statusOf(result.response),
+          error: result.error ? String(result.error) : undefined,
+        },
+      };
+    }
+    return { token: bodyOf(result.response).access_token, adminBaseUrl };
+  }
+
+  async function findKeycloakUsers(adminBaseUrl, adminToken, prefix) {
+    const result = await send({
+      method: 'GET',
+      url: adminBaseUrl + '/admin/realms/aegis/users?search=' + encodeURIComponent(prefix) + '&max=100',
+      headers: { 'Authorization': 'Bearer ' + adminToken },
+    });
+    if (result.error || statusOf(result.response) !== 200) {
+      return {
+        users: [],
+        failure: {
+          scope: 'keycloak-search',
+          prefix,
+          status: statusOf(result.response),
+          error: result.error ? String(result.error) : undefined,
+        },
+      };
+    }
+    const body = bodyOf(result.response);
+    const users = Array.isArray(body) ? body : [];
+    return { users: users.filter((user) => temporaryEmailPattern.test(String(user.email || ''))) };
+  }
+
+  async function deleteKeycloakUser(adminBaseUrl, adminToken, user) {
+    const result = await send({
+      method: 'DELETE',
+      url: adminBaseUrl + '/admin/realms/aegis/users/' + user.id,
+      headers: { 'Authorization': 'Bearer ' + adminToken },
+    });
+    const status = statusOf(result.response);
+    return {
+      ok: !result.error && (status === 204 || status === 404),
+      status,
+      error: result.error ? String(result.error) : undefined,
+    };
+  }
+
+  let deletedTenantUsers = 0;
+  let deletedKeycloakUsers = 0;
+  const failures = [];
+
+  for (const tenant of tenants) {
+    const listed = await listTenantUsers(tenant.id);
+    if (listed.failure) {
+      failures.push(listed.failure);
+      continue;
+    }
+    const temporaryUsers = listed.users.filter((user) => temporaryEmailPattern.test(String(user.email || '')));
+    for (const user of temporaryUsers) {
+      const removed = await removeTenantUser(tenant.id, user);
+      if (removed.ok) {
+        deletedTenantUsers += 1;
+      } else {
+        failures.push({
+          scope: 'aegis-delete',
+          tenantId: tenant.id,
+          userId: user.userId,
+          email: user.email,
+          status: removed.status,
+          error: removed.error,
+        });
+      }
+    }
+  }
+
+  if (failures.length === 0) {
+    const keycloakAuth = await keycloakAdminToken();
+    if (keycloakAuth.failure) {
+      failures.push(keycloakAuth.failure);
+    } else {
+      const seen = new Set();
+      for (const prefix of searchPrefixes) {
+        const found = await findKeycloakUsers(keycloakAuth.adminBaseUrl, keycloakAuth.token, prefix);
+        if (found.failure) {
+          failures.push(found.failure);
+          continue;
+        }
+        for (const user of found.users) {
+          if (seen.has(user.id)) {
+            continue;
+          }
+          seen.add(user.id);
+          const deleted = await deleteKeycloakUser(keycloakAuth.adminBaseUrl, keycloakAuth.token, user);
+          if (deleted.ok) {
+            deletedKeycloakUsers += 1;
+          } else {
+            failures.push({
+              scope: 'keycloak-delete',
+              userId: user.id,
+              email: user.email,
+              status: deleted.status,
+              error: deleted.error,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  bru.setVar('teardownDeletedTenantUsers', deletedTenantUsers);
+  bru.setVar('teardownDeletedKeycloakUsers', deletedKeycloakUsers);
+  bru.setVar('teardownUserFailures', JSON.stringify(failures));
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("usuarios temporarios removidos sem falhas", function() {
+    expect(bru.getVar('teardownUserFailures')).to.equal('[]');
+  });
+}

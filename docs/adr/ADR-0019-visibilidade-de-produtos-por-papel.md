@@ -65,8 +65,31 @@ Restrito a usuários com `ProductAssignment` para aquele `productId`. Qualquer c
 
 `POST /tenants/{tenantId}/users/invite`:
 - SUPER_ADMIN / TENANT_ADMIN: podem convidar para qualquer produto do tenant
-- PRODUCT_MANAGER: pode convidar apenas para produtos onde **ele** tem `ProductAssignment` com papel `PRODUCT_MANAGER` (não para produtos que ele não gerencia)
-- EDITOR / VIEWER: não podem convidar — `roleBlockedRoutePrefixes` já bloqueia `/users/invite`
+- PRODUCT_MANAGER: pode convidar apenas para produtos onde **ele** tem `ProductAssignment` ativo com papel `PRODUCT_MANAGER` (não para produtos que ele não gerencia)
+- EDITOR / VIEWER: não podem convidar
+
+### 6. Gestão de equipe de produto pelo PRODUCT_MANAGER
+
+O PRODUCT_MANAGER é responsável pela equipe dos produtos que gerencia, mas não
+pela base inteira de usuários do tenant. Portanto:
+
+| Rota / tela | PRODUCT_MANAGER |
+|---|---|
+| `GET /api/v1/tenants/{tenantId}/users` / `/users` | permitido apenas como visão filtrada por usuários que compartilham produto com ele; a UI deve tratar como consulta/leitura, não como gestão ampla do tenant |
+| `POST /api/v1/tenants/{tenantId}/users/invite` | permitido somente quando `allowedProductIds` é subconjunto dos produtos em que o caller é `PRODUCT_MANAGER`; convites sem produto explícito são rejeitados para PRODUCT_MANAGER |
+| `GET /api/v1/products/{productId}/users` / `/settings/team` | permitido para produto onde o caller tem qualquer `ProductAssignment` ativo, respeitando a visibilidade do produto |
+| `POST /api/v1/products/{productId}/users` | permitido para SUPER_ADMIN, TENANT_ADMIN ou PRODUCT_MANAGER ativo daquele produto; EDITOR/VIEWER não gerenciam equipe |
+| `DELETE /api/v1/products/{productId}/users/{userId}` | mesma regra de gestão: SUPER_ADMIN, TENANT_ADMIN ou PRODUCT_MANAGER ativo daquele produto |
+
+Essa regra resolve a ambiguidade entre "PRODUCT_MANAGER não vê todos os usuários
+do tenant" e "PRODUCT_MANAGER gerencia equipe de produto": o escopo administrativo
+dele é o produto, nunca o tenant inteiro.
+
+Exclusão de produto não é exclusão de usuário. Quando um produto é deletado,
+somente os vínculos daquele produto são removidos; a identidade Keycloak e o
+membership do tenant devem permanecer enquanto o usuário tiver qualquer outro
+vínculo ativo em outro produto ou tenant. A regra vale para todos os papéis de
+produto (`PRODUCT_MANAGER`, `EDITOR`, `VIEWER`).
 
 ## Consequências
 
@@ -74,16 +97,19 @@ Positivas:
 - Menor privilégio: cada papel vê exatamente o que precisa para suas responsabilidades
 - Privacidade: membros de um produto não ficam expostos para membros de outros produtos do mesmo tenant
 - Clareza de UX: o PRODUCT_MANAGER vê uma lista focada, sem "ruído" de produtos que não são dele
+- Coerência operacional: Product Manager consegue montar e manter a equipe do produto que administra, sem ganhar poderes de Tenant Admin
 
 Negativas / trade-offs:
 - `GET /products` precisa de lógica de filtro condicional por papel — mais complexo que um único `findAllByTenantId`; mitigado pelo fato de ser localizado no `ProductService`, nunca espalhado
 - `GET /tenants/{tenantId}/users` para PRODUCT_MANAGER precisa de um JOIN entre `ProductAssignment` do caller e `ProductAssignment` de todos os outros usuários — query mais complexa, mas correta
+- Convites e alterações de equipe precisam validar `allowedProductIds`/`productId` no backend, mesmo quando a UI já restringe as opções
 
 ## Alternativas Consideradas
 
 - **Todos os papéis usam TenantMembership como filtro**: rejeitado — expõe todos os produtos e usuários do tenant a quem não deveria ver
 - **PRODUCT_MANAGER vê todos os produtos mas não pode editar os que não são seus**: rejeitado — ver dado que não é do seu escopo já é o problema, mesmo sem poder editar
 - **Filtro via parâmetro de query (`?scope=mine`)**: rejeitado — o cliente poderia omitir o parâmetro e ver tudo; o critério deve ser determinado pelo backend com base no papel do token
+- **PRODUCT_MANAGER sem permissão para gerenciar equipe nenhuma**: rejeitado — contradiz a responsabilidade operacional do papel sobre o produto e forçaria Tenant Admin a executar tarefas de equipe que pertencem ao dono do produto
 
 ## Impactos
 

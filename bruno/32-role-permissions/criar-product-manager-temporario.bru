@@ -1,0 +1,36 @@
+meta {
+  name: Criar Product Manager temporario
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{rbacProductId}}/users
+  body: json
+}
+
+headers {
+  Authorization: Bearer {{rbacSuperToken}}
+}
+
+body:json {
+  {
+    "productId": "{{rbacProductId}}",
+    "tenantId": "{{rbacTenantId}}",
+    "inviteEmail": "{{brunoRbacPmEmail}}",
+    "role": "PRODUCT_MANAGER"
+  }
+}
+
+script:post-response {
+  bru.setVar('brunoRbacPmUserId', res.body.userSubject);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("PM temporario capturado", function() {
+    expect(bru.getVar('brunoRbacPmUserId')).to.be.a('string');
+  });
+}

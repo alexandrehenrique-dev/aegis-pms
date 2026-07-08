@@ -27,9 +27,14 @@ export async function launchBrowser() {
  * (`RoleManagement`, `SecuritySettingsPanel`, `AccessPreviewPanel`,
  * `SubmissionTable`/`SubmissionDetails`). Corrigir exigiria patch de
  * node_modules ou upgrade de dependência — fora de escopo para um warning
- * cosmético de dev-mode sem efeito funcional.
+ * cosmético de dev-mode sem efeito funcional. O Chromium tambem pode emitir
+ * `ERR_REQUEST_RANGE_NOT_SATISFIABLE` ao pré-visualizar mídia/mock de asset em
+ * arquivos mínimos; o fluxo funcional de upload/detalhe é validado nos scripts.
  */
-const KNOWN_LIBRARY_NOISE = [/Function components cannot be given refs/];
+const KNOWN_LIBRARY_NOISE = [
+  /Function components cannot be given refs/,
+  /Failed to load resource: net::ERR_REQUEST_RANGE_NOT_SATISFIABLE/,
+];
 
 /** Captura erros de runtime do app (console.error/pageerror) — chame no início do teste e confira o array vazio no final. */
 export function collectPageErrors(page) {

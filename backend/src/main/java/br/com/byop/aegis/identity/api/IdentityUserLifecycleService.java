@@ -47,6 +47,12 @@ public class IdentityUserLifecycleService {
         log.info("executeActionsEmail: acoes obrigatorias enviadas para userId='{}'", userId);
     }
 
+    public void assignRealmRole(String userId, String realmRoleName) {
+        log.debug("assignRealmRole: userId='{}', realmRoleName='{}'", userId, realmRoleName);
+        keycloakAdminClient.assignRealmRole(userId, realmRoleName);
+        log.info("assignRealmRole: role='{}' atribuida ao usuario id='{}'", realmRoleName, userId);
+    }
+
     private IdentityUser toIdentityUser(UserResponse user) {
         return new IdentityUser(user.id(), user.username(), user.email(), user.firstName(), user.lastName());
     }

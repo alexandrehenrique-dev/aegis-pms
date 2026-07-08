@@ -24,6 +24,18 @@ public class IdentityInvitationService {
         log.debug("inviteByEmail: email='{}', name='{}'", email, name);
         UserResponse user = keycloakAdminClient.inviteUser(email, name);
         log.info("inviteByEmail: usuario convidado id='{}'", user.id());
+        return toIdentityUser(user);
+    }
+
+    public IdentityUser inviteByEmail(String email, String name, String realmRoleName) {
+        log.debug("inviteByEmail: email='{}', name='{}', realmRoleName='{}'", email, name, realmRoleName);
+        IdentityUser user = inviteByEmail(email, name);
+        keycloakAdminClient.assignRealmRole(user.id(), realmRoleName);
+        log.info("inviteByEmail: role='{}' atribuida ao usuario id='{}'", realmRoleName, user.id());
+        return user;
+    }
+
+    private IdentityUser toIdentityUser(UserResponse user) {
         return new IdentityUser(
                 user.id(),
                 user.username(),

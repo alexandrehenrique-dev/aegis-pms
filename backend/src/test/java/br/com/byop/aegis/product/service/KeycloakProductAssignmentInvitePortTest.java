@@ -49,7 +49,7 @@ class KeycloakProductAssignmentInvitePortTest {
         UUID tenantId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         UUID productId = UUID.fromString("22222222-2222-2222-2222-222222222222");
         IdentityUser invited = new IdentityUser("user-1", "guest", "guest@byop.dev", "Guest", "User");
-        when(invitationService.inviteByEmail("guest@byop.dev")).thenReturn(invited);
+        when(invitationService.inviteByEmail("guest@byop.dev", "guest@byop.dev", "AEGIS_EDITOR")).thenReturn(invited);
         when(tenantAccessService.getRequiredReference(tenantId))
                 .thenReturn(new TenantReference(tenantId, "BYOP"));
         KeycloakProductAssignmentInvitePort port =
@@ -65,5 +65,6 @@ class KeycloakProductAssignmentInvitePortTest {
         assertThat(captor.getValue().productSlug()).isEqualTo("aegis");
         assertThat(captor.getValue().role()).isEqualTo("EDITOR");
         assertThat(captor.getValue().inviterName()).isEqualTo("Admin");
+        verify(invitationService).inviteByEmail("guest@byop.dev", "guest@byop.dev", "AEGIS_EDITOR");
     }
 }

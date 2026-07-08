@@ -23,8 +23,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -88,6 +90,7 @@ class AuthActivationServiceTest {
         AuthMessageResponse response = service.acceptExistingUser(TOKEN_ID);
 
         assertThat(response.message()).isEqualTo("Convite aceito. Faça login para acessar o produto.");
+        verify(keycloakAdminClient).assignRealmRole("user-id", "AEGIS_EDITOR");
         verify(keycloakAdminClient).clearRequiredActions("user-id");
         verify(eventPublisher).publishEvent(any(IdentityUserInviteActivatedEvent.class));
         assertPublishedAuditAction("USER_INVITE_ACCEPTED_EXISTING");
@@ -104,9 +107,35 @@ class AuthActivationServiceTest {
         verify(passwordPolicy).assertStrong("Senha123");
         verify(keycloakAdminClient).resetPassword("user-id", "Senha123");
         verify(keycloakAdminClient).updateUserProfile("user-id", "Alexandre", "Henrique");
+        verify(keycloakAdminClient).assignRealmRole("user-id", "AEGIS_EDITOR");
         verify(keycloakAdminClient).setUserEnabled("user-id", true);
         verify(keycloakAdminClient).clearRequiredActions("user-id");
         verify(eventPublisher).publishEvent(any(IdentityUserInviteActivatedEvent.class));
+        assertPublishedAuditAction("USER_INVITE_ACTIVATED");
+    }
+
+    @Test
+    void shouldAcceptExistingInviteWithoutAssigningRealmRoleWhenTokenHasNoRole() {
+        AuthActionToken token = inviteTokenWithoutContext();
+        when(tokenService.consumeInvite(TOKEN_ID)).thenReturn(token);
+
+        AuthMessageResponse response = service.acceptExistingUser(TOKEN_ID);
+
+        assertThat(response.message()).isEqualTo("Convite aceito. Faça login para acessar o produto.");
+        verify(keycloakAdminClient, never()).assignRealmRole(anyString(), anyString());
+        verify(keycloakAdminClient).clearRequiredActions("user-id");
+        assertPublishedAuditAction("USER_INVITE_ACCEPTED_EXISTING");
+    }
+
+    @Test
+    void shouldActivateInviteWithoutAssigningRealmRoleWhenTokenRoleIsBlank() {
+        AuthActionToken token = inviteTokenWithRole(" ");
+        when(tokenService.consumeInvite(TOKEN_ID)).thenReturn(token);
+
+        service.activate(TOKEN_ID, "Senha123", "Alexandre", "Henrique");
+
+        verify(keycloakAdminClient, never()).assignRealmRole(anyString(), anyString());
+        verify(keycloakAdminClient).clearRequiredActions("user-id");
         assertPublishedAuditAction("USER_INVITE_ACTIVATED");
     }
 
@@ -171,6 +200,10 @@ class AuthActivationServiceTest {
     }
 
     private AuthActionToken inviteToken() {
+        return inviteTokenWithRole("EDITOR");
+    }
+
+    private AuthActionToken inviteTokenWithRole(String role) {
         AuthActionToken token = new AuthActionToken(
                 "user-id",
                 "guest@byop.dev",
@@ -184,10 +217,21 @@ class AuthActivationServiceTest {
                 "BYOP",
                 "[\"Aegis\"]",
                 null,
-                "EDITOR",
+                role,
                 "Admin"
         );
         return token;
+    }
+
+    private AuthActionToken inviteTokenWithoutContext() {
+        return new AuthActionToken(
+                "user-id",
+                "guest@byop.dev",
+                "Guest",
+                AuthActionType.INVITE,
+                NOW,
+                NOW.plusSeconds(3600)
+        );
     }
 
     private AuthActionToken resetToken() {

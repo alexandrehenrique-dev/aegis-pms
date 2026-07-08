@@ -1,0 +1,20 @@
+meta {
+  name: Viewer nao remove membro do produto
+  type: http
+  seq: 14
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/products/{{rbacProductId}}/users/{{brunoRbacProductUserId}}
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{rbacViewerToken}}
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+}

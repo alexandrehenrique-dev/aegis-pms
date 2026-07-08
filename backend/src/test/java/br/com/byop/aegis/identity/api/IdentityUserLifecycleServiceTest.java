@@ -30,8 +30,10 @@ class IdentityUserLifecycleServiceTest {
 
         service.executeActionsEmail("user-1", List.of("UPDATE_PASSWORD"));
         service.setUserEnabled("user-1", false);
+        service.assignRealmRole("user-1", "AEGIS_PRODUCT_MANAGER");
 
         verify(keycloakAdminClient).executeActionsEmail("user-1", List.of("UPDATE_PASSWORD"));
         verify(keycloakAdminClient).setUserEnabled("user-1", false);
+        verify(keycloakAdminClient).assignRealmRole("user-1", "AEGIS_PRODUCT_MANAGER");
     }
 }
