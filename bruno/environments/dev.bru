@@ -2,11 +2,13 @@ vars {
   baseUrl: http://localhost:8080
   keycloakIssuer: http://localhost:8282/realms/aegis
   clientId: aegis-web
-  username: loki
-  password: 123456
+  username: aegis
   tenantName: TEST-BYOP
   tenantKey:
   productKey:
+  protectedTenantIds:
+  protectedTenantKeys:
+  protectedTenantNames:
   inviteEmail:
   tenantUserInviteEmail:
   notificationInviteEmail:
@@ -19,3 +21,6 @@ vars {
   auditTenantKey:
   nonMemberToken:
 }
+vars:secret [
+  password
+]

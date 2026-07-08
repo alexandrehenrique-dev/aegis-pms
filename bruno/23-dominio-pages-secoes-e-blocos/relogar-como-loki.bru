@@ -1,5 +1,5 @@
 meta {
-  name: Relogar como loki (super_admin com assignment em productId)
+  name: Relogar como usuario ambiente
   type: http
   seq: 1
 }
@@ -18,7 +18,7 @@ body:form-urlencoded {
 }
 
 docs {
-Objetivo: a pasta 22-seed-inicial-e-grafo termina autenticada como o usuario demo super-admin@byop.io (login-super-admin-seed), que nao tem ProductAssignment no {{productId}} criado em 02-products (produto avulso desta execucao, nao um dos produtos seedados). Reautentica como {{username}} (loki, o SUPER_ADMIN com assignment real em {{productId}}) antes de qualquer request desta pasta.
+Objetivo: a pasta 22-seed-inicial-e-grafo termina autenticada como o usuario demo super-admin@byop.io (login-super-admin-seed), que nao tem ProductAssignment no {{productId}} criado em 02-products (produto avulso desta execucao, nao um dos produtos seedados). Reautentica como {{username}} (usuario operacional do environment ativo, com assignment real em {{productId}}) antes de qualquer request desta pasta.
 Resultado esperado: 200, access_token presente.
 }
 

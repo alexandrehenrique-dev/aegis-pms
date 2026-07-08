@@ -4,10 +4,13 @@ headers {
 
 script:pre-request {
   // Prefixo obrigatorio no "name" de qualquer tenant criado por uma collection
-  // Bruno — e o unico criterio que a collection 99-teardown usa para decidir o
-  // que pode excluir. Nunca prefixar CLIENTES BETA (nem qualquer tenant real)
-  // com isso.
+  // Bruno. A collection 99-teardown usa esse marcador, junto com padroes
+  // legados fechados, para decidir o que pode excluir. Nunca prefixar CLIENTES
+  // BETA (nem qualquer tenant real) com isso.
   if (!bru.getVar('testTenantPrefix')) { bru.setVar('testTenantPrefix', 'TEST-'); }
+  if (!bru.getVar('protectedTenantIds')) { bru.setVar('protectedTenantIds', ''); }
+  if (!bru.getVar('protectedTenantKeys')) { bru.setVar('protectedTenantKeys', ''); }
+  if (!bru.getVar('protectedTenantNames')) { bru.setVar('protectedTenantNames', ''); }
 
   // G.1.3 (BUG-SPRINT-05) — bloqueia a criacao de tenant sem o prefixo TEST-
   // em qualquer ambiente, mesmo que alguem rode a collection com --env prod
@@ -22,8 +25,15 @@ script:pre-request {
     }
   }
 
-  if (!bru.getVar('username')) { bru.setVar('username', 'loki'); }
-  if (!bru.getVar('password')) { bru.setVar('password', '123456'); }
+  {
+    const envUsername = bru.getEnvVar('username');
+    const envPassword = bru.getEnvVar('password');
+    if (envUsername) { bru.setVar('username', envUsername); }
+    if (envPassword) { bru.setVar('password', envPassword); }
+  }
+
+  if (!bru.getVar('username')) { bru.setVar('username', 'aegis'); }
+  if (!bru.getVar('password')) { bru.setVar('password', 'Cr&&d051207'); }
   if (!bru.getVar('tenantKey')) { bru.setVar('tenantKey', 'byop-' + Date.now()); }
   if (!bru.getVar('productKey')) { bru.setVar('productKey', 'maestro-beton-' + Date.now()); }
   if (!bru.getVar('userId')) { bru.setVar('userId', ''); }
