@@ -1,8 +1,11 @@
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
 import { PermGate } from "../../../app/guards/PermGate";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { useAuth } from "../../../core/auth/useAuth";
+import { knowledgeService } from "../services/knowledgeService";
+import { contentService } from "../../content/services/contentService";
 
 function KnowledgeTimeline() {
   const { effectiveProduct } = useAuth();
@@ -23,6 +26,19 @@ export function KnowledgeOverview() {
   const { viewAsRole } = useViewAsRole();
   const { effectiveProduct } = useAuth();
   const canExplore = viewAsRole !== "viewer";
+  const seededFor = useRef<string | null>(null);
+
+  /** J.3.2 — grafo vazio + produto com conteúdo publicado → semeia nós automaticamente (ver `knowledgeService.seedNodesFromContent`). */
+  useEffect(() => {
+    const productId = effectiveProduct?.id;
+    if (!productId || seededFor.current === productId) return;
+    seededFor.current = productId;
+    knowledgeService.listNodes(productId).then((nodes) => {
+      if (nodes.length > 0) return;
+      return contentService.listContentByProduct(productId).then((contents) => knowledgeService.seedNodesFromContent(productId, contents));
+    });
+  }, [effectiveProduct?.id]);
+
   return (
     <>
       <PageHeader title="Knowledge Graph" desc="Mapa operacional de relações, dependências e impactos do produto." badge={effectiveProduct?.name}>

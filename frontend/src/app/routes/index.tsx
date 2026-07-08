@@ -158,6 +158,8 @@ export function AppRoutes() {
             <Route path="/forms/submissions/:id" element={<SubmissionDetails />} />
             <Route path="/forms/analytics" element={<BasicFormAnalytics />} />
             <Route path="/forms/publication" element={<PublicationPanel />} />
+            <Route path="/forms/:formId/preview" element={<FormPreviewFrame />} />
+            <Route path="/forms/:formId/submissions/:id" element={<SubmissionDetails />} />
             <Route path="/forms/:slug" element={<FormBuilder />} />
 
             <Route path="/analytics" element={<AnalyticsOverview />} />

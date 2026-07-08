@@ -5,6 +5,7 @@ import br.com.byop.aegis.identity.auth.exception.AuthActionTokenNotFoundExceptio
 import br.com.byop.aegis.identity.auth.exception.AuthActionTokenUsedException;
 import br.com.byop.aegis.identity.auth.exception.AuthRateLimitExceededException;
 import br.com.byop.aegis.identity.auth.exception.AccountDisabledException;
+import br.com.byop.aegis.identity.auth.exception.AccountNotFullySetUpException;
 import br.com.byop.aegis.identity.auth.exception.InvalidCredentialsException;
 import br.com.byop.aegis.identity.auth.exception.KeycloakAuthenticationException;
 import br.com.byop.aegis.identity.auth.exception.RefreshTokenExpiredException;
@@ -45,6 +46,12 @@ public class AuthExceptionHandler {
     @ResponseStatus(HttpStatus.LOCKED)
     public AuthErrorResponse handleAccountDisabled() {
         return new AuthErrorResponse("ACCOUNT_DISABLED");
+    }
+
+    @ExceptionHandler(AccountNotFullySetUpException.class)
+    @ResponseStatus(HttpStatus.LOCKED)
+    public AuthErrorResponse handleAccountNotFullySetUp() {
+        return new AuthErrorResponse("ACCOUNT_NOT_FULLY_SET_UP");
     }
 
     @ExceptionHandler(AuthActionTokenUsedException.class)

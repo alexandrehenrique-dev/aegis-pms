@@ -1,5 +1,6 @@
 package br.com.byop.aegis.identity.auth.controller;
 
+import br.com.byop.aegis.identity.auth.dto.AuthActivateRequest;
 import br.com.byop.aegis.identity.auth.dto.AuthForgotPasswordRequest;
 import br.com.byop.aegis.identity.auth.dto.AuthInviteValidationResponse;
 import br.com.byop.aegis.identity.auth.dto.AuthLoginRequest;
@@ -74,9 +75,9 @@ public class AuthController {
 
     @PostMapping("/activate")
     public AuthMessageResponse activate(
-            @Valid @RequestBody AuthPasswordActionRequest request
+            @Valid @RequestBody AuthActivateRequest request
     ) {
-        return authActivationService.activate(request.token(), request.password());
+        return authActivationService.activate(request.token(), request.password(), request.firstName(), request.lastName());
     }
 
     @PostMapping("/invite/accept-existing")

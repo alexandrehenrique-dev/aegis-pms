@@ -5,3 +5,10 @@ export type AuditEvent = {
 };
 
 export type ListAuditEventsResponse = AuditEvent[];
+
+export type AuditEventDetailDto = AuditEvent & {
+  diffJson: { before?: Record<string, unknown>; after?: Record<string, unknown> } & Record<string, unknown>;
+  traceId: string | null;
+  ip: string | null;
+  userAgent: string | null;
+};

@@ -5,6 +5,7 @@ import { AssetPickerModal, type AssetTypeFilter } from "../../domains/assets/com
 import { assetsService } from "../../domains/assets/services/assetsService";
 import { useCurrentProduct } from "../../core/products/useCurrentProduct";
 import { useAsyncData } from "../hooks/useAsyncData";
+import { useAuthenticatedImage } from "../hooks/useAuthenticatedImage";
 import type { AssetSummary } from "../../domains/assets/contracts/responses";
 
 const FILTER_LABEL: Record<AssetTypeFilter, string> = { imagem: "imagem", PDF: "PDF", áudio: "áudio", "vídeo": "vídeo", qualquer: "arquivo" };
@@ -43,13 +44,20 @@ export function MediaField({ label, value, onChange, typeFilter = "qualquer", on
     [value, product?.id],
   );
   const displayName = resolved?.friendlyName ?? resolved?.name ?? value;
+  // J.5.2 (BUG-SPRINT-05) — thumbnail real da imagem selecionada; antes só o nome do arquivo era exibido, sem nenhuma confirmação visual da imagem escolhida.
+  const thumbSrc = useAuthenticatedImage(typeFilter === "imagem" && value ? value : undefined);
 
   return (
     <div>
       <span className="mb-1 block text-sm font-medium">{label}</span>
       {value ? (
         <div className="flex items-center justify-between gap-2 rounded-lg border border-border p-2">
-          <span className="flex items-center gap-2 truncate text-sm"><ImageIcon size={14} className="shrink-0 text-muted-foreground" />{displayName}</span>
+          <span className="flex items-center gap-2 truncate text-sm">
+            {thumbSrc
+              ? <img src={thumbSrc} alt="preview" className="h-8 w-8 shrink-0 rounded object-cover" />
+              : <ImageIcon size={14} className="shrink-0 text-muted-foreground" />}
+            {displayName}
+          </span>
           <div className="flex shrink-0 gap-1">
             <Button onClick={() => setPickerOpen(true)}>Trocar</Button>
             <button onClick={() => onChange("")} aria-label="Remover seleção" className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><X size={14} /></button>

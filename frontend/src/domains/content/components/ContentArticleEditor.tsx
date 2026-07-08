@@ -1,12 +1,11 @@
 import { Card, Field } from "../../../shared/components/Primitives";
 import { MarkdownField } from "../../../shared/components/MarkdownField";
 import { MediaField } from "../../../shared/components/MediaField";
-import { EntityPicker } from "../../knowledge/components/EntityPicker";
+import { MusicPicker, type MusicSource } from "./MusicPicker";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { Button } from "../../../shared/components/Primitives";
 import { Link2 } from "lucide-react";
 import type { ContentRow } from "../contracts/responses";
-import type { KGNode } from "../../knowledge/mocks/knowledge.mocks";
 
 const MUSIC_LINKED_TYPES = new Set(["Post", "Manifesto", "Reflexão", "Poema"]);
 
@@ -29,7 +28,15 @@ function MetadataPanel({ content, knowledgeGraphEnabled, productSlug, onPatchMet
   if (MUSIC_LINKED_TYPES.has(content.type)) {
     const musicReferenceId = typeof metadata.musicReferenceId === "string" ? metadata.musicReferenceId : "";
     const coverImage = typeof metadata.coverImage === "string" ? metadata.coverImage : "";
-    const handleLinkMusic = (node: KGNode) => onPatchMetadata({ musicReferenceId: node.id, musicReferenceLabel: node.label });
+    // J.2.3 (BUG-SPRINT-05) — o KG node MUSIC_REF é uma referência secundária
+    // derivada da escolha (asset ou Spotify), não o ponto de entrada da seleção.
+    const handleLinkMusic = (src: MusicSource) => {
+      if (src.type === "asset") {
+        onPatchMetadata({ musicReferenceId: src.assetId, musicReferenceLabel: src.name, musicSource: "asset" });
+      } else {
+        onPatchMetadata({ musicReferenceId: src.url, musicReferenceLabel: src.url, musicSource: "spotify" });
+      }
+    };
     return (
       <div className="grid gap-3 md:grid-cols-2">
         <MediaField label="Imagem de capa" value={coverImage} typeFilter="imagem" onChange={(v) => onPatchMetadata({ coverImage: v })} />
@@ -39,12 +46,12 @@ function MetadataPanel({ content, knowledgeGraphEnabled, productSlug, onPatchMet
             {musicReferenceId ? (
               <div className="flex items-center justify-between gap-2 rounded-lg border border-border p-2 text-sm">
                 <span className="truncate">{typeof metadata.musicReferenceLabel === "string" ? metadata.musicReferenceLabel : musicReferenceId}</span>
-                <Button onClick={() => onPatchMetadata({ musicReferenceId: undefined, musicReferenceLabel: undefined })}>Remover</Button>
+                <Button onClick={() => onPatchMetadata({ musicReferenceId: undefined, musicReferenceLabel: undefined, musicSource: undefined })}>Remover</Button>
               </div>
             ) : productSlug ? (
               <Popover>
-                <PopoverTrigger asChild><Button><Link2 size={14} />Buscar entidade musical</Button></PopoverTrigger>
-                <PopoverContent><EntityPicker productId={productSlug} onSelect={handleLinkMusic} /></PopoverContent>
+                <PopoverTrigger asChild><Button className="flex items-center gap-1.5"><Link2 size={14} />Buscar entidade musical</Button></PopoverTrigger>
+                <PopoverContent><MusicPicker onSelect={handleLinkMusic} /></PopoverContent>
               </Popover>
             ) : null}
           </div>

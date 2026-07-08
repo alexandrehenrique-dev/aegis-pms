@@ -31,7 +31,13 @@ export function InviteUserDrawer() {
   const [allowedModules, setAllowedModules] = useState(MODULES[0]);
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean }>({});
 
-  const nameErr = textLengthError(name, 2, 100, "Nome");
+  // O.1 (BUG-SPRINT-05) — um nome de uma só palavra vira firstName sem
+  // lastName no Keycloak (ver KeycloakAdminClient.firstName/lastName), o que
+  // deixa o perfil incompleto e bloqueia o login do convidado mesmo com a
+  // conta habilitada. Exigir nome e sobrenome aqui, na origem do convite,
+  // evita esse estado por completo.
+  const nameErr = textLengthError(name, 2, 100, "Nome")
+    ?? (name.trim() && !name.trim().includes(" ") ? "Informe nome e sobrenome (ex.: Alexandre Henrique)" : undefined);
   const emailErr = emailError(email);
   const hasErrors = !!nameErr || !!emailErr;
 

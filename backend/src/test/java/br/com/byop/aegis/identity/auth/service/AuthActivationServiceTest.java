@@ -98,11 +98,12 @@ class AuthActivationServiceTest {
         AuthActionToken token = inviteToken();
         when(tokenService.consumeInvite(TOKEN_ID)).thenReturn(token);
 
-        AuthMessageResponse response = service.activate(TOKEN_ID, "Senha123");
+        AuthMessageResponse response = service.activate(TOKEN_ID, "Senha123", "Alexandre", "Henrique");
 
         assertThat(response.message()).isEqualTo("Conta ativada. Faça login para continuar.");
         verify(passwordPolicy).assertStrong("Senha123");
         verify(keycloakAdminClient).resetPassword("user-id", "Senha123");
+        verify(keycloakAdminClient).updateUserProfile("user-id", "Alexandre", "Henrique");
         verify(keycloakAdminClient).setUserEnabled("user-id", true);
         verify(keycloakAdminClient).clearRequiredActions("user-id");
         verify(eventPublisher).publishEvent(any(IdentityUserInviteActivatedEvent.class));
@@ -151,7 +152,7 @@ class AuthActivationServiceTest {
         org.mockito.Mockito.doThrow(new WeakPasswordException(PasswordPolicy.WEAK_CREDENTIAL_MESSAGE))
                 .when(passwordPolicy).assertStrong("fraca");
 
-        assertThatThrownBy(() -> service.activate(TOKEN_ID, "fraca"))
+        assertThatThrownBy(() -> service.activate(TOKEN_ID, "fraca", "Alexandre", "Henrique"))
                 .isInstanceOf(WeakPasswordException.class);
 
         verifyNoInteractions(keycloakAdminClient);
@@ -164,7 +165,7 @@ class AuthActivationServiceTest {
         org.mockito.Mockito.doThrow(new KeycloakAuthenticationException("weak"))
                 .when(keycloakAdminClient).resetPassword("user-id", "Senha123");
 
-        assertThatThrownBy(() -> service.activate(TOKEN_ID, "Senha123"))
+        assertThatThrownBy(() -> service.activate(TOKEN_ID, "Senha123", "Alexandre", "Henrique"))
                 .isInstanceOf(WeakPasswordException.class)
                 .hasMessage(PasswordPolicy.WEAK_CREDENTIAL_MESSAGE);
     }

@@ -117,7 +117,7 @@ export function FormsList() {
                 <td className="p-3">
                   <div className="flex flex-wrap gap-1">
                     <PermGate allowed={canEdit}><Button onClick={() => navigate(`/forms/${f.id}`)}>Editar</Button></PermGate>
-                    <Button onClick={() => navigate("/forms/preview")}>Preview</Button>
+                    <Button onClick={() => navigate(`/forms/${f.id}/preview`)}>Preview</Button>
                     <Button onClick={() => navigate("/forms/submissions")}>Submissions</Button>
                     <PermGate allowed={canEdit}><button onClick={() => setPendingDeleteId(f.id)} aria-label={`Excluir ${f.name}`} className="rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button></PermGate>
                   </div>

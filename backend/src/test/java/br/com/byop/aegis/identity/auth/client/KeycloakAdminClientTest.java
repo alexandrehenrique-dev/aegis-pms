@@ -406,6 +406,28 @@ class KeycloakAdminClientTest {
     }
 
     @Test
+    void shouldUpdateUserProfileWithPublicMethod() {
+        stubAdminToken();
+        wireMockServer.stubFor(put(urlEqualTo("/admin/realms/aegis/users/user-id"))
+                .willReturn(noContent()));
+
+        assertDoesNotThrow(() -> client.updateUserProfile("user-id", "Alexandre", "Henrique"));
+
+        wireMockServer.verify(putRequestedFor(urlEqualTo("/admin/realms/aegis/users/user-id"))
+                .withRequestBody(equalToJson("{\"firstName\":\"Alexandre\",\"lastName\":\"Henrique\"}")));
+    }
+
+    @Test
+    void shouldThrowWhenPublicUpdateUserProfileFails() {
+        stubAdminToken();
+
+        assertThrows(
+                KeycloakAuthenticationException.class,
+                () -> client.updateUserProfile("user-id", "Alexandre", "Henrique")
+        );
+    }
+
+    @Test
     void shouldThrowWhenEnsuringDemoUserFails() {
         stubAdminToken();
         stubUserLookup("""

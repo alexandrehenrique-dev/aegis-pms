@@ -99,7 +99,7 @@ export function ResponsivePreviewFrame() {
           ) : page ? (
             <div className="divide-y divide-border">
               {globals && <GlobalNavbar globals={globals} />}
-              {[...page.sections].sort((a, b) => a.order - b.order).map((section) => <BlockRenderer key={section.id} section={section} forceLightProse />)}
+              {[...page.sections].sort((a, b) => a.order - b.order).map((section) => <BlockRenderer key={section.id} section={section} forceLightProse productSlug={productId} />)}
               {globals && <GlobalFooter globals={globals} />}
             </div>
           ) : (

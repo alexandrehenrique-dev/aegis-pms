@@ -1,10 +1,10 @@
 import { auditEvents } from "../mocks/audit.mocks";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
-import type { AuditEvent, ListAuditEventsResponse } from "../contracts/responses";
+import type { AuditEvent, AuditEventDetailDto, ListAuditEventsResponse } from "../contracts/responses";
 
-const auditStore: AuditEvent[] = auditEvents.map(([actor, action, target, tenant, module, time, risk]) => ({
-  actor, action, target, tenant, module, time, risk,
+const auditStore: AuditEvent[] = auditEvents.map(([actor, action, target, tenant, module, time, risk], i) => ({
+  id: `mock-evt-${i}`, actor, action, target, tenant, module, time, risk,
 }));
 
 type AuditEventDto = AuditEvent & {
@@ -62,6 +62,25 @@ export const auditService = {
     }
     if (filters?.productName) result = result.filter((e) => e.tenant === filters.productName);
     return result;
+  },
+  /**
+   * G.3 (BUG-SPRINT-05) — detalhe de um evento (`AuditEventDetail.tsx`), com
+   * `diffJson`/`traceId`/`ip`/`userAgent` além dos campos de `AuditEvent`.
+   * Backend: `GET /tenants/{tenantId}/audit-events/{eventId}`.
+   */
+  async getEvent(tenantId: string, eventId: string): Promise<AuditEventDetailDto> {
+    if (IS_API_MODE) {
+      return apiClient.get<AuditEventDetailDto>(`/tenants/${tenantId}/audit-events/${eventId}`);
+    }
+    const found = auditStore.find((e) => e.id === eventId);
+    if (!found) throw { status: 404, message: `Evento ${eventId} não encontrado.` };
+    return {
+      ...found,
+      diffJson: { before: {}, after: {} },
+      traceId: `mock_tr_${eventId}`,
+      ip: "127.0.0.1",
+      userAgent: "mock",
+    };
   },
   // `recordEvent` removido (Sprint de Integração 02): auditoria é
   // exclusivamente server-side — o frontend nunca cria eventos de auditoria,

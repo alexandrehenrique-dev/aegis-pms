@@ -21,6 +21,7 @@ export type FormField = {
 };
 
 export type SubmissionSummary = {
+  id?: string;
   date: string; name: string; email: string; source: string;
   status: string; owner: string; score: string;
 };

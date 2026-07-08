@@ -6,7 +6,7 @@ import { MediaField } from "../../../shared/components/MediaField";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { toast } from "../../../core/notifications/toast";
 import { formatDateTime } from "../../../shared/utils/formatDateTime";
-import { resolveAssetSrc } from "../../../shared/utils/resolveAssetSrc";
+import { useAuthenticatedImage } from "../../../shared/hooks/useAuthenticatedImage";
 import { eventsService } from "../services/eventsService";
 import type { CreateEventRequest, EventVisibility, PageEvent } from "../contracts/events";
 
@@ -17,13 +17,13 @@ const EMPTY_EVENT: CreateEventRequest = { title: "", date: "", location: "", typ
 
 /** Preview de como o evento aparece publicamente, respeitando a regra de privacidade do contrato Maestro Beton (Seção 12). */
 function PublicPreview({ event }: { event: CreateEventRequest }) {
+  const photoSrc = useAuthenticatedImage(event.image || undefined);
   if (event.visibility === "private") {
     return <p className="text-sm text-muted-foreground">Data reservada</p>;
   }
   if (event.visibility === "public-summary") {
     return <p className="text-sm"><b>{event.title || "Evento"}</b> — {formatDateTime(event.date)}</p>;
   }
-  const photoSrc = event.image ? resolveAssetSrc(event.image) : undefined;
   return (
     <div className="text-sm">
       {event.image && (photoSrc

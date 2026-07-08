@@ -2,6 +2,7 @@ package br.com.byop.aegis.identity.auth.client;
 
 import br.com.byop.aegis.identity.auth.config.KeycloakProperties;
 import br.com.byop.aegis.identity.auth.exception.AccountDisabledException;
+import br.com.byop.aegis.identity.auth.exception.AccountNotFullySetUpException;
 import br.com.byop.aegis.identity.auth.exception.InvalidCredentialsException;
 import br.com.byop.aegis.identity.auth.exception.KeycloakAuthenticationException;
 import br.com.byop.aegis.identity.auth.exception.RefreshTokenExpiredException;
@@ -27,7 +28,13 @@ public class KeycloakTokenClient {
     private static final String KEYCLOAK_COMMUNICATION_ERROR = "Error communicating with Keycloak";
 
     private static final Pattern ACCOUNT_DISABLED_PATTERN =
-            Pattern.compile("disabled|not fully set up", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("disabled", Pattern.CASE_INSENSITIVE);
+    // O.1 (BUG-SPRINT-05) — checado ANTES do padrao generico acima: perfil
+    // incompleto no Keycloak (sem firstName/lastName) e uma causa distinta
+    // de conta desabilitada, e merece uma mensagem propria em vez de cair no
+    // "conta bloqueada, fale com o administrador" (AccountDisabledException).
+    private static final Pattern ACCOUNT_NOT_FULLY_SET_UP_PATTERN =
+            Pattern.compile("not fully set up", Pattern.CASE_INSENSITIVE);
 
     private final RestClient restClient;
     private final KeycloakProperties properties;
@@ -53,7 +60,11 @@ public class KeycloakTokenClient {
                     .body(KeycloakTokenResponse.class);
 
         } catch (HttpClientErrorException.Unauthorized exception) {
-            if (isAccountDisabled(exception.getResponseBodyAsString())) {
+            String body = exception.getResponseBodyAsString();
+            if (isAccountNotFullySetUp(body)) {
+                throw new AccountNotFullySetUpException();
+            }
+            if (isAccountDisabled(body)) {
                 throw new AccountDisabledException();
             }
             throw new InvalidCredentialsException();
@@ -61,9 +72,11 @@ public class KeycloakTokenClient {
         } catch (HttpClientErrorException.BadRequest exception) {
             // Keycloak retorna 400 com invalid_grant quando a conta existe mas tem
             // required actions pendentes (ex.: "Account is not fully set up").
-            // Tratamos como conta bloqueada/pendente — mensagem ao usuário é mais
-            // precisa do que "Erro no servidor".
-            if (isAccountDisabled(exception.getResponseBodyAsString())) {
+            String body = exception.getResponseBodyAsString();
+            if (isAccountNotFullySetUp(body)) {
+                throw new AccountNotFullySetUpException();
+            }
+            if (isAccountDisabled(body)) {
                 throw new AccountDisabledException();
             }
             throw new KeycloakAuthenticationException(KEYCLOAK_COMMUNICATION_ERROR, exception);
@@ -129,6 +142,12 @@ public class KeycloakTokenClient {
 
     private boolean isAccountDisabled(String responseBody) {
         return ACCOUNT_DISABLED_PATTERN
+                .matcher(String.valueOf(responseBody))
+                .find();
+    }
+
+    private boolean isAccountNotFullySetUp(String responseBody) {
+        return ACCOUNT_NOT_FULLY_SET_UP_PATTERN
                 .matcher(String.valueOf(responseBody))
                 .find();
     }

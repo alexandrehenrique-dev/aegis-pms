@@ -52,6 +52,7 @@ export function LoginScreen() {
     "": "",
     invalid: "E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.",
     blocked: "Esta conta está bloqueada. Entre em contato com o administrador.",
+    profileIncomplete: "Seu perfil está incompleto. Acesse o link de convite novamente para finalizar o cadastro.",
     expired: "Sua sessão expirou. Faça login novamente para continuar.",
     server: "Erro no servidor. Tente novamente em instantes.",
   };

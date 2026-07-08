@@ -61,9 +61,10 @@ export const authActivationService = {
     return apiClient.post<InviteTokenData>("/auth/invite/validate", { token });
   },
 
-  activateAccount(token: string, password: string): Promise<void> {
+  /** `firstName`/`lastName` (O.1, BUG-SPRINT-05) — obrigatórios: sem perfil completo no Keycloak, o realm bloqueia o login mesmo com a conta habilitada. */
+  activateAccount(token: string, password: string, firstName: string, lastName: string): Promise<void> {
     if (!IS_API_MODE) return Promise.resolve();
-    return apiClient.post("/auth/activate", { token, password });
+    return apiClient.post("/auth/activate", { token, password, firstName, lastName });
   },
 
   /** Aceite de convite por usuário que já tem conta (requiresPasswordSetup: false) — sem senha para definir. */

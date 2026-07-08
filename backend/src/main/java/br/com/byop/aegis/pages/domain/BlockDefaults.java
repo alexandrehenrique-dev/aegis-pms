@@ -81,7 +81,7 @@ public final class BlockDefaults {
         // asset/URL), entao o default traz um item com fonte/URL em branco.
         defaults.put(BlockType.AUDIO, Map.of(KEY_SOURCE, "upload", "fileAssetId", "", "spotifyUrl", "", "autoplay", false));
         defaults.put(BlockType.SOCIAL_LINKS, Map.of(KEY_ITEMS, List.of()));
-        defaults.put(BlockType.VIDEO, Map.of(KEY_SOURCE, "upload", "fileAssetId", "", "youtubeUrl", "", "autoplay", false));
+        defaults.put(BlockType.VIDEO, Map.of(KEY_SOURCE, "upload", "fileAssetId", "", KEY_YOUTUBE_URL, "", "autoplay", false));
         defaults.put(BlockType.VIDEO_GALLERY, Map.of(KEY_ITEMS, List.of(Map.of(KEY_TITLE, "Vídeo 1", KEY_SOURCE, "youtube", KEY_YOUTUBE_URL, ""))));
         return Map.copyOf(defaults);
     }

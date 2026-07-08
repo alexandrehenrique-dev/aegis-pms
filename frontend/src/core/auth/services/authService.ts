@@ -69,6 +69,11 @@ export function loginErrorFromException(err: unknown): LoginError {
   switch (apiErr.code) {
     case "ACCOUNT_DISABLED":
       return "blocked";
+    // O.1 (BUG-SPRINT-05) — perfil incompleto no Keycloak (sem firstName/lastName)
+    // é distinto de conta desabilitada: o usuário só precisa reabrir o link de
+    // convite para completar a ativação, não falar com o administrador.
+    case "ACCOUNT_NOT_FULLY_SET_UP":
+      return "profileIncomplete";
     case "REFRESH_TOKEN_EXPIRED":
       return "expired";
     case "KEYCLOAK_AUTHENTICATION_ERROR":

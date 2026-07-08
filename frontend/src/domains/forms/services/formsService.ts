@@ -11,8 +11,8 @@ const formsStore: FormSummary[] = forms.map(([id, productSlug, name, type, statu
   id, productSlug, name, type, status, responses, conversion, lastActivity, publication,
 }));
 
-const submissionsStore: SubmissionSummary[] = submissionsData.map(([date, name, email, source, status, owner, score]) => ({
-  date, name, email, source, status, owner, score,
+const submissionsStore: SubmissionSummary[] = submissionsData.map(([date, name, email, source, status, owner, score], i) => ({
+  id: `mock-sub-${i}`, date, name, email, source, status, owner, score,
 }));
 
 function makeField(type: string): FormField {
@@ -83,14 +83,19 @@ export const formsService = {
     return fieldsByFormId[formId] ?? [];
   },
 
-  async saveFormFields(productId: string, formId: string, fields: FormField[]): Promise<void> {
+  /** `name` (H.2.2, BUG-SPRINT-05) — quando informado, sobrescreve o nome persistido; sem ele, mantém o nome atual do formulário. */
+  async saveFormFields(productId: string, formId: string, fields: FormField[], name?: string): Promise<void> {
     if (IS_API_MODE) {
       const form = await apiClient.get<FormDetail>(`/products/${productId}/forms/${formId}`);
-      await apiClient.put(`/products/${productId}/forms/${formId}`, { name: form.name, type: form.type, fields });
+      await apiClient.put(`/products/${productId}/forms/${formId}`, { name: name ?? form.name, type: form.type, fields });
       return;
     }
-    logApiCall("PUT", `/api/v1/products/${productId}/forms/${formId}`, { fields });
+    logApiCall("PUT", `/api/v1/products/${productId}/forms/${formId}`, { fields, name });
     fieldsByFormId[formId] = fields;
+    if (name) {
+      const stored = formsStore.find((f) => f.id === formId);
+      if (stored) stored.name = name;
+    }
   },
 
   makeField,
