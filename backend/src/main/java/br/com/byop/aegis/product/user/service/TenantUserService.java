@@ -95,6 +95,9 @@ public class TenantUserService {
         log.debug("inviteUser: tenantId='{}', role='{}'", tenantId, request.role());
         assertTenantVisible(caller, tenantId);
         assertCanInvite(caller, tenantId);
+        String role = parseRole(request.role());
+        List<UUID> allowedProductIds = inviteProductIds(request);
+        String productNames = inviteProductNames(tenantId, allowedProductIds, request.allowedProducts());
         identityUserLifecycleService.findByEmail(request.email())
                 .filter(user -> tenantUserAccessService.hasAnyMembership(tenantId, user.id()))
                 .ifPresent(_ -> {
@@ -108,11 +111,9 @@ public class TenantUserService {
             throw new TenantUserAlreadyExistsException();
         }
 
-        String role = parseRole(request.role());
         TenantMembershipReference membership = tenantUserAccessService.invite(tenantId, user.id(), role);
-        List<UUID> allowedProductIds = inviteProductIds(request);
         productUserAccessService.inviteTenantAssignments(tenantId, user.id(), role, allowedProductIds);
-        sendInviteActivation(user, membership, inviteProductNames(tenantId, request), role, caller.name());
+        sendInviteActivation(user, membership, productNames, role, caller.name());
         notificationOnboardingService.assignOnboarding(user.id());
         recordAudit(tenantId, caller.subject(), "USER_INVITED_TO_TENANT", user.id(), user.displayName(),
                 null, Map.of("role", role, DIFF_KEY_STATUS, STATUS_INVITED));
@@ -286,10 +287,9 @@ public class TenantUserService {
                 .toList());
     }
 
-    private String inviteProductNames(UUID tenantId, InviteTenantUserRequest request) {
-        List<UUID> productIds = inviteProductIds(request);
+    private String inviteProductNames(UUID tenantId, List<UUID> productIds, String allowedProducts) {
         if (productIds.isEmpty()) {
-            return request.allowedProducts();
+            return allowedProducts;
         }
 
         List<Product> products = productRepository.findAllById(productIds);
@@ -331,7 +331,14 @@ public class TenantUserService {
     }
 
     private String parseRole(String role) {
-        String normalized = String.valueOf(role).trim().toUpperCase(Locale.ROOT);
+        String normalized = String.valueOf(role)
+                .trim()
+                .replace('-', '_')
+                .replace(' ', '_')
+                .toUpperCase(Locale.ROOT);
+        if (normalized.startsWith("ROLE_")) {
+            normalized = normalized.substring("ROLE_".length());
+        }
         return switch (normalized) {
             case SUPER_ADMIN, TENANT_ADMIN, "PRODUCT_MANAGER", "EDITOR", "VIEWER" -> normalized;
             default -> throw new InvalidTenantUserOperationException("Invalid user role: " + role);
