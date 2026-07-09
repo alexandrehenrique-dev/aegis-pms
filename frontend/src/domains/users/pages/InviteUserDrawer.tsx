@@ -7,6 +7,7 @@ import { usersService } from "../services/usersService";
 import { PermissionImpactSummary } from "../components/PermissionImpactSummary";
 import { emailError, textLengthError } from "../../../shared/utils/validation";
 import { useAuth } from "../../../core/auth/useAuth";
+import { ALL_MODULE_KEYS, resolveEnabledModules } from "../../../core/products/moduleDefaults";
 import type { ApiError } from "../../../shared/services/apiClient";
 
 const ROLES = [
@@ -17,7 +18,7 @@ const ROLES = [
 ];
 const ROLE_LABELS = ROLES.map((role) => role.label);
 const ROLE_VALUE_BY_LABEL = Object.fromEntries(ROLES.map((role) => [role.label, role.value]));
-const MODULES = ["Conteúdo, Assets, Forms", "Conteúdo, Analytics", "Todos os módulos"];
+const DEFAULT_INVITE_MESSAGE = "Você foi convidado para operar conteúdo do produto.";
 
 export function InviteUserDrawer() {
   const navigate = useNavigate();
@@ -35,8 +36,22 @@ export function InviteUserDrawer() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState(ROLES[0].label);
   const [allowedProducts, setAllowedProducts] = useState(productOptions[0]);
-  const [allowedModules, setAllowedModules] = useState(MODULES[0]);
+  const [allowedModules, setAllowedModules] = useState("");
+  const [message, setMessage] = useState(DEFAULT_INVITE_MESSAGE);
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean }>({});
+  const enabledModules = useMemo(() => {
+    const products = allowedProducts === "Todos os produtos"
+      ? tenantProducts
+      : tenantProducts.filter((product) => product.name === allowedProducts);
+    const modules = products.length > 0
+      ? Array.from(new Set(products.flatMap((product) => resolveEnabledModules(product))))
+      : Array.from(ALL_MODULE_KEYS);
+    return modules.length > 0 ? modules : Array.from(ALL_MODULE_KEYS);
+  }, [allowedProducts, tenantProducts]);
+  const moduleOptions = useMemo(() => [
+    enabledModules.join(", "),
+    "Todos os módulos",
+  ], [enabledModules]);
 
   // O.1 (BUG-SPRINT-05) — um nome de uma só palavra vira firstName sem
   // lastName no Keycloak (ver KeycloakAdminClient.firstName/lastName), o que
@@ -56,7 +71,7 @@ export function InviteUserDrawer() {
       const allowedProductIds = allowedProducts === "Todos os produtos"
         ? tenantProducts.map((product) => product.id)
         : tenantProducts.filter((product) => product.name === allowedProducts).map((product) => product.id);
-      await usersService.invite({ name, email, role: ROLE_VALUE_BY_LABEL[role] ?? role, allowedProducts, allowedProductIds }, effectiveTenant?.id);
+      await usersService.invite({ name, email, role: ROLE_VALUE_BY_LABEL[role] ?? role, allowedProducts, allowedProductIds, message }, effectiveTenant?.id);
       toast.success("Convite enviado!", { description: `${name} receberá um email com instruções de acesso.` });
       navigate("/users");
     } catch (error) {
@@ -66,7 +81,7 @@ export function InviteUserDrawer() {
         : apiError.status === 403
           ? "Sem permissão para convidar usuários neste contexto."
           : apiError.status === 409
-            ? "Este usuário já possui acesso ao tenant."
+            ? "Este usuário já pertence ao tenant. Para conceder acesso a outro produto, use Configurações → Equipe no produto desejado."
             : apiError.status === 0
               ? "Não foi possível conectar à API. Verifique o backend e tente novamente."
               : "Erro ao enviar convite. Tente novamente.";
@@ -89,8 +104,8 @@ export function InviteUserDrawer() {
             <Field label="Email" value={email} onChange={setEmail} onBlur={() => setTouched((t) => ({ ...t, email: true }))} error={touched.email ? emailErr : undefined} />
             <SelectLike label="Papel" value={role} options={ROLE_LABELS} onChange={setRole} />
             <SelectLike label="Produtos permitidos" value={allowedProducts} options={productOptions} onChange={setAllowedProducts} />
-            <SelectLike label="Módulos permitidos" value={allowedModules} options={MODULES} onChange={setAllowedModules} />
-            <Field label="Mensagem opcional" value="Você foi convidado para operar conteúdo do produto." textarea />
+            <SelectLike label="Módulos permitidos" value={allowedModules || moduleOptions[0]} options={moduleOptions} onChange={setAllowedModules} />
+            <Field label="Mensagem opcional" value={message} onChange={setMessage} textarea />
           </div>
         </Card>
         <Card>

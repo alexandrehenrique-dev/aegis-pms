@@ -64,15 +64,14 @@ export async function suppressTutorialAutostart(page) {
 }
 
 /**
- * Login + seleção de tenant/produto (fluxo Aegis PMS). Usuários com mais de
- * um tenant/produto (super-admin, tenant-admin) caem na tela de seleção com
- * vários cards — passe `tenantName`/`productName` para escolher um
- * específico (clica no texto do nome, que propaga pro `onClick` do card por
- * bubbling); sem eles, assume o caso comum de 1 card só ("Entrar →"/"Abrir
- * →", como editor/viewer/product_manager veem para o tenant BYOP). `theme`
- * opcional ("light"/"dark") seta `localStorage.aegis-theme` antes do login,
- * para testar telas que reagem ao tema do app (ex.: Tarefa C da Sprint 18 —
- * preview "papel branco").
+ * Login + seleção de contexto (fluxo Aegis PMS). Super Admin/Tenant Admin
+ * podem passar por tenant e produto; Product Manager/Editor/Viewer entram em
+ * fluxo produto-first, sem escolher tenant explicitamente. Passe
+ * `tenantName`/`productName` para escolher cards específicos; sem eles, o
+ * helper aceita o caso de um único card usando os botões de seleção quando
+ * existirem. `theme` opcional ("light"/"dark") seta
+ * `localStorage.aegis-theme` antes do login, para testar telas que reagem ao
+ * tema do app (ex.: Tarefa C da Sprint 18 — preview "papel branco").
  */
 export async function loginAndOpenProduct(page, { user = DEMO_USERS.editor, theme, tenantName, productName } = {}) {
   await page.goto(`${BASE_URL}/login`, { waitUntil: "networkidle" });
@@ -86,10 +85,20 @@ export async function loginAndOpenProduct(page, { user = DEMO_USERS.editor, them
   await page.getByRole("button", { name: "Entrar" }).click();
   await page.waitForTimeout(800);
   if (tenantName) await page.getByText(tenantName, { exact: true }).first().click();
-  else await page.getByText("Entrar →").click();
+  else {
+    const enterButtons = page.getByText("Entrar →");
+    if (await enterButtons.count() > 0 && await enterButtons.first().isVisible().catch(() => false)) {
+      await enterButtons.first().click();
+    }
+  }
   await page.waitForTimeout(800);
   if (productName) await page.getByText(productName, { exact: true }).first().click();
-  else await page.getByText("Abrir →").click();
+  else {
+    const openButtons = page.getByText("Abrir →");
+    if (await openButtons.count() > 0 && await openButtons.first().isVisible().catch(() => false)) {
+      await openButtons.first().click();
+    }
+  }
   await page.waitForTimeout(1000);
   // Modal de boas-vindas só aparece no primeiro acesso da sessão — ignora se não existir.
   await page.getByText("Entendi").click({ timeout: 2000 }).catch(() => {});

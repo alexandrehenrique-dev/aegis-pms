@@ -1,224 +1,238 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, BookOpen, Calendar, Download, LayoutGrid, ShieldAlert, User, X, Zap } from "lucide-react";
-import { Button, Card, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
-import { AuditEventCard } from "../components/AuditEventCard";
-import { auditService } from "../services/auditService";
-import { useAsyncData } from "../../../shared/hooks/useAsyncData";
-import { toast } from "../../../core/notifications/toast";
+import { useNavigate } from "react-router";
+import { ChevronLeft, ChevronRight, Download, Search } from "lucide-react";
+import { Button, EmptyState, PageHeader, PartialErrorWidget, SkeletonLines } from "../../../shared/components/Primitives";
+import { RiskBadge } from "../../../shared/components/RiskBadge";
 import { useAuth } from "../../../core/auth/useAuth";
-import type { AuditEvent } from "../contracts/responses";
+import { toast } from "../../../core/notifications/toast";
+import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { AuditEventCard } from "../components/AuditEventCard";
+import type { AuditEvent, AuditEventFilters } from "../contracts/responses";
+import { auditService } from "../services/auditService";
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
-type FilterKey = "actor" | "module" | "action" | "tenant" | "risk";
-
-const FILTER_CONFIG: Array<{ key: FilterKey; label: string; icon: React.ReactNode; field: keyof AuditEvent }> = [
-  { key: "actor",  label: "Usuário",   icon: <User size={13} />,        field: "actor" },
-  { key: "tenant", label: "Produto",   icon: <BookOpen size={13} />,    field: "tenant" },
-  { key: "module", label: "Módulo",    icon: <LayoutGrid size={13} />,  field: "module" },
-  { key: "action", label: "Evento",    icon: <Zap size={13} />,         field: "action" },
-  { key: "risk",   label: "Severidade",icon: <ShieldAlert size={13} />, field: "risk" },
-];
-
-const RISK_COLOR: Record<string, string> = {
-  alta:  "text-red-500",
-  média: "text-amber-500",
-  baixa: "text-green-500",
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 25;
+const RISK_OPTIONS = ["baixo", "medio", "alto"];
+const MODULE_OPTIONS = ["CONTENT", "PAGES", "ASSETS", "FORM", "ANALYTICS", "KNOWLEDGE_GRAPH", "USERS", "SETTINGS", "PRODUCT"];
 
 function exportTimelineCsv(events: AuditEvent[]) {
   const header = ["Ator", "Ação", "Recurso", "Tenant", "Módulo", "Hora", "Risco"];
   const csv = [header, ...events.map((e) => [e.actor, e.action, e.target, e.tenant, e.module, e.time, e.risk])]
-    .map((r) => r.map((c) => `"${String(c)}"`).join(",")).join("\n");
+    .map((row) => row.map((cell) => `"${String(cell).replaceAll("\"", "\"\"")}"`).join(","))
+    .join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "audit-timeline.csv";
-  a.click();
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "audit-events.csv";
+  link.click();
   URL.revokeObjectURL(url);
 }
 
-// ─── Painel lateral de filtros ────────────────────────────────────────────────
-
-function FilterPanel({
-  events,
-  filters,
+function SelectFilter({
+  label,
+  value,
+  options,
   onChange,
-  onClearAll,
 }: {
-  events: AuditEvent[];
-  filters: Partial<Record<FilterKey, string | null>>;
-  onChange: (key: FilterKey, value: string | null) => void;
-  onClearAll: () => void;
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
 }) {
-  const hasActive = Object.values(filters).some(Boolean);
-
   return (
-    <Card className="sticky top-4 h-fit">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Filtros</h2>
-        {hasActive && (
-          <button
-            onClick={onClearAll}
-            className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
-            <X size={10} /> Limpar
-          </button>
-        )}
-      </div>
-
-      {FILTER_CONFIG.map(({ key, label, icon, field }) => {
-        const opts = Array.from(new Set(events.map((e) => String(e[field])))).filter(Boolean).sort();
-        const active = filters[key] ?? null;
-        if (opts.length === 0) return null;
-        return (
-          <div key={key} className="mb-4">
-            <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {icon} {label}
-            </p>
-            <div className="flex flex-wrap gap-1">
-              <Chip active={!active} onClick={() => onChange(key, null)}>Todos</Chip>
-              {opts.map((o) => (
-                <Chip
-                  key={o}
-                  active={active === o}
-                  onClick={() => onChange(key, active === o ? null : o)}
-                >
-                  {key === "risk" && (
-                    <AlertTriangle size={10} className={RISK_COLOR[o] ?? "text-muted-foreground"} />
-                  )}
-                  {o}
-                </Chip>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Período — visual até API retornar timestamps completos */}
-      <div className="mb-1">
-        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          <Calendar size={13} /> Período
-        </p>
-        <div className="flex flex-wrap gap-1">
-          {["Hoje", "7 dias", "30 dias"].map((p) => (
-            <Chip key={p} active={false} onClick={() => toast.info("Disponível após integração com timestamps completos")} >
-              {p}
-            </Chip>
-          ))}
-          <Chip active={true} onClick={() => {}}>Tudo</Chip>
-        </div>
-      </div>
-    </Card>
+    <label className="min-w-0 text-xs font-medium text-muted-foreground">
+      {label}
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground outline-primary"
+      >
+        <option value="">Todos</option>
+        {options.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </select>
+    </label>
   );
 }
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function AuditTable({ events }: { events: AuditEvent[] }) {
+  const navigate = useNavigate();
   return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-        active
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "bg-muted text-muted-foreground hover:bg-muted/70"
-      }`}
-    >
-      {children}
-    </button>
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="overflow-x-auto">
+        <table className="min-w-[920px] w-full text-left text-sm">
+          <thead className="bg-muted/70 text-xs uppercase tracking-wide text-muted-foreground">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Quando</th>
+              <th className="px-4 py-3 font-semibold">Ator</th>
+              <th className="px-4 py-3 font-semibold">Evento</th>
+              <th className="px-4 py-3 font-semibold">Alvo</th>
+              <th className="px-4 py-3 font-semibold">Módulo</th>
+              <th className="px-4 py-3 font-semibold">Risco</th>
+              <th className="px-4 py-3 text-right font-semibold">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {events.map((event) => (
+              <tr key={event.id ?? `${event.actor}-${event.action}-${event.time}`} className="transition hover:bg-muted/35">
+                <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{event.time}</td>
+                <td className="max-w-[220px] px-4 py-3">
+                  <p className="truncate font-medium">{event.actor}</p>
+                  <p className="truncate text-xs text-muted-foreground">{event.tenant}</p>
+                </td>
+                <td className="max-w-[260px] px-4 py-3">
+                  <p className="truncate font-medium">{event.action}</p>
+                </td>
+                <td className="max-w-[280px] px-4 py-3 text-muted-foreground">
+                  <p className="truncate">{event.target}</p>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">{event.module}</span>
+                </td>
+                <td className="px-4 py-3"><RiskBadge risk={event.risk} /></td>
+                <td className="px-4 py-3 text-right">
+                  <Button onClick={() => navigate(`/audit/${event.id}`)} disabled={!event.id}>Abrir</Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────────
+function Pagination({
+  page,
+  totalPages,
+  totalElements,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  totalElements: number;
+  onPageChange: (page: number) => void;
+}) {
+  const lastPage = Math.max(totalPages - 1, 0);
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+      <span>
+        {totalElements === 0
+          ? "Nenhum evento"
+          : `${totalElements} evento${totalElements === 1 ? "" : "s"} · página ${page + 1} de ${Math.max(totalPages, 1)}`}
+      </span>
+      <div className="flex gap-2">
+        <Button onClick={() => onPageChange(page - 1)} disabled={page <= 0}>
+          <ChevronLeft size={14} /> Anterior
+        </Button>
+        <Button onClick={() => onPageChange(page + 1)} disabled={page >= lastPage}>
+          Próxima <ChevronRight size={14} />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function AuditTimeline({ compact = false }: { compact?: boolean }) {
   const { effectiveTenant } = useAuth();
-  const { data: auditEvents, loading, error } = useAsyncData(
-    () => auditService.listEvents(effectiveTenant?.id),
-    [effectiveTenant?.id],
+  const [page, setPage] = useState(0);
+  const [filters, setFilters] = useState<AuditEventFilters>({});
+
+  const { data, loading, error } = useAsyncData(
+    () => auditService.listEventsPage(effectiveTenant?.id, filters, page, PAGE_SIZE),
+    [effectiveTenant?.id, filters.query, filters.module, filters.risk, filters.productId, page],
   );
 
-  const [filters, setFilters] = useState<Partial<Record<FilterKey, string | null>>>({});
+  const events = useMemo(() => data?.items ?? [], [data?.items]);
+  const compactEvents = useMemo(() => events.slice(0, 3), [events]);
+  const activeFilterCount = [filters.query, filters.module, filters.risk].filter(Boolean).length;
 
-  const handleFilter = (key: FilterKey, value: string | null) =>
-    setFilters((prev) => ({ ...prev, [key]: value }));
+  const updateFilter = (patch: Partial<AuditEventFilters>) => {
+    setPage(0);
+    setFilters((current) => ({ ...current, ...patch }));
+  };
 
-  const handleClearAll = () => setFilters({});
-
-  const allEvents = useMemo(() => auditEvents ?? [], [auditEvents]);
-
-  const filtered = useMemo(
-    () =>
-      allEvents.filter((e) =>
-        FILTER_CONFIG.every(({ key, field }) => {
-          const active = filters[key];
-          return !active || String(e[field]) === active;
-        }),
-      ),
-    [allEvents, filters],
-  );
+  const clearFilters = () => {
+    setPage(0);
+    setFilters({});
+  };
 
   if (loading) return <SkeletonLines />;
-  if (error || !auditEvents) return <PartialErrorWidget />;
+  if (error || !data) return <PartialErrorWidget />;
 
-  const body = (
-    <div>
-      {filtered.map((e) => (
-        <AuditEventCard key={`${e.actor}-${e.action}-${e.time}`} e={e} />
-      ))}
-    </div>
-  );
+  if (compact) {
+    return (
+      <div>
+        {compactEvents.map((event) => <AuditEventCard key={event.id ?? `${event.actor}-${event.time}`} e={event} />)}
+        {compactEvents.length === 0 && <EmptyState compact title="Sem atividade recente" description="Ainda não há eventos para este contexto." />}
+      </div>
+    );
+  }
 
-  if (compact) return body;
-
-  const activeCount = Object.values(filters).filter(Boolean).length;
+  const visibleEvents = events;
 
   return (
     <>
       <PageHeader
-        title="Audit Timeline"
+        title="Auditoria"
         module="Auditoria"
-        desc="Timeline operacional de eventos relevantes e rastreáveis."
+        desc="Eventos rastreáveis do tenant em uma tabela paginada, com filtros operacionais."
         badge="Audit"
       >
-        {activeCount > 0 && (
-          <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary">
-            {activeCount} filtro{activeCount > 1 ? "s" : ""} ativo{activeCount > 1 ? "s" : ""}
+        {activeFilterCount > 0 && (
+          <span className="rounded-full bg-primary/15 px-2.5 py-1 text-xs font-medium text-primary">
+            {activeFilterCount} filtro{activeFilterCount === 1 ? "" : "s"}
           </span>
         )}
         <Button
           primary
           onClick={() => {
-            exportTimelineCsv(filtered);
-            toast.success("Timeline exportada!", { description: `${filtered.length} evento(s) exportados.` });
+            exportTimelineCsv(visibleEvents);
+            toast.success("Auditoria exportada.", { description: `${visibleEvents.length} evento(s) da página exportados.` });
           }}
         >
-          <Download size={14} /> Exportar
+          <Download size={14} /> Exportar página
         </Button>
       </PageHeader>
 
-      <div className="grid gap-4 xl:grid-cols-[240px_1fr]">
-        <FilterPanel
-          events={allEvents}
-          filters={filters}
-          onChange={handleFilter}
-          onClearAll={handleClearAll}
-        />
-        <div>
-          {filtered.length === 0 ? (
-            <EmptyState
-              compact
-              title="Nenhum evento encontrado"
-              description="Tente remover alguns filtros para ver mais resultados."
-              primaryAction={{ label: "Limpar filtros", onClick: handleClearAll }}
-            />
-          ) : (
-            body
-          )}
+      <div className="mb-4 rounded-xl border border-border bg-card p-3">
+        <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_160px_auto] lg:items-end">
+          <label className="text-xs font-medium text-muted-foreground">
+            Buscar
+            <div className="mt-1 flex h-10 items-center gap-2 rounded-lg border border-border bg-background px-3">
+              <Search size={15} />
+              <input
+                value={filters.query ?? ""}
+                onChange={(event) => updateFilter({ query: event.target.value })}
+                placeholder="Ator, evento, alvo..."
+                className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none"
+              />
+            </div>
+          </label>
+          <SelectFilter label="Módulo" value={filters.module ?? ""} options={MODULE_OPTIONS} onChange={(module) => updateFilter({ module: module || undefined })} />
+          <SelectFilter label="Risco" value={filters.risk ?? ""} options={RISK_OPTIONS} onChange={(risk) => updateFilter({ risk: risk || undefined })} />
+          <Button onClick={clearFilters} disabled={activeFilterCount === 0}>Limpar filtros</Button>
         </div>
       </div>
+
+      {visibleEvents.length === 0 ? (
+        <EmptyState
+          title="Nenhum evento encontrado"
+          description="Ajuste filtros ou avance para outra página da trilha de auditoria."
+          primaryAction={{ label: "Limpar filtros", onClick: clearFilters }}
+        />
+      ) : (
+        <div className="space-y-3">
+          <AuditTable events={visibleEvents} />
+          <Pagination
+            page={data.page}
+            totalPages={data.totalPages}
+            totalElements={data.totalElements}
+            onPageChange={(nextPage) => setPage(Math.max(nextPage, 0))}
+          />
+        </div>
+      )}
     </>
   );
 }

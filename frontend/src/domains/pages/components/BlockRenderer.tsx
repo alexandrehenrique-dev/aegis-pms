@@ -2,6 +2,7 @@ import type { MiniBlock } from "../contracts/responses";
 import type { Section } from "../contracts/responses";
 import { Markdown } from "../../../shared/components/Markdown";
 import { useAuthenticatedImage } from "../../../shared/hooks/useAuthenticatedImage";
+import { toYoutubeEmbedUrl } from "../videoUrl";
 import { EventListPreview } from "./EventListPreview";
 
 function asStr(v: unknown, fallback = ""): string {
@@ -20,11 +21,11 @@ function AuthImg({ assetId, alt, className }: { assetId: string | undefined; alt
     : <div className={`flex items-center justify-center bg-muted p-6 text-center text-xs text-muted-foreground ${className}`}>[imagem: {alt}]</div>;
 }
 
-function AuthAudio({ assetId, className }: { assetId: string | undefined; className: string }) {
+function AuthAudio({ assetId, className }: { assetId: string | undefined; className?: string }) {
   const src = useAuthenticatedImage(assetId);
   return src
-    ? <audio controls src={src} className={className} />
-    : <div className="rounded-lg border border-border p-3 text-sm text-muted-foreground">[áudio não disponível: {assetId ?? "nenhum"}]</div>;
+    ? <audio controls src={src} className={className ?? "w-full"} />
+    : <div className={`rounded-lg border border-border bg-white/70 p-3 text-sm text-muted-foreground ${className ?? ""}`}>Áudio ainda não disponível{assetId ? `: ${assetId}` : ""}</div>;
 }
 
 function AuthVideo({ assetId, className }: { assetId: string | undefined; className: string }) {
@@ -34,16 +35,43 @@ function AuthVideo({ assetId, className }: { assetId: string | undefined; classN
     : <div className={`flex items-center justify-center rounded-lg border border-border text-sm text-muted-foreground ${className}`}>[vídeo não disponível]</div>;
 }
 
-function toYoutubeEmbed(url: string): string | undefined {
-  const match = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  return match ? `https://www.youtube.com/embed/${match[1]}` : undefined;
+function EmptyMedia({ label, className = "" }: { label: string; className?: string }) {
+  return <div className={`flex items-center justify-center rounded-lg border border-dashed border-border bg-muted/60 p-6 text-center text-xs text-muted-foreground ${className}`}>{label}</div>;
+}
+
+function VideoPreview({ item, titleClassName = "" }: { item: Record<string, unknown>; titleClassName?: string }) {
+  const source = asStr(item.source, "upload");
+  const title = asStr(item.title, "Sem título");
+  const youtubeEmbedUrl = source === "youtube" ? toYoutubeEmbedUrl(asStr(item.youtubeUrl)) : undefined;
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
+      {source === "upload" ? (
+        <AuthVideo assetId={asStr(item.fileAssetId) || undefined} className="aspect-video w-full bg-black/5 object-cover" />
+      ) : youtubeEmbedUrl ? (
+        <iframe
+          title={title}
+          src={youtubeEmbedUrl}
+          className="aspect-video w-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          allowFullScreen
+        />
+      ) : (
+        <EmptyMedia label="URL do YouTube inválida ou ausente" className="aspect-video" />
+      )}
+      <div className="p-3">
+        <p className={`font-medium ${titleClassName}`}>{title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{source === "upload" ? "Vídeo dos assets do produto" : "YouTube incorporado"}</p>
+      </div>
+    </div>
+  );
 }
 
 function MiniBlockPreview({ block }: { block: MiniBlock }) {
   const c = block.content;
   switch (block.type) {
     case "image":
-      return <div className="rounded-lg bg-muted p-6 text-center text-xs text-muted-foreground">[imagem: {asStr(c.alt, "sem descrição")}]</div>;
+      return <AuthImg assetId={asStr(c.src) || undefined} alt={asStr(c.alt, "sem descrição")} className="aspect-[4/3] w-full rounded-xl object-cover" />;
     case "cta":
       return <button className="rounded-lg bg-primary px-3 py-1.5 text-sm text-primary-foreground">{asStr(c.label, "Call to action")}</button>;
     default:
@@ -158,11 +186,22 @@ export function BlockRenderer({ section, forceLightProse = false, productSlug }:
 
     case "gallery": {
       const items = asArray(c.items);
+      const [featured, ...rest] = items;
       return (
-        <div className="grid grid-cols-3 gap-2 p-6">
-          {items.map((item, i) => (
-            <AuthImg key={i} assetId={typeof item.src === "string" ? item.src : undefined} alt={asStr(item.alt, "imagem")} className="aspect-square rounded-lg object-cover" />
-          ))}
+        <div className="p-6">
+          {c.title ? <h3 className="mb-3 text-xl font-semibold">{asStr(c.title)}</h3> : null}
+          {items.length === 0 ? (
+            <EmptyMedia label="Galeria sem imagens" className="min-h-40" />
+          ) : (
+            <div className="grid gap-3 md:grid-cols-[1.4fr_1fr]">
+              <AuthImg assetId={asStr(featured.src) || undefined} alt={asStr(featured.alt, "imagem em destaque")} className="aspect-[4/3] w-full rounded-xl object-cover" />
+              <div className="grid grid-cols-2 gap-3">
+                {(rest.length > 0 ? rest : items).slice(0, 4).map((item, i) => (
+                  <AuthImg key={i} assetId={asStr(item.src) || undefined} alt={asStr(item.alt, "imagem")} className="aspect-square rounded-xl object-cover" />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -196,6 +235,7 @@ export function BlockRenderer({ section, forceLightProse = false, productSlug }:
       const items = asArray(c.items);
       return (
         <div className="space-y-2 p-6">
+          {c.title ? <h3 className="mb-3 text-xl font-semibold">{asStr(c.title)}</h3> : null}
           {items.map((item, i) => (
             <div key={i} className="rounded-lg border border-border p-3">
               <p className="font-medium">{asStr(item.q ?? item.question)}</p>
@@ -240,14 +280,21 @@ export function BlockRenderer({ section, forceLightProse = false, productSlug }:
 
     case "video": {
       const source = asStr(c.source, "upload");
-      const youtubeEmbedUrl = source === "youtube" ? toYoutubeEmbed(asStr(c.youtubeUrl)) : undefined;
+      const youtubeEmbedUrl = source === "youtube" ? toYoutubeEmbedUrl(asStr(c.youtubeUrl)) : undefined;
       return (
         <div className="p-6">
           {c.title ? <h3 className="mb-2 text-xl font-semibold">{asStr(c.title)}</h3> : null}
           {source === "upload" ? (
             <AuthVideo assetId={asStr(c.fileAssetId) || undefined} className="aspect-video w-full rounded-lg" />
           ) : youtubeEmbedUrl ? (
-            <iframe src={youtubeEmbedUrl} className="aspect-video w-full rounded-lg" allowFullScreen />
+            <iframe
+              title={asStr(c.title, "Video do YouTube")}
+              src={youtubeEmbedUrl}
+              className="aspect-video w-full rounded-lg"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
           ) : (
             <div className="flex aspect-video items-center justify-center rounded-lg border border-border text-sm text-muted-foreground">[URL do YouTube inválida]</div>
           )}
@@ -259,15 +306,15 @@ export function BlockRenderer({ section, forceLightProse = false, productSlug }:
     case "video-gallery": {
       const items = asArray(c.items);
       return (
-        <div className="grid grid-cols-2 gap-3 p-6 md:grid-cols-3">
-          {items.map((item, i) => (
-            <div key={i} className="flex aspect-video flex-col items-center justify-center rounded-lg bg-muted p-2 text-center text-xs text-muted-foreground">
-              {asStr(item.source, "upload") === "upload"
-                ? `[vídeo: ${asStr(item.fileAssetId, "nenhum arquivo")}]`
-                : `[YouTube: ${asStr(item.youtubeUrl, "nenhuma URL")}]`}
-              <span className="mt-1 font-medium text-foreground">{asStr(item.title, "Sem título")}</span>
+        <div className="p-6">
+          {c.title ? <h3 className="mb-3 text-xl font-semibold">{asStr(c.title)}</h3> : null}
+          {items.length === 0 ? (
+            <EmptyMedia label="Galeria de vídeos sem itens" className="min-h-40" />
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {items.map((item, i) => <VideoPreview key={i} item={item} />)}
             </div>
-          ))}
+          )}
         </div>
       );
     }
@@ -275,8 +322,11 @@ export function BlockRenderer({ section, forceLightProse = false, productSlug }:
     case "social-links": {
       const items = asArray(c.items);
       return (
-        <div className="flex gap-3 p-6">
-          {items.map((item, i) => <span key={i} className="rounded-full border border-border px-3 py-1 text-sm">{asStr(item.platform, "rede social")}</span>)}
+        <div className="p-6">
+          {c.title ? <h3 className="mb-3 text-xl font-semibold">{asStr(c.title)}</h3> : null}
+          <div className="flex flex-wrap gap-3">
+            {items.map((item, i) => <span key={i} className="rounded-full border border-border px-3 py-1 text-sm">{asStr(item.platform, "rede social")}</span>)}
+          </div>
         </div>
       );
     }

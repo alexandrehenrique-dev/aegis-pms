@@ -1,6 +1,6 @@
 import { Outlet, useLocation } from "react-router";
 import { useViewAsRole } from "../../core/permissions/useViewAsRole";
-import { isRouteBlockedForEffectiveAccess } from "../../core/permissions/roles";
+import { isRouteBlockedForEffectiveAccess, requiresProductContext } from "../../core/permissions/roles";
 import { NoPermScreen } from "../../core/permissions/components/NoPermScreen";
 import { useAuth } from "../../core/auth/useAuth";
 
@@ -21,7 +21,8 @@ export function RequireRole() {
   const { effectiveProduct } = useAuth();
   const location = useLocation();
 
-  if (isRouteBlockedForEffectiveAccess(viewAsRole, effectiveProduct?.callerAssignedRole, location.pathname)) {
+  const assignedRole = requiresProductContext(location.pathname) ? effectiveProduct?.callerAssignedRole : null;
+  if (isRouteBlockedForEffectiveAccess(viewAsRole, assignedRole, location.pathname)) {
     return <NoPermScreen role={viewAsRole} />;
   }
 

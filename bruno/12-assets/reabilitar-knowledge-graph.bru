@@ -1,0 +1,25 @@
+meta {
+  name: Reabilitar modulo KNOWLEDGE_GRAPH
+  type: http
+  seq: 25
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/KNOWLEDGE_GRAPH/enable
+  body: none
+}
+
+docs {
+Passo 4 de 4 — restaura KNOWLEDGE_GRAPH depois que ASSETS foi religado.
+Resultado esperado: 200, enabled true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("KNOWLEDGE_GRAPH habilitado novamente", function() {
+    expect(res.body.moduleKey).to.equal("KNOWLEDGE_GRAPH");
+    expect(res.body.enabled).to.equal(true);
+  });
+}

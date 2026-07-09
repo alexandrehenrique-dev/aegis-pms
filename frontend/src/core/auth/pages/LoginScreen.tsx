@@ -9,6 +9,8 @@ import { getApiMode } from "../../config/keycloakConfig";
 import { toast } from "../../notifications/toast";
 import type { LoginError } from "../../../shared/types";
 
+const PRODUCT_WORKSPACE_ROLES = new Set(["product_manager", "editor", "viewer"]);
+
 export function LoginScreen() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,10 +39,10 @@ export function LoginScreen() {
     setLoading(true);
     try {
       const result = await authService.login({ username: email, password });
-      await initSession(result);
+      const user = await initSession(result);
       // Se o usuário veio de um convite com produto específico, vai direto ao produto.
       // Caso contrário, segue o fluxo normal de seleção de tenant.
-      navigate(postLoginNext.current ?? "/select-tenant");
+      navigate(postLoginNext.current ?? (user && PRODUCT_WORKSPACE_ROLES.has(user.role) ? "/select-product" : "/select-tenant"));
     } catch (err) {
       setError(loginErrorFromException(err));
     } finally {
@@ -69,16 +71,28 @@ export function LoginScreen() {
             <span className="mb-1 block text-sm font-medium">E-mail</span>
             <input type="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" onKeyDown={(e) => e.key === "Enter" && handleLogin()} />
           </label>
-          <label className="block">
+          <div className="block">
             <div className="mb-1 flex items-center justify-between">
-              <span className="text-sm font-medium">Senha</span>
+              <label htmlFor="password" className="text-sm font-medium">Senha</label>
               <button type="button" onClick={() => navigate("/forgot-password")} className="text-xs text-muted-foreground transition hover:text-foreground">Esqueci minha senha</button>
             </div>
             <div className="relative">
-              <input type={showPwd ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" onKeyDown={(e) => e.key === "Enter" && handleLogin()} />
-              <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground">{showPwd ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+              <input id="password" type={showPwd ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full rounded-lg border border-border bg-card px-3 py-2.5 pr-10 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10" onKeyDown={(e) => e.key === "Enter" && handleLogin()} />
+              <button
+                type="button"
+                aria-label={showPwd ? "Ocultar senha" : "Mostrar senha"}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowPwd((current) => !current);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+              >
+                {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
-          </label>
+          </div>
           {error && <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg border border-destructive/20 bg-[#FDEBE8] p-3 text-sm text-destructive">{msgs[error]}</motion.div>}
           <button onClick={handleLogin} disabled={loading || !email || !password} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50">
             {loading ? <><Loader2 size={16} className="animate-spin" />Entrando...</> : "Entrar"}

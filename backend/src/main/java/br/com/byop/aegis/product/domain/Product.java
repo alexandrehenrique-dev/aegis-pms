@@ -77,6 +77,14 @@ public class Product {
         this.name = Objects.requireNonNull(name, "name is required");
     }
 
+    public void changeType(ProductTypeKey type) {
+        this.type = Objects.requireNonNull(type, "type is required");
+    }
+
+    public void changeStatus(ProductStatus status) {
+        this.status = Objects.requireNonNull(status, "status is required");
+    }
+
     public void suspend() {
         this.status = ProductStatus.SUSPENDED;
     }

@@ -7,7 +7,6 @@ import { MarkdownField } from "../../../shared/components/MarkdownField";
 import { ImageFieldEditor, MediaField } from "../../../shared/components/MediaField";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
 import { toast } from "../../../core/notifications/toast";
-import { VersionTimeline } from "../../content/components/VersionTimeline";
 import type { BlockType, Page, Section } from "../contracts/responses";
 import { EntityPicker } from "../../knowledge/components/EntityPicker";
 import { knowledgeService } from "../../knowledge/services/knowledgeService";
@@ -39,9 +38,9 @@ function SectionRow({ section, index, isSelected, isLast, totalCount, onSelect, 
       className={`mb-1 flex w-full items-center gap-1 rounded-lg p-1 transition ${isSelected ? "bg-muted" : "hover:bg-muted"} ${isOver ? "ring-2 ring-primary/30" : ""}`}
     >
       <GripVertical size={14} className="shrink-0 cursor-grab text-muted-foreground/50 active:cursor-grabbing" />
-      <button onClick={onSelect} className="flex flex-1 items-center justify-between p-1 text-left text-sm">
-        <span>{section.label}</span>
-        <span className="flex gap-1"><Badge>{section.type}</Badge>{isLast && totalCount > 4 && <AlertTriangle size={14} className="text-[#8A5A12]" />}</span>
+      <button onClick={onSelect} className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 p-1 text-left text-sm">
+        <span className="min-w-0 truncate">{section.label}</span>
+        <span className="flex shrink-0 items-center gap-1"><Badge>{section.type}</Badge>{isLast && totalCount > 4 && <AlertTriangle size={14} className="text-[#8A5A12]" />}</span>
       </button>
       <button onClick={onRequestDelete} aria-label={`Remover ${section.label}`} className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"><Trash2 size={14} /></button>
     </div>
@@ -212,7 +211,7 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
     ...(isTwoColumn ? ["left", "right"] : []),
     ...(isAudio ? ["source", "fileAssetId", "spotifyUrl", "autoplay"] : []),
     ...(isVideo ? ["source", "fileAssetId", "youtubeUrl", "autoplay"] : []),
-    ...(isEventList ? ["selectedEventIds"] : []),
+    ...(isEventList ? ["selectedEventIds", "selectedEvents"] : []),
     ...(isHero ? ["theme"] : []),
     ...(itemsCrudConfig ? [itemsCrudConfig.key] : []),
     ...(hasFormIdSelector ? ["formId"] : []),
@@ -364,19 +363,43 @@ export function BlockEditorCanvas({ section, productSlug, onChangeContent, onReq
 }
 
 function SEOPanel({ page }: { page: Page | null }) {
-  const [title, setTitle] = useState(page?.seo.title ?? "Maestro Beton | Experiências");
-  const [description, setDescription] = useState(page?.seo.description ?? "Conheça experiências e apresentações do Maestro Beton.");
-  const [keywords, setKeywords] = useState(page?.seo.keywords ?? "maestro, eventos, apresentações");
+  const [title, setTitle] = useState(page?.seo.title ?? page?.title ?? "");
+  const [description, setDescription] = useState(page?.seo.description ?? "");
+  const [canonical, setCanonical] = useState(page?.seo.canonical ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setTitle(page?.seo.title ?? page?.title ?? "");
+    setDescription(page?.seo.description ?? "");
+    setCanonical(page?.seo.canonical ?? "");
+  }, [page?.id, page?.seo.title, page?.seo.description, page?.seo.canonical, page?.title]);
+
+  const handleSave = async () => {
+    if (!page) return;
+    setSaving(true);
+    try {
+      await pagesService.updatePage(page.productSlug, page.id, {
+        seo: { ...page.seo, title, description, canonical },
+      });
+      toast.success("SEO salvo", { description: "Metadados da página atualizados." });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
       <Field label="Title" value={title} onChange={setTitle} />
       <Field label="Description" value={description} onChange={setDescription} textarea />
-      <Field label="Keywords" value={keywords} onChange={setKeywords} />
+      <Field label="Canonical" value={canonical} onChange={setCanonical} />
       <div className="rounded-lg border border-border p-3 text-sm">
         <b>Preview Google</b>
-        <p className="text-[#1F5FA8]">{title}</p>
-        <p className="text-muted-foreground">{description}</p>
+        <p className="text-[#1F5FA8]">{title || page?.title || "Sem título definido"}</p>
+        <p className="text-muted-foreground">{description || "Sem descrição definida."}</p>
       </div>
+      <Button onClick={handleSave} disabled={!page || saving}>
+        {saving && <Loader2 size={15} className="animate-spin" />}Salvar SEO
+      </Button>
     </div>
   );
 }
@@ -435,8 +458,41 @@ function PageJsonViewer({ page }: { page: Page | null }) {
   );
 }
 
-export function PropertiesPanel({ page, section }: { page: Page | null; section: Section | null }) {
+function PageHistoryPanel({ page }: { page: Page | null }) {
+  if (!page) return <p className="text-sm text-muted-foreground">Nenhuma página carregada.</p>;
+  return (
+    <div className="space-y-2 text-sm">
+      {[
+        ["Página", page.title],
+        ["Slug", page.slug],
+        ["Status", page.status],
+        ["Versão atual", `v${page.version}`],
+        ["Blocos", String(page.sections.length)],
+        ["SEO", page.seo.title || page.seo.description ? "configurado" : "sem metadados"],
+      ].map(([label, value]) => (
+        <div key={label} className="flex justify-between gap-3 rounded-lg bg-muted p-2">
+          <span>{label}</span>
+          <b className="text-right">{value}</b>
+        </div>
+      ))}
+      <div className="rounded-lg border border-border p-3 text-muted-foreground">
+        Histórico exibido a partir da página carregada. Eventos de auditoria aparecem no módulo Auditoria.
+      </div>
+    </div>
+  );
+}
+
+export function PropertiesPanel({ page, section, onRenameSection }: { page: Page | null; section: Section | null; onRenameSection: (sectionId: string, label: string) => void }) {
   const [tab, setTab] = useState("Propriedades");
+  const [draftLabel, setDraftLabel] = useState(section?.label ?? "");
+
+  useEffect(() => setDraftLabel(section?.label ?? ""), [section?.id, section?.label]);
+
+  const commitLabel = () => {
+    if (!section || draftLabel.trim() === section.label) return;
+    onRenameSection(section.id, draftLabel);
+  };
+
   return (
     <Card className="h-full">
       <div className="mb-3 flex gap-1 overflow-auto">
@@ -444,11 +500,18 @@ export function PropertiesPanel({ page, section }: { page: Page | null; section:
           <button key={t} onClick={() => setTab(t)} className={`rounded-lg px-2 py-1 text-xs ${tab === t ? "bg-primary text-white" : "bg-muted"}`}>{t}</button>
         ))}
       </div>
-      {tab === "SEO" ? <SEOPanel page={page} /> : tab === "Workflow" ? <WorkflowPanel page={page} /> : tab === "Histórico" ? <VersionTimeline compact /> : tab === "JSON" ? <PageJsonViewer page={page} /> : (
+      {tab === "SEO" ? <SEOPanel page={page} /> : tab === "Workflow" ? <WorkflowPanel page={page} /> : tab === "Histórico" ? <PageHistoryPanel page={page} /> : tab === "JSON" ? <PageJsonViewer page={page} /> : (
         <div className="space-y-2 text-sm">
+          {section && (
+            <Field
+              label="Nome do bloco"
+              value={draftLabel}
+              onChange={setDraftLabel}
+              onBlur={commitLabel}
+            />
+          )}
           {[
             ["página", page?.slug ?? "—"],
-            ["bloco", section?.label ?? "—"],
             ["tipo de bloco", section?.type ?? "—"],
             ["idioma", page?.locale ?? "—"],
             ["status", page?.status ?? "—"],

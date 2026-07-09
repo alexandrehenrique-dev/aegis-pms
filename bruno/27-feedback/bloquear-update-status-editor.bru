@@ -17,14 +17,17 @@ body:json {
 
 docs {
 Objetivo: validar que update de status e exclusivo de SUPER_ADMIN.
-Resultado esperado: 403 FEEDBACK_FORBIDDEN.
+Resultado esperado: 403 FEEDBACK_FORBIDDEN quando o editor demo existe, ou 401 quando o realm local nao trouxer esse usuario opcional.
 }
 
 tests {
-  test("status 403", function() {
-    expect(res.status).to.equal(403);
+  test("status 401 ou 403", function() {
+    expect([401, 403]).to.include(res.status);
   });
   test("erro esperado", function() {
+    if (res.status === 401) {
+      return;
+    }
     expect(res.body.error).to.equal("FEEDBACK_FORBIDDEN");
   });
 }

@@ -7,6 +7,7 @@ import br.com.byop.aegis.knowledgegraph.contract.ResolveGraphOrphansRequest;
 import br.com.byop.aegis.knowledgegraph.contract.ReviewGraphInsightRequest;
 import br.com.byop.aegis.knowledgegraph.contract.UpdateGraphNodePositionRequest;
 import br.com.byop.aegis.knowledgegraph.dto.GraphEdgeDetail;
+import br.com.byop.aegis.knowledgegraph.dto.GraphEdgeSummary;
 import br.com.byop.aegis.knowledgegraph.dto.GraphInsightReviewSummary;
 import br.com.byop.aegis.knowledgegraph.dto.GraphNeighborSummary;
 import br.com.byop.aegis.knowledgegraph.dto.GraphNodeDetail;
@@ -131,6 +132,13 @@ public class KnowledgeGraphController {
                                       Authentication authentication) {
         assertProductAccess(authentication, productId);
         return knowledgeGraphService.createEdge(productId, request);
+    }
+
+    @GetMapping("/api/v1/products/{productId}/graph/edges")
+    public List<GraphEdgeSummary> listEdges(@PathVariable("productId") UUID productId,
+                                            Authentication authentication) {
+        assertProductAccess(authentication, productId);
+        return knowledgeGraphService.listEdges(productId);
     }
 
     @GetMapping("/api/v1/products/{productId}/graph/nodes/{nodeId}/neighbors")

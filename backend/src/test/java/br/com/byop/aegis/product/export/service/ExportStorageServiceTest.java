@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -78,7 +79,7 @@ class ExportStorageServiceTest {
                 .isInstanceOf(ExportStorageException.class)
                 .hasMessage("Unable to open export ZIP");
 
-        org.mockito.Mockito.doThrow(new IllegalStateException("broken"))
+        doThrow(new IllegalStateException("broken"))
                 .when(storagePort)
                 .deleteExport("local", token.getZipPath());
 

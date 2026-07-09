@@ -3,6 +3,7 @@ package br.com.byop.aegis.product.service;
 import br.com.byop.aegis.product.api.ModuleKey;
 import br.com.byop.aegis.product.api.ProductCreatedEvent;
 import br.com.byop.aegis.product.command.CreateProductCommand;
+import br.com.byop.aegis.product.command.UpdateProductCommand;
 import br.com.byop.aegis.product.api.AssetStorageStrategy;
 import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.domain.ProductAssignment;
@@ -15,6 +16,7 @@ import br.com.byop.aegis.product.dto.ProductDetail;
 import br.com.byop.aegis.product.dto.ProductModuleSummary;
 import br.com.byop.aegis.product.dto.ProductSummary;
 import br.com.byop.aegis.product.exception.InvalidProductTypeException;
+import br.com.byop.aegis.product.exception.InvalidProductStatusException;
 import br.com.byop.aegis.product.exception.ProductAlreadyExistsException;
 import br.com.byop.aegis.product.exception.ProductNotFoundException;
 import br.com.byop.aegis.product.mapper.ProductMapper;
@@ -44,6 +46,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -87,7 +90,7 @@ class ProductServiceTest {
         when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "maestro-beton")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
-        when(productMapper.toSummary(savedProduct, 0, "PRODUCT_MANAGER")).thenReturn(summary);
+        when(productMapper.toSummary(savedProduct, 0, List.of(), "PRODUCT_MANAGER")).thenReturn(summary);
 
         ProductSummary result = productService.createProduct(
                 user("creator-subject", "ROLE_TENANT_ADMIN"),
@@ -139,7 +142,7 @@ class ProductServiceTest {
         when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "kb-product")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
-        when(productMapper.toSummary(savedProduct, 0, "PRODUCT_MANAGER")).thenReturn(productSummary(tenantId, savedProductId(), "kb-product"));
+        when(productMapper.toSummary(savedProduct, 0, List.of(), "PRODUCT_MANAGER")).thenReturn(productSummary(tenantId, savedProductId(), "kb-product"));
 
         productService.createProduct(user("creator-subject", "ROLE_TENANT_ADMIN"),
                 createCommand(tenantId, "kb-product", "Knowledge Base"));
@@ -156,7 +159,7 @@ class ProductServiceTest {
         when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "custom-product")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
-        when(productMapper.toSummary(savedProduct, 0, "PRODUCT_MANAGER")).thenReturn(productSummary(tenantId, savedProductId(), "custom-product"));
+        when(productMapper.toSummary(savedProduct, 0, List.of(), "PRODUCT_MANAGER")).thenReturn(productSummary(tenantId, savedProductId(), "custom-product"));
 
         productService.createProduct(user("creator-subject", "ROLE_TENANT_ADMIN"),
                 createCommand(tenantId, "custom-product", ProductTypeKey.CUSTOM.name()));
@@ -171,7 +174,7 @@ class ProductServiceTest {
         when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "broken-product")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
-        org.mockito.Mockito.doThrow(new RuntimeException("boom"))
+        doThrow(new RuntimeException("boom"))
                 .when(productModuleService).enableModule(savedProductId(), "PAGES");
         AuthenticatedUser caller = user("creator-subject", "ROLE_TENANT_ADMIN");
         CreateProductCommand command = createCommand(tenantId, "broken-product", "Site Institucional");
@@ -192,7 +195,7 @@ class ProductServiceTest {
         when(tenantAccessService.getRequiredReference(tenantId)).thenReturn(new TenantReference(tenantId, "Tenant Aegis"));
         when(productRepository.existsByTenantIdAndKey(tenantId, "explicit-storage-product")).thenReturn(false);
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
-        when(productMapper.toSummary(savedProduct, 0, "PRODUCT_MANAGER")).thenReturn(summary);
+        when(productMapper.toSummary(savedProduct, 0, List.of(), "PRODUCT_MANAGER")).thenReturn(summary);
 
         ProductSummary result = productService.createProduct(
                 user("creator-subject", "ROLE_TENANT_ADMIN"),
@@ -253,7 +256,7 @@ class ProductServiceTest {
         when(productRepository.findAll()).thenReturn(List.of(product));
         when(assignmentRepository.findAllByUserSubjectAndStatus("super-subject", ProductAssignmentStatus.ASSIGNED))
                 .thenReturn(List.of());
-        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, List.of(), null)).thenReturn(summary);
 
         List<ProductSummary> result = productService.listProducts(user("super-subject", "ROLE_SUPER_ADMIN"));
 
@@ -274,7 +277,7 @@ class ProductServiceTest {
         when(tenantAccessService.findActiveTenantAdminTenantIds("tenant-admin-subject"))
                 .thenReturn(List.of(activeTenant.getId()));
         when(productRepository.findAllByTenantId(activeTenant.getId())).thenReturn(List.of(product));
-        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, List.of(), null)).thenReturn(summary);
 
         List<ProductSummary> result = productService.listProducts(user("tenant-admin-subject", "ROLE_TENANT_ADMIN"));
 
@@ -290,7 +293,7 @@ class ProductServiceTest {
         when(tenantAccessService.findActiveTenantAdminTenantIds("tenant-admin-subject"))
                 .thenReturn(List.of(tenant.getId()));
         when(productRepository.findAllByTenantId(tenant.getId())).thenReturn(List.of(product));
-        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, List.of(), null)).thenReturn(summary);
 
         List<ProductSummary> result = productService.listProducts(user("tenant-admin-subject", "ROLE_UNKNOWN"));
 
@@ -323,7 +326,7 @@ class ProductServiceTest {
         ProductSummary summary = productSummary(tenant.getId(), product.getId(), product.getKey());
         when(assignmentRepository.findAllByUserSubjectAndStatus("unknown-subject", ProductAssignmentStatus.ASSIGNED))
                 .thenReturn(List.of(assignment));
-        when(productMapper.toSummary(product, 0, "PRODUCT_MANAGER")).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, List.of(), "PRODUCT_MANAGER")).thenReturn(summary);
 
         List<ProductSummary> result = productService.listProducts(user("unknown-subject", "ROLE_UNKNOWN"));
 
@@ -337,7 +340,7 @@ class ProductServiceTest {
         UUID productId = product.getId();
         ProductSummary summary = productSummary(tenant.getId(), productId, "visible-product");
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, List.of(), null)).thenReturn(summary);
 
         assertThat(productService.getProduct(user("super-subject", "ROLE_SUPER_ADMIN"), productId)).isEqualTo(summary);
 
@@ -351,6 +354,102 @@ class ProductServiceTest {
     }
 
     @Test
+    void shouldUpdateProductForSuperAdminAndPersistActiveStatus() {
+        Tenant tenant = tenant(UUID.fromString("b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b3b3"), "update-super");
+        Product product = product(tenant, "archived-product");
+        product.archive();
+        UUID productId = product.getId();
+        ProductSummary summary = productSummary(tenant.getId(), productId, "archived-product");
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productMapper.toSummary(product, 0, List.of(), null)).thenReturn(summary);
+        AuthenticatedUser caller = user("super-subject", "ROLE_SUPER_ADMIN");
+        UpdateProductCommand command = new UpdateProductCommand("Produto Ativo", "PORTAL", "ACTIVE");
+
+        ProductSummary result = productService.updateProduct(caller, productId, command);
+
+        assertThat(result).isEqualTo(summary);
+        assertThat(product.getName()).isEqualTo("Produto Ativo");
+        assertThat(product.getType()).isEqualTo(ProductTypeKey.PORTAL);
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.ACTIVE);
+    }
+
+    @Test
+    void shouldUpdateProductForTenantAdminMembershipWithPortugueseArchivedStatus() {
+        Tenant tenant = tenant(UUID.fromString("b4b4b4b4-b4b4-b4b4-b4b4-b4b4b4b4b4b4"), "update-tenant");
+        Product product = product(tenant, "tenant-product");
+        UUID productId = product.getId();
+        ProductSummary summary = productSummary(tenant.getId(), productId, "tenant-product");
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(tenantAccessService.hasActiveTenantAdminMembership(tenant.getId(), "tenant-subject")).thenReturn(true);
+        when(productMapper.toSummary(product, 0, List.of(), null)).thenReturn(summary);
+        AuthenticatedUser caller = user("tenant-subject", "ROLE_VIEWER");
+        UpdateProductCommand command = new UpdateProductCommand("Produto Arquivado", "Knowledge Base", "Arquivado");
+
+        ProductSummary result = productService.updateProduct(caller, productId, command);
+
+        assertThat(result).isEqualTo(summary);
+        assertThat(product.getType()).isEqualTo(ProductTypeKey.KNOWLEDGE_BASE);
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.ARCHIVED);
+    }
+
+    @Test
+    void shouldMapLegacyPendingStatusToSuspendedWhenUpdatingProduct() {
+        Tenant tenant = tenant(UUID.fromString("b5b5b5b5-b5b5-b5b5-b5b5-b5b5b5b5b5b5"), "update-pending");
+        Product product = product(tenant, "pending-product");
+        UUID productId = product.getId();
+        ProductSummary summary = productSummary(tenant.getId(), productId, "pending-product");
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productMapper.toSummary(product, 0, List.of(), null)).thenReturn(summary);
+        AuthenticatedUser caller = user("super-subject", "ROLE_SUPER_ADMIN");
+        UpdateProductCommand command = new UpdateProductCommand("Produto Pendente", "CUSTOM", "PENDING");
+
+        productService.updateProduct(caller, productId, command);
+
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.SUSPENDED);
+    }
+
+    @Test
+    void shouldRejectInvalidProductStatusWhenUpdatingProduct() {
+        Tenant tenant = tenant(UUID.fromString("b6b6b6b6-b6b6-b6b6-b6b6-b6b6b6b6b6b6"), "invalid-status");
+        Product product = product(tenant, "invalid-status-product");
+        UUID productId = product.getId();
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        AuthenticatedUser caller = user("super-subject", "ROLE_SUPER_ADMIN");
+        UpdateProductCommand command = new UpdateProductCommand("Produto", "CUSTOM", "BROKEN");
+
+        assertThatThrownBy(() -> productService.updateProduct(caller, productId, command))
+                .isInstanceOf(InvalidProductStatusException.class)
+                .hasMessage("Invalid product status: BROKEN");
+    }
+
+    @Test
+    void shouldRejectProductRoleTryingToUpdateProductStatus() {
+        Tenant tenant = tenant(UUID.fromString("b7b7b7b7-b7b7-b7b7-b7b7-b7b7b7b7b7b7"), "update-denied");
+        Product product = product(tenant, "denied-product");
+        UUID productId = product.getId();
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(tenantAccessService.hasActiveTenantAdminMembership(tenant.getId(), "pm-subject")).thenReturn(false);
+        AuthenticatedUser caller = user("pm-subject", "ROLE_PRODUCT_MANAGER");
+        UpdateProductCommand command = new UpdateProductCommand("Produto", "CUSTOM", "ACTIVE");
+
+        assertThatThrownBy(() -> productService.updateProduct(caller, productId, command))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessage("Product not found: " + productId);
+    }
+
+    @Test
+    void shouldRejectUpdateWhenProductDoesNotExist() {
+        UUID productId = UUID.fromString("b8b8b8b8-b8b8-b8b8-b8b8-b8b8b8b8b8b8");
+        when(productRepository.findById(productId)).thenReturn(Optional.empty());
+        AuthenticatedUser caller = user("super-subject", "ROLE_SUPER_ADMIN");
+        UpdateProductCommand command = new UpdateProductCommand("Produto", "CUSTOM", "ACTIVE");
+
+        assertThatThrownBy(() -> productService.updateProduct(caller, productId, command))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessage("Product not found: " + productId);
+    }
+
+    @Test
     void shouldReportCallerAssignedRoleWhenAssignmentIsActive() {
         Tenant tenant = tenant(UUID.fromString("b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1"), "combo");
         Product product = product(tenant, "combo-product");
@@ -360,7 +459,7 @@ class ProductServiceTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(assignmentRepository.findByProductIdAndUserSubject(productId, "super-editor-subject"))
                 .thenReturn(Optional.of(assignment));
-        when(productMapper.toSummary(product, 0, "EDITOR")).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, List.of(), "EDITOR")).thenReturn(summary);
 
         assertThat(productService.getProduct(user("super-editor-subject", "ROLE_SUPER_ADMIN"), productId))
                 .isEqualTo(summary);
@@ -377,7 +476,7 @@ class ProductServiceTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(assignmentRepository.findByProductIdAndUserSubject(productId, "super-subject"))
                 .thenReturn(Optional.of(assignment));
-        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, List.of(), null)).thenReturn(summary);
 
         assertThat(productService.getProduct(user("super-subject", "ROLE_SUPER_ADMIN"), productId))
                 .isEqualTo(summary);
@@ -459,7 +558,7 @@ class ProductServiceTest {
         ProductSummary summary = productSummary(tenant.getId(), productId, "membership-admin-product");
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(tenantAccessService.hasActiveTenantAdminMembership(tenant.getId(), "tenant-subject")).thenReturn(true);
-        when(productMapper.toSummary(product, 0, null)).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, List.of(), null)).thenReturn(summary);
 
         ProductSummary result = productService.getProduct(user("tenant-subject", "ROLE_VIEWER"), productId);
 
@@ -497,7 +596,7 @@ class ProductServiceTest {
         ProductSummary summary = productSummary(tenant.getId(), product.getId(), product.getKey());
         when(assignmentRepository.findAllByUserSubjectAndStatus("assigned-subject", ProductAssignmentStatus.ASSIGNED))
                 .thenReturn(List.of(assignment));
-        when(productMapper.toSummary(product, 0, "EDITOR")).thenReturn(summary);
+        when(productMapper.toSummary(product, 0, List.of(), "EDITOR")).thenReturn(summary);
 
         return productService.listProducts(user("assigned-subject", authority));
     }
@@ -538,6 +637,7 @@ class ProductServiceTest {
                 OffsetDateTime.parse("2026-06-25T10:00:00-03:00"),
                 OffsetDateTime.parse("2026-06-25T10:10:00-03:00"),
                 0,
+                List.of(),
                 null
         );
     }

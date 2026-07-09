@@ -1,20 +1,17 @@
-import { kgNodes, kgEdges, wikidevKgNodes, wikidevKgEdges, lokiKgNodes, lokiKgEdges, type KGEdge, type KGEntityType, type KGNode } from "../mocks/knowledge.mocks";
+import type { KGEdge, KGEntityType, KGNode } from "../mocks/knowledge.mocks";
 import { products as productsStore } from "../../products/mocks/products.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
 import { slugify } from "../../../shared/utils/slugify";
-import type { EdgeType, GraphNodePreview, ListEdgesResponse, ListNodesResponse, RelatedNode } from "../contracts/responses";
+import type { EdgeType, GraphEdgeApiResponse, GraphNodePreview, ListEdgesResponse, ListNodesResponse, RelatedNode } from "../contracts/responses";
 
 // Store em memória só para a sessão do navegador — ver nota equivalente em
-// domains/products/services/productsService.ts. Os 3 conjuntos (Maestro
-// Beton, WikiDev, Loki) convivem aqui porque `getNodePreview`/`createEdge`
-// precisam resolver nós de qualquer produto (caso WikiDev, Tarefa C).
-const PRODUCT_NODE_SEEDS: { slug: string; nodes: KGNode[]; edges: KGEdge[] }[] = [
-  { slug: "maestro-beton", nodes: kgNodes, edges: kgEdges },
-  { slug: "wikidev", nodes: wikidevKgNodes, edges: wikidevKgEdges },
-  { slug: "loki", nodes: lokiKgNodes, edges: lokiKgEdges },
-];
+// domains/products/services/productsService.ts. Começa vazio de propósito:
+// Knowledge Graph não deve exibir entidades "demo" para um produto que o
+// usuário ainda não alimentou. Nós surgem a partir de conteúdo publicado e
+// referências kg-ref criadas na sessão.
+const PRODUCT_NODE_SEEDS: { slug: string; nodes: KGNode[]; edges: KGEdge[] }[] = [];
 
 const allNodes: KGNode[] = PRODUCT_NODE_SEEDS.flatMap((g) => g.nodes);
 const allEdges: KGEdge[] = PRODUCT_NODE_SEEDS.flatMap((g) => g.edges);
@@ -32,8 +29,8 @@ function productSlugFromId(productId: string): string | undefined {
 }
 
 function productNodes(productId: string): KGNode[] {
-  const productSlug = productSlugFromId(productId);
-  return allNodes.filter((n) => !productSlug || nodeProductSlug.get(n.id) === productSlug);
+  const owner = productSlugFromId(productId) ?? productId;
+  return allNodes.filter((n) => nodeProductSlug.get(n.id) === owner);
 }
 
 function productEdges(productId: string): KGEdge[] {
@@ -41,14 +38,19 @@ function productEdges(productId: string): KGEdge[] {
   return allEdges.filter((e) => nodeIds.has(e.from) && nodeIds.has(e.to));
 }
 
-function warnMissingEndpoint(method: string, path: string) {
-  if (!import.meta.env.PROD) console.warn(`knowledgeService: backend ainda não expõe ${method} ${path}; usando mock local.`);
-}
-
 type GraphRelatedApiResponse = {
   node: KGNode;
   edge: { edgeType?: string; weight?: number | string | null };
 };
+
+function mapEdgeApiResponse(edge: GraphEdgeApiResponse): KGEdge {
+  return {
+    from: edge.sourceNodeId,
+    to: edge.targetNodeId,
+    verb: edge.edgeType,
+    weight: Number(edge.weight ?? 1),
+  };
+}
 
 function mapRelatedApiResponse(row: GraphRelatedApiResponse): RelatedNode {
   return {
@@ -58,13 +60,23 @@ function mapRelatedApiResponse(row: GraphRelatedApiResponse): RelatedNode {
   };
 }
 
+function isContentBackedNode(node: KGNode): boolean {
+  return !node.refType || node.refType === "CONTENT";
+}
+
 export const knowledgeService = {
   async listNodes(productId: string): Promise<ListNodesResponse> {
-    if (IS_API_MODE) return apiClient.get<ListNodesResponse>(`/products/${productId}/graph/nodes`);
+    if (IS_API_MODE) {
+      const rows = await apiClient.get<ListNodesResponse>(`/products/${productId}/graph/nodes`);
+      return rows.filter(isContentBackedNode);
+    }
     return productNodes(productId);
   },
   async listEdges(productId: string): Promise<ListEdgesResponse> {
-    if (IS_API_MODE) warnMissingEndpoint("GET", `/api/v1/products/${productId}/graph/edges`);
+    if (IS_API_MODE) {
+      const rows = await apiClient.get<GraphEdgeApiResponse[]>(`/products/${productId}/graph/edges`);
+      return rows.map(mapEdgeApiResponse);
+    }
     return productEdges(productId);
   },
   // Pontos de integração real — sem endpoint formalizado ainda em
@@ -95,7 +107,7 @@ export const knowledgeService = {
   async listRelated(productId: string, nodeId: string): Promise<RelatedNode[]> {
     if (IS_API_MODE) {
       const rows = await apiClient.get<GraphRelatedApiResponse[]>(`/products/${productId}/graph/nodes/${nodeId}/related`);
-      return rows.map(mapRelatedApiResponse).sort((a, b) => b.weight - a.weight);
+      return rows.map(mapRelatedApiResponse).filter((row) => isContentBackedNode(row.node)).sort((a, b) => b.weight - a.weight);
     }
     return allEdges
       .filter((e) => e.from === nodeId || e.to === nodeId)
@@ -110,7 +122,10 @@ export const knowledgeService = {
 
   /** Busca por label entre os nós de um produto (ADR-0016: uma edge nunca conecta nós de produtos diferentes). */
   async searchNodes(query: string, productId: string): Promise<KGNode[]> {
-    if (IS_API_MODE) return apiClient.get<KGNode[]>(`/products/${productId}/graph/nodes?q=${encodeURIComponent(query)}`);
+    if (IS_API_MODE) {
+      const rows = await apiClient.get<KGNode[]>(`/products/${productId}/graph/nodes?q=${encodeURIComponent(query)}`);
+      return rows.filter(isContentBackedNode);
+    }
     const productSlug = productSlugFromId(productId);
     const q = query.toLowerCase();
     return allNodes

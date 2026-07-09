@@ -71,7 +71,8 @@ public class AuthActionTokenService {
                 writeProductNames(command.productNames()),
                 command.productSlug(),
                 command.role(),
-                command.inviterName()
+                command.inviterName(),
+                command.message()
         );
         AuthActionToken savedToken = tokenRepository.save(token);
         log.info("createInvite: token de convite criado para keycloakId='{}'", command.keycloakId());

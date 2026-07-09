@@ -1,0 +1,25 @@
+meta {
+  name: Preparar sandbox - desabilitar Knowledge Graph
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{moduleSandboxProductId}}/modules/KNOWLEDGE_GRAPH/disable
+  body: none
+}
+
+docs {
+Objetivo: deixar o produto sandbox em estado deterministico antes do teste de @RequireModule da pasta 04.
+Resultado esperado: 200, sem afetar o produto principal das proximas pastas.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("Knowledge Graph desabilitado", function() {
+    expect(res.body.moduleKey).to.equal("KNOWLEDGE_GRAPH");
+    expect(res.body.enabled).to.equal(false);
+  });
+}

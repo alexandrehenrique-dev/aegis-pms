@@ -276,6 +276,22 @@ class KnowledgeGraphControllerTest {
     }
 
     @Test
+    void shouldListEdges() throws Exception {
+        AuthenticatedUser caller = user();
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(knowledgeGraphService.listEdges(PRODUCT_ID)).thenReturn(List.of(edgeSummary()));
+
+        mockMvc.perform(get("/api/v1/products/{productId}/graph/edges", PRODUCT_ID)
+                        .with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].sourceNodeId").value(NODE_ID.toString()))
+                .andExpect(jsonPath("$[0].targetNodeId").value(TARGET_NODE_ID.toString()))
+                .andExpect(jsonPath("$[0].edgeType").value("RELATED_TO"));
+
+        verify(productAccessPort).assertAccessible(PRODUCT_ID, caller);
+    }
+
+    @Test
     void shouldFindNeighbors() throws Exception {
         AuthenticatedUser caller = user();
         when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);

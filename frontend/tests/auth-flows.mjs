@@ -16,6 +16,10 @@ async function main() {
     // `handleLogin` tem um delay artificial de 700ms (simula latencia de rede) antes de resolver o erro.
     await page.locator('input[type="email"]').fill("editor@byop.io");
     await page.locator('input[type="password"]').fill("senha-errada");
+    await page.getByRole("button", { name: "Mostrar senha" }).click();
+    ok = report("Olho da senha revela a senha sem navegar para esqueci senha", await page.locator('input[type="text"]').isVisible() && page.url().includes("/login")) && ok;
+    await page.getByRole("button", { name: "Ocultar senha" }).click();
+    ok = report("Olho da senha volta a ocultar a senha ainda em /login", await page.locator('input[type="password"]').isVisible() && page.url().includes("/login")) && ok;
     await page.getByRole("button", { name: "Entrar" }).click();
     await page.waitForTimeout(1000);
     ok = report("Senha errada mostra mensagem de credenciais invalidas", await page.getByText("E-mail ou senha incorretos").isVisible()) && ok;
@@ -34,19 +38,19 @@ async function main() {
     await page.goBack();
     await page.waitForTimeout(500);
 
-    // Login valido (editor) -> tenant -> produto -> dashboard
+    // Login valido (editor) -> produto -> dashboard. PM/editor/viewer seguem
+    // jornada produto-first: o tenant é contexto técnico, não uma escolha que
+    // esses perfis precisam fazer.
     await page.locator('input[type="email"]').fill(DEMO_USERS.editor.email);
     await page.locator('input[type="password"]').fill(DEMO_USERS.editor.password);
     await page.getByRole("button", { name: "Entrar" }).click();
     await page.waitForTimeout(1000);
-    ok = report("Apos login valido, cai na selecao de tenant", page.url().includes("/select-tenant")) && ok;
-    await page.getByText("Entrar →").click();
-    await page.waitForTimeout(800);
-    ok = report("Apos selecionar tenant, cai na selecao de produto", page.url().includes("/select-product")) && ok;
-    await page.getByText("Abrir →").click();
+    ok = report("Apos login valido, editor nao cai na selecao de tenant", !page.url().includes("/select-tenant")) && ok;
+    ok = report("Apos login valido, editor cai na selecao de produto", page.url().includes("/select-product")) && ok;
+    await page.getByText("Maestro Beton", { exact: true }).first().click();
     await page.waitForTimeout(1000);
     await page.getByText("Entendi").click({ timeout: 2000 }).catch(() => {});
-    ok = report("Apos selecionar produto, cai no dashboard do produto", page.url().includes("/products/")) && ok;
+    ok = report("Apos selecionar produto, editor cai no workspace operacional do produto", page.url().includes("/content")) && ok;
 
     // Logout
     await page.getByText("Rafael", { exact: true }).click();

@@ -1,4 +1,5 @@
 import type { ProductStatus } from "../../../shared/types";
+import { countOperationalModules } from "../../../core/products/moduleDefaults";
 import type { ProductSummary } from "../contracts/responses";
 
 export type ProductSummaryDto = {
@@ -13,6 +14,7 @@ export type ProductSummaryDto = {
   createdAt?: string;
   updatedAt?: string;
   enabledModuleCount?: number;
+  enabledModules?: string[];
   callerAssignedRole?: string | null;
 };
 
@@ -39,16 +41,18 @@ const PRODUCT_TYPES: Record<string, string> = {
 };
 
 export function mapProductSummary(dto: ProductSummaryDto): ProductSummary {
+  const modulesList = dto.enabledModules?.map(mapModuleKey);
   return {
     id: dto.id,
     key: dto.key,
     name: dto.name ?? dto.key,
     type: mapProductType(dto.type),
     status: mapProductStatus(dto.status),
-    modules: dto.enabledModuleCount ?? 0,
+    modules: modulesList ? countOperationalModules({ modulesList }) : (dto.enabledModuleCount ?? 0),
     last: dto.updatedAt ?? dto.createdAt ?? "—",
     score: "—",
     tenantId: dto.tenantId,
+    modulesList,
     callerAssignedRole: dto.callerAssignedRole ?? null,
   };
 }
@@ -63,4 +67,26 @@ export function mapProductStatus(status: string): ProductStatus {
 
 function mapProductType(type: string): string {
   return PRODUCT_TYPES[type] ?? type;
+}
+
+const MODULE_KEYS: Record<string, string> = {
+  PAGES: "Páginas",
+  CONTENT: "Conteúdo",
+  ASSETS: "Assets",
+  FORMS: "Forms",
+  SEO: "SEO",
+  ANALYTICS: "Analytics",
+  KNOWLEDGE_GRAPH: "Knowledge Graph",
+  ECOMMERCE: "E-commerce",
+  PORTFOLIO: "Portfolio",
+  LIBRARY: "Library",
+  BOOKS: "Books",
+  MUSIC: "Music",
+  SUBMISSIONS: "Submissions",
+  COMMENTS: "Comentários",
+  CONTRIBUTORS: "Contribuidores",
+};
+
+function mapModuleKey(moduleKey: string): string {
+  return MODULE_KEYS[moduleKey] ?? moduleKey;
 }

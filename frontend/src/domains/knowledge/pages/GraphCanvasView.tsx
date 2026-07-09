@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Info, Search, X, AlertTriangle } from "lucide-react";
 import { Button, EmptyState, PageHeader, Card, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { kgColor, KG_H, KG_W, type KGEdge, type KGNode } from "../mocks/knowledge.mocks";
@@ -12,24 +12,60 @@ export function GraphCanvasView() {
   const [sel, setSel] = useState<KGNode | null>(null);
   const [tf, setTf] = useState("todos");
   const [q, setQ] = useState("");
+  const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
   const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(productId), [productId]);
   const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(productId), [productId]);
+  const edges = kgEdges ?? [];
+  const positionedNodes = useMemo(() => (kgNodes ?? []).map((node, index) => {
+    const pos = nodePositions[node.id];
+    return {
+      ...node,
+      x: pos?.x ?? (node.x || 40 + (index % 4) * 190),
+      y: pos?.y ?? (node.y || 40 + Math.floor(index / 4) * 150),
+    };
+  }), [kgNodes, nodePositions]);
 
   if (loadingNodes || loadingEdges) return <SkeletonLines />;
   if (errorNodes || errorEdges || !kgNodes || !kgEdges) return <PartialErrorWidget />;
 
-  const types = [...new Set(kgNodes.map((n) => n.type))];
-  const vis = kgNodes.filter((n) => (tf === "todos" || n.type === tf) && (q === "" || n.label.toLowerCase().includes(q.toLowerCase())));
+  const nodeIds = new Set(positionedNodes.map((n) => n.id));
+  const visibleScopeEdges = edges.filter((e) => nodeIds.has(e.from) && nodeIds.has(e.to));
+  const types = [...new Set(positionedNodes.map((n) => n.type))];
+  const vis = positionedNodes.filter((n) => (tf === "todos" || n.type === tf) && (q === "" || n.label.toLowerCase().includes(q.toLowerCase())));
   const visIds = new Set(vis.map((n) => n.id));
-  const visEdges = kgEdges.filter((e) => visIds.has(e.from) && visIds.has(e.to));
+  const visEdges = visibleScopeEdges.filter((e) => visIds.has(e.from) && visIds.has(e.to));
   const ep = (e: KGEdge) => {
-    const fn = kgNodes.find((n) => n.id === e.from), tn = kgNodes.find((n) => n.id === e.to);
+    const fn = positionedNodes.find((n) => n.id === e.from), tn = positionedNodes.find((n) => n.id === e.to);
     if (!fn || !tn) return null;
     const sx = fn.x + KG_W / 2, sy = fn.y + KG_H, tx = tn.x + KG_W / 2, ty = tn.y, my = (sy + ty) / 2;
     return { path: `M ${sx} ${sy} C ${sx} ${my}, ${tx} ${my}, ${tx} ${ty}`, mx: (sx + tx) / 2, my };
   };
-  const incoming = sel ? kgEdges.filter((e) => e.to === sel.id).map((e) => kgNodes.find((n) => n.id === e.from)!).filter(Boolean) : [];
-  const outgoing = sel ? kgEdges.filter((e) => e.from === sel.id).map((e) => kgNodes.find((n) => n.id === e.to)!).filter(Boolean) : [];
+  const incoming = sel ? visibleScopeEdges.filter((e) => e.to === sel.id).map((e) => positionedNodes.find((n) => n.id === e.from)!).filter(Boolean) : [];
+  const outgoing = sel ? visibleScopeEdges.filter((e) => e.from === sel.id).map((e) => positionedNodes.find((n) => n.id === e.to)!).filter(Boolean) : [];
+
+  const startDrag = (node: KGNode, event: ReactPointerEvent<HTMLButtonElement>) => {
+    const originX = event.clientX;
+    const originY = event.clientY;
+    const startX = node.x;
+    const startY = node.y;
+    const pointerId = event.pointerId;
+    event.currentTarget.setPointerCapture(pointerId);
+    const handleMove = (moveEvent: PointerEvent) => {
+      setNodePositions((current) => ({
+        ...current,
+        [node.id]: {
+          x: Math.max(8, Math.min(864 - KG_W - 8, startX + moveEvent.clientX - originX)),
+          y: Math.max(8, Math.min(570 - KG_H - 8, startY + moveEvent.clientY - originY)),
+        },
+      }));
+    };
+    const handleUp = () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+  };
 
   return (
     <>
@@ -70,9 +106,9 @@ export function GraphCanvasView() {
             {vis.map((n) => {
               const c = kgColor[n.type] || "#374151";
               const isSel = sel?.id === n.id;
-              const isRel = !!(sel && kgEdges.some((e) => (e.from === sel.id && e.to === n.id) || (e.to === sel.id && e.from === n.id)));
+              const isRel = !!(sel && visibleScopeEdges.some((e) => (e.from === sel.id && e.to === n.id) || (e.to === sel.id && e.from === n.id)));
               return (
-                <button key={n.id} onClick={() => setSel(isSel ? null : n)} style={{ left: n.x, top: n.y, width: KG_W, height: KG_H, borderColor: isSel ? c : isRel ? c + "88" : "transparent", background: `${c}14` }} className={`absolute flex flex-col justify-center rounded-xl border-2 px-2.5 transition hover:border-current hover:shadow-md ${isSel ? "shadow-[0_0_0_3px_rgba(124,58,237,0.18)]" : ""}`}>
+                <button key={n.id} onPointerDown={(event) => startDrag(n, event)} onClick={() => setSel(isSel ? null : n)} style={{ left: n.x, top: n.y, width: KG_W, height: KG_H, borderColor: isSel ? c : isRel ? c + "88" : "transparent", background: `${c}14` }} className={`absolute flex cursor-grab flex-col justify-center rounded-xl border-2 px-2.5 transition hover:border-current hover:shadow-md active:cursor-grabbing ${isSel ? "shadow-[0_0_0_3px_rgba(124,58,237,0.18)]" : ""}`}>
                   <span style={{ color: c }} className="text-[8px] font-bold uppercase tracking-widest">{n.type}</span>
                   <span className="mt-0.5 w-full truncate text-sm font-semibold leading-tight text-foreground">{n.label}</span>
                   <span className="text-[9px] capitalize text-muted-foreground">{n.status}</span>
@@ -112,9 +148,9 @@ export function GraphCanvasView() {
               {incoming.length === 0 && outgoing.length === 0 && <EmptyState compact title="Sem dependências" description="Nenhuma entidade conectada." />}
             </Card>
             <Card>
-              <h3 className="mb-2 font-semibold text-sm">Relações ({kgEdges.filter((e) => e.from === sel.id || e.to === sel.id).length})</h3>
-              {kgEdges.filter((e) => e.from === sel.id || e.to === sel.id).map((e) => {
-                const other = e.from === sel.id ? kgNodes.find((n) => n.id === e.to) : kgNodes.find((n) => n.id === e.from);
+              <h3 className="mb-2 font-semibold text-sm">Relações ({visibleScopeEdges.filter((e) => e.from === sel.id || e.to === sel.id).length})</h3>
+              {visibleScopeEdges.filter((e) => e.from === sel.id || e.to === sel.id).map((e) => {
+                const other = e.from === sel.id ? positionedNodes.find((n) => n.id === e.to) : positionedNodes.find((n) => n.id === e.from);
                 if (!other) return null;
                 return (
                   <div key={`${e.from}${e.to}`} onClick={() => setSel(other)} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-xs transition hover:bg-muted">
@@ -140,7 +176,7 @@ export function GraphCanvasView() {
                 <div key={type} onClick={() => setTf(type === tf ? "todos" : type)} className="flex cursor-pointer items-center gap-2 py-0.5 text-xs text-muted-foreground hover:text-foreground">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                   <span>{type}</span>
-                  <span className="ml-auto">{kgNodes.filter((n) => n.type === type).length}</span>
+                  <span className="ml-auto">{positionedNodes.filter((n) => n.type === type).length}</span>
                 </div>
               ))}
             </div>

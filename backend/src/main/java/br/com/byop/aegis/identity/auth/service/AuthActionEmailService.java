@@ -98,6 +98,7 @@ public class AuthActionEmailService {
                 "tenantName", token.getTenantName(),
                 "productNames", String.join(", ", tokenService.productNames(token)),
                 "role", token.getRole(),
+                "inviteMessage", token.getInviteMessage() == null ? "" : token.getInviteMessage(),
                 "activationUrl", normalizedAppBaseUrl() + "/invite?token=" + token.getId(),
                 "expiresAt", EXPIRATION_FORMATTER.format(token.getExpiresAt())
         );

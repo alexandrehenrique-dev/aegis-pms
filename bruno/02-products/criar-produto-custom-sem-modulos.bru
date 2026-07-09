@@ -1,0 +1,42 @@
+meta {
+  name: Criar produto custom sem modulos - sandbox
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+}
+
+body:json {
+  {
+    "tenantId": "{{tenantId}}",
+    "key": "custom-modules-{{productKey}}",
+    "name": "Sandbox Modulos",
+    "type": "Custom",
+    "defaultLocale": "pt-BR"
+  }
+}
+
+docs {
+Objetivo: criar um produto CUSTOM sem modulos recomendados para os cenarios de dependencias e gating da pasta 03/04.
+Resultado esperado: 201, sem alterar o produto principal usado pelas proximas pastas.
+Variaveis produzidas: moduleSandboxProductId.
+}
+
+script:post-response {
+bru.setVar('moduleSandboxProductId', res.body.id);
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("sandbox product id presente", function() {
+    expect(res.body.id).to.be.a('string');
+  });
+  test("tipo custom", function() {
+    expect(res.body.type).to.equal("CUSTOM");
+  });
+}

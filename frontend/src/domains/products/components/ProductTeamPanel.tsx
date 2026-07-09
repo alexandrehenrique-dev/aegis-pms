@@ -85,12 +85,15 @@ function AddMemberModal({
   const isExistingAlready = detectedUser
     ? existingSubjects.has(detectedUser.userId) || existingSubjects.has(detectedUser.name)
     : false;
+  const inviteNameRequired = email.trim() !== "" && !detectedUser;
+  const inviteNameInvalid = inviteNameRequired && !/^\S+\s+\S+/.test(inviteName.trim());
 
   const canSubmit =
     !saving &&
     role !== "" &&
     email.trim() !== "" &&
-    !isExistingAlready;
+    !isExistingAlready &&
+    !inviteNameInvalid;
 
   const handleSubmit = async () => {
     setSaving(true);
@@ -169,7 +172,7 @@ function AddMemberModal({
               {/* Nome: só para novos usuários */}
               {email.trim() !== "" && !detectedUser && (
                 <div className="mt-3">
-                  <Field label="Nome (opcional)" value={inviteName} onChange={setInviteName} />
+                  <Field label="Nome e sobrenome" value={inviteName} onChange={setInviteName} error={inviteNameInvalid ? "Informe nome e sobrenome (ex.: Alexandre Henrique)." : undefined} />
                 </div>
               )}
             </>

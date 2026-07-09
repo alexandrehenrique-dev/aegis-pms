@@ -16,8 +16,9 @@ export type FormField = {
   mask: string;
   defaultValue: string;
   condition: string;
-  /** Formatos aceitos quando `type === "Upload"` (Sprint 12, Tarefa K.7) — vazio = aceita qualquer formato. */
+  /** Formatos aceitos quando `type === "Upload"` (Sprint 12, Tarefa K.7) — vazio = inválido para publicação. */
   acceptedFormats?: string[];
+  acceptedFileTypes?: string[];
 };
 
 export type SubmissionSummary = {

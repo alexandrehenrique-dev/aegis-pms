@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -98,28 +99,60 @@ public class TenantUserService {
         String role = parseRole(request.role());
         List<UUID> allowedProductIds = inviteProductIds(request);
         assertCanInvite(caller, tenantId, allowedProductIds, role);
-        String productNames = inviteProductNames(tenantId, allowedProductIds, request.allowedProducts());
-        identityUserLifecycleService.findByEmail(request.email())
-                .filter(user -> tenantUserAccessService.hasAnyMembership(tenantId, user.id()))
-                .ifPresent(_ -> {
-                    log.warn("inviteUser: usuario ja possui membership no tenant tenantId='{}'", tenantId);
-                    throw new TenantUserAlreadyExistsException();
-                });
+        InviteProductScope productScope = new InviteProductScope(
+                allowedProductIds,
+                inviteProductNames(tenantId, allowedProductIds, request.allowedProducts())
+        );
+        Optional<IdentityUser> existingUser = identityUserLifecycleService.findByEmail(request.email());
+        if (existingUser.isPresent()) {
+            IdentityUser user = existingUser.get();
+            Optional<TenantMembershipReference> existingMembership =
+                    tenantUserAccessService.findMembership(tenantId, user.id());
+            if (existingMembership.isPresent()) {
+                return inviteExistingTenantUser(caller, tenantId, request, role, productScope, user, existingMembership.get());
+            }
+        }
 
         IdentityUser user = identityUserLifecycleService.invite(request.email(), request.name());
-        if (tenantUserAccessService.hasAnyMembership(tenantId, user.id())) {
+        Optional<TenantMembershipReference> existingMembership =
+                tenantUserAccessService.findMembership(tenantId, user.id());
+        if (existingMembership.isPresent()) {
             log.warn("inviteUser: usuario ja possui membership no tenant tenantId='{}', userId='{}'", tenantId, user.id());
-            throw new TenantUserAlreadyExistsException();
+            return inviteExistingTenantUser(caller, tenantId, request, role, productScope, user, existingMembership.get());
         }
 
         identityUserLifecycleService.assignRealmRole(user.id(), KEYCLOAK_ROLE_PREFIX + role);
         TenantMembershipReference membership = tenantUserAccessService.invite(tenantId, user.id(), role);
-        productUserAccessService.inviteTenantAssignments(tenantId, user.id(), role, allowedProductIds);
-        sendInviteActivation(user, membership, productNames, role, caller.name());
+        productUserAccessService.inviteTenantAssignments(tenantId, user.id(), role, productScope.allowedProductIds());
+        sendInviteActivation(user, membership, productScope.productNames(), role, caller.name(), request.message());
         notificationOnboardingService.assignOnboarding(user.id());
         recordAudit(tenantId, caller.subject(), "USER_INVITED_TO_TENANT", user.id(), user.displayName(),
                 null, Map.of("role", role, DIFF_KEY_STATUS, STATUS_INVITED));
         log.info("inviteUser: usuario convidado tenantId='{}', userId='{}', role='{}'", tenantId, user.id(), role);
+        return toSummary(membership, user);
+    }
+
+    private TenantUserSummary inviteExistingTenantUser(AuthenticatedUser caller, UUID tenantId,
+                                                       InviteTenantUserRequest request, String role,
+                                                       InviteProductScope productScope,
+                                                       IdentityUser user, TenantMembershipReference membership) {
+        if (!isProductRole(role) || productScope.allowedProductIds().isEmpty() || STATUS_REMOVED.equals(membership.status())) {
+            log.warn("inviteExistingTenantUser: usuario ja possui membership no tenant tenantId='{}', userId='{}'",
+                    tenantId, user.id());
+            throw new TenantUserAlreadyExistsException();
+        }
+
+        identityUserLifecycleService.assignRealmRole(user.id(), KEYCLOAK_ROLE_PREFIX + role);
+        if (STATUS_ACTIVE.equals(membership.status())) {
+            productUserAccessService.grantTenantAssignments(tenantId, user.id(), role, productScope.allowedProductIds());
+        } else {
+            productUserAccessService.inviteTenantAssignments(tenantId, user.id(), role, productScope.allowedProductIds());
+        }
+        sendInviteActivation(user, membership, productScope.productNames(), role, caller.name(), request.message());
+        recordAudit(tenantId, caller.subject(), "USER_ASSIGNED_TO_PRODUCT", user.id(), user.displayName(),
+                null, Map.of("role", role, DIFF_KEY_STATUS, membership.status()));
+        log.info("inviteExistingTenantUser: acesso de produto atualizado tenantId='{}', userId='{}', role='{}'",
+                tenantId, user.id(), role);
         return toSummary(membership, user);
     }
 
@@ -151,7 +184,7 @@ public class TenantUserService {
             throw new InvalidTenantUserOperationException("Invite can only be resent for pending users");
         }
         IdentityUser user = identityUserLifecycleService.getRequiredUser(userId);
-        sendInviteActivation(user, membership, membershipProductNames(membership), membership.role(), caller.name());
+        sendInviteActivation(user, membership, membershipProductNames(membership), membership.role(), caller.name(), null);
         log.info("resendInvite: convite reenviado tenantId='{}', userId='{}'", tenantId, userId);
         return toSummary(membership);
     }
@@ -194,7 +227,7 @@ public class TenantUserService {
         TenantMembershipReference restored = tenantUserAccessService.restore(tenantId, userId);
         identityUserLifecycleService.setUserEnabled(userId, true);
         IdentityUser user = identityUserLifecycleService.getRequiredUser(userId);
-        sendInviteActivation(user, restored, membershipProductNames(restored), restored.role(), caller.name());
+        sendInviteActivation(user, restored, membershipProductNames(restored), restored.role(), caller.name(), null);
         recordAudit(tenantId, caller.subject(), "USER_RESTORED_TO_TENANT", userId, null,
                 Map.of(DIFF_KEY_STATUS, current.status()), Map.of(DIFF_KEY_STATUS, STATUS_ACTIVE));
         log.info("restoreUser: usuario restaurado tenantId='{}', userId='{}'", tenantId, userId);
@@ -280,7 +313,7 @@ public class TenantUserService {
     }
 
     private void sendInviteActivation(IdentityUser user, TenantMembershipReference membership, String productNames,
-                                      String role, String inviterName) {
+                                      String role, String inviterName, String message) {
         // productSlug é null para convites no nível do tenant — sem produto específico
         identityActionTokenService.sendInviteActivation(new IdentityActionInviteCommand(
                 user.id(),
@@ -291,7 +324,8 @@ public class TenantUserService {
                 splitProductNames(productNames),
                 null,
                 role,
-                inviterName
+                inviterName,
+                message
         ));
     }
 
@@ -392,5 +426,8 @@ public class TenantUserService {
         auditService.recordEvent(new AuditRecordCommand(
                 tenantId, null, actorSubject, action, "User", targetSubject, targetLabel, null, before, after
         ));
+    }
+
+    private record InviteProductScope(List<UUID> allowedProductIds, String productNames) {
     }
 }

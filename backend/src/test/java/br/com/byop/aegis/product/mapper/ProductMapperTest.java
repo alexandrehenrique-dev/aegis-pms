@@ -31,7 +31,7 @@ class ProductMapperTest {
         OffsetDateTime updatedAt = OffsetDateTime.parse("2026-06-25T12:10:00-03:00");
         Product product = product(tenantId, productId, createdAt, updatedAt);
 
-        ProductSummary summary = mapper.toSummary(product, 3, "EDITOR");
+        ProductSummary summary = mapper.toSummary(product, 3, List.of("CONTENT", "ASSETS", "FORMS"), "EDITOR");
 
         assertThat(summary).isNotNull();
         assertThat(summary.id()).isEqualTo(productId);
@@ -45,12 +45,13 @@ class ProductMapperTest {
         assertThat(summary.createdAt()).isEqualTo(createdAt);
         assertThat(summary.updatedAt()).isEqualTo(updatedAt);
         assertThat(summary.enabledModuleCount()).isEqualTo(3);
+        assertThat(summary.enabledModules()).containsExactly("CONTENT", "ASSETS", "FORMS");
         assertThat(summary.callerAssignedRole()).isEqualTo("EDITOR");
     }
 
     @Test
     void shouldReturnNullSummaryWhenProductIsNull() {
-        assertThat(mapper.toSummary(null, 0, null)).isNull();
+        assertThat(mapper.toSummary(null, 0, List.of(), null)).isNull();
     }
 
     @Test
@@ -65,7 +66,7 @@ class ProductMapperTest {
         when(product.getDefaultLocale()).thenReturn("pt-BR");
         when(product.getAssetStorageStrategy()).thenReturn(AssetStorageStrategy.LOCAL);
 
-        ProductSummary summary = mapper.toSummary(product, 0, null);
+        ProductSummary summary = mapper.toSummary(product, 0, List.of(), null);
 
         assertThat(summary).isNotNull();
         assertThat(summary.id()).isEqualTo(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));

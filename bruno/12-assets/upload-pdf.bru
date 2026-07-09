@@ -11,7 +11,7 @@ post {
 }
 
 body:multipart-form {
-  file: @file(/Users/alexandresilva/Downloads/curriculo-atual.pdf) @contentType(application/pdf)
+  file: @file(fixtures/curriculo.pdf) @contentType(application/pdf)
 }
 
 script:post-response {

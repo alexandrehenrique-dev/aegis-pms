@@ -290,6 +290,22 @@ class KnowledgeGraphServiceTest {
     }
 
     @Test
+    void shouldListEdgesForProduct() {
+        ProductReference product = product();
+        GraphNode source = node(product.tenantId(), product.productId(), GraphNodeType.ARTICLE, "source");
+        GraphNode target = node(product.tenantId(), product.productId(), GraphNodeType.TOPIC, "target");
+        GraphEdge edge = edge(product.tenantId(), product.productId(), source.getId(), target.getId());
+        GraphEdgeSummary edgeSummary = edgeSummary(edge);
+        when(productReferenceService.getRequiredReference(product.productId())).thenReturn(product);
+        when(edgeRepository.findAllByProductId(product.productId())).thenReturn(List.of(edge));
+        when(edgeMapper.toSummary(edge)).thenReturn(edgeSummary);
+
+        List<GraphEdgeSummary> result = service.listEdges(product.productId());
+
+        assertThat(result).containsExactly(edgeSummary);
+    }
+
+    @Test
     void shouldSearchNodesWithQuery() {
         ProductReference product = product();
         GraphNode node = node(product.tenantId(), product.productId(), GraphNodeType.TOPIC, "spring");

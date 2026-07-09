@@ -2,6 +2,8 @@ package br.com.byop.aegis.audit.repository;
 
 import br.com.byop.aegis.audit.domain.AuditEvent;
 import br.com.byop.aegis.audit.domain.AuditRisk;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -46,6 +48,44 @@ public interface AuditEventRepository extends JpaRepository<AuditEvent, UUID> {
                                        @Param("productId") UUID productId,
                                        @Param("module") String module,
                                        @Param("risk") AuditRisk risk);
+
+    @Query("""
+            SELECT e FROM AuditEvent e
+            WHERE e.tenantId = :tenantId
+              AND (:actorSubject IS NULL OR e.actorSubject = :actorSubject)
+              AND (:productId IS NULL OR e.productId = :productId)
+              AND (:module IS NULL OR e.module = :module)
+              AND (:risk IS NULL OR e.risk = :risk)
+            ORDER BY e.createdAt DESC
+            """)
+    Page<AuditEvent> findPageByFilters(@Param("tenantId") UUID tenantId,
+                                        @Param("actorSubject") String actorSubject,
+                                        @Param("productId") UUID productId,
+                                        @Param("module") String module,
+                                        @Param("risk") AuditRisk risk,
+                                        Pageable pageable);
+
+    @Query("""
+            SELECT e FROM AuditEvent e
+            WHERE e.tenantId = :tenantId
+              AND (:actorSubject IS NULL OR e.actorSubject = :actorSubject)
+              AND (:productId IS NULL OR e.productId = :productId)
+              AND (:module IS NULL OR e.module = :module)
+              AND (:risk IS NULL OR e.risk = :risk)
+              AND (LOWER(e.actorSubject) LIKE :queryPattern OR
+                   LOWER(e.action) LIKE :queryPattern OR
+                   LOWER(COALESCE(e.targetLabel, '')) LIKE :queryPattern OR
+                   LOWER(COALESCE(e.targetType, '')) LIKE :queryPattern OR
+                   LOWER(COALESCE(e.module, '')) LIKE :queryPattern)
+            ORDER BY e.createdAt DESC
+            """)
+    Page<AuditEvent> findPageByFiltersAndQuery(@Param("tenantId") UUID tenantId,
+                                        @Param("actorSubject") String actorSubject,
+                                        @Param("productId") UUID productId,
+                                        @Param("module") String module,
+                                        @Param("risk") AuditRisk risk,
+                                        @Param("queryPattern") String queryPattern,
+                                        Pageable pageable);
 
     /**
      * Busca um evento pelo identificador, restrito ao tenant informado —

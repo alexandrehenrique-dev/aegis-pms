@@ -13,11 +13,13 @@ import br.com.byop.aegis.product.mapper.ProductModuleMapper;
 import br.com.byop.aegis.product.repository.ProductModuleRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import br.com.byop.aegis.tenant.api.TenantAccessService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,20 +27,28 @@ import java.util.UUID;
 @Service
 public class ProductModuleService {
 
-    private static final Map<ModuleKey, ModuleKey> DEPENDENCIES = Map.copyOf(new EnumMap<>(Map.of(
-            ModuleKey.KNOWLEDGE_GRAPH, ModuleKey.CONTENT
-    )));
+    private static final Map<ModuleKey, List<ModuleKey>> DEPENDENCIES = buildDependencies();
     private static final String MODULE_PRODUCT = "PRODUCT";
+    private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
     private static final String TARGET_TYPE_PRODUCT_MODULE = "ProductModule";
 
     private final ProductRepository productRepository;
+    private final TenantAccessService tenantAccessService;
     private final ProductModuleRepository moduleRepository;
     private final ProductModuleMapper moduleMapper;
     private final AuditService auditService;
 
-    public ProductModuleService(ProductRepository productRepository, ProductModuleRepository moduleRepository,
-                                ProductModuleMapper moduleMapper, AuditService auditService) {
+    private static Map<ModuleKey, List<ModuleKey>> buildDependencies() {
+        Map<ModuleKey, List<ModuleKey>> dependencies = new EnumMap<>(ModuleKey.class);
+        dependencies.put(ModuleKey.KNOWLEDGE_GRAPH, List.of(ModuleKey.CONTENT, ModuleKey.ASSETS));
+        return Map.copyOf(dependencies);
+    }
+
+    public ProductModuleService(ProductRepository productRepository, TenantAccessService tenantAccessService,
+                                ProductModuleRepository moduleRepository, ProductModuleMapper moduleMapper,
+                                AuditService auditService) {
         this.productRepository = productRepository;
+        this.tenantAccessService = tenantAccessService;
         this.moduleRepository = moduleRepository;
         this.moduleMapper = moduleMapper;
         this.auditService = auditService;
@@ -60,11 +70,13 @@ public class ProductModuleService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
         ModuleKey moduleKey = parseModuleKey(moduleKeyValue);
-        ModuleKey dependency = DEPENDENCIES.get(moduleKey);
-
-        if (dependency != null && !moduleRepository.existsByProductIdAndModuleKeyAndEnabledTrue(productId, dependency)) {
-            log.warn("enableModule: dependencia ausente productId='{}', moduleKey='{}', dependency='{}'", productId, moduleKey, dependency);
-            throw new ModuleDependencyMissingException(moduleKey, dependency);
+        assertModuleManager(product, caller);
+        List<ModuleKey> dependencies = DEPENDENCIES.getOrDefault(moduleKey, List.of());
+        for (ModuleKey dependency : dependencies) {
+            if (!moduleRepository.existsByProductIdAndModuleKeyAndEnabledTrue(productId, dependency)) {
+                log.warn("enableModule: dependencia ausente productId='{}', moduleKey='{}', dependency='{}'", productId, moduleKey, dependency);
+                throw new ModuleDependencyMissingException(moduleKey, dependency);
+            }
         }
 
         ProductModule module = moduleRepository.findByProductIdAndModuleKey(productId, moduleKey)
@@ -93,6 +105,7 @@ public class ProductModuleService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
         ModuleKey moduleKey = parseModuleKey(moduleKeyValue);
+        assertModuleManager(product, caller);
         validateNoEnabledDependent(productId, moduleKey);
 
         ProductModule module = moduleRepository.findByProductIdAndModuleKey(productId, moduleKey)
@@ -108,7 +121,7 @@ public class ProductModuleService {
     private void validateNoEnabledDependent(UUID productId, ModuleKey moduleKey) {
         DEPENDENCIES.entrySet()
                 .stream()
-                .filter(entry -> entry.getValue() == moduleKey)
+                .filter(entry -> entry.getValue().contains(moduleKey))
                 .filter(entry -> moduleRepository.existsByProductIdAndModuleKeyAndEnabledTrue(productId, entry.getKey()))
                 .findFirst()
                 .ifPresent(entry -> {
@@ -123,6 +136,16 @@ public class ProductModuleService {
         } catch (IllegalArgumentException | NullPointerException _) {
             throw new InvalidModuleKeyException(moduleKeyValue);
         }
+    }
+
+    private void assertModuleManager(Product product, AuthenticatedUser caller) {
+        if (caller == null || caller.authorities().contains(ROLE_SUPER_ADMIN)) {
+            return;
+        }
+        if (tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), caller.subject())) {
+            return;
+        }
+        throw new ProductNotFoundException(product.getId());
     }
 
     private void recordModuleAudit(Product product, ModuleKey moduleKey, boolean enabled, AuthenticatedUser caller) {

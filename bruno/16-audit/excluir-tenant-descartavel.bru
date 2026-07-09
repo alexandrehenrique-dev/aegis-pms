@@ -18,11 +18,11 @@ body:json {
 docs {
 Objetivo: excluir o tenant criado na request anterior, gerando o evento
 TENANT_DELETED que a request seguinte verifica.
-Resultado esperado: 204.
+Resultado esperado: 202, pois a exclusao de tenant inicia exportacao/exclusao assincrona.
 }
 
 tests {
-  test("status 204", function() {
-    expect(res.status).to.equal(204);
+  test("status 202", function() {
+    expect(res.status).to.equal(202);
   });
 }

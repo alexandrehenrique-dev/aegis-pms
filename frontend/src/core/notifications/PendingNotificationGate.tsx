@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { NotificationModal } from "./components/NotificationModal";
 import { notificationsService } from "./services/notificationsService";
 import type { NotificationWithStatus } from "./contracts/notification";
+import { tutorialService } from "../tutorial/tutorialService";
+import { useTutorial } from "../tutorial/useTutorial";
 
 /**
  * Gatilho de exibição automática (Sprint 14, Tarefa C) — vive uma vez no
@@ -14,14 +16,30 @@ import type { NotificationWithStatus } from "./contracts/notification";
  */
 export function PendingNotificationGate() {
   const [pending, setPending] = useState<NotificationWithStatus | null>(null);
+  const { startTutorial, isRunning } = useTutorial();
+  const tutorialStartedByGate = useRef(false);
 
-  const loadNext = () => {
-    notificationsService.getPendingModal().then(setPending);
-  };
+  const loadNext = useCallback(() => {
+    notificationsService.getPendingModal().then((next) => {
+      if (
+        next
+        && next.type !== "ONBOARDING"
+        && !tutorialService.isCompleted()
+        && !tutorialStartedByGate.current
+      ) {
+        tutorialStartedByGate.current = true;
+        setPending(null);
+        setTimeout(() => startTutorial(), 300);
+        return;
+      }
+      setPending(next);
+    });
+  }, [startTutorial]);
 
   useEffect(() => {
+    if (isRunning) return;
     loadNext();
-  }, []);
+  }, [isRunning, loadNext]);
 
   const handleClose = async () => {
     if (!pending) return;

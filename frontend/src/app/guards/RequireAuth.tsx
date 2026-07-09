@@ -1,5 +1,8 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "../../core/auth/useAuth";
+import { requiresProductContext } from "../../core/permissions/roles";
+
+const PRODUCT_WORKSPACE_ROLES = new Set(["product_manager", "editor", "viewer"]);
 
 /**
  * Guards the authenticated section of the app. Redirects to /login if there's
@@ -13,8 +16,10 @@ export function RequireAuth() {
   const location = useLocation();
 
   if (!authUser) return <Navigate to="/login" replace state={{ from: location }} />;
-  if (!effectiveTenant) return <Navigate to="/select-tenant" replace />;
-  if (!effectiveProduct) return <Navigate to="/select-product" replace />;
+  if (!effectiveTenant) {
+    return <Navigate to={PRODUCT_WORKSPACE_ROLES.has(authUser.role) ? "/select-product" : "/select-tenant"} replace />;
+  }
+  if (!effectiveProduct && requiresProductContext(location.pathname)) return <Navigate to="/select-product" replace />;
 
   return <Outlet />;
 }

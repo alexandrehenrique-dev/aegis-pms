@@ -35,7 +35,8 @@ class IdentityActionTokenServiceTest {
                 List.of("Aegis"),
                 null,
                 "EDITOR",
-                "Admin"
+                "Admin",
+                "Bem-vindo ao produto."
         );
         AuthActionToken token = new AuthActionToken(
                 "user-id",
@@ -64,7 +65,8 @@ class IdentityActionTokenServiceTest {
                 List.of("Aegis"),
                 null,
                 "EDITOR",
-                "Admin"
+                "Admin",
+                null
         );
         AuthActionToken token = new AuthActionToken(
                 "user-id",

@@ -104,7 +104,7 @@ export function FeedbackModal({ screenName, onClose }: { screenName: string; onC
               <p className="font-medium text-foreground mb-1">Contexto capturado automaticamente</p>
               <p>Tela atual: <b>{screenName}</b></p>
               <p>Usuário: <b>{authUser.name}</b> · {authUser.email}</p>
-              <p>Tenant: <b>{effectiveTenant.name}</b> · Produto: <b>{effectiveProduct.name}</b></p>
+              <p>Tenant: <b>{effectiveTenant.name}</b>{effectiveProduct ? <> · Produto: <b>{effectiveProduct.name}</b></> : null}</p>
             </div>
           )}
           <div className="flex items-center justify-between">

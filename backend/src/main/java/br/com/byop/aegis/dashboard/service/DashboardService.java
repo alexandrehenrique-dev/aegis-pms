@@ -11,12 +11,17 @@ import br.com.byop.aegis.product.api.ProductVisibilityService;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.submission.api.SubmissionAnalyticsResponse;
 import br.com.byop.aegis.submission.api.SubmissionAnalyticsService;
+import br.com.byop.aegis.tenant.api.TenantUserAccessService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Agregador puro do hub do tenant — nenhuma tabela/cache propria (etapa 17).
@@ -38,17 +43,20 @@ public class DashboardService {
 
     private final ProductVisibilityService productVisibilityService;
     private final ProductUserAccessService productUserAccessService;
+    private final TenantUserAccessService tenantUserAccessService;
     private final ContentAnalyticsService contentAnalyticsService;
     private final AssetAnalyticsService assetAnalyticsService;
     private final SubmissionAnalyticsService submissionAnalyticsService;
 
     public DashboardService(ProductVisibilityService productVisibilityService,
                             ProductUserAccessService productUserAccessService,
+                            TenantUserAccessService tenantUserAccessService,
                             ContentAnalyticsService contentAnalyticsService,
                             AssetAnalyticsService assetAnalyticsService,
                             SubmissionAnalyticsService submissionAnalyticsService) {
         this.productVisibilityService = productVisibilityService;
         this.productUserAccessService = productUserAccessService;
+        this.tenantUserAccessService = tenantUserAccessService;
         this.contentAnalyticsService = contentAnalyticsService;
         this.assetAnalyticsService = assetAnalyticsService;
         this.submissionAnalyticsService = submissionAnalyticsService;
@@ -84,13 +92,37 @@ public class DashboardService {
             recentAssets += assets.recent();
         }
 
-        long activeUsers = productUserAccessService.countDistinctAssignedUsers(productIds);
-        long productManagers = productUserAccessService.countDistinctProductManagers(productIds);
+        ActiveProductUsers activeProductUsers = countActiveProductUsers(scopes);
+        long activeUsers = activeProductUsers.assignedUsers();
+        long productManagers = activeProductUsers.productManagers();
 
         return new DashboardSummaryResponse(
                 activeProducts, archivedProducts, pendingContent, pendingContentNeedingReview,
                 pendingContentNeedingReview, criticalApprovals, formsReceived, formsReceivedToday,
                 recentAssets, activeUsers, productManagers, CONVERSION_RATE_UNAVAILABLE
         );
+    }
+
+    private ActiveProductUsers countActiveProductUsers(List<ProductAccessScope> scopes) {
+        Map<UUID, List<UUID>> productIdsByTenant = scopes.stream()
+                .collect(Collectors.groupingBy(ProductAccessScope::tenantId,
+                        Collectors.mapping(ProductAccessScope::productId, Collectors.toList())));
+        Set<String> activeAssignedUsers = new HashSet<>();
+        Set<String> activeProductManagers = new HashSet<>();
+        productIdsByTenant.forEach((tenantId, tenantProductIds) -> {
+            Set<String> activeTenantSubjects = Set.copyOf(tenantUserAccessService.listActiveUserSubjects(tenantId));
+            productUserAccessService.listDistinctAssignedUserSubjects(tenantProductIds)
+                    .stream()
+                    .filter(activeTenantSubjects::contains)
+                    .forEach(activeAssignedUsers::add);
+            productUserAccessService.listDistinctProductManagerSubjects(tenantProductIds)
+                    .stream()
+                    .filter(activeTenantSubjects::contains)
+                    .forEach(activeProductManagers::add);
+        });
+        return new ActiveProductUsers(activeAssignedUsers.size(), activeProductManagers.size());
+    }
+
+    private record ActiveProductUsers(long assignedUsers, long productManagers) {
     }
 }

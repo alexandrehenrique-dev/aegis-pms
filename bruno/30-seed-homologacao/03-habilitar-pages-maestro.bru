@@ -1,0 +1,21 @@
+meta {
+  name: Habilitar Pages Maestro Beton
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{seed30MaestroBetonProductId}}/modules/PAGES/enable
+  body: none
+}
+
+docs {
+Objetivo: garantir que o seed reaproveitado em bancos locais antigos esteja com PAGES habilitado antes de validar o esqueleto de paginas.
+Resultado esperado: 200, idempotente quando o modulo ja estava habilitado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

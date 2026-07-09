@@ -1,16 +1,16 @@
 meta {
   name: Reabilitar CONTENT para as proximas pastas - sucesso
   type: http
-  seq: 10
+  seq: 11
 }
 
 post {
-  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/CONTENT/enable
+  url: {{baseUrl}}/api/v1/products/{{moduleSandboxProductId}}/modules/CONTENT/enable
   body: none
 }
 
 docs {
-Decisao de reconstrucao: a pasta 11 (Content) reaproveita {{productId}} e precisa do modulo CONTENT habilitado. O cenario de desabilitar (passo 6) ja foi validado; este passo deixa o estado limpo para as pastas seguintes, sem perder nenhuma cobertura.
+Decisao de reconstrucao: o sandbox de modulos volta a ter CONTENT habilitado depois dos cenarios negativos, sem alterar o produto principal.
 }
 
 tests {

@@ -149,7 +149,7 @@ class TenantUserServiceTest {
         visibleTenant(caller);
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.empty());
         when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
         when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
         when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
@@ -162,6 +162,7 @@ class TenantUserServiceTest {
                 org.mockito.ArgumentCaptor.forClass(IdentityActionInviteCommand.class);
         verify(identityActionTokenService).sendInviteActivation(inviteCaptor.capture());
         assertThat(inviteCaptor.getValue().productNames()).containsExactly("Conecta Talentos");
+        assertThat(inviteCaptor.getValue().message()).isNull();
         verify(notificationOnboardingService).assignOnboarding("user-1");
         org.mockito.ArgumentCaptor<br.com.byop.aegis.audit.api.AuditRecordCommand> auditCaptor =
                 org.mockito.ArgumentCaptor.forClass(br.com.byop.aegis.audit.api.AuditRecordCommand.class);
@@ -188,7 +189,7 @@ class TenantUserServiceTest {
         visibleTenant(caller);
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.empty());
         when(tenantUserAccessService.invite(TENANT_ID, "user-1", "PRODUCT_MANAGER")).thenReturn(membership);
         when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
         when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
@@ -199,6 +200,35 @@ class TenantUserServiceTest {
         verify(identityUserLifecycleService).assignRealmRole("user-1", "AEGIS_PRODUCT_MANAGER");
         verify(productUserAccessService).inviteTenantAssignments(TENANT_ID, "user-1", "PRODUCT_MANAGER", List.of(PRODUCT_ID));
         verify(tenantUserAccessService).invite(TENANT_ID, "user-1", "PRODUCT_MANAGER");
+    }
+
+    @Test
+    void shouldInviteIdentityUserWithoutExistingTenantMembership() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "EDITOR",
+                "Maestro Beton",
+                List.of(PRODUCT_ID),
+                null
+        );
+        IdentityUser user = user("user-1");
+        TenantMembershipReference membership = membership("user-1", "EDITOR", "convidado");
+        Product product = product(PRODUCT_ID, "maestro-beton", "Maestro Beton");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.of(user));
+        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.empty());
+        when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+        when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
+        when(userMapper.toSummary(membership, user, List.of())).thenReturn(summary("user-1", "convidado"));
+
+        TenantUserSummary result = service.inviteUser(caller, TENANT_ID, request);
+
+        assertThat(result.status()).isEqualTo("convidado");
+        verify(tenantUserAccessService).invite(TENANT_ID, "user-1", "EDITOR");
     }
 
     @Test
@@ -273,7 +303,7 @@ class TenantUserServiceTest {
         visibleTenant(caller);
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.empty());
         when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
         when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
         when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
@@ -328,7 +358,7 @@ class TenantUserServiceTest {
         visibleTenant(caller);
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.empty());
         when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
         when(productRepository.findAllById(List.of(PRODUCT_ID, otherProductId))).thenReturn(List.of(product, otherProduct));
         when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
@@ -373,7 +403,7 @@ class TenantUserServiceTest {
         when(tenantUserAccessService.getRequiredTenant(TENANT_ID)).thenReturn(new TenantReference(TENANT_ID, "BYOP"));
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.empty());
         when(tenantUserAccessService.invite(TENANT_ID, "user-1", "EDITOR")).thenReturn(membership);
         when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
         when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
@@ -387,7 +417,8 @@ class TenantUserServiceTest {
         InviteTenantUserRequest request = new InviteTenantUserRequest("Guest User", "guest@byop.dev", "EDITOR", "Aegis", null);
         visibleTenant(caller);
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.of(user("user-1")));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(true);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1"))
+                .thenReturn(Optional.of(membership("user-1", "EDITOR", "ativo")));
 
         assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
                 .isInstanceOf(TenantUserAlreadyExistsException.class);
@@ -400,7 +431,8 @@ class TenantUserServiceTest {
         visibleTenant(caller);
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(true);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1"))
+                .thenReturn(Optional.of(membership("user-1", "EDITOR", "ativo")));
 
         assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
                 .isInstanceOf(TenantUserAlreadyExistsException.class);
@@ -415,9 +447,10 @@ class TenantUserServiceTest {
         Product product = product(PRODUCT_ID, "aegis", "Aegis");
         visibleTenant(caller);
         when(productUserAccessService.listProductManagerProductIds(TENANT_ID, "pm")).thenReturn(Set.of(PRODUCT_ID));
+        when(tenantUserAccessService.findMembership(TENANT_ID, "pm")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.empty());
         when(tenantUserAccessService.invite(TENANT_ID, "user-1", "VIEWER")).thenReturn(membership);
         when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
         when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
@@ -470,7 +503,7 @@ class TenantUserServiceTest {
                 .thenReturn(Optional.of(membership("tenant-admin", "TENANT_ADMIN", "ativo")));
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.empty());
         when(tenantUserAccessService.invite(TENANT_ID, "user-1", "VIEWER")).thenReturn(membership);
         when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
         when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
@@ -586,12 +619,174 @@ class TenantUserServiceTest {
         visibleTenant(caller);
         when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
         when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user("user-1"));
-        when(tenantUserAccessService.hasAnyMembership(TENANT_ID, "user-1")).thenReturn(false);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.empty());
         when(tenantUserAccessService.invite(TENANT_ID, "user-1", "VIEWER")).thenReturn(membership);
         when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
         when(userMapper.toSummary(membership, user("user-1"), List.of())).thenReturn(summary("user-1", "convidado"));
 
         assertThat(service.inviteUser(caller, TENANT_ID, request).status()).isEqualTo("convidado");
+    }
+
+    @Test
+    void shouldGrantProductAccessWhenNewInviteFindsExistingMembershipAfterIdentityInvite() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "EDITOR",
+                "Maestro Beton",
+                List.of(PRODUCT_ID),
+                null
+        );
+        IdentityUser user = user("user-1");
+        TenantMembershipReference membership = membership("user-1", "VIEWER", "ativo");
+        Product product = product(PRODUCT_ID, "maestro-beton", "Maestro Beton");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.empty());
+        when(identityUserLifecycleService.invite("guest@byop.dev", "Guest User")).thenReturn(user);
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.of(membership));
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+        when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
+        when(userMapper.toSummary(membership, user, List.of())).thenReturn(summary("user-1", "ativo"));
+
+        TenantUserSummary result = service.inviteUser(caller, TENANT_ID, request);
+
+        assertThat(result.status()).isEqualTo("ativo");
+        verify(tenantUserAccessService, never()).invite(TENANT_ID, "user-1", "EDITOR");
+        verify(productUserAccessService).grantTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of(PRODUCT_ID));
+    }
+
+    @Test
+    void shouldGrantProductAccessToExistingActiveTenantUser() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "EDITOR",
+                "Maestro Beton",
+                List.of(PRODUCT_ID),
+                "Você foi convidado para operar conteúdo do produto."
+        );
+        IdentityUser user = user("user-1");
+        TenantMembershipReference membership = membership("user-1", "VIEWER", "ativo");
+        Product product = product(PRODUCT_ID, "maestro-beton", "Maestro Beton");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.of(user));
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.of(membership));
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+        when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
+        when(userMapper.toSummary(membership, user, List.of())).thenReturn(summary("user-1", "ativo"));
+
+        TenantUserSummary result = service.inviteUser(caller, TENANT_ID, request);
+
+        assertThat(result.status()).isEqualTo("ativo");
+        verify(identityUserLifecycleService, never()).invite("guest@byop.dev", "Guest User");
+        verify(tenantUserAccessService, never()).invite(TENANT_ID, "user-1", "EDITOR");
+        verify(productUserAccessService).grantTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of(PRODUCT_ID));
+        verify(notificationOnboardingService, never()).assignOnboarding("user-1");
+        org.mockito.ArgumentCaptor<IdentityActionInviteCommand> inviteCaptor =
+                org.mockito.ArgumentCaptor.forClass(IdentityActionInviteCommand.class);
+        verify(identityActionTokenService).sendInviteActivation(inviteCaptor.capture());
+        assertThat(inviteCaptor.getValue().message()).isEqualTo("Você foi convidado para operar conteúdo do produto.");
+        assertThat(inviteCaptor.getValue().productNames()).containsExactly("Maestro Beton");
+    }
+
+    @Test
+    void shouldInviteProductAccessToExistingPendingTenantUser() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "VIEWER",
+                "Maestro Beton",
+                List.of(PRODUCT_ID),
+                null
+        );
+        IdentityUser user = user("user-1");
+        TenantMembershipReference membership = membership("user-1", "VIEWER", "convidado");
+        Product product = product(PRODUCT_ID, "maestro-beton", "Maestro Beton");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.of(user));
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.of(membership));
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+        when(productUserAccessService.listTenantAssignments(TENANT_ID, "user-1")).thenReturn(List.of());
+        when(userMapper.toSummary(membership, user, List.of())).thenReturn(summary("user-1", "convidado"));
+
+        TenantUserSummary result = service.inviteUser(caller, TENANT_ID, request);
+
+        assertThat(result.status()).isEqualTo("convidado");
+        verify(productUserAccessService).inviteTenantAssignments(TENANT_ID, "user-1", "VIEWER", List.of(PRODUCT_ID));
+        verify(productUserAccessService, never()).grantTenantAssignments(TENANT_ID, "user-1", "VIEWER", List.of(PRODUCT_ID));
+    }
+
+    @Test
+    void shouldRejectExistingRemovedTenantUserProductInvite() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "EDITOR",
+                "Maestro Beton",
+                List.of(PRODUCT_ID),
+                null
+        );
+        IdentityUser user = user("user-1");
+        TenantMembershipReference membership = membership("user-1", "EDITOR", "removido");
+        Product product = product(PRODUCT_ID, "maestro-beton", "Maestro Beton");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.of(user));
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.of(membership));
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+
+        assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
+                .isInstanceOf(TenantUserAlreadyExistsException.class);
+
+        verify(productUserAccessService, never()).inviteTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of(PRODUCT_ID));
+        verify(productUserAccessService, never()).grantTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of(PRODUCT_ID));
+    }
+
+    @Test
+    void shouldRejectExistingTenantUserProductInviteWithoutAllowedProduct() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "EDITOR",
+                "Maestro Beton",
+                null
+        );
+        IdentityUser user = user("user-1");
+        TenantMembershipReference membership = membership("user-1", "EDITOR", "ativo");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.of(user));
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.of(membership));
+
+        assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
+                .isInstanceOf(TenantUserAlreadyExistsException.class);
+
+        verify(productRepository, never()).findAllById(any());
+    }
+
+    @Test
+    void shouldRejectExistingTenantUserTenantRoleInvite() {
+        AuthenticatedUser caller = caller("admin", "ROLE_TENANT_ADMIN");
+        InviteTenantUserRequest request = new InviteTenantUserRequest(
+                "Guest User",
+                "guest@byop.dev",
+                "TENANT_ADMIN",
+                "Aegis",
+                null
+        );
+        IdentityUser user = user("user-1");
+        TenantMembershipReference membership = membership("user-1", "EDITOR", "ativo");
+        visibleTenant(caller);
+        when(identityUserLifecycleService.findByEmail("guest@byop.dev")).thenReturn(Optional.of(user));
+        when(tenantUserAccessService.findMembership(TENANT_ID, "user-1")).thenReturn(Optional.of(membership));
+
+        assertThatThrownBy(() -> service.inviteUser(caller, TENANT_ID, request))
+                .isInstanceOf(TenantUserAlreadyExistsException.class);
+
+        verify(productUserAccessService, never()).inviteTenantAssignments(TENANT_ID, "user-1", "TENANT_ADMIN", List.of());
     }
 
     @Test

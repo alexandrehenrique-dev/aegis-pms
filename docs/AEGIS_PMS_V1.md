@@ -1789,6 +1789,8 @@ Auditoria registra quem fez o quê, quando, em qual tenant, com qual resultado. 
 
 > Nenhuma ação relevante deve acontecer sem deixar rastros.
 
+Na operação administrativa, auditoria deve ser exibida como tabela paginada e filtrável, não como feed infinito de cards. Super Admin e Tenant Admin precisam consultar por texto livre, ator, produto, módulo, risco e página mantendo identidade visual, tema claro/escuro e responsividade. A API preserva o endpoint legado de lista para compatibilidade, mas a UI operacional deve consumir paginação explícita para evitar telas gigantes, filtros confusos e carregamento excessivo.
+
 ### 23.1 Revisão × Auditoria
 
 ```txt
@@ -1946,6 +1948,7 @@ attempt 1 → fail → wait 1m  → attempt 2 → fail → wait 5m → attempt 3
 4. Canais são trocáveis; o domínio não acopla a um provider (§25).
 5. Templates são versionados e tenant-scoped quando customizados.
 6. Notificação respeita LGPD: nunca envia dado sensível por canal inadequado.
+7. Onboarding/tutorial tem prioridade sobre notificações modais genéricas. Um aviso de novidade ou feature não pode substituir o tour inicial quando ele ainda não foi concluído.
 
 ## 25. Telegram (Comunicação Operacional)
 
@@ -3478,7 +3481,7 @@ Itens que ainda precisam ser **decididos, validados ou implementados** antes/dur
 
 **Telas obrigatórias (MVP):** login (Keycloak); seleção de tenant/produto; dashboard global; dashboard do produto; lista e cadastro de produtos; gestão de usuários/memberships/convites; gestão de features (com dependências e limites); editor de páginas/blocos; asset manager; form builder; SEO manager; analytics; audit log; configurações.
 
-**Fluxos:** onboarding de produto por preset de categoria; convite/aceite de membro; troca de tenant (limpa estado); ativação/desativação de feature com avisos de dependência; publicação editorial (draft→review→publish) com diferenciação clara de status.
+**Fluxos:** onboarding de produto por preset de categoria; tutorial inicial com prioridade sobre modais de novidade; convite/aceite de membro; troca de tenant (limpa estado); ativação/desativação de feature com avisos de dependência; publicação editorial (draft→review→publish) com diferenciação clara de status.
 
 **Design system:** menus dinâmicos por tenant/role/features; estados de bloqueio por permissão vs. recurso inexistente; preview textual/estrutural no editor (sem preview visual completo no MVP).
 

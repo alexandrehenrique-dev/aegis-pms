@@ -319,9 +319,9 @@ class AuthControllerTest {
         when(authActivationService.validateInvite(token)).thenThrow(new AuthActionTokenExpiredException());
         when(authActivationService.validateInvite(usedToken)).thenThrow(new AuthActionTokenUsedException());
         when(authActivationService.validateInvite(missingToken)).thenThrow(new AuthActionTokenNotFoundException());
-        org.mockito.Mockito.when(authActivationService.activate(token, "fraca", "Alexandre", "Henrique"))
+        when(authActivationService.activate(token, "fraca", "Alexandre", "Henrique"))
                 .thenThrow(new WeakPasswordException("A senha deve ter ao menos 8 caracteres, incluindo letras e números."));
-        org.mockito.Mockito.when(authActivationService.requestPasswordReset("user@byop.dev"))
+        when(authActivationService.requestPasswordReset("user@byop.dev"))
                 .thenThrow(new AuthRateLimitExceededException(900));
 
         mockMvc.perform(post("/api/v1/auth/invite/validate")

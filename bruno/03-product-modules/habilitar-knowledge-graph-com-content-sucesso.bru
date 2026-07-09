@@ -1,16 +1,16 @@
 meta {
-  name: Habilitar KNOWLEDGE_GRAPH com CONTENT - sucesso
+  name: Habilitar KNOWLEDGE_GRAPH com CONTENT e ASSETS - sucesso
   type: http
-  seq: 3
+  seq: 4
 }
 
 post {
-  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/KNOWLEDGE_GRAPH/enable
+  url: {{baseUrl}}/api/v1/products/{{moduleSandboxProductId}}/modules/KNOWLEDGE_GRAPH/enable
   body: none
 }
 
 docs {
-Objetivo: com CONTENT habilitado, a dependencia e satisfeita.
+Objetivo: com CONTENT e ASSETS habilitados, as dependencias do Knowledge Graph estao satisfeitas.
 Resultado esperado: 200.
 }
 

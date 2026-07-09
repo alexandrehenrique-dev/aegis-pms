@@ -21,14 +21,16 @@ Ao mesmo tempo, o projeto já tem 6 contratos de produto reais e detalhadamente 
 | Site Institucional | CMSS (a referência mais completa, Sprint 11) + Galeria (de Maestro Beton, ausente no contrato da CMSS) | Home (`hero`, `feature-grid`, `event-list`, `cta-section`), Quem Somos (`image-text`, `two-column`), História (`timeline`), Agenda (`event-list`), Galeria (`gallery`), Apoie (`rich-text`, `faq`), Contato (`contact`) | Páginas, Conteúdo, Assets, Forms, SEO, Analytics |
 | Portal | Conecta Talentos | Home (`hero`, `text`, `card-list` "Vagas", `card-list` "Blog") | Páginas, Conteúdo, Forms, SEO, Analytics |
 | Portfolio | Alexandre Dev | Home (`hero`, `card-list` "Projetos", `feature-grid` "Skills", `timeline` "Experiência", `download` "Downloads") | Portfolio, Páginas, Conteúdo, Assets, SEO, Analytics |
-| Knowledge Base | WikiDev | nenhuma (módulo `Páginas` não é default neste tipo — produto é predominantemente `content`/`knowledge`) | Conteúdo, Knowledge Graph, SEO, Analytics |
-| Library/Books/Music | Loki | nenhuma (mesmo motivo) | Library, Books, Music, Conteúdo, Knowledge Graph, SEO, Analytics |
+| Knowledge Base | WikiDev | nenhuma (módulo `Páginas` não é default neste tipo — produto é predominantemente `content`/`knowledge`) | Conteúdo, Assets, Knowledge Graph, SEO, Analytics |
+| Library/Books/Music | Loki | nenhuma (mesmo motivo) | Library, Books, Music, Conteúdo, Assets, Knowledge Graph, SEO, Analytics |
 | Produto SaaS | — (nenhum contrato real ainda usa páginas institucionais) | nenhuma | Conteúdo, Assets, Forms, Analytics, SEO, Workflow |
 | **Custom** (tipo novo) | — | nenhuma | nenhum — produto nasce 100% em branco, todo módulo desabilitado, Tenant Admin habilita manualmente depois |
 
 **Regra de conteúdo do esqueleto — nunca inventar dado de demonstração**: toda seção criada usa o **mesmo conteúdo default vazio** que o editor de páginas já usa ao adicionar manualmente um bloco novo (`DEFAULT_BLOCK_CONTENT[type]` no frontend, `blockDefaults.ts`; equivalente a formalizar no backend, etapa 24) — nunca o texto/imagem de demonstração dos mocks de Maestro Beton/CMSS/etc. (esses são fiéis aos produtos reais que os originaram, não fazem sentido em um produto novo de um tenant qualquer). Isso garante, sem nenhuma lógica especial por tipo de bloco, exatamente a regra pedida: blocos que dependem de asset (`gallery`, `download`, `audio`, `image`, `image-text`) nascem com listas/referências vazias — não porque alguém tratou esse caso à parte, mas porque é assim que o default de qualquer bloco novo já funciona.
 
 `Custom` é um valor novo de `ProductTypeKey`/`type` — não é "nenhum template", é um tipo de produto explícito que significa "sem nenhum esqueleto, sem nenhum módulo pré-marcado".
+
+Templates que pré-habilitam `Knowledge Graph` também pré-habilitam `Assets`, além de `Conteúdo`, por dependência operacional definida na ADR-0015/ADR-0016. Isso evita produtos de conhecimento nascerem com grafo ativo mas sem biblioteca de mídia/documentos para evidências e vínculos.
 
 ## Consequências
 

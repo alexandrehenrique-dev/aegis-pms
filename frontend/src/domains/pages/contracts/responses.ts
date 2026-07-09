@@ -55,7 +55,9 @@ export type PageStatus = "draft" | "review" | "published" | "archived";
 export type PageSeo = {
   title?: string;
   description?: string;
-  keywords?: string;
+  canonical?: string;
+  ogImageAssetId?: string;
+  noIndex?: boolean;
 };
 
 /** `source` permite que um Section (ex.: event-list, card-list) referencie itens de outro domínio em vez de conteúdo inline — igual ao EventListBlock da auditoria CMSS. */

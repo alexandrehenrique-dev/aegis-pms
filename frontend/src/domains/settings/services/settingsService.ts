@@ -2,7 +2,7 @@ import { settingCards } from "../mocks/settings.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
-import type { ListSettingCardsResponse, ProductSecuritySettings, SettingCard, UpdateProductSecuritySettingsRequest } from "../contracts/responses";
+import type { ListSettingCardsResponse, ProductSecuritySettings, RoleMatrixEntry, SettingCard, UpdateProductSecuritySettingsRequest } from "../contracts/responses";
 
 const settingCardsStore: SettingCard[] = settingCards.map(([name, description, status, lastUpdated, owner, risk]) => ({
   name, description, status, lastUpdated, owner, risk,
@@ -80,12 +80,27 @@ export const settingsService = {
     }
     logApiCall("POST", "/api/v1/admin/permissions/restore-defaults");
   },
-  async savePermissions(): Promise<void> {
+  async getPermissionMatrix(tenantId?: string): Promise<RoleMatrixEntry[]> {
     if (IS_API_MODE) {
-      console.warn("[settingsService] salvar roles exige matriz completa no shape RoleMatrixEntry[] — tela atual mantém edição local.");
-      return;
+      if (!tenantId) {
+        console.warn("[settingsService] carregar matriz de permissoes requer tenant efetivo — usando lista vazia em modo API.");
+        return [];
+      }
+      return apiClient.get<RoleMatrixEntry[]>(`/tenants/${tenantId}/permission-matrix`);
     }
-    logApiCall("PUT", "/api/v1/admin/permissions");
+    logApiCall("GET", "/api/v1/admin/permissions");
+    return [];
+  },
+  async savePermissions(tenantId?: string, entries: RoleMatrixEntry[] = []): Promise<RoleMatrixEntry[]> {
+    if (IS_API_MODE) {
+      if (!tenantId) {
+        console.warn("[settingsService] salvar matriz de permissoes requer tenant efetivo — ignorando em modo API.");
+        return [];
+      }
+      return apiClient.put<RoleMatrixEntry[]>(`/tenants/${tenantId}/roles`, entries);
+    }
+    logApiCall("PUT", "/api/v1/admin/permissions", entries);
+    return entries;
   },
   /** Path corrigido: `/products/{productId}/settings/security` (etapa 19, Seção C) — `productId` agora obrigatório. */
   async saveSecurity(productId: string, payload?: unknown): Promise<void> {

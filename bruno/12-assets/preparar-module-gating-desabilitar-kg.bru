@@ -1,0 +1,25 @@
+meta {
+  name: Preparar module-gating - desabilitar Knowledge Graph
+  type: http
+  seq: 22
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/KNOWLEDGE_GRAPH/disable
+  body: none
+}
+
+docs {
+Passo 1 de 4 do teste de module-gating desta pasta. KNOWLEDGE_GRAPH depende de ASSETS; por isso precisa ser desligado antes de validar ASSETS desabilitado.
+Resultado esperado: 200, enabled false.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("KNOWLEDGE_GRAPH desabilitado", function() {
+    expect(res.body.moduleKey).to.equal("KNOWLEDGE_GRAPH");
+    expect(res.body.enabled).to.equal(false);
+  });
+}

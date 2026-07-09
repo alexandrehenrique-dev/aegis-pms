@@ -11,14 +11,15 @@ get {
 
 docs {
 Objetivo: listar as paginas do produto.
-Resultado esperado: 200, array com a pagina "home".
+Resultado esperado: 200, array com a pagina criada pela collection.
 }
 
 tests {
   test("status 200", function() {
     expect(res.status).to.equal(200);
   });
-  test("pagina home presente", function() {
-    expect(res.body.some(function(page) { return page.slug === "home"; })).to.equal(true);
+  test("pagina da collection presente", function() {
+    const expectedSlug = bru.getVar('brunoPageSlug');
+    expect(res.body.some(function(page) { return page.slug === expectedSlug; })).to.equal(true);
   });
 }

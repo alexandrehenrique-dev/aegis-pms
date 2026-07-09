@@ -58,6 +58,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -712,7 +713,7 @@ class ContentServiceTest {
 
     @Test
     void shouldWrapSnapshotSerializationFailure() {
-        ObjectMapper brokenObjectMapper = org.mockito.Mockito.mock(ObjectMapper.class);
+        ObjectMapper brokenObjectMapper = mock(ObjectMapper.class);
         ContentService brokenService = new ContentService(
                 contentRepository, versionRepository, contentMapper, versionMapper,
                 new ContentWorkflowPolicy(), new MarkdownSanitizer(), identityUserDirectory,
@@ -721,7 +722,7 @@ class ContentServiceTest {
         UUID productId = UUID.randomUUID();
         Content content = content(productId, ContentStatus.DRAFT);
         when(contentRepository.findByProductIdAndId(productId, content.getId())).thenReturn(Optional.of(content));
-        when(brokenObjectMapper.writeValueAsString(any())).thenThrow(org.mockito.Mockito.mock(JacksonException.class));
+        when(brokenObjectMapper.writeValueAsString(any())).thenThrow(mock(JacksonException.class));
 
         ContentTransitionRequest request = new ContentTransitionRequest("Draft", "In Review", null);
         AuthenticatedUser editor = caller(Set.of("ROLE_EDITOR"));
@@ -734,7 +735,7 @@ class ContentServiceTest {
 
     @Test
     void shouldWrapMetadataSerializationFailure() {
-        ObjectMapper brokenObjectMapper = org.mockito.Mockito.mock(ObjectMapper.class);
+        ObjectMapper brokenObjectMapper = mock(ObjectMapper.class);
         ContentService brokenService = new ContentService(
                 contentRepository, versionRepository, contentMapper, versionMapper,
                 new ContentWorkflowPolicy(), new MarkdownSanitizer(), identityUserDirectory,
@@ -743,7 +744,7 @@ class ContentServiceTest {
         UUID productId = UUID.randomUUID();
         Content content = content(productId, ContentStatus.DRAFT);
         when(contentRepository.findByProductIdAndId(productId, content.getId())).thenReturn(Optional.of(content));
-        when(brokenObjectMapper.writeValueAsString(any())).thenThrow(org.mockito.Mockito.mock(JacksonException.class));
+        when(brokenObjectMapper.writeValueAsString(any())).thenThrow(mock(JacksonException.class));
 
         UpdateContentRequest request = new UpdateContentRequest(
                 "Titulo", "article", "pt-BR", "corpo", null, null, null, null, Map.of("k", "v")
@@ -757,7 +758,7 @@ class ContentServiceTest {
 
     @Test
     void shouldWrapMetadataDeserializationFailure() {
-        ObjectMapper brokenObjectMapper = org.mockito.Mockito.mock(ObjectMapper.class);
+        ObjectMapper brokenObjectMapper = mock(ObjectMapper.class);
         ContentService brokenService = new ContentService(
                 contentRepository, versionRepository, contentMapper, versionMapper,
                 new ContentWorkflowPolicy(), new MarkdownSanitizer(), identityUserDirectory,
@@ -768,7 +769,7 @@ class ContentServiceTest {
         ReflectionTestUtils.setField(content, "metadataJson", "{\"k\":\"v\"}");
         when(contentRepository.findByProductIdAndId(productId, content.getId())).thenReturn(Optional.of(content));
         when(brokenObjectMapper.readValue(eq("{\"k\":\"v\"}"), any(TypeReference.class)))
-                .thenThrow(org.mockito.Mockito.mock(JacksonException.class));
+                .thenThrow(mock(JacksonException.class));
         UUID contentId = content.getId();
 
         assertThatThrownBy(() -> brokenService.getContent(productId, contentId))
@@ -804,7 +805,4 @@ class ContentServiceTest {
         return new AuthenticatedUser("subject-1", "alexandre@byop.dev", "alexandre", "Alexandre Silva", authorities);
     }
 
-    private <T> T mock(Class<T> type) {
-        return org.mockito.Mockito.mock(type);
-    }
 }

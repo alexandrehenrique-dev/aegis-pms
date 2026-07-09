@@ -1,0 +1,25 @@
+meta {
+  name: Preparar sandbox - desabilitar Assets
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{moduleSandboxProductId}}/modules/ASSETS/disable
+  body: none
+}
+
+docs {
+Objetivo: garantir que o endpoint de Assets do produto sandbox seja bloqueado por @RequireModule no proximo passo.
+Resultado esperado: 200, ASSETS desabilitado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("Assets desabilitado", function() {
+    expect(res.body.moduleKey).to.equal("ASSETS");
+    expect(res.body.enabled).to.equal(false);
+  });
+}

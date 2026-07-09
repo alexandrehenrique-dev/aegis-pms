@@ -15,7 +15,10 @@ import java.net.URISyntaxException;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
@@ -58,10 +61,12 @@ public class SectionContentValidationService {
 
     private static final String CATEGORY_AUDIO = "audio";
     private static final String CATEGORY_VIDEO = "video";
+    private static final String HOST_YOUTUBE = "youtube.com";
+    private static final String HOST_YOUTUBE_WWW = "www.youtube.com";
+    private static final String HOST_YOUTU_BE = "youtu.be";
+    private static final Set<String> YOUTUBE_WATCH_HOSTS = Set.of(HOST_YOUTUBE, HOST_YOUTUBE_WWW);
 
     private static final Pattern SPOTIFY_URL_PATTERN = Pattern.compile("^https://open\\.spotify\\.com/.+");
-    private static final Pattern YOUTUBE_WATCH_PATTERN = Pattern.compile("^https://(www\\.)?youtube\\.com/watch\\?v=[\\w-]{6,}$");
-    private static final Pattern YOUTUBE_SHORT_PATTERN = Pattern.compile("^https://youtu\\.be/[\\w-]{6,}$");
 
     private final FormReferenceService formReferenceService;
     private final AssetReferenceService assetReferenceService;
@@ -175,6 +180,9 @@ public class SectionContentValidationService {
 
     private void validateEventList(UUID productId, Map<String, Object> content) {
         Object source = content.get(KEY_SOURCE);
+        if (source instanceof String text && !text.isBlank()) {
+            return;
+        }
         if (!(source instanceof Map<?, ?> sourceMap)) {
             throw invalid("EVENT_LIST_SOURCE_REQUIRED", "source is required");
         }
@@ -277,12 +285,90 @@ public class SectionContentValidationService {
                 return;
             }
             String url = requireNonBlankString(content, KEY_YOUTUBE_URL, errorPrefix + "_YOUTUBE_URL_REQUIRED");
-            if (!YOUTUBE_WATCH_PATTERN.matcher(url).matches() && !YOUTUBE_SHORT_PATTERN.matcher(url).matches()) {
+            if (!isValidYoutubeUrl(url)) {
                 throw invalid(errorPrefix + "_YOUTUBE_URL_INVALID", "youtubeUrl does not match the expected pattern");
             }
         } else {
             throw invalid(errorPrefix + "_SOURCE_INVALID", "source must be upload or youtube");
         }
+    }
+
+    private boolean isValidYoutubeUrl(String value) {
+        URI uri = parseUri(value);
+        if (uri == null) {
+            return false;
+        }
+        if (!"https".equalsIgnoreCase(uri.getScheme())) {
+            return false;
+        }
+        String host = normalizedHost(uri);
+        if (host == null) {
+            return false;
+        }
+        if (HOST_YOUTU_BE.equals(host)) {
+            return hasYoutubeShortPath(uri);
+        }
+        if (YOUTUBE_WATCH_HOSTS.contains(host)) {
+            return hasYoutubeWatchPath(uri);
+        }
+        return false;
+    }
+
+    private URI parseUri(String value) {
+        try {
+            return new URI(value);
+        } catch (URISyntaxException _) {
+            return null;
+        }
+    }
+
+    private String normalizedHost(URI uri) {
+        String host = uri.getHost();
+        if (host == null) {
+            return null;
+        }
+        return host.toLowerCase(Locale.ROOT);
+    }
+
+    private boolean hasYoutubeWatchPath(URI uri) {
+        if (!"/watch".equals(uri.getPath())) {
+            return false;
+        }
+        return hasQueryParamWithVideoId(uri.getRawQuery(), "v");
+    }
+
+    private boolean hasYoutubeShortPath(URI uri) {
+        String path = Objects.toString(uri.getPath(), "");
+        if (path.length() < 2) {
+            return false;
+        }
+        return hasYoutubeVideoId(path.substring(1));
+    }
+
+    private boolean hasQueryParamWithVideoId(String rawQuery, String paramName) {
+        if (rawQuery == null || rawQuery.isBlank()) {
+            return false;
+        }
+        for (String part : rawQuery.split("&")) {
+            int separatorIndex = part.indexOf('=');
+            String key = separatorIndex < 0 ? part : part.substring(0, separatorIndex);
+            String value = separatorIndex < 0 ? "" : part.substring(separatorIndex + 1);
+            if (!paramName.equals(key)) {
+                continue;
+            }
+            if (hasYoutubeVideoId(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasYoutubeVideoId(String value) {
+        if (value.length() < 6) {
+            return false;
+        }
+        return value.chars().allMatch(character -> Character.isLetterOrDigit(character)
+                || character == '-' || character == '_');
     }
 
     private void validateChildren(BlockTypeDefinition definition, Map<String, Object> content) {

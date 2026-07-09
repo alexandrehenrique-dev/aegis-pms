@@ -17,8 +17,100 @@ externos podem ser preservados via protectedTenantIds, protectedTenantKeys ou
 protectedTenantNames no environment.
 
 Depois do step de limpeza, tenants com marcador de teste nao devem permanecer
-visiveis. Se algum ficar, este health-check falha para impedir que a sujeira
-local passe despercebida.
+visiveis. Como DELETE /api/v1/tenants/{id} e assincrono, este health-check faz
+polling curto antes de falhar, evitando falso negativo quando a remocao ja foi
+aceita mas ainda nao refletiu na listagem.
+}
+
+script:post-response {
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function parseProtectedList(value) {
+    return String(value || '')
+      .trim()
+      .split(/[\n,;]+/)
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  const prefix = bru.getVar('testTenantPrefix') || 'TEST-';
+  const protectedIds = parseProtectedList(bru.getVar('protectedTenantIds'));
+  const protectedKeys = parseProtectedList(bru.getVar('protectedTenantKeys'));
+  const protectedNames = parseProtectedList(bru.getVar('protectedTenantNames'));
+  const legacyTestName = /^Tenant listener-(commit|rollback)$/i;
+  const legacyUuidName = /^Tenant [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const legacyE2eName = /^Tenant E2E [0-9]+$/i;
+  const mavenTestName = /^(TEST-Maven |TEST-Form Listener )/i;
+  const legacyUuidKey = /^tenant-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const legacyListenerKey = /^test-tenant-listener-(commit|rollback)-[0-9a-f-]{36}$/i;
+  const closedLegacyKey = /^(tenant-submission-|tenant-membership-|tenant-notification-|feedback-(cross-)?tenant-[0-9]+|template-tenant-[0-9]+|export-delete-tenant-[0-9]+|auth-action-[0-9]+|audit-throwaway-[0-9]+)/i;
+
+  function isProtectedTenant(tenant) {
+    const id = String(tenant.id || '').trim().toLowerCase();
+    const name = String(tenant.name || '').trim().toLowerCase();
+    const key = String(tenant.key || '').trim().toLowerCase();
+    return id === 'a0000000-0000-0000-0000-000000000001'
+      || name === 'clientes beta'
+      || key === 'clientes-beta'
+      || protectedIds.includes(id)
+      || protectedKeys.includes(key)
+      || protectedNames.includes(name);
+  }
+
+  function pendingTenants(tenants) {
+    return tenants.filter((tenant) => {
+      if (isProtectedTenant(tenant)) {
+        return false;
+      }
+      const name = String(tenant.name || '').trim();
+      const key = String(tenant.key || '').trim();
+      return name.startsWith(prefix)
+        || legacyTestName.test(name)
+        || legacyUuidName.test(name)
+        || legacyE2eName.test(name)
+        || mavenTestName.test(name)
+        || legacyUuidKey.test(key)
+        || legacyListenerKey.test(key)
+        || closedLegacyKey.test(key);
+    });
+  }
+
+  function requestTenants() {
+    return new Promise((resolve) => {
+      bru.sendRequest({
+        method: 'GET',
+        url: bru.getEnvVar('baseUrl') + '/api/v1/tenants',
+        headers: {
+          'Authorization': 'Bearer ' + bru.getVar('token'),
+        },
+      }, function(error, response) {
+        if (error) {
+          resolve(Array.isArray(res.body) ? res.body : []);
+          return;
+        }
+        const body = response && (response.body || response.data);
+        resolve(Array.isArray(body) ? body : []);
+      });
+    });
+  }
+
+  let tenants = Array.isArray(res.body) ? res.body : [];
+  let stillPending = pendingTenants(tenants);
+  let attempts = 0;
+
+  while (stillPending.length > 0 && attempts < 10) {
+    attempts += 1;
+    await sleep(500);
+    tenants = await requestTenants();
+    stillPending = pendingTenants(tenants);
+  }
+
+  bru.setVar('teardownHealthAttempts', attempts);
+  bru.setVar('teardownFinalTenants', JSON.stringify(tenants));
+  bru.setVar('teardownStillPendingCount', stillPending.length);
+  bru.setVar('teardownStillPendingTenants', JSON.stringify(stillPending.map((tenant) => tenant.key)));
 }
 
 tests {
@@ -26,33 +118,13 @@ tests {
     expect(res.status).to.equal(200);
   });
   test("CLIENTES BETA presente e intacta", function() {
-    const tenants = Array.isArray(res.body) ? res.body : [];
+    const tenants = JSON.parse(bru.getVar('teardownFinalTenants') || '[]');
     const beta = tenants.find((t) => String(t.name || '').trim().toLowerCase() === 'clientes beta');
     expect(beta).to.exist;
     expect(beta.name).to.equal('CLIENTES BETA');
   });
   test("nenhum tenant temporario conhecido permanece visivel", function() {
-    const prefix = bru.getVar('testTenantPrefix') || 'TEST-';
-    const tenants = Array.isArray(res.body) ? res.body : [];
-    const legacyTestName = /^Tenant listener-(commit|rollback)$/i;
-    const legacyUuidName = /^Tenant [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const legacyE2eName = /^Tenant E2E [0-9]+$/i;
-    const mavenTestName = /^(TEST-Maven |TEST-Form Listener )/i;
-    const legacyUuidKey = /^tenant-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const legacyListenerKey = /^test-tenant-listener-(commit|rollback)-[0-9a-f-]{36}$/i;
-    const stillPending = tenants.filter((t) => {
-      const name = String(t.name || '').trim();
-      const key = String(t.key || '').trim();
-      return name.startsWith(prefix)
-        || legacyTestName.test(name)
-        || legacyUuidName.test(name)
-        || legacyE2eName.test(name)
-        || mavenTestName.test(name)
-        || legacyUuidKey.test(key)
-        || legacyListenerKey.test(key);
-    });
-    bru.setVar('teardownStillPendingCount', stillPending.length);
-    bru.setVar('teardownStillPendingTenants', JSON.stringify(stillPending.map((tenant) => tenant.key)));
-    expect(stillPending).to.deep.equal([]);
+    expect(Number(bru.getVar('teardownStillPendingCount') || '0')).to.equal(0);
+    expect(bru.getVar('teardownStillPendingTenants')).to.equal('[]');
   });
 }

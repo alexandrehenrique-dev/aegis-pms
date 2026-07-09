@@ -50,6 +50,15 @@
                         <td style="padding:5px 0;font-size:13px;font-weight:600;color:#1d1d1f;text-align:right;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;">${productNames}</td>
                       </tr>
                     </table>
+                    <#if inviteMessage?? && inviteMessage?trim?has_content>
+                      <table cellpadding="0" cellspacing="0" width="100%" style="margin-top:14px;background-color:#ffffff;border:1px solid #ddd6fe;border-radius:8px;">
+                        <tr>
+                          <td style="padding:12px 14px;font-size:13px;color:#374151;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Inter',sans-serif;line-height:1.5;">
+                            ${inviteMessage}
+                          </td>
+                        </tr>
+                      </table>
+                    </#if>
                   </td>
                 </tr>
               </table>

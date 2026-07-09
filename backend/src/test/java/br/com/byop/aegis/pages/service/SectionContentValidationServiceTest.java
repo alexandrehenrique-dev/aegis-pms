@@ -228,8 +228,24 @@ class SectionContentValidationServiceTest {
     }
 
     @Test
+    void shouldAcceptEventListWithAutoSourceString() {
+        Map<String, Object> content = Map.of("source", "auto", "selectedEvents", List.of());
+
+        service.validateSectionContent(PRODUCT_ID, BlockType.EVENT_LIST, content);
+    }
+
+    @Test
     void shouldRejectEventListWithoutSource() {
         Map<String, Object> content = Map.of();
+
+        assertThatThrownBy(() -> service.validateSectionContent(PRODUCT_ID, BlockType.EVENT_LIST, content))
+                .isInstanceOf(InvalidSectionContentException.class)
+                .extracting("errorCode").isEqualTo("EVENT_LIST_SOURCE_REQUIRED");
+    }
+
+    @Test
+    void shouldRejectEventListWithBlankSourceString() {
+        Map<String, Object> content = Map.of("source", "   ");
 
         assertThatThrownBy(() -> service.validateSectionContent(PRODUCT_ID, BlockType.EVENT_LIST, content))
                 .isInstanceOf(InvalidSectionContentException.class)
@@ -515,6 +531,46 @@ class SectionContentValidationServiceTest {
     }
 
     @Test
+    void shouldAcceptYoutubeShareUrlWithQueryString() {
+        Map<String, Object> content = Map.of(
+                "source", "youtube",
+                "youtubeUrl", "https://youtu.be/opQ5NfaOKTQ?si=egJqbCBkOAyXGmAd"
+        );
+
+        service.validateSectionContent(PRODUCT_ID, BlockType.VIDEO, content);
+    }
+
+    @Test
+    void shouldAcceptYoutubeWatchUrlWithAdditionalQueryParameters() {
+        Map<String, Object> content = Map.of(
+                "source", "youtube",
+                "youtubeUrl", "https://www.youtube.com/watch?si=abc123&v=opQ5NfaOKTQ"
+        );
+
+        service.validateSectionContent(PRODUCT_ID, BlockType.VIDEO, content);
+    }
+
+    @Test
+    void shouldAcceptYoutubeWatchUrlWithoutWww() {
+        Map<String, Object> content = Map.of(
+                "source", "youtube",
+                "youtubeUrl", "https://youtube.com/watch?v=opQ5NfaOKTQ"
+        );
+
+        service.validateSectionContent(PRODUCT_ID, BlockType.VIDEO, content);
+    }
+
+    @Test
+    void shouldAcceptYoutubeVideoIdWithAllowedSymbols() {
+        Map<String, Object> content = Map.of(
+                "source", "youtube",
+                "youtubeUrl", "https://www.youtube.com/watch?v=opQ5Nfa_OK-TQ"
+        );
+
+        service.validateSectionContent(PRODUCT_ID, BlockType.VIDEO, content);
+    }
+
+    @Test
     void shouldAcceptVideoUploadWithBlankAsset() {
         Map<String, Object> content = Map.of("source", "upload", "fileAssetId", "");
 
@@ -535,6 +591,33 @@ class SectionContentValidationServiceTest {
         assertThatThrownBy(() -> service.validateSectionContent(PRODUCT_ID, BlockType.VIDEO, content))
                 .isInstanceOf(InvalidSectionContentException.class)
                 .extracting("errorCode").isEqualTo("VIDEO_YOUTUBE_URL_INVALID");
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("invalidYoutubeUrls")
+    void shouldRejectVideoWithMalformedYoutubeUrl(String scenario, String url) {
+        Map<String, Object> content = Map.of("source", "youtube", "youtubeUrl", url);
+
+        assertThatThrownBy(() -> service.validateSectionContent(PRODUCT_ID, BlockType.VIDEO, content))
+                .isInstanceOf(InvalidSectionContentException.class)
+                .extracting("errorCode").isEqualTo("VIDEO_YOUTUBE_URL_INVALID");
+    }
+
+    private static Stream<Arguments> invalidYoutubeUrls() {
+        return Stream.of(
+                Arguments.of("esquema nao https", "http://www.youtube.com/watch?v=abcdef1234"),
+                Arguments.of("host ausente", "https:/watch?v=abcdef1234"),
+                Arguments.of("url sintaticamente invalida", "https://exa mple.com/watch?v=abcdef1234"),
+                Arguments.of("watch sem query", "https://www.youtube.com/watch"),
+                Arguments.of("watch com query vazia", "https://www.youtube.com/watch?"),
+                Arguments.of("path diferente de watch", "https://www.youtube.com/embed/abcdef1234"),
+                Arguments.of("watch sem parametro v", "https://www.youtube.com/watch?si=abc123"),
+                Arguments.of("watch com v sem valor", "https://www.youtube.com/watch?v"),
+                Arguments.of("id curto", "https://youtu.be/abcde"),
+                Arguments.of("short url sem caminho", "https://youtu.be"),
+                Arguments.of("short url com caminho vazio", "https://youtu.be/"),
+                Arguments.of("id com caractere invalido", "https://youtu.be/abcde%2F123")
+        );
     }
 
     @Test

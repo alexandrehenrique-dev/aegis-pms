@@ -3,6 +3,7 @@ package br.com.byop.aegis.product.api;
 import br.com.byop.aegis.product.domain.ProductAssignment;
 import br.com.byop.aegis.product.domain.ProductAssignmentRole;
 import br.com.byop.aegis.product.domain.ProductAssignmentStatus;
+import br.com.byop.aegis.product.domain.Product;
 import br.com.byop.aegis.product.repository.ProductAssignmentRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -74,28 +75,46 @@ public class ProductUserAccessService {
     @Transactional(readOnly = true)
     public long countDistinctAssignedUsers(Collection<UUID> productIds) {
         log.debug("countDistinctAssignedUsers: productCount='{}'", productIds.size());
-        if (productIds.isEmpty()) {
-            return 0;
-        }
-        return assignmentRepository.findAllByProductIdInAndStatus(productIds, ProductAssignmentStatus.ASSIGNED)
-                .stream()
-                .map(ProductAssignment::getUserSubject)
-                .distinct()
-                .count();
+        return resolveDistinctAssignedUserSubjects(productIds).size();
+    }
+
+    @Transactional(readOnly = true)
+    public Set<String> listDistinctAssignedUserSubjects(Collection<UUID> productIds) {
+        log.debug("listDistinctAssignedUserSubjects: productCount='{}'", productIds.size());
+        return resolveDistinctAssignedUserSubjects(productIds);
     }
 
     @Transactional(readOnly = true)
     public long countDistinctProductManagers(Collection<UUID> productIds) {
         log.debug("countDistinctProductManagers: productCount='{}'", productIds.size());
+        return resolveDistinctProductManagerSubjects(productIds).size();
+    }
+
+    @Transactional(readOnly = true)
+    public Set<String> listDistinctProductManagerSubjects(Collection<UUID> productIds) {
+        log.debug("listDistinctProductManagerSubjects: productCount='{}'", productIds.size());
+        return resolveDistinctProductManagerSubjects(productIds);
+    }
+
+    private Set<String> resolveDistinctAssignedUserSubjects(Collection<UUID> productIds) {
         if (productIds.isEmpty()) {
-            return 0;
+            return Set.of();
+        }
+        return assignmentRepository.findAllByProductIdInAndStatus(productIds, ProductAssignmentStatus.ASSIGNED)
+                .stream()
+                .map(ProductAssignment::getUserSubject)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    private Set<String> resolveDistinctProductManagerSubjects(Collection<UUID> productIds) {
+        if (productIds.isEmpty()) {
+            return Set.of();
         }
         return assignmentRepository.findAllByProductIdInAndStatus(productIds, ProductAssignmentStatus.ASSIGNED)
                 .stream()
                 .filter(assignment -> assignment.getRole() == ProductAssignmentRole.PRODUCT_MANAGER)
                 .map(ProductAssignment::getUserSubject)
-                .distinct()
-                .count();
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     @Transactional(readOnly = true)
@@ -112,6 +131,18 @@ public class ProductUserAccessService {
     public void inviteTenantAssignments(UUID tenantId, String userSubject, String role, List<UUID> productIds) {
         log.debug("inviteTenantAssignments: tenantId='{}', userSubject='{}', productCount='{}'",
                 tenantId, userSubject, productIds.size());
+        upsertTenantAssignments(tenantId, userSubject, role, productIds, ProductAssignmentStatus.INVITED);
+    }
+
+    @Transactional
+    public void grantTenantAssignments(UUID tenantId, String userSubject, String role, List<UUID> productIds) {
+        log.debug("grantTenantAssignments: tenantId='{}', userSubject='{}', productCount='{}'",
+                tenantId, userSubject, productIds.size());
+        upsertTenantAssignments(tenantId, userSubject, role, productIds, ProductAssignmentStatus.ASSIGNED);
+    }
+
+    private void upsertTenantAssignments(UUID tenantId, String userSubject, String role, List<UUID> productIds,
+                                         ProductAssignmentStatus status) {
         if (productIds.isEmpty() || !isProductRole(role)) {
             return;
         }
@@ -120,12 +151,9 @@ public class ProductUserAccessService {
         productRepository.findAllById(productIds)
                 .stream()
                 .filter(product -> tenantId.equals(product.getTenantId()))
-                .filter(product -> assignmentRepository.findByProductIdAndUserSubject(product.getId(), userSubject).isEmpty())
-                .map(product -> {
-                    ProductAssignment assignment = new ProductAssignment(product, userSubject, assignmentRole);
-                    assignment.revoke();
-                    return assignment;
-                })
+                .map(product -> assignmentRepository.findByProductIdAndUserSubject(product.getId(), userSubject)
+                        .map(assignment -> updateAssignment(assignment, assignmentRole, status))
+                        .orElseGet(() -> newAssignment(product, userSubject, assignmentRole, status)))
                 .forEach(assignmentRepository::save);
     }
 
@@ -151,6 +179,23 @@ public class ProductUserAccessService {
                 assignment.getRole().name(),
                 assignment.getStatus().contractValue()
         );
+    }
+
+    private ProductAssignment newAssignment(Product product, String userSubject, ProductAssignmentRole role,
+                                            ProductAssignmentStatus status) {
+        ProductAssignment assignment = new ProductAssignment(product, userSubject, role);
+        return updateAssignment(assignment, role, status);
+    }
+
+    private ProductAssignment updateAssignment(ProductAssignment assignment, ProductAssignmentRole role,
+                                               ProductAssignmentStatus status) {
+        assignment.changeRole(role);
+        if (status == ProductAssignmentStatus.ASSIGNED) {
+            assignment.assign();
+        } else {
+            assignment.revoke();
+        }
+        return assignment;
     }
 
     private boolean isProductRole(String role) {

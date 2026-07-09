@@ -30,8 +30,9 @@ export type ModuleOption = {
   comingSoon?: boolean;
 };
 
-/** Knowledge Graph exige o módulo Conteúdo habilitado (Sprint 11, Tarefa A.4). */
-export const KNOWLEDGE_GRAPH_DEPENDENCY = "Conteúdo";
+/** Knowledge Graph exige Conteúdo e Assets habilitados: cria relações entre conteúdo e referencia mídia. */
+export const KNOWLEDGE_GRAPH_DEPENDENCIES = ["Conteúdo", "Assets"] as const;
+export const KNOWLEDGE_GRAPH_DEPENDENCY = KNOWLEDGE_GRAPH_DEPENDENCIES[0];
 
 /**
  * "E-commerce" (Sprint 13, Decisão 5/Tarefa H.2) — carrinho, checkout e
@@ -86,6 +87,16 @@ export function resolveEnabledModules(product: { type: string; modulesList?: str
   return defaults ? defaults.filter((m) => m.default).map((m) => m.key) : [];
 }
 
+export function isOperationalModule(moduleKey: string): boolean {
+  return moduleKey !== ECOMMERCE_MODULE_KEY;
+}
+
+export function countOperationalModules(product: { modules?: number; modulesList?: string[] } | null): number {
+  if (!product) return 0;
+  if (product.modulesList) return product.modulesList.filter(isOperationalModule).length;
+  return product.modules ?? 0;
+}
+
 export const PRODUCT_TYPE_MODULE_DEFAULTS: Partial<Record<ProductTypeKey, ModuleOption[]>> = {
   "Site Institucional": [
     { key: "Páginas", default: true },
@@ -109,6 +120,7 @@ export const PRODUCT_TYPE_MODULE_DEFAULTS: Partial<Record<ProductTypeKey, Module
   ],
   "Knowledge Base": [
     { key: "Conteúdo", default: true },
+    { key: "Assets", default: true },
     { key: "Knowledge Graph", default: true },
     { key: "Comentários", default: false, comingSoon: true },
     { key: "Contribuidores", default: false, comingSoon: true },
@@ -129,6 +141,7 @@ export const PRODUCT_TYPE_MODULE_DEFAULTS: Partial<Record<ProductTypeKey, Module
     { key: "Books", default: true },
     { key: "Music", default: true },
     { key: "Conteúdo", default: true },
+    { key: "Assets", default: true },
     { key: "Knowledge Graph", default: true },
     { key: "SEO", default: true },
     { key: "Analytics", default: true },

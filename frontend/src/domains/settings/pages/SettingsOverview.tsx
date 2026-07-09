@@ -4,7 +4,10 @@ import { Button, Card, PageHeader, PartialErrorWidget, PermissionHint, SkeletonL
 import { settingsService } from "../services/settingsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { SettingsCard } from "../components/SettingsBits";
+import { routeForSettingCard } from "../components/settingsRoutes";
 import { useAuth } from "../../../core/auth/useAuth";
+import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
+import { isRouteBlockedForEffectiveAccess } from "../../../core/permissions/roles";
 import { usersService } from "../../users/services/usersService";
 import type { SettingCard as SettingCardType } from "../contracts/responses";
 
@@ -16,21 +19,26 @@ function needsAttention(card: SettingCardType): boolean {
 export function SettingsOverview() {
   const navigate = useNavigate();
   const { effectiveProduct, effectiveTenant } = useAuth();
+  const { viewAsRole } = useViewAsRole();
   const { data: settingCards, loading, error } = useAsyncData(() => settingsService.listSettingCards(effectiveProduct?.id), [effectiveProduct?.id]);
   const { data: tenantUsers } = useAsyncData(() => usersService.listUsers(effectiveTenant?.id), [effectiveTenant?.id]);
+  const assignedRole = effectiveProduct?.callerAssignedRole;
+  const allowedSettingCards = (settingCards ?? []).filter((card) => !isRouteBlockedForEffectiveAccess(viewAsRole, assignedRole, routeForSettingCard(card.name)));
   const pendingInvites = (tenantUsers ?? []).filter((user) => user.status === "convidado" || user.inviteStatus === "pendente").length;
   const attnItems: [string, string][] = [
-    ...(pendingInvites > 0 ? [[`${pendingInvites} convite${pendingInvites > 1 ? "s" : ""} pendente${pendingInvites > 1 ? "s" : ""}.`, "/users"] as [string, string]] : []),
-    ...((settingCards ?? []).filter(needsAttention).map((card) => [`${card.name}: ${card.status}.`, card.name === "Auditoria" ? "/audit" : "/settings/security"] as [string, string])),
-  ];
+    ...(pendingInvites > 0 && !isRouteBlockedForEffectiveAccess(viewAsRole, assignedRole, "/users") ? [[`${pendingInvites} convite${pendingInvites > 1 ? "s" : ""} pendente${pendingInvites > 1 ? "s" : ""}.`, "/users"] as [string, string]] : []),
+    ...allowedSettingCards.filter(needsAttention).map((card) => [`${card.name}: ${card.status}.`, routeForSettingCard(card.name)] as [string, string]),
+  ].filter(([, path]) => !isRouteBlockedForEffectiveAccess(viewAsRole, assignedRole, path));
+  const canSeeAudit = !isRouteBlockedForEffectiveAccess(viewAsRole, assignedRole, "/audit");
+  const canConfigureProduct = !isRouteBlockedForEffectiveAccess(viewAsRole, assignedRole, "/settings/product");
   return (
     <>
       <PageHeader title="Configurações" desc="Controle administrativo, governança e segurança operacional do produto." badge="Governança">
-        <Button onClick={() => navigate("/audit")}>Ver auditoria</Button>
-        <Button primary onClick={() => navigate("/settings/product")}>Configurar produto</Button>
+        {canSeeAudit && <Button onClick={() => navigate("/audit")}>Ver auditoria</Button>}
+        {canConfigureProduct && <Button primary onClick={() => navigate("/settings/product")}>Configurar produto</Button>}
       </PageHeader>
       {loading ? <SkeletonLines /> : error || !settingCards ? <PartialErrorWidget /> : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{settingCards.map((c, i) => <SettingsCard key={c.name} c={c} data-tour={i === 0 ? "settings-geral" : undefined} />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{allowedSettingCards.map((c, i) => <SettingsCard key={c.name} c={c} data-tour={i === 0 ? "settings-geral" : undefined} />)}</div>
       )}
       <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_360px]">
         <Card>

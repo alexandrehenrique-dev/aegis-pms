@@ -1,6 +1,8 @@
 package br.com.byop.aegis.audit.controller;
 
 import br.com.byop.aegis.audit.dto.AuditEventDetail;
+import br.com.byop.aegis.audit.dto.AuditEventPage;
+import br.com.byop.aegis.audit.dto.AuditEventPageQuery;
 import br.com.byop.aegis.audit.dto.AuditEventSummary;
 import br.com.byop.aegis.audit.service.AuditEventQueryService;
 import br.com.byop.aegis.security.AuthenticatedUser;
@@ -33,13 +35,28 @@ public class AuditEventController {
 
     @GetMapping("/api/v1/tenants/{tenantId}/audit-events")
     public List<AuditEventSummary> listAuditEvents(@PathVariable("tenantId") UUID tenantId,
-                                                    @RequestParam(name = "actorSubject", required = false) String actorSubject,
-                                                    @RequestParam(name = "productId", required = false) UUID productId,
-                                                    @RequestParam(name = "module", required = false) String module,
-                                                    @RequestParam(name = "risk", required = false) String risk,
-                                                    Authentication authentication) {
+                                                   @RequestParam(name = "actorSubject", required = false) String actorSubject,
+                                                   @RequestParam(name = "productId", required = false) UUID productId,
+                                                   @RequestParam(name = "module", required = false) String module,
+                                                   @RequestParam(name = "risk", required = false) String risk,
+                                                   Authentication authentication) {
         AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
         return auditEventQueryService.listEvents(caller, tenantId, actorSubject, productId, module, risk);
+    }
+
+    @GetMapping("/api/v1/tenants/{tenantId}/audit-events/page")
+    public AuditEventPage listAuditEventsPage(@PathVariable("tenantId") UUID tenantId,
+                                              @RequestParam(name = "actorSubject", required = false) String actorSubject,
+                                              @RequestParam(name = "productId", required = false) UUID productId,
+                                              @RequestParam(name = "module", required = false) String module,
+                                              @RequestParam(name = "risk", required = false) String risk,
+                                              @RequestParam(name = "q", required = false) String query,
+                                              @RequestParam(name = "page", defaultValue = "0") int page,
+                                              @RequestParam(name = "size", defaultValue = "25") int size,
+                                              Authentication authentication) {
+        AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
+        AuditEventPageQuery pageQuery = new AuditEventPageQuery(actorSubject, productId, module, risk, query, page, size);
+        return auditEventQueryService.listEventsPage(caller, tenantId, pageQuery);
     }
 
     @GetMapping("/api/v1/tenants/{tenantId}/audit-events/{eventId}")

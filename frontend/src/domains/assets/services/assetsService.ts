@@ -2,10 +2,11 @@ import { assets, assetTags } from "../mocks/assets.mocks";
 import { logApiCall } from "../../../shared/services/devLog";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
+import { currentProductSlugOrId } from "../../../core/products/currentProductContext";
 import type { AssetDetailResponse, AssetSummary, ListAssetsResponse, ListAssetTagsResponse } from "../contracts/responses";
 
-const assetsStore: AssetSummary[] = assets.map(([name, type, size, status, tags, usage, uploadedAt]) => ({
-  name, type, size, status, tags, usage, uploadedAt,
+const assetsStore: AssetSummary[] = assets.map(([productSlug, name, type, size, status, tags, usage, uploadedAt]) => ({
+  productSlug, name, type, size, status, tags, usage, uploadedAt,
 }));
 
 const assetTagsStore: string[] = [...assetTags];
@@ -39,7 +40,9 @@ export const assetsService = {
         throw err;
       }
     }
-    return assetsStore;
+    const productSlug = currentProductSlugOrId();
+    if (!productSlug) return assetsStore;
+    return assetsStore.filter((asset) => asset.productSlug === productSlug || asset.productSlug === productId);
   },
   async listTags(productId: string): Promise<ListAssetTagsResponse> {
     if (IS_API_MODE) return apiClient.get<ListAssetTagsResponse>(`/products/${productId}/asset-tags`);
@@ -119,7 +122,7 @@ export const assetsService = {
     }
     const assetId = `mock-asset-${Date.now()}`;
     logApiCall("POST", `/api/v1/products/${productId}/assets`, { name: file.name, size: file.size });
-    assetsStore.push({ id: assetId, name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
+    assetsStore.push({ id: assetId, productSlug: currentProductSlugOrId() ?? productId, name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
     onProgress?.(100);
   },
   async uploadFiles(productId: string, files: File[], onProgress?: UploadProgressHandler): Promise<void> {
@@ -137,7 +140,7 @@ export const assetsService = {
     }
     const assetId = `mock-asset-${Date.now()}`;
     logApiCall("POST", `/api/v1/products/${productId}/assets`, { name: file.name, size: file.size });
-    assetsStore.push({ id: assetId, name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
+    assetsStore.push({ id: assetId, productSlug: currentProductSlugOrId() ?? productId, name: file.name, type: inferAssetType(file), size: formatSize(file.size), status: "ativo", tags: "", usage: "", uploadedAt: new Date().toLocaleDateString("pt-BR") });
     return { assetId };
   },
   async loadAssetFile(assetId: string): Promise<Blob> {

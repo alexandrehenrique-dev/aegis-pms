@@ -1,0 +1,25 @@
+meta {
+  name: Habilitar ASSETS - sucesso
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{moduleSandboxProductId}}/modules/ASSETS/enable
+  body: none
+}
+
+docs {
+Objetivo: habilitar o modulo ASSETS, dependencia obrigatoria do Knowledge Graph junto de CONTENT.
+Resultado esperado: 200, enabled true.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("ASSETS habilitado", function() {
+    expect(res.body.moduleKey).to.equal("ASSETS");
+    expect(res.body.enabled).to.equal(true);
+  });
+}

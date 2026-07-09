@@ -13,12 +13,12 @@ post {
 body:form-urlencoded {
   grant_type: password
   client_id: {{clientId}}
-  username: super-admin@byop.io
-  password: senha123
+  username: {{username}}
+  password: {{password}}
 }
 
 docs {
-Objetivo: autenticar como SUPER_ADMIN para criar e listar notificacoes administrativas.
+Objetivo: autenticar com as credenciais do ambiente Bruno local para criar e listar notificacoes administrativas.
 Resultado esperado: 200 e token salvo em {{token}}.
 }
 

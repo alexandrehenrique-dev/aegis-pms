@@ -32,6 +32,12 @@ export type ActionMenuItem = { label: string; icon: ReactNode; destructive?: boo
  */
 export function ContextActionMenu({ position, items, onClose }: { position: ContextMenuTarget; items: ActionMenuItem[]; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const menuWidth = 176;
+  const menuHeight = Math.max(64, items.length * 38 + 12);
+  const viewportWidth = typeof window === "undefined" ? 0 : window.innerWidth;
+  const viewportHeight = typeof window === "undefined" ? 0 : window.innerHeight;
+  const left = viewportWidth ? Math.min(position.x, Math.max(8, viewportWidth - menuWidth - 8)) : position.x;
+  const top = viewportHeight ? Math.min(position.y, Math.max(8, viewportHeight - menuHeight - 8)) : position.y;
 
   useEffect(() => {
     // "mousedown", não "click" (Sprint 23) — mesmo padrão de AppShell.tsx
@@ -53,7 +59,7 @@ export function ContextActionMenu({ position, items, onClose }: { position: Cont
 
   return createPortal(
     <div ref={ref}>
-      <div style={{ position: "fixed", left: position.x, top: position.y, zIndex: 60 }} className="hidden w-44 rounded-xl border border-border bg-card p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.16)] lg:block">
+      <div style={{ position: "fixed", left, top, zIndex: 60 }} className="hidden w-44 rounded-xl border border-border bg-card p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.16)] lg:block">
         {items.map((item) => (
           <button key={item.label} onClick={item.onClick} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition hover:bg-muted ${item.destructive ? "text-destructive hover:bg-destructive/10" : ""}`}>
             {item.icon}{item.label}

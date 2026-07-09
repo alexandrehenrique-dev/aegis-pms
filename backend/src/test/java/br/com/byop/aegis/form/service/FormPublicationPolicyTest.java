@@ -22,6 +22,15 @@ class FormPublicationPolicyTest {
     }
 
     @Test
+    void shouldAcceptLegacyUploadFormatLabels() {
+        policy.assertPublishable("Contato", List.of(
+                Map.of("label", "Email", "type", "Email", "required", true),
+                Map.of("label", "Curriculo", "type", "Upload", "required", false,
+                        "acceptedFormats", List.of("PDF", "Imagem", "DOCX", "ZIP"))
+        ));
+    }
+
+    @Test
     void shouldAcceptFieldsWithoutLabelsWhenOtherRequiredFieldExists() {
         policy.assertPublishable("Contato", List.of(
                 Map.of("required", true, "type", "Texto"),

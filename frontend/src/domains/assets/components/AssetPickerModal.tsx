@@ -8,6 +8,7 @@ import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { AssetTypeIcon } from "./AssetBits";
 import { toast } from "../../../core/notifications/toast";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
+import { useAuthenticatedImage } from "../../../shared/hooks/useAuthenticatedImage";
 import type { AssetSummary } from "../contracts/responses";
 
 export type AssetTypeFilter = "imagem" | "PDF" | "áudio" | "vídeo" | "qualquer";
@@ -21,6 +22,17 @@ function previewKind(type: string | undefined) {
   if (normalized === "vídeo" || normalized === "video") return "video";
   if (normalized === "áudio" || normalized === "audio") return "audio";
   return "document";
+}
+
+function AssetPreviewThumb({ asset }: { asset: AssetSummary }) {
+  const kind = previewKind(asset.type);
+  const assetId = asset.id ?? asset.name;
+  const src = useAuthenticatedImage((kind === "image" || kind === "video" || kind === "audio") ? assetId : undefined);
+  if (kind === "image" && src) return <img src={src} alt={asset.name} className="h-24 w-full rounded-lg object-cover" />;
+  if (kind === "video" && src) return <video src={src} className="h-24 w-full rounded-lg bg-black object-cover" muted playsInline />;
+  if (kind === "audio") return <div className="flex h-24 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">Áudio</div>;
+  if (kind === "pdf") return <div className="flex h-24 items-center justify-center rounded-lg bg-muted text-xs font-medium text-muted-foreground">PDF</div>;
+  return <div className="flex h-24 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">Arquivo</div>;
 }
 
 /**
@@ -112,7 +124,7 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
 
   return (
     <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[3px] p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={handleCancel}>
-      <motion.div {...fade} className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
+      <motion.div {...fade} className="flex max-h-[88vh] w-full max-w-4xl flex-col rounded-2xl border border-border bg-card p-6 shadow-[0_24px_80px_rgba(0,0,0,0.2)]" onClick={(e) => e.stopPropagation()}>
         <input ref={fileInputRef} type="file" multiple hidden onChange={handleFilesSelected} />
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Selecionar asset</h3>
@@ -142,11 +154,14 @@ export function AssetPickerModal({ open, typeFilter = "qualquer", lockFilter = f
           ) : filtered.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">Nenhum asset encontrado para este filtro.</p>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((a) => (
-                <button key={a.name} onClick={() => setSelectedName(a.name)} className={`rounded-xl border p-3 text-left ${selectedName === a.name ? "border-primary bg-muted" : "border-border"}`}>
-                  <AssetTypeIcon type={a.type} />
-                  <p className="mt-2 truncate font-medium">{a.name}</p>
+                <button key={a.id ?? a.name} onClick={() => setSelectedName(a.name)} className={`rounded-xl border p-3 text-left transition ${selectedName === a.name ? "border-primary bg-muted ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
+                  <AssetPreviewThumb asset={a} />
+                  <div className="mt-3 flex items-center gap-2">
+                    <AssetTypeIcon type={a.type} />
+                    <p className="min-w-0 truncate font-medium">{a.name}</p>
+                  </div>
                   <p className="text-sm text-muted-foreground">{a.type} · {a.size}</p>
                 </button>
               ))}

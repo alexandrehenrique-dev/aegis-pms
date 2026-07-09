@@ -1,7 +1,7 @@
 import { auditEvents } from "../mocks/audit.mocks";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
-import type { AuditEvent, AuditEventDetailDto, ListAuditEventsResponse } from "../contracts/responses";
+import type { AuditEvent, AuditEventDetailDto, AuditEventFilters, AuditEventPage, ListAuditEventsResponse } from "../contracts/responses";
 
 const auditStore: AuditEvent[] = auditEvents.map(([actor, action, target, tenant, module, time, risk], i) => ({
   id: `mock-evt-${i}`, actor, action, target, tenant, module, time, risk,
@@ -45,12 +45,13 @@ export const auditService = {
    * de produto em vez de tenant real (inconsistência pré-existente do
    * fixture, não deste bug fix).
    */
-  async listEvents(tenantId?: string, filters?: { productId?: string; module?: string; productName?: string }): Promise<ListAuditEventsResponse> {
+  async listEvents(tenantId?: string, filters?: AuditEventFilters): Promise<ListAuditEventsResponse> {
     if (IS_API_MODE) {
       if (!tenantId) throw { status: 400, message: "Timeline de auditoria requer um tenant selecionado." };
       const query = new URLSearchParams();
       if (filters?.productId) query.set("productId", filters.productId);
       if (filters?.module) query.set("module", filters.module);
+      if (filters?.risk) query.set("risk", filters.risk);
       const qs = query.toString();
       const events = await apiClient.get<AuditEventDto[]>(`/tenants/${tenantId}/audit-events${qs ? `?${qs}` : ""}`);
       return events.map(mapAuditEvent);
@@ -61,7 +62,46 @@ export const auditService = {
       result = result.filter((e) => e.module.toLowerCase().startsWith(wanted));
     }
     if (filters?.productName) result = result.filter((e) => e.tenant === filters.productName);
+    if (filters?.risk) result = result.filter((e) => e.risk === filters.risk);
+    if (filters?.query) {
+      const query = filters.query.toLowerCase();
+      result = result.filter((e) => [e.actor, e.action, e.target, e.tenant, e.module]
+        .some((value) => value.toLowerCase().includes(query)));
+    }
     return result;
+  },
+  async listEventsPage(tenantId?: string, filters: AuditEventFilters = {}, page = 0, size = 25): Promise<AuditEventPage> {
+    if (IS_API_MODE) {
+      if (!tenantId) throw { status: 400, message: "Timeline de auditoria requer um tenant selecionado." };
+      const query = new URLSearchParams();
+      if (filters.productId) query.set("productId", filters.productId);
+      if (filters.module) query.set("module", filters.module);
+      if (filters.risk) query.set("risk", filters.risk);
+      if (filters.query?.trim()) query.set("q", filters.query.trim());
+      query.set("page", String(page));
+      query.set("size", String(size));
+      const response = await apiClient.get<{
+        items: AuditEventDto[];
+        page: number;
+        size: number;
+        totalElements: number;
+        totalPages: number;
+      }>(`/tenants/${tenantId}/audit-events/page?${query.toString()}`);
+      return {
+        ...response,
+        items: response.items.map(mapAuditEvent),
+      };
+    }
+    const all = await this.listEvents(tenantId, filters);
+    const start = Math.max(page, 0) * size;
+    const items = all.slice(start, start + size);
+    return {
+      items,
+      page: Math.max(page, 0),
+      size,
+      totalElements: all.length,
+      totalPages: Math.ceil(all.length / size),
+    };
   },
   /**
    * G.3 (BUG-SPRINT-05) — detalhe de um evento (`AuditEventDetail.tsx`), com

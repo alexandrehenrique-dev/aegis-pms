@@ -9,7 +9,7 @@ import type { ProductStatus } from "../../../shared/types";
 import type { EditableProduct } from "../contracts/responses";
 import type { UpdateProductRequest } from "../contracts/requests";
 
-const STATUSES: ProductStatus[] = ["Ativo", "Pendente", "Arquivado", "Sem módulos"];
+const STATUSES: ProductStatus[] = ["Ativo", "Arquivado"];
 
 /**
  * Editar Produto (docs/implementation/004_aegis_pms_screen_inventory.md,

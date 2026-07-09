@@ -47,7 +47,8 @@ public class KeycloakProductAssignmentInvitePort implements ProductAssignmentInv
                 List.of(productName),
                 productKey,
                 role,
-                inviterName
+                inviterName,
+                null
         ));
         return invited;
     }

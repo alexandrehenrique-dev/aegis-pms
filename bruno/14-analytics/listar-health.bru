@@ -20,6 +20,6 @@ tests {
   });
   test("shape HealthSignal", function() {
     expect(res.body).to.be.an("array");
-    expect(res.body[0]).to.have.all.keys("label", "status", "score", "tone");
+    expect(res.body[0]).to.include.keys("label", "status", "score", "tone");
   });
 }

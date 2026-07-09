@@ -29,6 +29,10 @@ Mapeamento módulo → domínio gateado:
 
 Domínios **não** gateados por módulo (sempre disponíveis para quem tem permissão de papel, independente de toggle de módulo): `tenants`/`ProductAssignment` (09), `users` (14), `audit` (15), `settings`/`dashboard` (16), `notification` (23) — são infraestrutura/fundação do produto, não "funcionalidades" que um tenant escolhe ligar ou desligar.
 
+`KNOWLEDGE_GRAPH` possui dependências explícitas de módulo: só pode ser habilitado quando `CONTENT` **e** `ASSETS` estiverem habilitados no mesmo produto. O grafo nasce de entidades de conteúdo e pode referenciar mídia/arquivos; permitir KG sem Assets deixou jornadas incoerentes (nó visualizando relação, mas sem biblioteca de mídia vinculável). Pela mesma regra, `CONTENT` ou `ASSETS` não podem ser desabilitados enquanto `KNOWLEDGE_GRAPH` estiver ativo. Backend e frontend aplicam a mesma dependência; a UI apenas antecipa o bloqueio, a API continua sendo a autoridade.
+
+A listagem resumida de produtos (`ProductSummary`) expõe os módulos realmente habilitados pelo backend. O frontend deve usar essa lista quando existir para contar/exibir módulos, em vez de recalcular pelo tipo do produto; defaults por tipo são apenas fallback para mocks/offline e para criação de produto antes da persistência.
+
 ## Consequências
 
 Positivas:
@@ -49,7 +53,7 @@ Negativas / trade-offs:
 ## Impactos
 
 - **Backend**: etapa 06 ganha a tarefa de implementar `@RequireModule`/`ModuleAccessAspect`; etapas 07, 10, 11, 12, 13, 17, 21 ganham a tarefa de anotar seus controllers e um cenário de teste (`módulo desabilitado → 403 MODULE_DISABLED`) nos critérios de aceite; etapa 22 (checklist final) ganha um item de auditoria cruzada confirmando que todo domínio gateável está de fato anotado.
-- **Frontend**: auditoria de refinamento (Sprint 15) encontrou que isso já é um problema **hoje**, não só uma preocupação futura — `AppShell.tsx` (sidebar) filtra item de navegação só por `roleVisibleNav[viewAsRole]` (papel), sem checar `product.modulesList`; um produto sem Knowledge Graph habilitado ainda mostra o item "Knowledge Graph" na sidebar para quem tem permissão de papel. Corrigido na Sprint 15, Tarefa E — filtro passa a exigir as duas condições (módulo do produto **e** papel do usuário), não uma ou outra.
+- **Frontend**: auditoria de refinamento (Sprint 15) encontrou que isso já é um problema **hoje**, não só uma preocupação futura — `AppShell.tsx` (sidebar) filtra item de navegação só por `roleVisibleNav[viewAsRole]` (papel), sem checar `product.modulesList`; um produto sem Knowledge Graph habilitado ainda mostra o item "Knowledge Graph" na sidebar para quem tem permissão de papel. Corrigido na Sprint 15, Tarefa E — filtro passa a exigir as duas condições (módulo do produto **e** papel do usuário), não uma ou outra. Quando o backend devolve `enabledModules`, essa lista é a fonte de verdade visual para cards, seletor de produto e catálogo.
 
 ## Links Relacionados
 

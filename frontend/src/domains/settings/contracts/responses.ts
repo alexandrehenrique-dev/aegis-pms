@@ -5,6 +5,11 @@ export type SettingCard = {
 
 export type ListSettingCardsResponse = SettingCard[];
 
+export type RoleMatrixEntry = {
+  role: string;
+  permissions: Record<string, boolean>;
+};
+
 /**
  * Espelha `ProductSecuritySettingsResponse` do backend (etapa 19 +
  * etapa 30 §D.4.2 — `br.com.byop.aegis.settings.dto`). `telegramAlert` é

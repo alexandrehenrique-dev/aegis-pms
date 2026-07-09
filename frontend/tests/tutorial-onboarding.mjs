@@ -13,8 +13,8 @@ import { launchBrowser, collectPageErrors, report, DEMO_USERS, BASE_URL } from "
 
 // Títulos gerados a partir de `core/tutorial/tutorialSteps.ts` — mantidos em
 // sincronia manualmente, mesmo texto (Seção G do documento da sprint).
-const ROLE_GATED_OUT_FOR_PM = ["Criar um produto digital", "Novos produtos em segundos", "Sua equipe", "Convidar alguém é simples", "Zona de perigo"];
-const EXPECTED_FOR_PM = ["Seja bem-vindo ao Aegis", "Seu painel de comando", "Configurações do workspace", "Você está pronto"];
+const ROLE_GATED_OUT_FOR_PM = ["Seu painel de comando", "Criar um produto digital", "Novos produtos em segundos", "Sua equipe", "Convidar alguém é simples", "Zona de perigo"];
+const EXPECTED_FOR_PM = ["Seja bem-vindo ao Aegis", "Configurações do workspace", "Você está pronto"];
 
 async function main() {
   const browser = await launchBrowser();
@@ -30,9 +30,8 @@ async function main() {
     await page.locator('input[type="password"]').fill(DEMO_USERS.productManager.password);
     await page.getByRole("button", { name: "Entrar" }).click();
     await page.waitForTimeout(800);
-    await page.getByText("Entrar →").click();
-    await page.waitForTimeout(800);
-    // product_manager vê vários produtos do tenant BYOP (não é o caso "1 card só") — escolhe um explícito.
+    ok = report("Product Manager entra direto na selecao de produto", page.url().includes("/select-product")) && ok;
+    // Product Manager pode ver vários produtos autorizados — escolhe um explícito.
     await page.getByText("Maestro Beton", { exact: true }).first().click();
     await page.waitForTimeout(1200);
 

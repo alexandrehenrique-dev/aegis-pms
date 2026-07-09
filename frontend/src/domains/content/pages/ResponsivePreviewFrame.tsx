@@ -13,6 +13,7 @@ import { pagesService } from "../../pages/services/pagesService";
 import { globalsService } from "../../pages/services/globalsService";
 import { BlockRenderer } from "../../pages/components/BlockRenderer";
 import { GlobalFooter, GlobalNavbar } from "../../pages/components/GlobalChrome";
+import { COMPONENT_LAB_PREVIEW_ID, componentLabSections } from "../../pages/previewScenarios";
 
 const LANGUAGES = ["PT-BR", "EN-US", "ES-ES"];
 
@@ -51,10 +52,11 @@ export function ResponsivePreviewFrame() {
   const productId = product ? product.id : "p1";
   const { data: productContent } = useAsyncData(() => contentService.listContentByProduct(productId), [productId]);
   const contentPreview = productContent?.find((c) => c.id === previewId);
+  const isComponentLab = previewId === COMPONENT_LAB_PREVIEW_ID;
   const wikidevArticle = product?.name === "WikiDev" ? productContent?.find((c) => c.body) : undefined;
   const { data: page, loading: loadingPage } = useAsyncData(
-    () => (previewId ? pagesService.getPageBySlug(productId, previewId) : Promise.resolve(undefined)),
-    [productId, previewId],
+    () => (previewId && !isComponentLab ? pagesService.getPageBySlug(productId, previewId) : Promise.resolve(undefined)),
+    [productId, previewId, isComponentLab],
   );
   const { data: globals } = useAsyncData(() => globalsService.getGlobals(productId), [productId]);
 
@@ -70,8 +72,9 @@ export function ResponsivePreviewFrame() {
 
   return (
     <>
-      <PageHeader title={`${contentPreview?.title ?? page?.title ?? "Preview"} — Preview`} module="Conteúdo" desc="Preview responsivo do conteúdo antes de revisão/publicação." badge={contentPreview?.status ?? "Preview"}>
+      <PageHeader title={`${contentPreview?.title ?? page?.title ?? (isComponentLab ? "Componentes" : "Preview")} — Preview`} module="Conteúdo" desc="Preview responsivo do conteúdo antes de revisão/publicação." badge={contentPreview?.status ?? (isComponentLab ? "Lab visual" : "Preview")}>
         <Button onClick={() => navigate(-1)}>Voltar ao editor</Button>
+        <Button onClick={() => navigate(`/content/${COMPONENT_LAB_PREVIEW_ID}/preview`)}>Cenário completo</Button>
         <Button primary onClick={handleSubmitForReview} disabled={submitting}>{submitting && <Loader2 size={15} className="animate-spin" />}{submitting ? "Enviando..." : "Enviar para revisão"}</Button>
       </PageHeader>
       <Card>
@@ -84,9 +87,9 @@ export function ResponsivePreviewFrame() {
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">Aegis · {product?.name ?? "Produto"}</p>
-              <h1 className="mt-1 text-2xl font-semibold">{contentPreview?.title ?? page?.title ?? "Preview"}</h1>
+              <h1 className="mt-1 text-2xl font-semibold">{contentPreview?.title ?? page?.title ?? (isComponentLab ? "Componentes" : "Preview")}</h1>
             </div>
-            <Badge>{contentPreview?.status ?? page?.status ?? "preview"}</Badge>
+            <Badge>{contentPreview?.status ?? page?.status ?? (isComponentLab ? "lab" : "preview")}</Badge>
           </div>
           {contentPreview?.body ? (
             <article className="mx-auto max-w-3xl py-6">
@@ -94,6 +97,10 @@ export function ResponsivePreviewFrame() {
             </article>
           ) : wikidevArticle?.body ? (
             <WikiDevArticlePreview article={{ title: wikidevArticle.title, body: wikidevArticle.body }} productId={productId} />
+          ) : isComponentLab ? (
+            <div className="divide-y divide-border">
+              {componentLabSections.map((section) => <BlockRenderer key={section.id} section={section} forceLightProse productSlug={productId} />)}
+            </div>
           ) : loadingPage ? (
             <SkeletonLines />
           ) : page ? (

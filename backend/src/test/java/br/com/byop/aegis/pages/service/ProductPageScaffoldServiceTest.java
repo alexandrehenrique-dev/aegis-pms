@@ -26,6 +26,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -48,8 +49,8 @@ class ProductPageScaffoldServiceTest {
     @BeforeEach
     void setUp() {
         validationService = new SectionContentValidationService(
-                org.mockito.Mockito.mock(br.com.byop.aegis.form.api.FormReferenceService.class),
-                org.mockito.Mockito.mock(br.com.byop.aegis.asset.api.AssetReferenceService.class),
+                mock(br.com.byop.aegis.form.api.FormReferenceService.class),
+                mock(br.com.byop.aegis.asset.api.AssetReferenceService.class),
                 new PageMarkdownSanitizer()
         );
         service = new ProductPageScaffoldService(pageRepository, sectionRepository, validationService, new ObjectMapper());
@@ -65,7 +66,7 @@ class ProductPageScaffoldServiceTest {
         service.scaffoldFor(TENANT_ID, PRODUCT_ID, "SITE_INSTITUCIONAL", "pt-BR");
 
         ArgumentCaptor<Page> pageCaptor = ArgumentCaptor.forClass(Page.class);
-        verify(pageRepository, org.mockito.Mockito.times(7)).save(pageCaptor.capture());
+        verify(pageRepository, times(7)).save(pageCaptor.capture());
         assertThat(pageCaptor.getAllValues()).extracting(Page::getSlug)
                 .containsExactly("home", "quem-somos", "historia", "agenda", "galeria", "apoie", "contato");
         assertThat(pageCaptor.getAllValues()).allSatisfy(page -> {
@@ -84,9 +85,9 @@ class ProductPageScaffoldServiceTest {
     void shouldCreateOnePageWithLabeledCardListsForPortal() {
         service.scaffoldFor(TENANT_ID, PRODUCT_ID, "PORTAL", "pt-BR");
 
-        verify(pageRepository, org.mockito.Mockito.times(1)).save(any(Page.class));
+        verify(pageRepository, times(1)).save(any(Page.class));
         ArgumentCaptor<PageSection> sectionCaptor = ArgumentCaptor.forClass(PageSection.class);
-        verify(sectionRepository, org.mockito.Mockito.times(4)).save(sectionCaptor.capture());
+        verify(sectionRepository, times(4)).save(sectionCaptor.capture());
         assertThat(sectionCaptor.getAllValues()).extracting(PageSection::getVariant)
                 .containsExactly(null, null, "Vagas", "Blog");
     }
@@ -118,8 +119,8 @@ class ProductPageScaffoldServiceTest {
         service.onProductCreated(new ProductCreatedEvent(TENANT_ID, PRODUCT_ID, AssetStorageStrategy.LOCAL,
                 "PORTFOLIO", "pt-BR"));
 
-        verify(pageRepository, org.mockito.Mockito.times(1)).save(any(Page.class));
-        verify(sectionRepository, org.mockito.Mockito.times(5)).save(any(PageSection.class));
+        verify(pageRepository, times(1)).save(any(Page.class));
+        verify(sectionRepository, times(5)).save(any(PageSection.class));
     }
 
     @Test
@@ -127,7 +128,7 @@ class ProductPageScaffoldServiceTest {
         service.scaffoldFor(TENANT_ID, PRODUCT_ID, "PORTAL", "pt-BR");
 
         ArgumentCaptor<PageSection> sectionCaptor = ArgumentCaptor.forClass(PageSection.class);
-        verify(sectionRepository, org.mockito.Mockito.times(4)).save(sectionCaptor.capture());
+        verify(sectionRepository, times(4)).save(sectionCaptor.capture());
         PageSection hero = sectionCaptor.getAllValues().get(0);
         assertThat(hero.getContentJson()).contains("Novo título");
     }

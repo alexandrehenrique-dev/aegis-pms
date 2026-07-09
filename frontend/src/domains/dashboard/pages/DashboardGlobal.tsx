@@ -4,7 +4,7 @@ import { AnimatePresence } from "motion/react";
 import { Plus } from "lucide-react";
 import { useAuth } from "../../../core/auth/useAuth";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
-import { getPostLoginLandingPath } from "../../../core/permissions/roles";
+import { canCreateProduct, getPostLoginLandingPath } from "../../../core/permissions/roles";
 import { PermGate } from "../../../app/guards/PermGate";
 import { Button, Card, EmptyState, KPIWidget, PageHeader, PartialErrorWidget, PermissionHint, SkeletonLines } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
@@ -21,7 +21,7 @@ export function DashboardGlobal() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
   const { authUser, effectiveTenant, tenantProducts, selectProduct } = useAuth();
-  const canCreate = !["editor", "viewer"].includes(viewAsRole);
+  const canCreate = canCreateProduct(viewAsRole);
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const canSeeUsers = ["super_admin", "tenant_admin"].includes(viewAsRole);
   const canSeeFinancial = viewAsRole === "super_admin";
@@ -41,7 +41,7 @@ export function DashboardGlobal() {
     if (!authUser) return;
     const product: ProductOption = { id: created.id ?? created.name, name: created.name, type: created.type, status: created.status, modules: created.modules };
     selectProduct(product);
-    navigate(getPostLoginLandingPath(authUser.role, product));
+    navigate(getPostLoginLandingPath(authUser.role));
   };
 
   return (

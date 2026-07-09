@@ -25,6 +25,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -105,7 +106,7 @@ class NotificationControllerTest {
     void shouldReturnNotFoundWhenNotificationDoesNotBelongToCaller() throws Exception {
         AuthenticatedUser caller = user("user-1", "ROLE_EDITOR");
         when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
-        org.mockito.Mockito.doThrow(new NotificationNotFoundException())
+        doThrow(new NotificationNotFoundException())
                 .when(notificationService).markRead(caller, NOTIFICATION_ID);
 
         mockMvc.perform(post("/api/v1/notifications/{notificationId}/mark-read", NOTIFICATION_ID).with(jwt()))

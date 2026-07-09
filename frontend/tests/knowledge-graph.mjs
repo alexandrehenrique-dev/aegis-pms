@@ -1,7 +1,6 @@
 // Domínio knowledge graph — overview, canvas do grafo, busca de entidade, detalhe, orfas, insights.
-// Modulo "Knowledge Graph" so vem habilitado por padrao em produtos tipo "Knowledge Base"
-// (PRODUCT_TYPE_MODULE_DEFAULTS) — Maestro Beton (Site Institucional) nao tem; usa-se
-// "Aegis Docs" (tenant "Aegis Labs"), unico produto Knowledge Base ativo (nao arquivado) dos mocks.
+// Knowledge Graph pertence ao workspace de produto. A jornada usa Product Manager
+// em Loki para validar que o usuário opera o módulo sem precisar conhecer tenant.
 // Ver tests/README.md.
 import { launchBrowser, loginAndOpenProduct, goToNav, goToTab, DEMO_USERS, collectPageErrors, report } from "./helpers.mjs";
 
@@ -12,7 +11,7 @@ async function main() {
   let ok = true;
 
   try {
-    await loginAndOpenProduct(page, { user: DEMO_USERS.tenantAdmin, tenantName: "Aegis Labs", productName: "Aegis Docs" });
+    await loginAndOpenProduct(page, { user: DEMO_USERS.productManager, productName: "Loki" });
     await goToNav(page, "Knowledge Graph");
     ok = report("Overview do Knowledge Graph carrega", page.url().endsWith("/knowledge")) && ok;
     ok = report("Overview mostra contagem de entidades totais", await page.getByText("Entidades totais").isVisible()) && ok;
@@ -22,10 +21,10 @@ async function main() {
 
     await goToTab(page, "Busca");
     ok = report("Entity Search carrega", page.url().endsWith("/knowledge/search")) && ok;
-    await page.locator('input[placeholder*="Buscar"]').fill("Home");
+    await page.locator('input[placeholder*="Buscar"]').fill("Vigília");
     await page.waitForTimeout(500);
-    const resultCard = page.locator("div", { hasText: "Home" }).first();
-    ok = report("Busca por 'Home' retorna algum resultado", await resultCard.isVisible()) && ok;
+    const resultCard = page.locator("div", { hasText: "Vigília" }).first();
+    ok = report("Busca por 'Vigília' retorna algum resultado", await resultCard.isVisible()) && ok;
 
     await goToTab(page, "Órfãos");
     ok = report("Tabela de entidades orfas carrega", page.url().endsWith("/knowledge/orphans")) && ok;

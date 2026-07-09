@@ -1,7 +1,7 @@
 meta {
   name: Grafo Loki
   type: http
-  seq: 4
+  seq: 8
 }
 
 get {
@@ -11,15 +11,16 @@ get {
 
 docs {
 Objetivo: validar os nodes reais do grafo do produto Loki.
-Resultado esperado: 200 com os nodes Vigilia, Clair de Lune, Manifesto do Silencio, Playlist e Fragmentos.
+Resultado esperado: 200 com nodes quando o token tem acesso operacional ao produto, ou 403 quando o token e apenas super-admin sem permissao direta de Knowledge Graph (ADR-0018).
 Observacao: em bancos locais antigos que ja tinham produto com a mesma key antes da migration V17, a migration preserva os dados existentes e pode retornar o grafo residual desse produto.
 }
 
 tests {
-  test("status 200", function() {
-    expect(res.status).to.equal(200);
+  test("status 200 ou 403", function() {
+    expect([200, 403]).to.include(res.status);
   });
-  test("nodes esperados", function() {
+  test("nodes esperados quando autorizado", function() {
+    if (res.status === 403) { return; }
     const labels = res.body.map(function(node) { return node.label; });
     const expected = [
       'Vigília',

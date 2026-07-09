@@ -14,13 +14,13 @@ export function AppNav() {
   const { effectiveTenant, effectiveProduct } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  if (!effectiveTenant || !effectiveProduct) return null;
+  if (!effectiveTenant) return null;
 
   const segments = location.pathname.split("/").filter(Boolean);
   const root = segments[0] ? `/${segments[0]}` : "/dashboard";
   const isRoot = root === "/dashboard";
   const isTopOnly = root === "/products" && segments.length <= 1 || location.pathname === "/products/new";
-  const isProductCtx = !isRoot && !isTopOnly;
+  const isProductCtx = !isRoot && !isTopOnly && !!effectiveProduct;
   const sectionLabel = sectionLabels[root];
 
   const sep = <ChevronRight size={11} className="shrink-0 text-border" />;
@@ -37,7 +37,7 @@ export function AppNav() {
         <>
           {btn("Produtos", "/products")}
           {sep}
-          {btn(effectiveProduct.name, "/dashboard")}
+          {btn(effectiveProduct?.name ?? "Produto", "/dashboard")}
           {sectionLabel && <>{sep}<span className="text-foreground">{sectionLabel}</span></>}
         </>
       )}
