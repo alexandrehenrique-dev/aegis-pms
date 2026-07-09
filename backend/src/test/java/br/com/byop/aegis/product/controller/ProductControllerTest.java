@@ -38,6 +38,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -149,6 +150,51 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.id").value(PRODUCT_ID.toString()))
                 .andExpect(jsonPath("$.modules[0].id").value(MODULE_ID.toString()))
                 .andExpect(jsonPath("$.modules[0].moduleKey").value("CONTENT"));
+    }
+
+    @Test
+    void shouldUpdateProduct() throws Exception {
+        AuthenticatedUser caller = user();
+        ProductSummary summary = productSummary();
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(productService.updateProduct(any(AuthenticatedUser.class), org.mockito.ArgumentMatchers.eq(PRODUCT_ID), any()))
+                .thenReturn(summary);
+
+        mockMvc.perform(put("/api/v1/products/{productId}", PRODUCT_ID)
+                        .with(jwt())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Maestro Beton",
+                                  "type": "SITE_INSTITUCIONAL",
+                                  "status": "ACTIVE",
+                                  "modules": ["CONTENT"]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(PRODUCT_ID.toString()))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenProductStatusIsInvalid() throws Exception {
+        AuthenticatedUser caller = user();
+        when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
+        when(productService.updateProduct(any(AuthenticatedUser.class), org.mockito.ArgumentMatchers.eq(PRODUCT_ID), any()))
+                .thenThrow(new br.com.byop.aegis.product.exception.InvalidProductStatusException("BROKEN"));
+
+        mockMvc.perform(put("/api/v1/products/{productId}", PRODUCT_ID)
+                        .with(jwt())
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Maestro Beton",
+                                  "type": "SITE_INSTITUCIONAL",
+                                  "status": "BROKEN"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_PRODUCT_STATUS"));
     }
 
     @Test
@@ -264,6 +310,7 @@ class ProductControllerTest {
                 OffsetDateTime.parse("2026-06-25T10:00:00-03:00"),
                 OffsetDateTime.parse("2026-06-25T10:10:00-03:00"),
                 0,
+                List.of(),
                 null
         );
     }

@@ -27,12 +27,18 @@ WORKDIR /app
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
+    && groupadd --system aegis \
+    && useradd --system --gid aegis --home-dir /app --shell /usr/sbin/nologin aegis \
+    && mkdir -p /data/assets /app/email-templates \
+    && chown -R aegis:aegis /app /data/assets \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=backend-build /workspace/backend/target/aegis-pms-backend-0.0.1-SNAPSHOT.jar /app/aegis-pms-backend.jar
+COPY --from=backend-build --chown=aegis:aegis /workspace/backend/target/aegis-pms-backend-0.0.1-SNAPSHOT.jar /app/aegis-pms-backend.jar
 
 VOLUME ["/data/assets", "/app/email-templates"]
 
 EXPOSE 8080
+
+USER aegis
 
 ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/aegis-pms-backend.jar"]

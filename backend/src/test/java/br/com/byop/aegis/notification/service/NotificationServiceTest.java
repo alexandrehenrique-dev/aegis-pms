@@ -42,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -79,7 +80,7 @@ class NotificationServiceTest {
 
         assertThat(response.id()).isEqualTo(NOTIFICATION_ID);
         ArgumentCaptor<UserNotificationStatus> statusCaptor = ArgumentCaptor.forClass(UserNotificationStatus.class);
-        verify(statusRepository, org.mockito.Mockito.times(2)).save(statusCaptor.capture());
+        verify(statusRepository, times(2)).save(statusCaptor.capture());
         assertThat(statusCaptor.getAllValues()).extracting(UserNotificationStatus::getUserSubject)
                 .containsExactly("user-1", "user-2");
     }
@@ -109,7 +110,7 @@ class NotificationServiceTest {
         service.create(superAdmin(), request);
 
         ArgumentCaptor<UserNotificationStatus> statusCaptor = ArgumentCaptor.forClass(UserNotificationStatus.class);
-        verify(statusRepository, org.mockito.Mockito.times(2)).save(statusCaptor.capture());
+        verify(statusRepository, times(2)).save(statusCaptor.capture());
         assertThat(statusCaptor.getAllValues()).extracting(UserNotificationStatus::getUserSubject)
                 .containsExactly("user-1", "user-2");
     }
@@ -306,7 +307,7 @@ class NotificationServiceTest {
         assertThat(notification.getTitle()).isEqualTo("Feedback critico recebido");
         assertThat(notification.getBodyMarkdown()).contains("AGS-0043", "Bug", "crítica", "editor-subject");
         ArgumentCaptor<UserNotificationStatus> statusCaptor = ArgumentCaptor.forClass(UserNotificationStatus.class);
-        verify(statusRepository, org.mockito.Mockito.times(2)).save(statusCaptor.capture());
+        verify(statusRepository, times(2)).save(statusCaptor.capture());
         assertThat(statusCaptor.getAllValues()).extracting(UserNotificationStatus::getUserSubject)
                 .containsExactly("super-admin", "super-admin-2");
     }

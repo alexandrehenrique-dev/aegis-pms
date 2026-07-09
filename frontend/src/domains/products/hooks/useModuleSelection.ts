@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { KNOWLEDGE_GRAPH_DEPENDENCY, PRODUCT_TYPE_MODULE_DEFAULTS, type ProductTypeKey } from "../../../core/products/moduleDefaults";
+import { KNOWLEDGE_GRAPH_DEPENDENCIES, PRODUCT_TYPE_MODULE_DEFAULTS, type ProductTypeKey } from "../../../core/products/moduleDefaults";
 
 /**
  * Seleção de módulos por tipo de produto — compartilhada entre
@@ -27,7 +27,7 @@ export function useModuleSelection(initialType: ProductTypeKey, initialModules?:
       const next = new Set(prev);
       if (next.has(key)) {
         next.delete(key);
-        if (key === KNOWLEDGE_GRAPH_DEPENDENCY) next.delete("Knowledge Graph");
+        if ((KNOWLEDGE_GRAPH_DEPENDENCIES as readonly string[]).includes(key)) next.delete("Knowledge Graph");
       } else {
         next.add(key);
       }

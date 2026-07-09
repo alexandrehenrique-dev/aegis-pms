@@ -13,12 +13,12 @@ post {
 body:form-urlencoded {
   grant_type: password
   client_id: {{clientId}}
-  username: super-admin@byop.io
-  password: senha123
+  username: {{username}}
+  password: {{password}}
 }
 
 docs {
-Objetivo: restaurar token SUPER_ADMIN antes de convidar novo usuario para validar integracao com onboarding.
+Objetivo: restaurar token do ambiente Bruno local antes de convidar novo usuario para validar integracao com onboarding.
 Resultado esperado: 200.
 }
 

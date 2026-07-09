@@ -6,6 +6,22 @@ export type AuditEvent = {
 
 export type ListAuditEventsResponse = AuditEvent[];
 
+export type AuditEventFilters = {
+  productId?: string;
+  module?: string;
+  productName?: string;
+  risk?: string;
+  query?: string;
+};
+
+export type AuditEventPage = {
+  items: AuditEvent[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
 export type AuditEventDetailDto = AuditEvent & {
   diffJson: { before?: Record<string, unknown>; after?: Record<string, unknown> } & Record<string, unknown>;
   traceId: string | null;

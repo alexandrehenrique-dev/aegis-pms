@@ -49,14 +49,14 @@ public final class ProductModuleTemplateCatalog {
                 ModuleKey.PAGES, ModuleKey.CONTENT, ModuleKey.FORMS, ModuleKey.SEO, ModuleKey.ANALYTICS
         ));
         catalog.put(ProductTypeKey.KNOWLEDGE_BASE, List.of(
-                ModuleKey.CONTENT, ModuleKey.KNOWLEDGE_GRAPH, ModuleKey.SEO, ModuleKey.ANALYTICS
+                ModuleKey.CONTENT, ModuleKey.ASSETS, ModuleKey.KNOWLEDGE_GRAPH, ModuleKey.SEO, ModuleKey.ANALYTICS
         ));
         catalog.put(ProductTypeKey.PORTFOLIO, List.of(
                 ModuleKey.PORTFOLIO, ModuleKey.PAGES, ModuleKey.CONTENT, ModuleKey.ASSETS,
                 ModuleKey.SEO, ModuleKey.ANALYTICS
         ));
         catalog.put(ProductTypeKey.LIBRARY_BOOKS_MUSIC, List.of(
-                ModuleKey.LIBRARY, ModuleKey.BOOKS, ModuleKey.MUSIC, ModuleKey.CONTENT,
+                ModuleKey.LIBRARY, ModuleKey.BOOKS, ModuleKey.MUSIC, ModuleKey.CONTENT, ModuleKey.ASSETS,
                 ModuleKey.KNOWLEDGE_GRAPH, ModuleKey.SEO, ModuleKey.ANALYTICS
         ));
         catalog.put(ProductTypeKey.PRODUTO_SAAS, List.of(

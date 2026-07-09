@@ -36,7 +36,7 @@ export const mockProductsByUser: Record<string, Record<string, ProductOption[]>>
       { id: "p6", name: "Conecta Talentos", type: "Portal", status: "Sem módulos", modules: 0 },
       { id: "p11", name: "CMSS", type: "Site Institucional", status: "Ativo", modules: 5 },
       { id: "p12", name: "Alexandre Dev", type: "Portfolio", status: "Ativo", modules: 4, isRecent: true },
-      { id: "p13", name: "Loki", type: "Biblioteca Filosófica", status: "Ativo", modules: 4 },
+      { id: "p13", name: "Loki", type: "Library/Books/Music", status: "Ativo", modules: 7 },
     ],
     t2: [
       { id: "p7", name: "Aegis Core", type: "Produto SaaS", status: "Ativo", modules: 4, isFavorite: true },
@@ -55,7 +55,7 @@ export const mockProductsByUser: Record<string, Record<string, ProductOption[]>>
       { id: "p6", name: "Conecta Talentos", type: "Portal", status: "Sem módulos", modules: 0 },
       { id: "p11", name: "CMSS", type: "Site Institucional", status: "Ativo", modules: 5 },
       { id: "p12", name: "Alexandre Dev", type: "Portfolio", status: "Ativo", modules: 4, isRecent: true },
-      { id: "p13", name: "Loki", type: "Biblioteca Filosófica", status: "Ativo", modules: 4 },
+      { id: "p13", name: "Loki", type: "Library/Books/Music", status: "Ativo", modules: 7 },
     ],
     t2: [
       { id: "p7", name: "Aegis Core", type: "Produto SaaS", status: "Ativo", modules: 4, isFavorite: true },
@@ -66,12 +66,13 @@ export const mockProductsByUser: Record<string, Record<string, ProductOption[]>>
   },
   u2: {
     t1: [
-      { id: "p1", name: "Maestro Beton", type: "Site Institucional", status: "Ativo", modules: 6, isFavorite: true, isRecent: true },
-      { id: "p2", name: "Aion Logbook", type: "Jogo / Experimento", status: "Pendente", modules: 4 },
-      { id: "p3", name: "Eirene UI", type: "Design System", status: "Ativo", modules: 5 },
-      { id: "p4", name: "Genesis", type: "Produto SaaS", status: "Ativo", modules: 7 },
+      { id: "p1", name: "Maestro Beton", type: "Site Institucional", status: "Ativo", modules: 6, isFavorite: true, isRecent: true, callerAssignedRole: "PRODUCT_MANAGER" },
+      { id: "p13", name: "Loki", type: "Library/Books/Music", status: "Ativo", modules: 7, callerAssignedRole: "PRODUCT_MANAGER" },
     ],
   },
-  u3: { t1: [{ id: "p1", name: "Maestro Beton", type: "Site Institucional", status: "Ativo", modules: 6, isFavorite: true }] },
-  u6: { t1: [{ id: "p1", name: "Maestro Beton", type: "Site Institucional", status: "Ativo", modules: 6, isFavorite: true }] },
+  u3: { t1: [
+    { id: "p1", name: "Maestro Beton", type: "Site Institucional", status: "Ativo", modules: 6, isFavorite: true, callerAssignedRole: "EDITOR" },
+    { id: "p13", name: "Loki", type: "Library/Books/Music", status: "Ativo", modules: 7, callerAssignedRole: "VIEWER" },
+  ] },
+  u6: { t1: [{ id: "p1", name: "Maestro Beton", type: "Site Institucional", status: "Ativo", modules: 6, isFavorite: true, callerAssignedRole: "VIEWER" }] },
 };

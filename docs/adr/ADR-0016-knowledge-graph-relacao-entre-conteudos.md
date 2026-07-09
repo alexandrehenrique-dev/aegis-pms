@@ -14,6 +14,8 @@ Isso expôs uma ambiguidade de escopo que nunca tinha sido escrita explicitament
 
 O Knowledge Graph modela exclusivamente **relações entre entidades de conteúdo/conhecimento** (`Content`, `Page` como referência única — não suas seções —, `Asset`, `Form`, `JobPosting`, `Book`, `Poem`, `Manifesto`, `MusicReference`, etc. — o catálogo de `nodeType` já existente na etapa 07), **nunca** a relação entre os componentes/seções de uma página (isso é `PageSection.order` dentro de uma `Page`, já resolvido pelo domínio `pages`).
 
+O módulo `KNOWLEDGE_GRAPH` depende operacionalmente de `CONTENT` e `ASSETS` habilitados no mesmo produto. `CONTENT` é a origem primária dos nós editáveis e das referências inline; `ASSETS` é necessário porque a jornada de grafo inclui entidades e evidências de mídia/documento vinculadas ao produto. Presets de produto que habilitam Knowledge Graph devem habilitar os dois módulos junto, e a API bloqueia habilitar KG quando qualquer dependência estiver ausente.
+
 A jornada de autoria real e primária é **sempre a partir do conteúdo**, nunca do canvas do grafo:
 
 1. Usuário está escrevendo um `Content` (post, artigo, manifesto...) em `ContentArticleEditor.tsx`/`MarkdownEditModal.tsx`.
@@ -24,6 +26,17 @@ A jornada de autoria real e primária é **sempre a partir do conteúdo**, nunca
 `GraphCanvasView` continua existindo como **visualização** dessas conexões (e como ferramenta de curadoria — resolver órfãos, revisar insights), não como ferramenta primária de criação manual de nó/edge. Desenhar uma edge arrastando no canvas **não é** a jornada suportada — se vier a ser necessária no futuro, é uma decisão nova, não implícita nesta.
 
 **Uma edge só pode conectar dois nós do mesmo produto.** Cada nó do grafo pertence a exatamente um produto (o nó é criado a partir de um `Content` que existe dentro de um produto específico — não existe `Content` "global" cross-produto). `EntityPicker.tsx`, ao buscar entidade para vincular durante a autoria, busca exclusivamente entre os nós do produto do conteúdo em edição — nunca lista nem permite selecionar um nó de outro produto. Pela mesma razão, `knowledgeService.createEdge` rejeita (não cria, loga aviso) qualquer tentativa de ligar dois nós de produtos diferentes — inclusive quando a referência `{{kg-ref:nodeId:Label}}` foi digitada manualmente apontando para um `nodeId` de outro produto. Esta restrição não tinha sido escrita explicitamente até a implementação da Sprint 16 — formalizada aqui porque o Knowledge Graph nunca existiu, em nenhum produto real do catálogo (Maestro Beton, CMSS, WikiDev, Loki, Conecta Talentos, Alexandre Dev), como um grafo compartilhado entre tenants/produtos distintos.
+
+As telas operacionais do Knowledge Graph (`GraphCanvasView`, `RelationshipExplorer`,
+busca de entidades e picker de vínculo no editor) exibem somente nós de conteúdo
+reais do produto ativo. Nós de catálogo/seed usados para homologação, exemplos
+musicais ou demonstrações (`POEM`, `MUSIC_REF`, `MANIFEST`, `PLAYLIST`, `BOOK`
+sem `refType=CONTENT`) não podem aparecer como entidades editáveis quando não
+existem como itens de `Content` daquele produto. Se um produto precisar modelar
+música, playlist ou livro como entidade editável, esses itens devem existir no
+domínio de conteúdo e então gerar nós `CONTENT` normalmente. A visualização do
+grafo nunca deve misturar fixtures invisíveis ao usuário com conteúdo real,
+porque isso impede exclusão/curadoria e passa a sensação de mock.
 
 ## Consequências
 
@@ -44,7 +57,8 @@ Negativas / trade-offs:
 ## Impactos
 
 - **Frontend**: Sprint 16 (`docs/sprints/16_knowledge_graph_real_conexao_durante_autoria.md`) — fiar `EntityPicker` no editor de conteúdo, parsear `kg-ref` ao salvar e chamar `createEdge`/`ensureNodeForContent` de fato, corrigir `knowledgeService.listNodes()`/`listEdges()` para ler do mesmo store mutável (`allNodes`/`allEdges`), não do array de mock estático original. `ensureNodeForContent`/`createEdge`/`searchNodes` passam a exigir/aceitar `productSlug` para que a busca do `EntityPicker` e a criação de edge nunca atravessem produtos.
-- **Backend**: etapa 07 (`GET /graph/nodes` ganha busca por `q`/label) e etapa 17 (endpoints de `orphans`/`insights` que já eram chamados pelo frontend mock sem estar documentados) — ver atualização desta sessão.
+- **Backend**: etapa 07 (`GET /graph/nodes` ganha busca por `q`/label; `GET /graph/edges` expõe as arestas reais do produto) e etapa 17 (endpoints de `orphans`/`insights` que já eram chamados pelo frontend mock sem estar documentados) — ver atualização desta sessão.
+- **Módulos**: ver ADR-0015 para a dependência `KNOWLEDGE_GRAPH` → `CONTENT` + `ASSETS` e para o bloqueio de desabilitar dependências enquanto o grafo estiver ativo.
 - **Documentação**: `docs/trace/00_endpoints_esperados.md` atualizado para refletir os dois pontos acima antes do backend ser construído.
 
 ## Links Relacionados

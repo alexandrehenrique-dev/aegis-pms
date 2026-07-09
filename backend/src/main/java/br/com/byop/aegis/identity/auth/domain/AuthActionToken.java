@@ -54,6 +54,9 @@ public class AuthActionToken {
     @Column(name = "inviter_name")
     private String inviterName;
 
+    @Column(name = "invite_message", columnDefinition = "TEXT")
+    private String inviteMessage;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -85,13 +88,14 @@ public class AuthActionToken {
     }
 
     public void addInviteContext(UUID tenantId, String tenantName, String productNames, String productSlug,
-                                String role, String inviterName) {
+                                String role, String inviterName, String inviteMessage) {
         this.tenantId = tenantId;
         this.tenantName = tenantName;
         this.productNames = productNames;
         this.productSlug = productSlug;
         this.role = role;
         this.inviterName = inviterName;
+        this.inviteMessage = inviteMessage;
     }
 
     public boolean isExpired(Instant now) {
@@ -153,6 +157,10 @@ public class AuthActionToken {
 
     public String getInviterName() {
         return inviterName;
+    }
+
+    public String getInviteMessage() {
+        return inviteMessage;
     }
 
     public Instant getCreatedAt() {

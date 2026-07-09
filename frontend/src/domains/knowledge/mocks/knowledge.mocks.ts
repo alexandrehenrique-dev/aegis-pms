@@ -4,6 +4,8 @@ export type KGEntityType =
 
 export type KGNode = {
   id: string; label: string; type: KGEntityType; status: string; x: number; y: number; props: { k: string; v: string }[];
+  refType?: string;
+  refId?: string;
   /** Preview leve (Sprint 11, Tarefa C.1) — usado por `GET .../graph/nodes/{id}/preview`, não pela tela de detalhe completa. */
   summary?: string;
   difficulty?: "beginner" | "intermediate" | "advanced";

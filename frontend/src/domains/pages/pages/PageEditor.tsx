@@ -194,6 +194,21 @@ export function PageEditor() {
     }
   };
 
+  const handleRenameSection = async (sectionId: string, label: string) => {
+    if (!page || !label.trim()) return;
+    const nextLabel = label.trim();
+    setPage((prev) => (prev ? { ...prev, sections: prev.sections.map((s) => (s.id === sectionId ? { ...s, label: nextLabel } : s)) } : prev));
+    try {
+      await pagesService.updateSection(page.productSlug, page.id, sectionId, { label: nextLabel });
+      await refreshPage(page);
+      triggerSave();
+    } catch (err: unknown) {
+      toast.error("Não foi possível renomear o bloco", {
+        description: (err as { message?: string }).message ?? "Tente novamente.",
+      });
+    }
+  };
+
   const handleDeleteBlock = async () => {
     if (!page || !pendingDeleteId) return;
     setDeletingBlock(true);
@@ -246,7 +261,7 @@ export function PageEditor() {
       <div className="grid gap-4 xl:grid-cols-[280px_1fr_340px]">
         <ContentStructureTree page={page} selectedId={selectedSectionId} onSelect={setSelectedSectionId} onAddBlock={handleAddBlock} onRequestDelete={setPendingDeleteId} onReorder={handleReorderSections} />
         <div className="space-y-4"><BlockEditorCanvas section={selectedSection} productSlug={productSlug} onChangeContent={handleChangeContent} onRequestDelete={setPendingDeleteId} /></div>
-        <PropertiesPanel page={page} section={selectedSection} />
+        <PropertiesPanel page={page} section={selectedSection} onRenameSection={handleRenameSection} />
       </div>
       {pendingDeleteSection && (
         <ConfirmDialog

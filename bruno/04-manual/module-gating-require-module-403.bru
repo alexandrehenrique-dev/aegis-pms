@@ -1,16 +1,16 @@
 meta {
   name: Module gating @RequireModule - validar em controller futuro anotado
   type: http
-  seq: 2
+  seq: 3
 }
 
 get {
-  url: {{baseUrl}}/api/v1/products/{{productId}}/assets
+  url: {{baseUrl}}/api/v1/products/{{moduleSandboxProductId}}/assets
   body: none
 }
 
 docs {
-Objetivo (historico, mantido por fidelidade): demonstrar que @RequireModule bloqueia o endpoint quando o modulo do path esta desabilitado. Usa ASSETS, que so e habilitado em {{productId}} na pasta 12 (ainda nao chegou) — leitura, sem efeito colateral.
+Objetivo (historico, mantido por fidelidade): demonstrar que @RequireModule bloqueia o endpoint quando o modulo do path esta desabilitado. Usa o produto CUSTOM sandbox, que nao habilita ASSETS automaticamente — leitura, sem efeito colateral.
 Resultado esperado: 403 MODULE_DISABLED.
 }
 

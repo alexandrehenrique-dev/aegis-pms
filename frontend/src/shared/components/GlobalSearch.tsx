@@ -1,15 +1,61 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { Command, Search, X } from "lucide-react";
 import { EmptyState } from "./Primitives";
 import { fade } from "./motion";
-import { searchIndex, type SearchEntry } from "../../mocks/searchIndex";
+import { useAuth } from "../../core/auth/useAuth";
+import { useViewAsRole } from "../../core/permissions/useViewAsRole";
+import { contentService } from "../../domains/content/services/contentService";
+import { assetsService } from "../../domains/assets/services/assetsService";
+import { formsService } from "../../domains/forms/services/formsService";
+import type { ProductOption } from "../types";
+
+type SearchEntry = {
+  cat: string;
+  label: string;
+  sub: string;
+  path: string;
+  product?: ProductOption;
+  tenantId?: string;
+};
+
+function productStatusLabel(status: string): string {
+  return status || "sem status";
+}
+
+function productSub(product: ProductOption): string {
+  return `${product.type} · ${productStatusLabel(product.status)}`;
+}
+
+function uniqueProducts(userProducts: Record<string, ProductOption[]>): SearchEntry[] {
+  const seen = new Set<string>();
+  return Object.entries(userProducts).flatMap(([tenantId, products]) => (
+    products
+      .filter((product) => {
+        const key = product.id || `${tenantId}:${product.name}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((product) => ({
+        cat: "Produtos",
+        label: product.name,
+        sub: productSub(product),
+        path: product.id ? `/products/${product.id}` : "/select-product",
+        product,
+        tenantId,
+      }))
+  ));
+}
 
 export function GlobalSearch() {
   const navigate = useNavigate();
+  const { effectiveProduct, selectProduct, selectTenant, userProducts, userTenants } = useAuth();
+  const { viewAsRole } = useViewAsRole();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [scopedEntries, setScopedEntries] = useState<SearchEntry[]>([]);
 
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
@@ -19,9 +65,73 @@ export function GlobalSearch() {
     return () => window.removeEventListener("keydown", f);
   }, []);
 
+  useEffect(() => {
+    if (!open || !effectiveProduct?.id) {
+      setScopedEntries([]);
+      return;
+    }
+
+    let alive = true;
+    Promise.allSettled([
+      contentService.listContentByProduct(effectiveProduct.id),
+      assetsService.listAssets(effectiveProduct.id),
+      formsService.listForms(effectiveProduct.id),
+    ]).then(([contentResult, assetsResult, formsResult]) => {
+      if (!alive) return;
+      const entries: SearchEntry[] = [];
+      if (contentResult.status === "fulfilled") {
+        entries.push(...contentResult.value.map((item) => ({
+          cat: "Conteúdo",
+          label: item.title,
+          sub: `${item.status} · ${item.lang}`,
+          path: `/content/${item.id}/editor`,
+        })));
+      }
+      if (assetsResult.status === "fulfilled") {
+        entries.push(...assetsResult.value.map((item) => ({
+          cat: "Assets",
+          label: item.name,
+          sub: `${item.type} · ${item.size}`,
+          path: item.id ? `/assets/${item.id}` : "/assets",
+        })));
+      }
+      if (formsResult.status === "fulfilled") {
+        entries.push(...formsResult.value.map((item) => ({
+          cat: "Formulários",
+          label: item.name,
+          sub: `${item.responses} respostas · ${item.publication}`,
+          path: `/forms/${item.id}/builder`,
+        })));
+      }
+      setScopedEntries(entries);
+    });
+
+    return () => { alive = false; };
+  }, [effectiveProduct?.id, open]);
+
+  const productEntries = useMemo(() => {
+    const allProducts = uniqueProducts(userProducts);
+    if (viewAsRole === "super_admin" || viewAsRole === "tenant_admin" || !effectiveProduct) return allProducts;
+    return allProducts.filter((entry) => entry.product?.id === effectiveProduct.id || entry.product?.name === effectiveProduct.name);
+  }, [effectiveProduct, userProducts, viewAsRole]);
+
+  const searchIndex = useMemo(() => [
+    ...productEntries,
+    ...scopedEntries,
+  ], [productEntries, scopedEntries]);
+
   const results = q.length > 0 ? searchIndex.filter((e) => (e.label + e.sub + e.cat).toLowerCase().includes(q.toLowerCase())) : searchIndex;
   const grouped = results.reduce((acc, e) => { (acc[e.cat] ??= []).push(e); return acc; }, {} as Record<string, SearchEntry[]>);
-  const handleSelect = (e: SearchEntry) => { navigate(e.path); setOpen(false); setQ(""); };
+  const handleSelect = (e: SearchEntry) => {
+    if (e.product) {
+      const tenant = userTenants.find((item) => item.id === e.tenantId) ?? null;
+      selectTenant(tenant);
+      selectProduct(e.product);
+    }
+    navigate(e.path);
+    setOpen(false);
+    setQ("");
+  };
 
   return (
     <>

@@ -13,10 +13,20 @@ import { tenantsService } from "../tenants/services/tenantsService";
 import { productsService } from "../../domains/products/services/productsService";
 import { toUserRole } from "./utils/roleMapper";
 import { setCurrentProductId, setCurrentProductSlug } from "../products/currentProductContext";
+import { countOperationalModules } from "../products/moduleDefaults";
 import { slugify } from "../../shared/utils/slugify";
 
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
+const MOCK_SESSION_KEY = "aegis:mock-session";
+
+type MockSessionSnapshot = {
+  authUser: AuthUser;
+  selectedTenant: TenantOption | null;
+  selectedProduct: ProductOption | null;
+  userTenants: TenantOption[];
+  userProducts: Record<string, ProductOption[]>;
+};
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -34,7 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [productSwitching, setProductSwitching] = useState(false);
   const productSwitchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // true enquanto restauramos sessão de um token existente no sessionStorage (F5/reabertura)
-  const [restoring, setRestoring] = useState(() => IS_API_MODE && !!sessionStorage.getItem(ACCESS_TOKEN_KEY));
+  const [restoring, setRestoring] = useState(() => {
+    if (IS_API_MODE) return !!sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    return !!sessionStorage.getItem(ACCESS_TOKEN_KEY) && !!sessionStorage.getItem(MOCK_SESSION_KEY);
+  });
   const restorationAttempted = useRef(false);
 
   // Registra a fonte do token do apiClient a partir do sessionStorage —
@@ -63,6 +76,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Restauração de sessão: se há token no sessionStorage (F5 / reabertura da aba),
   // rebusca /me para recriar o authUser sem exigir novo login.
+  useEffect(() => {
+    if (IS_API_MODE || restorationAttempted.current) return;
+    restorationAttempted.current = true;
+    const snapshot = sessionStorage.getItem(MOCK_SESSION_KEY);
+    if (!snapshot) { setRestoring(false); return; }
+    try {
+      const parsed = JSON.parse(snapshot) as MockSessionSnapshot;
+      setAuthUser(parsed.authUser);
+      setSelectedTenant(parsed.selectedTenant);
+      setSelectedProduct(parsed.selectedProduct);
+      setUserTenants(parsed.userTenants);
+      setUserProducts(parsed.userProducts);
+    } catch {
+      sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+      sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+      sessionStorage.removeItem(MOCK_SESSION_KEY);
+    } finally {
+      setRestoring(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!IS_API_MODE || restorationAttempted.current) return;
     restorationAttempted.current = true;
@@ -104,7 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (IS_API_MODE) {
       const me = await meService.getMe();
-      setAuthUser({ id: me.subject, name: me.name, email: me.email, role: toUserRole(me.role), initials: initialsOf(me.name) });
+      const user = { id: me.subject, name: me.name, email: me.email, role: toUserRole(me.role), initials: initialsOf(me.name) };
+      setAuthUser(user);
 
       // Carrega tenants e produtos de forma independente — se produtos falhar,
       // o usuário ainda consegue logar e ver seus tenants (degradação suave).
@@ -136,10 +171,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // o DTO do backend não retorna esse campo, então derivamos do que já temos.
       setUserTenants(tenants.map(tenant => ({ ...tenant, productCount: (productsByTenant[tenant.id] ?? []).length })));
       setUserProducts(productsByTenant);
+      return user;
     } else {
-      setAuthUser(result.user ?? null);
+      const user = result.user ?? null;
+      setAuthUser(user);
       setUserTenants(result.tenants ?? []);
       setUserProducts(result.products ?? {});
+      return user;
     }
   }, []);
 
@@ -148,6 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authService.logout(refreshToken).catch(() => { /* best-effort — limpa a sessão local de qualquer forma */ });
     sessionStorage.removeItem(ACCESS_TOKEN_KEY);
     sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    sessionStorage.removeItem(MOCK_SESSION_KEY);
     setAuthUser(null);
     setSelectedTenant(null);
     setSelectedProduct(null);
@@ -164,7 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [effectiveTenant, userProducts],
   );
   const effectiveProduct = useMemo(() => {
-    const activeProducts = tenantProducts.filter((p) => p.status !== "Arquivado" && p.modules > 0);
+    const activeProducts = tenantProducts.filter((p) => p.status !== "Arquivado" && countOperationalModules(p) > 0);
     return selectedProduct ?? (activeProducts.length === 1 ? activeProducts[0] : null);
   }, [selectedProduct, tenantProducts]);
 
@@ -175,6 +214,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCurrentProductId(effectiveProduct?.id ?? null);
     setCurrentProductSlug(effectiveProduct ? slugify(effectiveProduct.name) : null);
   }, [effectiveProduct]);
+
+  useEffect(() => {
+    if (IS_API_MODE || !authUser) return;
+    const snapshot: MockSessionSnapshot = {
+      authUser,
+      selectedTenant,
+      selectedProduct,
+      userTenants,
+      userProducts,
+    };
+    sessionStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(snapshot));
+  }, [authUser, selectedTenant, selectedProduct, userTenants, userProducts]);
 
   const switchTenant = useCallback((tenantId: string) => {
     const t = userTenants.find((t) => t.id === tenantId);
@@ -205,7 +256,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!effectiveTenant) return;
     logApiCall("PATCH", `/api/v1/admin/products/${productId}`, req);
     const tenantId = effectiveTenant.id;
-    const patch = { name: req.name, type: req.type, status: req.status, modulesList: req.modules, modules: req.modules.length };
+    const patch = { name: req.name, type: req.type, status: req.status, modulesList: req.modules, modules: countOperationalModules({ modulesList: req.modules }) };
     setUserProducts((prev) => ({ ...prev, [tenantId]: (prev[tenantId] ?? []).map((p) => (p.id === productId ? { ...p, ...patch } : p)) }));
     setSelectedProduct((sp) => (sp && sp.id === productId ? { ...sp, ...patch } : sp));
   }, [effectiveTenant]);

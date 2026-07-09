@@ -12,6 +12,7 @@ public record IdentityActionInviteCommand(
         List<String> productNames,
         String productSlug,
         String role,
-        String inviterName
+        String inviterName,
+        String message
 ) {
 }

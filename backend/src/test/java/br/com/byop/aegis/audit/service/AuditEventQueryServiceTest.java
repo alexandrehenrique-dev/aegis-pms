@@ -4,6 +4,8 @@ import br.com.byop.aegis.audit.api.TenantVisibilityPort;
 import br.com.byop.aegis.audit.domain.AuditEvent;
 import br.com.byop.aegis.audit.domain.AuditRisk;
 import br.com.byop.aegis.audit.dto.AuditEventDetail;
+import br.com.byop.aegis.audit.dto.AuditEventPage;
+import br.com.byop.aegis.audit.dto.AuditEventPageQuery;
 import br.com.byop.aegis.audit.dto.AuditEventSummary;
 import br.com.byop.aegis.audit.exception.AuditEventNotFoundException;
 import br.com.byop.aegis.audit.exception.InvalidAuditRiskFilterException;
@@ -16,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.ObjectMapper;
 
@@ -85,6 +89,64 @@ class AuditEventQueryServiceTest {
 
         assertThat(result).isEmpty();
         verify(auditEventRepository).findAllByFilters(tenantId, "subject-1", null, "CONTENT", AuditRisk.BAIXO);
+    }
+
+    @Test
+    void shouldListPagedEventsWithBoundedSize() {
+        AuthenticatedUser caller = caller(Set.of("ROLE_SUPER_ADMIN"));
+        UUID tenantId = UUID.randomUUID();
+        AuditEvent event = event(tenantId, "TENANT_UPDATED", "Tenant", null, "ACME");
+        when(tenantVisibilityPort.findTenantName(tenantId)).thenReturn("ACME");
+        when(identityUserDirectory.getRequiredUser("subject-1")).thenReturn(identityUser("Ana Martins"));
+        PageRequest pageRequest = PageRequest.of(0, 100);
+        when(auditEventRepository.findPageByFiltersAndQuery(eq(tenantId), isNull(), isNull(), isNull(), isNull(), eq("%tenant%"),
+                eq(pageRequest)))
+                .thenReturn(new PageImpl<>(List.of(event), pageRequest, 1));
+        AuditEventSummary expected = new AuditEventSummary(event.getId(), "Ana Martins", "TENANT_UPDATED", "ACME",
+                "ACME", null, "2026-06-27T10:00-03:00", "medio");
+        when(auditEventMapper.toSummary(event, "Ana Martins", "ACME", "ACME")).thenReturn(expected);
+
+        AuditEventPageQuery pageQuery = new AuditEventPageQuery(null, null, null, null, " tenant ", -1, 500);
+        AuditEventPage result = service().listEventsPage(caller, tenantId, pageQuery);
+
+        assertThat(result.items()).containsExactly(expected);
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(100);
+        assertThat(result.totalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldListPagedEventsWithoutSearchQueryUsingMinimumSize() {
+        AuthenticatedUser caller = caller(Set.of("ROLE_SUPER_ADMIN"));
+        UUID tenantId = UUID.randomUUID();
+        PageRequest pageRequest = PageRequest.of(2, 1);
+        when(auditEventRepository.findPageByFilters(tenantId, null, null, null, null, pageRequest))
+                .thenReturn(new PageImpl<>(List.of(), pageRequest, 0));
+
+        AuditEventPageQuery pageQuery = new AuditEventPageQuery(null, null, null, null, "   ", 2, 0);
+        AuditEventPage result = service().listEventsPage(caller, tenantId, pageQuery);
+
+        assertThat(result.items()).isEmpty();
+        assertThat(result.page()).isEqualTo(2);
+        assertThat(result.size()).isEqualTo(1);
+        assertThat(result.totalElements()).isZero();
+        verify(auditEventRepository).findPageByFilters(tenantId, null, null, null, null, pageRequest);
+    }
+
+    @Test
+    void shouldListPagedEventsWithoutSearchQueryWhenQueryIsAbsent() {
+        AuthenticatedUser caller = caller(Set.of("ROLE_SUPER_ADMIN"));
+        UUID tenantId = UUID.randomUUID();
+        PageRequest pageRequest = PageRequest.of(0, 10);
+        when(auditEventRepository.findPageByFilters(tenantId, null, null, null, null, pageRequest))
+                .thenReturn(new PageImpl<>(List.of(), pageRequest, 0));
+
+        AuditEventPageQuery pageQuery = new AuditEventPageQuery(null, null, null, null, null, 0, 10);
+        AuditEventPage result = service().listEventsPage(caller, tenantId, pageQuery);
+
+        assertThat(result.items()).isEmpty();
+        assertThat(result.size()).isEqualTo(10);
+        verify(auditEventRepository).findPageByFilters(tenantId, null, null, null, null, pageRequest);
     }
 
     @Test

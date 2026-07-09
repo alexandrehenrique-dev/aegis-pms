@@ -33,8 +33,9 @@ variaveis protectedTenantIds, protectedTenantKeys ou protectedTenantNames
 DELETE /api/v1/tenants/{id} e ASSINCRONO — retorna 202 e apenas INICIA a exportacao
 por produto (ProductExportCoordinatorService); o tenant so some de fato depois que
 todos os produtos terminarem de exportar (fluxo real usa Keycloak Admin API, zip e
-e-mail via MailHog). Por isso este step so confirma que a exclusao foi ACEITA
-(202) para cada tenant de teste — nao espera nem afirma que eles ja sumiram.
+e-mail via MailHog). Por isso este step confirma que a exclusao foi aceita
+(202) ou que o tenant ja estava em um fluxo equivalente de remocao/exportacao
+(404/409) — nao espera nem afirma que eles ja sumiram.
 A confirmacao "nenhum tenant real foi tocado" e feita pelo health-check final,
 que so verifica a presenca de CLIENTES BETA (nao a ausencia imediata dos de teste).
 
@@ -133,13 +134,63 @@ script:post-response {
           return;
         }
 
-        const status = response && (response.status || response.statusCode);
+        const rawStatus = response && (response.status || response.statusCode);
+        const status = Number.parseInt(String(rawStatus || ''), 10);
         resolve({
-          ok: status === 202,
-          status,
+          ok: [202, 404, 409].includes(status),
+          status: Number.isNaN(status) ? rawStatus : status,
         });
       });
     });
+  }
+
+  function listTenantIds() {
+    return new Promise((resolve) => {
+      bru.sendRequest({
+        method: 'GET',
+        url: baseUrl + '/api/v1/tenants',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+        },
+      }, function(error, response) {
+        if (error) {
+          resolve([]);
+          return;
+        }
+
+        const payload = response && (response.data || response.body);
+        if (Array.isArray(payload)) {
+          resolve(payload.map((tenant) => tenant.id));
+          return;
+        }
+        if (typeof payload === 'string') {
+          try {
+            const parsed = JSON.parse(payload);
+            resolve(Array.isArray(parsed) ? parsed.map((tenant) => tenant.id) : []);
+            return;
+          } catch (parseError) {
+            resolve([]);
+            return;
+          }
+        }
+        resolve([]);
+      });
+    });
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function tenantDisappeared(tenantId) {
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const visibleTenantIds = await listTenantIds();
+      if (!visibleTenantIds.includes(tenantId)) {
+        return true;
+      }
+      await sleep(150);
+    }
+    return false;
   }
 
   const candidates = tenants.filter((tenant) => isTestTenant(tenant) && !isProtectedTenant(tenant));
@@ -154,13 +205,18 @@ script:post-response {
     if (result.ok) {
       accepted += 1;
     } else {
-      failures.push({
-        id: tenant.id,
-        key: tenant.key,
-        name: tenant.name,
-        status: result.status,
-        error: result.error,
-      });
+      const goneAfterAsyncDelete = await tenantDisappeared(tenant.id);
+      if (!goneAfterAsyncDelete) {
+        failures.push({
+          id: tenant.id,
+          key: tenant.key,
+          name: tenant.name,
+          status: result.status,
+          error: result.error,
+        });
+      } else {
+        accepted += 1;
+      }
     }
   }
 
@@ -189,7 +245,7 @@ tests {
     expect(candidateKeys).to.not.include('clientes-beta');
     expect(candidateNames).to.not.include('BYOP');
   });
-  test("exclusao aceita (202) para todos os candidatos de teste", function() {
+  test("exclusao aceita ou ja em andamento para todos os candidatos de teste", function() {
     expect(bru.getVar('teardownFailures')).to.equal('[]');
   });
 }

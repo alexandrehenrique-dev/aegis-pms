@@ -24,6 +24,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -173,7 +174,7 @@ class TenantControllerTest {
         AuthenticatedUser caller = user();
         UUID tenantId = UUID.fromString("12121212-1212-1212-1212-121212121212");
         when(authenticatedUserProvider.from(any(Authentication.class))).thenReturn(caller);
-        org.mockito.Mockito.doThrow(new InvalidTenantConfirmationException())
+        doThrow(new InvalidTenantConfirmationException())
                 .when(tenantService)
                 .deleteTenant(any(AuthenticatedUser.class), any(UUID.class), any());
 

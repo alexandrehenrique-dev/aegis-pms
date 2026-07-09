@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -178,7 +179,7 @@ class AuthActivationServiceTest {
 
     @Test
     void shouldPropagateWeakPasswordBeforeConsumingToken() {
-        org.mockito.Mockito.doThrow(new WeakPasswordException(PasswordPolicy.WEAK_CREDENTIAL_MESSAGE))
+        doThrow(new WeakPasswordException(PasswordPolicy.WEAK_CREDENTIAL_MESSAGE))
                 .when(passwordPolicy).assertStrong("fraca");
 
         assertThatThrownBy(() -> service.activate(TOKEN_ID, "fraca", "Alexandre", "Henrique"))
@@ -191,7 +192,7 @@ class AuthActivationServiceTest {
     void shouldMapKeycloakPasswordPolicyRejection() {
         AuthActionToken token = inviteToken();
         when(tokenService.consumeInvite(TOKEN_ID)).thenReturn(token);
-        org.mockito.Mockito.doThrow(new KeycloakAuthenticationException("weak"))
+        doThrow(new KeycloakAuthenticationException("weak"))
                 .when(keycloakAdminClient).resetPassword("user-id", "Senha123");
 
         assertThatThrownBy(() -> service.activate(TOKEN_ID, "Senha123", "Alexandre", "Henrique"))
@@ -218,7 +219,8 @@ class AuthActivationServiceTest {
                 "[\"Aegis\"]",
                 null,
                 role,
-                "Admin"
+                "Admin",
+                null
         );
         return token;
     }

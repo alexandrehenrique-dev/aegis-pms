@@ -13,12 +13,12 @@ post {
 body:form-urlencoded {
   grant_type: password
   client_id: {{clientId}}
-  username: super-admin@byop.io
-  password: senha123
+  username: {{username}}
+  password: {{password}}
 }
 
 docs {
-Objetivo: autenticar como SUPER_ADMIN antes de validar o seed de homologacao.
+Objetivo: autenticar com as credenciais do ambiente Bruno local, alinhadas ao seed Maven/local.
 Resultado esperado: 200 e token salvo em {{token}}.
 }
 

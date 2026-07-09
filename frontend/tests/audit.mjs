@@ -13,13 +13,16 @@ async function main() {
     await loginAndOpenProduct(page, { user: DEMO_USERS.tenantAdmin, tenantName: "BYOP", productName: "Maestro Beton" });
     await goToNav(page, "Auditoria");
     ok = report("Audit Timeline carrega", page.url().endsWith("/audit")) && ok;
+    ok = report("Auditoria renderiza tabela paginada", await page.getByRole("table").isVisible()) && ok;
+    ok = report("Filtros de auditoria ficam em toolbar", await page.getByPlaceholder("Ator, evento, alvo...").isVisible()) && ok;
+    ok = report("Paginação da auditoria aparece", await page.getByRole("button", { name: /Próxima/ }).isVisible()) && ok;
 
     // G.3 (BUG-SPRINT-05) — AuditEventDetail agora busca o evento real via
     // useParams + auditService.getEvent, e "Abrir recurso" navega por
     // event.module (resourceRoute) em vez de sempre /settings/roles fixo.
     // O 2º card do mock ("Ana Martins · permissão alterada", módulo
     // "Permissions") é o único cujo módulo mapeia para /settings/roles.
-    await page.getByRole("button", { name: "Ver detalhe" }).nth(1).click();
+    await page.getByRole("button", { name: "Abrir" }).nth(1).click();
     await page.waitForTimeout(800);
     ok = report("Ver detalhe entra no evento", page.url().includes("/audit/")) && ok;
 

@@ -54,7 +54,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -190,7 +193,7 @@ class AssetServiceTest {
         when(productReferenceService.getRequiredAssetStorageStrategy(PRODUCT_ID)).thenReturn(AssetStorageStrategy.LOCAL);
         // MockMultipartFile normaliza originalFilename nulo para "" no construtor — usar um mock
         // real para exercitar o ramo `originalFilename == null` (distinto do ramo "branco").
-        org.springframework.web.multipart.MultipartFile file = org.mockito.Mockito.mock(org.springframework.web.multipart.MultipartFile.class);
+        org.springframework.web.multipart.MultipartFile file = mock(org.springframework.web.multipart.MultipartFile.class);
         when(file.getOriginalFilename()).thenReturn(null);
 
         assertThatThrownBy(() -> assetService.uploadAsset(PRODUCT_ID, file, null, caller))
@@ -251,7 +254,7 @@ class AssetServiceTest {
         when(productReferenceService.getRequiredReference(PRODUCT_ID)).thenReturn(new ProductReference(PRODUCT_ID, TENANT_ID));
         when(productReferenceService.getRequiredAssetStorageStrategy(PRODUCT_ID)).thenReturn(AssetStorageStrategy.LOCAL);
         when(uploadValidator.validate("image/png", 3L)).thenReturn(AssetCategory.IMAGE);
-        org.springframework.web.multipart.MultipartFile file = org.mockito.Mockito.mock(org.springframework.web.multipart.MultipartFile.class);
+        org.springframework.web.multipart.MultipartFile file = mock(org.springframework.web.multipart.MultipartFile.class);
         when(file.getOriginalFilename()).thenReturn("foto.png");
         when(file.getContentType()).thenReturn("image/png");
         when(file.getSize()).thenReturn(3L);
@@ -279,7 +282,7 @@ class AssetServiceTest {
         assetService.uploadAsset(PRODUCT_ID, new MockMultipartFile("file", "foto2.png", "image/png", "2".getBytes()), null, caller);
 
         ArgumentCaptor<Asset> captor = ArgumentCaptor.forClass(Asset.class);
-        verify(assetRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        verify(assetRepository, times(2)).save(captor.capture());
         List<Asset> savedAssets = captor.getAllValues();
         assertThat(savedAssets.get(0).getStorageProvider()).isEqualTo(AssetStorageStrategy.LOCAL);
         assertThat(savedAssets.get(1).getStorageProvider()).isEqualTo(AssetStorageStrategy.S3);
@@ -473,7 +476,7 @@ class AssetServiceTest {
 
         assetService.updateMetadata(PRODUCT_ID, ASSET_ID, new UpdateAssetMetadataRequest("Nome", null, null, null, "blog, ,blog"));
 
-        verify(assetTagRepository, org.mockito.Mockito.times(1)).save(any(AssetTag.class));
+        verify(assetTagRepository, times(1)).save(any(AssetTag.class));
     }
 
     @Test
@@ -639,7 +642,7 @@ class AssetServiceTest {
     void shouldReturn404ForCrossTenantResolveWithoutLeakingExistence() {
         Asset asset = asset();
         when(assetRepository.findById(ASSET_ID)).thenReturn(Optional.of(asset));
-        org.mockito.Mockito.doThrow(new ProductNotFoundException(PRODUCT_ID))
+        doThrow(new ProductNotFoundException(PRODUCT_ID))
                 .when(productAccessPort).assertAccessible(PRODUCT_ID, caller);
 
         assertThatThrownBy(() -> assetService.resolveAsset(ASSET_ID, caller))

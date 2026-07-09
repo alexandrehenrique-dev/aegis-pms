@@ -9,7 +9,7 @@ import { PRODUCT_PAGE_SKELETONS } from "../../../core/products/productTemplates"
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
 import { mapProductSummaries, mapProductSummary, type ProductSummaryDto } from "../mappers/productMapper";
-import type { ProductTypeKey } from "../../../core/products/moduleDefaults";
+import { countOperationalModules, type ProductTypeKey } from "../../../core/products/moduleDefaults";
 import type { ComponentType } from "react";
 import type { ModuleState } from "../../../shared/types";
 import type { CreateProductRequest, DeleteProductRequest, UpdateProductRequest } from "../contracts/requests";
@@ -87,7 +87,7 @@ export const productsService = {
       if (p) {
         if (!p.modulesList) p.modulesList = [];
         if (!p.modulesList.includes(moduleName)) p.modulesList.push(moduleName);
-        p.modules = p.modulesList.length;
+        p.modules = countOperationalModules(p);
       }
     }
   },
@@ -106,7 +106,7 @@ export const productsService = {
       const p = productsStore.find((x) => x.id === productId || x.name === productId);
       if (p && p.modulesList) {
         p.modulesList = p.modulesList.filter((n) => n !== moduleName);
-        p.modules = p.modulesList.length;
+        p.modules = countOperationalModules(p);
       }
     }
   },
@@ -147,7 +147,7 @@ export const productsService = {
     p.type = req.type;
     p.status = req.status;
     p.modulesList = req.modules;
-    p.modules = req.modules.length;
+    p.modules = countOperationalModules({ modulesList: req.modules });
     return p;
   },
 
@@ -184,7 +184,7 @@ export const productsService = {
       name: req.name,
       type: req.type,
       status: "Pendente",
-      modules: req.initialModules.length,
+      modules: countOperationalModules({ modulesList: req.initialModules }),
       modulesList: req.initialModules,
       last: "Produto criado agora",
       score: "—",

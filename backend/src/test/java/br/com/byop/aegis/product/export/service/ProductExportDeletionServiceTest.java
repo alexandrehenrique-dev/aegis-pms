@@ -5,6 +5,7 @@ import br.com.byop.aegis.product.api.ProductExportStoragePort;
 import br.com.byop.aegis.product.export.dto.ExportAssetFile;
 import br.com.byop.aegis.product.export.dto.ProductExportData;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,7 +56,7 @@ class ProductExportDeletionServiceTest {
         assertThat(sqlCaptor.getAllValues())
                 .noneMatch(sql -> sql.contains("tenant_memberships"))
                 .noneMatch(sql -> sql.contains("user_entity"))
-                .noneMatch(sql -> sql.matches("(?i).*delete\\s+from\\s+users.*"));
+                .noneMatch(ProductExportDeletionServiceTest::deletesFromUsersTable);
     }
 
     @Test
@@ -66,10 +68,15 @@ class ProductExportDeletionServiceTest {
 
         service().deleteExportedProductSkippingAssetFiles(data);
 
-        verify(storagePort, org.mockito.Mockito.never()).deleteAsset(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+        verify(storagePort, never()).deleteAsset(anyString(), anyString());
         verify(jdbcClient, times(19)).sql(anyString());
         verify(statementSpec, times(19)).param("productId", PRODUCT_ID);
         verify(statementSpec, times(19)).update();
+    }
+
+    private static boolean deletesFromUsersTable(String sql) {
+        String normalizedSql = sql.toLowerCase(Locale.ROOT);
+        return normalizedSql.contains("delete from users");
     }
 
     private ProductExportDeletionService service() {

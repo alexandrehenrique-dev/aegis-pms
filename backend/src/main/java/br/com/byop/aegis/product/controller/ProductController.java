@@ -1,6 +1,7 @@
 package br.com.byop.aegis.product.controller;
 
 import br.com.byop.aegis.product.contract.CreateProductRequest;
+import br.com.byop.aegis.product.contract.UpdateProductRequest;
 import br.com.byop.aegis.product.dto.ProductDetail;
 import br.com.byop.aegis.product.dto.ProductModuleSummary;
 import br.com.byop.aegis.product.dto.ProductSummary;
@@ -14,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -53,6 +55,14 @@ public class ProductController {
     public ProductDetail getProduct(@PathVariable("productId") UUID productId, Authentication authentication) {
         AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
         return productService.getProductDetail(caller, productId);
+    }
+
+    @PutMapping("/api/v1/products/{productId}")
+    public ProductSummary updateProduct(@PathVariable("productId") UUID productId,
+                                        @Valid @RequestBody UpdateProductRequest request,
+                                        Authentication authentication) {
+        AuthenticatedUser caller = authenticatedUserProvider.from(authentication);
+        return productService.updateProduct(caller, productId, request.toCommand());
     }
 
     @PostMapping("/api/v1/products/{productId}/modules/{moduleKey}/enable")

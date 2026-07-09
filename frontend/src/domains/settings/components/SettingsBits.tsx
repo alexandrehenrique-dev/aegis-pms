@@ -2,12 +2,7 @@ import { useNavigate } from "react-router";
 import { Button, Card } from "../../../shared/components/Primitives";
 import { RiskBadge } from "../../../shared/components/RiskBadge";
 import type { SettingCard as SettingCardType } from "../contracts/responses";
-
-const SETTINGS_ROUTES: Record<string, string> = {
-  "Produto": "/settings/product", "Tenant": "/settings/tenant", "Equipe": "/users",
-  "Permissões": "/settings/permissions", "Integrações": "/settings/security", "Segurança": "/settings/security",
-  "Auditoria": "/audit", "SEO": "/settings/product", "Domínios futuros": "/settings/product",
-};
+import { routeForSettingCard } from "./settingsRoutes";
 
 export function SettingsCard({ c, "data-tour": dataTour }: { c: SettingCardType; "data-tour"?: string }) {
   const navigate = useNavigate();
@@ -18,7 +13,7 @@ export function SettingsCard({ c, "data-tour": dataTour }: { c: SettingCardType;
         <RiskBadge risk={c.risk} />
       </div>
       <div className="mt-4 grid gap-2 text-xs text-muted-foreground"><span>Status: {c.status}</span><span>Última atualização: {c.lastUpdated}</span><span>Responsável: {c.owner}</span></div>
-      <Button onClick={() => navigate(SETTINGS_ROUTES[c.name] ?? "/settings")}>Abrir</Button>
+      <Button onClick={() => navigate(routeForSettingCard(c.name))}>Abrir</Button>
     </Card>
   );
 }

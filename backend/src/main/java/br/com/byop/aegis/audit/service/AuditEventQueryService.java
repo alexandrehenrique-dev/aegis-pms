@@ -3,6 +3,8 @@ package br.com.byop.aegis.audit.service;
 import br.com.byop.aegis.audit.domain.AuditEvent;
 import br.com.byop.aegis.audit.domain.AuditRisk;
 import br.com.byop.aegis.audit.dto.AuditEventDetail;
+import br.com.byop.aegis.audit.dto.AuditEventPage;
+import br.com.byop.aegis.audit.dto.AuditEventPageQuery;
 import br.com.byop.aegis.audit.dto.AuditEventSummary;
 import br.com.byop.aegis.audit.exception.AuditEventNotFoundException;
 import br.com.byop.aegis.audit.exception.InvalidAuditRiskFilterException;
@@ -12,6 +14,8 @@ import br.com.byop.aegis.audit.api.TenantVisibilityPort;
 import br.com.byop.aegis.identity.api.IdentityUserDirectory;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -33,6 +37,7 @@ public class AuditEventQueryService {
 
     private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
     private static final String TARGET_TYPE_TENANT = "Tenant";
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final AuditEventRepository auditEventRepository;
     private final AuditEventMapper auditEventMapper;
@@ -61,6 +66,31 @@ public class AuditEventQueryService {
                 .map(event -> auditEventMapper.toSummary(event, resolveActor(event.getActorSubject()),
                         resolveTenantName(tenantId, event), resolveTarget(event)))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public AuditEventPage listEventsPage(AuthenticatedUser caller, UUID tenantId, AuditEventPageQuery pageQuery) {
+        log.debug("listEventsPage: tenantId='{}', productId='{}', module='{}', risk='{}', query='{}', page='{}', size='{}'",
+                tenantId, pageQuery.productId(), pageQuery.module(), pageQuery.risk(), pageQuery.query(), pageQuery.page(),
+                pageQuery.size());
+        assertTenantVisible(caller, tenantId);
+        AuditRisk riskFilter = parseRiskFilter(pageQuery.risk());
+        String searchQuery = normalizeQuery(pageQuery.query());
+        int safePage = Math.max(pageQuery.page(), 0);
+        int safeSize = Math.clamp(pageQuery.size(), 1, MAX_PAGE_SIZE);
+        PageRequest pageRequest = PageRequest.of(safePage, safeSize);
+        Page<AuditEvent> result = searchQuery == null
+                ? auditEventRepository.findPageByFilters(tenantId, pageQuery.actorSubject(), pageQuery.productId(),
+                        pageQuery.module(), riskFilter, pageRequest)
+                : auditEventRepository.findPageByFiltersAndQuery(tenantId, pageQuery.actorSubject(), pageQuery.productId(),
+                        pageQuery.module(), riskFilter,
+                        toQueryPattern(searchQuery), pageRequest);
+        List<AuditEventSummary> items = result.stream()
+                .map(event -> auditEventMapper.toSummary(event, resolveActor(event.getActorSubject()),
+                        resolveTenantName(tenantId, event), resolveTarget(event)))
+                .toList();
+        return new AuditEventPage(items, result.getNumber(), result.getSize(), result.getTotalElements(),
+                result.getTotalPages());
     }
 
     @Transactional(readOnly = true)
@@ -102,6 +132,17 @@ public class AuditEventQueryService {
             log.warn("parseRiskFilter: filtro de risco invalido rejeitado risk='{}'", risk);
             throw new InvalidAuditRiskFilterException(risk);
         }
+    }
+
+    private String normalizeQuery(String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+        return query.trim().toLowerCase();
+    }
+
+    private String toQueryPattern(String query) {
+        return "%" + query + "%";
     }
 
     private String resolveActor(String actorSubject) {

@@ -10,8 +10,8 @@ get {
 }
 
 docs {
-Objetivo: validar que os produtos oficiais da Sprint 22 existem e capturar IDs para o grafo.
-Resultado esperado: 200 com produtos Loki e WikiDev.
+Objetivo: validar que os produtos reais atuais existem e capturar IDs para o grafo.
+Resultado esperado: 200 com produtos Loki e WikiDev, sem exigir produtos legados removidos do seed.
 }
 
 script:post-response {
@@ -27,7 +27,7 @@ tests {
   });
   test("produtos oficiais existem", function() {
     var keys = res.body.map(function (product) { return product.key; });
-    ['maestro-beton', 'conecta-talentos', 'alexandre-dev', 'cmss', 'loki', 'wikidev', 'aegis-core', 'aegis-docs', 'portal-norte'].forEach(function (key) {
+    ['maestro-beton', 'conecta-talentos', 'alexandre-dev', 'cmss', 'loki', 'wikidev'].forEach(function (key) {
       expect(keys).to.include(key);
     });
   });

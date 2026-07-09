@@ -93,6 +93,28 @@ O frontend reflete este escopo:
 - `roleBlockedRoutePrefixes["super_admin"]` bloqueia: `/content`, `/pages`, `/assets`, `/forms`, `/analytics`, `/knowledge`
 - A tela de produtos para SUPER_ADMIN mostra metadados (nome, tipo, status, módulos) mas não tem botão "Entrar no produto" — substituído por "Gerenciar" (módulos, usuários, configurações)
 
+Quando o `SUPER_ADMIN` também possui `ProductAssignment` explícito em um produto
+selecionado, o frontend deve mesclar a navegação/ações do papel de plataforma
+com o papel de produto daquele assignment. Ex.: um Super Admin que também é
+`EDITOR` de um produto específico pode acessar o workspace editorial desse
+produto, mas continua sem acesso ao conteúdo dos demais produtos sem assignment.
+A decisão efetiva é sempre contextual ao produto selecionado e nunca transforma
+`SUPER_ADMIN` em super-editor global.
+
+Dashboards e widgets de plataforma não podem reaproveitar componentes de
+produto sem escopo explícito. O dashboard global do `SUPER_ADMIN` pode mostrar
+metadados e saúde operacional agregada, mas qualquer timeline, busca, lista de
+assets/conteúdos/forms ou Knowledge Graph exibida enquanto um produto está
+selecionado precisa respeitar o produto selecionado. Isso evita que a UI dê ao
+operador de plataforma a impressão de que ele está vendo ou podendo agir sobre
+conteúdo de produtos de cliente sem assignment explícito.
+
+Essa regra vale também na direção oposta: `PRODUCT_MANAGER`, `EDITOR` e
+`VIEWER` não devem receber o `Dashboard Global` como fallback de navegação. Se
+o usuário tem somente papéis de produto, a experiência principal é o workspace
+do produto selecionado; dashboards globais, listas amplas de tenant e ações de
+criação/configuração de produto ficam reservadas aos papéis administrativos.
+
 ## Consequências
 
 Positivas:

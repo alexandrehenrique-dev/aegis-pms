@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { Filter, RefreshCw, X, UserRound } from "lucide-react";
 import { Button, EmptyState, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
@@ -104,6 +104,12 @@ export function UserTable() {
   // Super Admin e Tenant Admin → visão de todos os usuários do tenant
   const isTenantWideView = isAdminRole(viewAsRole);
 
+  useEffect(() => {
+    if (isTenantWideView && effectiveProduct?.name && productFilter === null) {
+      setProductFilter(effectiveProduct.name);
+    }
+  }, [effectiveProduct?.name, isTenantWideView, productFilter]);
+
   const { data: tenantUsers, loading: loadingTenant, error: errorTenant } = useAsyncData(
     () => (isTenantWideView ? usersService.listUsers(effectiveTenant?.id) : Promise.resolve(null)),
     [isTenantWideView, effectiveTenant?.id, refreshKey],
@@ -151,11 +157,11 @@ export function UserTable() {
 
   const filtered = users.filter((u) =>
     (!roleFilter   || u.role     === roleFilter) &&
-    (!statusFilter || u.status   === statusFilter) &&
+    (statusFilter ? u.status === statusFilter : u.status !== "removido") &&
     (!productFilter || matchesProduct(u, productFilter)),
   );
 
-  const pageTitle = isTenantWideView ? "Usuários do tenant" : `Equipe — ${effectiveProduct?.name ?? "Produto"}`;
+  const pageTitle = isTenantWideView && productFilter ? `Usuários — ${productFilter}` : isTenantWideView ? "Usuários do tenant" : `Equipe — ${effectiveProduct?.name ?? "Produto"}`;
   const pageDesc  = isTenantWideView
     ? "Gestão de pessoas, papéis e convites no tenant atual."
     : "Membros atribuídos a este produto. Para gerenciar a equipe, acesse Configurações → Equipe.";

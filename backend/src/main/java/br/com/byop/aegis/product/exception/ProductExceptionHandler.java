@@ -27,6 +27,12 @@ public class ProductExceptionHandler {
         return new CoreErrorResponse("INVALID_PRODUCT_TYPE");
     }
 
+    @ExceptionHandler(InvalidProductStatusException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public CoreErrorResponse handleInvalidProductStatus() {
+        return new CoreErrorResponse("INVALID_PRODUCT_STATUS");
+    }
+
     @ExceptionHandler(InvalidModuleKeyException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public CoreErrorResponse handleInvalidModuleKey() {

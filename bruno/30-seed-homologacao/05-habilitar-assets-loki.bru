@@ -1,0 +1,21 @@
+meta {
+  name: Habilitar Assets Loki
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{seed30LokiProductId}}/modules/ASSETS/enable
+  body: none
+}
+
+docs {
+Objetivo: garantir a dependencia ASSETS no produto Loki antes de validar Knowledge Graph em bancos locais reaproveitados.
+Resultado esperado: 200, idempotente quando o modulo ja estava habilitado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

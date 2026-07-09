@@ -7,6 +7,7 @@ import br.com.byop.aegis.asset.api.AssetReferenceService;
 import br.com.byop.aegis.form.api.FormReference;
 import br.com.byop.aegis.form.api.FormReferenceService;
 import br.com.byop.aegis.form.api.FormFieldCatalog;
+import br.com.byop.aegis.form.api.FormAcceptedFileTypes;
 import br.com.byop.aegis.submission.command.SubmitFormCommand;
 import br.com.byop.aegis.submission.domain.Submission;
 import br.com.byop.aegis.submission.domain.SubmissionStatus;
@@ -178,7 +179,7 @@ public class SubmissionService {
         if (answer == null) {
             return;
         }
-        List<String> acceptedFileTypes = acceptedFileTypes(field);
+        List<String> acceptedFileTypes = FormAcceptedFileTypes.fromField(field);
         if (acceptedFileTypes.isEmpty()) {
             throw new InvalidSubmissionException(UPLOAD_ACCEPTED_TYPES_ERROR);
         }
@@ -198,16 +199,6 @@ public class SubmissionService {
         } catch (IllegalArgumentException _) {
             throw new InvalidSubmissionException(INVALID_UPLOAD_ASSET_ERROR);
         }
-    }
-
-    private List<String> acceptedFileTypes(Map<String, Object> field) {
-        Object value = field.get("acceptedFileTypes");
-        if (value instanceof List<?> list && list.stream().allMatch(item -> item instanceof String _)) {
-            return list.stream()
-                    .map(String.class::cast)
-                    .toList();
-        }
-        return List.of();
     }
 
     private String writeJson(Object value) {

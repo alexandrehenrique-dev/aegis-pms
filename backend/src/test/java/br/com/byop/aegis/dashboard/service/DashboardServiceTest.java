@@ -11,6 +11,7 @@ import br.com.byop.aegis.product.api.ProductVisibilityService;
 import br.com.byop.aegis.security.AuthenticatedUser;
 import br.com.byop.aegis.submission.api.SubmissionAnalyticsResponse;
 import br.com.byop.aegis.submission.api.SubmissionAnalyticsService;
+import br.com.byop.aegis.tenant.api.TenantUserAccessService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,6 +37,9 @@ class DashboardServiceTest {
 
     @Mock
     private ProductUserAccessService productUserAccessService;
+
+    @Mock
+    private TenantUserAccessService tenantUserAccessService;
 
     @Mock
     private ContentAnalyticsService contentAnalyticsService;
@@ -70,10 +74,11 @@ class DashboardServiceTest {
                 .thenReturn(new AssetAnalyticsResponse(9, 3, 2, null));
         when(assetAnalyticsService.summarize(SECOND_PRODUCT_ID))
                 .thenReturn(new AssetAnalyticsResponse(1, 0, 0, null));
-        when(productUserAccessService.countDistinctAssignedUsers(List.of(FIRST_PRODUCT_ID, SECOND_PRODUCT_ID)))
-                .thenReturn(7L);
-        when(productUserAccessService.countDistinctProductManagers(List.of(FIRST_PRODUCT_ID, SECOND_PRODUCT_ID)))
-                .thenReturn(2L);
+        when(tenantUserAccessService.listActiveUserSubjects(TENANT_ID)).thenReturn(List.of("pm-1", "editor-1"));
+        when(productUserAccessService.listDistinctAssignedUserSubjects(List.of(FIRST_PRODUCT_ID, SECOND_PRODUCT_ID)))
+                .thenReturn(Set.of("pm-1", "editor-1", "removed-1"));
+        when(productUserAccessService.listDistinctProductManagerSubjects(List.of(FIRST_PRODUCT_ID, SECOND_PRODUCT_ID)))
+                .thenReturn(Set.of("pm-1", "removed-1"));
 
         DashboardSummaryResponse summary = service.getSummary(caller);
 
@@ -86,8 +91,8 @@ class DashboardServiceTest {
         assertThat(summary.formsReceived()).isEqualTo(12);
         assertThat(summary.formsReceivedToday()).isEqualTo(3);
         assertThat(summary.recentAssets()).isEqualTo(3);
-        assertThat(summary.activeUsers()).isEqualTo(7);
-        assertThat(summary.productManagers()).isEqualTo(2);
+        assertThat(summary.activeUsers()).isEqualTo(2);
+        assertThat(summary.productManagers()).isEqualTo(1);
         assertThat(summary.conversionRate()).isEqualTo("0%");
     }
 
@@ -95,9 +100,6 @@ class DashboardServiceTest {
     void shouldReturnZeroedSummaryWhenCallerHasNoVisibleProducts() {
         AuthenticatedUser caller = new AuthenticatedUser("user-1", "user@aegis.app", "user", "User", Set.of("ROLE_VIEWER"));
         when(productVisibilityService.listVisibleProducts(caller)).thenReturn(List.of());
-        when(productUserAccessService.countDistinctAssignedUsers(List.of())).thenReturn(0L);
-        when(productUserAccessService.countDistinctProductManagers(List.of())).thenReturn(0L);
-
         DashboardSummaryResponse summary = service.getSummary(caller);
 
         assertThat(summary.activeProducts()).isZero();

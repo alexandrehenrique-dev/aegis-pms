@@ -3,6 +3,18 @@ import type { KGEdge, KGNode } from "../mocks/knowledge.mocks";
 export type ListNodesResponse = KGNode[];
 export type ListEdgesResponse = KGEdge[];
 
+export type GraphEdgeApiResponse = {
+  id: string;
+  tenantId: string;
+  productId: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  edgeType: EdgeType;
+  weight?: number | string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 /**
  * Catálogo fechado de `edgeType` (Sprint 02-gpt, etapa 07) — qualquer valor
  * fora desta lista é rejeitado (400) pelo backend real. `KGEdge.verb` (mock,

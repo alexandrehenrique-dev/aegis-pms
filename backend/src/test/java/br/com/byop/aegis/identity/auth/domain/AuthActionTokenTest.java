@@ -23,7 +23,7 @@ class AuthActionTokenTest {
         );
         UUID tenantId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
-        token.addInviteContext(tenantId, "BYOP", "[\"Aegis\"]", null, "EDITOR", "Admin");
+        token.addInviteContext(tenantId, "BYOP", "[\"Aegis\"]", null, "EDITOR", "Admin", null);
 
         assertThat(token.getId()).isNotNull();
         assertThat(token.getKeycloakId()).isEqualTo("keycloak-id");
@@ -36,6 +36,7 @@ class AuthActionTokenTest {
         assertThat(token.getProductNames()).isEqualTo("[\"Aegis\"]");
         assertThat(token.getRole()).isEqualTo("EDITOR");
         assertThat(token.getInviterName()).isEqualTo("Admin");
+        assertThat(token.getInviteMessage()).isNull();
         assertThat(token.getCreatedAt()).isEqualTo(NOW);
         assertThat(token.getExpiresAt()).isEqualTo(NOW.plusSeconds(60));
         assertThat(token.isExpired(NOW.plusSeconds(59))).isFalse();

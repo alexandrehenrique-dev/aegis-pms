@@ -1,0 +1,20 @@
+meta {
+  name: Habilitar KNOWLEDGE_GRAPH no produto principal
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/KNOWLEDGE_GRAPH/enable
+  body: none
+}
+
+docs {
+Decisao de reconstrucao: os cenarios de dependencia rodam no produto CUSTOM sandbox, mas as pastas seguintes validam o produto principal. Como Site Institucional nasce com CONTENT, este passo habilita KNOWLEDGE_GRAPH no produto principal sem afetar o teste negativo do sandbox.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

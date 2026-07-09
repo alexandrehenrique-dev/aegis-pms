@@ -5,12 +5,12 @@ meta {
 }
 
 post {
-  url: {{baseUrl}}/api/v1/products/{{productId}}/modules/KNOWLEDGE_GRAPH/enable
+  url: {{baseUrl}}/api/v1/products/{{moduleSandboxProductId}}/modules/KNOWLEDGE_GRAPH/enable
   body: none
 }
 
 docs {
-Objetivo: KNOWLEDGE_GRAPH depende de CONTENT (ainda nao habilitado neste produto).
+Objetivo: KNOWLEDGE_GRAPH depende de CONTENT. Usa o produto CUSTOM sandbox, que nasce sem modulos recomendados.
 Resultado esperado: 400 MODULE_DEPENDENCY_MISSING.
 }
 

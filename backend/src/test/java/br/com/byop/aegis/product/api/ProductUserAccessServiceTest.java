@@ -95,6 +95,19 @@ class ProductUserAccessServiceTest {
     }
 
     @Test
+    void shouldListDistinctAssignedUserSubjects() {
+        ProductAssignment pm = assignment("pm-1", ProductAssignmentRole.PRODUCT_MANAGER);
+        ProductAssignment duplicatedPm = assignment("pm-1", ProductAssignmentRole.EDITOR);
+        ProductAssignment editor = assignment("editor-1", ProductAssignmentRole.EDITOR);
+        when(assignmentRepository.findAllByProductIdInAndStatus(List.of(PRODUCT_ID), ProductAssignmentStatus.ASSIGNED))
+                .thenReturn(List.of(pm, duplicatedPm, editor));
+
+        Set<String> subjects = service.listDistinctAssignedUserSubjects(List.of(PRODUCT_ID));
+
+        assertThat(subjects).containsExactlyInAnyOrder("pm-1", "editor-1");
+    }
+
+    @Test
     void shouldReturnZeroDistinctAssignedUsersWhenNoProductIds() {
         assertThat(service.countDistinctAssignedUsers(List.of())).isZero();
     }
@@ -107,6 +120,19 @@ class ProductUserAccessServiceTest {
                 .thenReturn(List.of(pm, editor));
 
         assertThat(service.countDistinctProductManagers(List.of(PRODUCT_ID))).isEqualTo(1);
+    }
+
+    @Test
+    void shouldListDistinctProductManagerSubjects() {
+        ProductAssignment pm = assignment("pm-1", ProductAssignmentRole.PRODUCT_MANAGER);
+        ProductAssignment duplicatedPm = assignment("pm-1", ProductAssignmentRole.PRODUCT_MANAGER);
+        ProductAssignment editor = assignment("editor-1", ProductAssignmentRole.EDITOR);
+        when(assignmentRepository.findAllByProductIdInAndStatus(List.of(PRODUCT_ID), ProductAssignmentStatus.ASSIGNED))
+                .thenReturn(List.of(pm, duplicatedPm, editor));
+
+        Set<String> subjects = service.listDistinctProductManagerSubjects(List.of(PRODUCT_ID));
+
+        assertThat(subjects).containsExactly("pm-1");
     }
 
     @Test
@@ -163,6 +189,40 @@ class ProductUserAccessServiceTest {
         assertThat(saved.getUserSubject()).isEqualTo("user-1");
         assertThat(saved.getRole()).isEqualTo(ProductAssignmentRole.EDITOR);
         assertThat(saved.getStatus()).isEqualTo(ProductAssignmentStatus.INVITED);
+    }
+
+    @Test
+    void shouldCreateAssignedAssignmentsForExistingTenantUser() {
+        Product product = product();
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+        when(assignmentRepository.findByProductIdAndUserSubject(PRODUCT_ID, "user-1")).thenReturn(java.util.Optional.empty());
+
+        service.grantTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of(PRODUCT_ID));
+
+        org.mockito.ArgumentCaptor<ProductAssignment> assignmentCaptor =
+                org.mockito.ArgumentCaptor.forClass(ProductAssignment.class);
+        verify(assignmentRepository).save(assignmentCaptor.capture());
+        ProductAssignment saved = assignmentCaptor.getValue();
+        assertThat(saved.getProductId()).isEqualTo(PRODUCT_ID);
+        assertThat(saved.getUserSubject()).isEqualTo("user-1");
+        assertThat(saved.getRole()).isEqualTo(ProductAssignmentRole.EDITOR);
+        assertThat(saved.getStatus()).isEqualTo(ProductAssignmentStatus.ASSIGNED);
+    }
+
+    @Test
+    void shouldUpdateExistingProductAssignmentWithoutDuplicatingUser() {
+        Product product = product();
+        ProductAssignment removed = assignment("user-1", ProductAssignmentRole.VIEWER);
+        removed.remove();
+        when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+        when(assignmentRepository.findByProductIdAndUserSubject(PRODUCT_ID, "user-1"))
+                .thenReturn(java.util.Optional.of(removed));
+
+        service.grantTenantAssignments(TENANT_ID, "user-1", "EDITOR", List.of(PRODUCT_ID));
+
+        assertThat(removed.getRole()).isEqualTo(ProductAssignmentRole.EDITOR);
+        assertThat(removed.getStatus()).isEqualTo(ProductAssignmentStatus.ASSIGNED);
+        verify(assignmentRepository).save(removed);
     }
 
     @Test

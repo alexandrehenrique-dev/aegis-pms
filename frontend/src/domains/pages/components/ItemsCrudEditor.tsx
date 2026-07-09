@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import { Button, Field } from "../../../shared/components/Primitives";
+import { Button, Field, SelectLike } from "../../../shared/components/Primitives";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { MarkdownField } from "../../../shared/components/MarkdownField";
 import { MediaField } from "../../../shared/components/MediaField";
@@ -84,7 +84,11 @@ export function ItemsCrudEditor({ items, onChange, newItem, rules }: {
                 return <div key={k} className="md:col-span-2"><MediaField label={label} value={v as string} typeFilter="imagem" onChange={onFieldChange} />{missing && <p className="mt-1 text-xs text-destructive">Campo obrigatório.</p>}</div>;
               }
               if (k === "fileAssetId") {
-                return <div key={k} className="md:col-span-2"><MediaField label={label} value={v as string} typeFilter="qualquer" onChange={onFieldChange} />{missing && <p className="mt-1 text-xs text-destructive">Campo obrigatório.</p>}</div>;
+                const typeFilter = typeof item.source === "string" && "youtubeUrl" in item ? "vídeo" : "qualquer";
+                return <div key={k} className="md:col-span-2"><MediaField label={label} value={v as string} typeFilter={typeFilter} onChange={onFieldChange} />{missing && <p className="mt-1 text-xs text-destructive">Campo obrigatório.</p>}</div>;
+              }
+              if (k === "source" && "youtubeUrl" in item && "fileAssetId" in item) {
+                return <SelectLike key={k} label={label} value={v as string} options={["upload", "youtube"]} onChange={onFieldChange} />;
               }
               if (k === "youtubeUrl") {
                 const invalidUrl = (v as string).trim() !== "" && !isValidYoutubeUrl(v as string);

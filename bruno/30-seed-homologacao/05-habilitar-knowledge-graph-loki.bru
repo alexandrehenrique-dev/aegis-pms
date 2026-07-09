@@ -1,0 +1,21 @@
+meta {
+  name: Habilitar Knowledge Graph Loki
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{seed30LokiProductId}}/modules/KNOWLEDGE_GRAPH/enable
+  body: none
+}
+
+docs {
+Objetivo: garantir que o modulo Knowledge Graph esteja habilitado no Loki apos CONTENT e ASSETS, antes de validar os nodes reais do seed.
+Resultado esperado: 200, idempotente quando o modulo ja estava habilitado.
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

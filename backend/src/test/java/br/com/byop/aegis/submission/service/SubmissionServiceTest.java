@@ -163,6 +163,22 @@ class SubmissionServiceTest {
     }
 
     @Test
+    void shouldSubmitUploadWhenFormUsesAcceptedFormatLabels() {
+        when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID))
+                .thenReturn(form(true, "[{\"label\":\"Curriculo\",\"type\":\"Upload\",\"required\":true,"
+                        + "\"acceptedFormats\":[\"PDF\",\"Imagem\",\"DOCX\",\"ZIP\"]}]"));
+        when(assetReferenceService.getRequiredReference(ASSET_ID))
+                .thenReturn(new AssetReference(ASSET_ID, PRODUCT_ID, "image/png", "image"));
+        when(submissionRepository.save(any(Submission.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        SubmitFormCommand command = command(Map.of("Curriculo", ASSET_ID.toString()));
+        SubmissionDetail detail = new SubmissionDetail(null, FORM_ID, null, "Ana", "ana@example.com",
+                "site", "new", "—", null, command.answers(), null);
+        when(submissionMapper.toDetail(any(), eq(command.answers()))).thenReturn(detail);
+
+        assertThat(service.submit(PRODUCT_ID, FORM_ID, command)).isEqualTo(detail);
+    }
+
+    @Test
     void shouldSubmitWhenAnswersAreNull() {
         when(formReferenceService.getRequiredReference(PRODUCT_ID, FORM_ID))
                 .thenReturn(form(true, optionalFieldsJson()));

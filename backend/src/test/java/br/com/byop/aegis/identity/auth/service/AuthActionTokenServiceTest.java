@@ -53,7 +53,8 @@ class AuthActionTokenServiceTest {
                 List.of("Aegis"),
                 null,
                 "EDITOR",
-                "Admin"
+                "Admin",
+                "Mensagem opcional"
         );
 
         AuthActionToken token = service.createInvite(command);
@@ -62,6 +63,7 @@ class AuthActionTokenServiceTest {
         assertThat(token.getType()).isEqualTo(AuthActionType.INVITE);
         assertThat(token.getExpiresAt()).isEqualTo(NOW.plusSeconds(172800));
         assertThat(service.productNames(token)).containsExactly("Aegis");
+        assertThat(token.getInviteMessage()).isEqualTo("Mensagem opcional");
     }
 
     @Test
@@ -211,7 +213,8 @@ class AuthActionTokenServiceTest {
                 productNames,
                 null,
                 "EDITOR",
-                "Admin"
+                "Admin",
+                null
         );
         when(objectMapper.writeValueAsString(productNames))
                 .thenThrow(new JacksonException("invalid") {

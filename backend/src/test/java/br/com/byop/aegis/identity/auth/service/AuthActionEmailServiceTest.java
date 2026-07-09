@@ -46,6 +46,18 @@ class AuthActionEmailServiceTest {
     }
 
     @Test
+    void shouldRenderInviteTemplateWithoutOptionalMessage() {
+        MimeMessage message = mimeMessage();
+        AuthActionToken token = inviteTokenWithoutMessage();
+        when(mailSender.createMimeMessage()).thenReturn(message);
+        when(tokenService.productNames(token)).thenReturn(List.of("Aegis"));
+
+        service.sendInviteActivation(token);
+
+        verify(mailSender).send(message);
+    }
+
+    @Test
     void shouldRenderAndSendPasswordResetTemplate() {
         MimeMessage message = mimeMessage();
         AuthActionToken token = new AuthActionToken(
@@ -117,7 +129,29 @@ class AuthActionEmailServiceTest {
                 "[\"Aegis\"]",
                 null,
                 "EDITOR",
-                "Admin"
+                "Admin",
+                "Mensagem opcional"
+        );
+        return token;
+    }
+
+    private AuthActionToken inviteTokenWithoutMessage() {
+        AuthActionToken token = new AuthActionToken(
+                "user-id",
+                "guest@byop.dev",
+                "Guest",
+                AuthActionType.INVITE,
+                NOW,
+                NOW.plusSeconds(3600)
+        );
+        token.addInviteContext(
+                UUID.fromString("11111111-1111-1111-1111-111111111111"),
+                "BYOP",
+                "[\"Aegis\"]",
+                null,
+                "EDITOR",
+                "Admin",
+                null
         );
         return token;
     }

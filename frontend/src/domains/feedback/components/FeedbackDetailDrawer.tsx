@@ -16,9 +16,10 @@ export function FeedbackDetailDrawer({ feedback, tenantName, onOpenChange, onSta
   onOpenChange: (open: boolean) => void;
   onStatusChange: (feedbackId: string, status: FeedbackStatus) => void;
 }) {
+  const attachmentFilename = feedback?.attachmentAssetId ? `feedback-${feedback.id}-${feedback.attachmentAssetId}` : undefined;
   return (
     <Drawer open={feedback !== null} onOpenChange={onOpenChange} direction="right">
-      <DrawerContent className="w-full sm:max-w-md">
+      <DrawerContent className="max-h-[100dvh] w-full sm:max-w-2xl">
         {feedback && (
           <>
             <DrawerHeader>
@@ -45,6 +46,7 @@ export function FeedbackDetailDrawer({ feedback, tenantName, onOpenChange, onSta
                 {feedback.attachmentAssetId ? (
                   <a
                     href={`${resolveBaseUrl()}/assets/${feedback.attachmentAssetId}/download`}
+                    download={attachmentFilename}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 text-primary hover:underline"

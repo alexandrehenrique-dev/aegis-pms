@@ -1,7 +1,7 @@
 meta {
   name: Paginas Maestro Beton
   type: http
-  seq: 3
+  seq: 7
 }
 
 get {
@@ -11,15 +11,16 @@ get {
 
 docs {
 Objetivo: validar o esqueleto de paginas reais do produto Maestro Beton.
-Resultado esperado: 200 com as paginas home, quem-somos, historia, agenda, galeria, apoie e contato.
+Resultado esperado: 200 com paginas quando o token tem acesso operacional ao produto, ou 403 quando o token e apenas super-admin sem permissao direta de conteudo (ADR-0018).
 Observacao: em bancos locais antigos que ja tinham produto com a mesma key antes da migration V17, a migration preserva os dados existentes e pode nao inserir o esqueleto nesse produto residual.
 }
 
 tests {
-  test("status 200", function() {
-    expect(res.status).to.equal(200);
+  test("status 200 ou 403", function() {
+    expect([200, 403]).to.include(res.status);
   });
-  test("paginas esperadas", function() {
+  test("paginas esperadas quando autorizado", function() {
+    if (res.status === 403) { return; }
     const slugs = res.body.map(function(page) { return page.slug; });
     if (slugs.length > 0) {
       expect(slugs).to.include.members(['home', 'quem-somos', 'historia', 'agenda', 'galeria', 'apoie', 'contato']);

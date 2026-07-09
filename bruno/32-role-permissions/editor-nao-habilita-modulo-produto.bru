@@ -1,0 +1,20 @@
+meta {
+  name: Editor nao habilita modulo do produto
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products/{{rbacProductId}}/modules/SEO/enable
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{rbacEditorToken}}
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+}

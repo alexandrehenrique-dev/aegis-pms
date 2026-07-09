@@ -65,6 +65,7 @@ class ProductVisibilityServiceTest {
                 FIXED_TIMESTAMP,
                 FIXED_TIMESTAMP,
                 0,
+                List.of(),
                 null
         );
     }

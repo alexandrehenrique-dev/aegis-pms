@@ -1,21 +1,15 @@
-import { getProductSlug } from "../../shared/utils/productSlugs";
-import type { ProductOption, UserRole } from "../../shared/types";
+import type { UserRole } from "../../shared/types";
 
 /**
  * Para onde o usuário cai depois de selecionar um produto no login,
  * conforme o papel:
  * - super_admin / tenant_admin: hub do tenant (visão ampla, vários produtos).
- * - product_manager: lista de produtos disponíveis (opera vários produtos).
- * - editor / viewer: direto no produto já selecionado (operam um produto
- *   por vez) — viewer cai no mesmo lugar que editor; as restrições de
- *   somente-leitura já são aplicadas pelo RequireRole/ReadOnlyBanner.
+ * - product_manager / editor / viewer: workspace operacional do produto
+ *   selecionado. Eles podem ter atribuições em múltiplos produtos/tenants,
+ *   mas nunca caem no dashboard administrativo do produto.
  */
-export function getPostLoginLandingPath(role: UserRole, product: ProductOption): string {
-  if (role === "product_manager") return "/products";
-  if (role === "editor" || role === "viewer") {
-    const slug = getProductSlug(product.name);
-    return slug ? `/products/${slug}` : "/dashboard";
-  }
+export function getPostLoginLandingPath(role: UserRole): string {
+  if (role === "product_manager" || role === "editor" || role === "viewer") return "/content";
   return "/dashboard";
 }
 
@@ -40,11 +34,11 @@ export const roleDescriptions: Record<UserRole, string> = {
 export const roleVisibleNav: Record<UserRole, Set<string>> = {
   // SUPER_ADMIN é operador de plataforma (ADR-0018): gerencia tenants, produtos,
   // usuários e infraestrutura, mas não acessa conteúdo de produtos de clientes (LGPD).
-  super_admin: new Set(["/dashboard", "/products", "/settings", "/audit", "/admin/feedback"]),
-  tenant_admin: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings", "/audit"]),
-  product_manager: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings"]),
-  editor: new Set(["/dashboard", "/products", "/content", "/pages", "/assets", "/forms", "/analytics"]),
-  viewer: new Set(["/dashboard", "/products", "/content", "/pages", "/analytics"]),
+  super_admin: new Set(["/dashboard", "/products", "/users", "/settings", "/audit", "/admin/feedback"]),
+  tenant_admin: new Set(["/dashboard", "/products", "/users", "/settings", "/audit"]),
+  product_manager: new Set(["/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings"]),
+  editor: new Set(["/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge"]),
+  viewer: new Set(["/content", "/pages", "/analytics"]),
 };
 
 // Route prefixes blocked per role (replaces the old `roleBlockedScreens` Set<Screen>).
@@ -57,15 +51,16 @@ export const roleBlockedRoutePrefixes: Record<UserRole, string[]> = {
   super_admin: ["/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge"],
   tenant_admin: ["/settings/security", "/admin/feedback"],
   product_manager: [
-    "/settings/tenant", "/users", "/settings/permissions", "/settings/roles", "/settings/access-preview",
-    "/audit", "/settings/security", "/products/new", "/content/*/publish", "/admin/feedback",
+    "/dashboard", "/products", "/products/new", "/products/*/modules", "/users", "/settings/tenant",
+    "/settings/permissions", "/settings/roles", "/settings/access-preview", "/audit",
+    "/settings/security", "/content/*/publish", "/admin/feedback",
   ],
   editor: [
-    "/settings", "/users",
-    "/audit", "/products/new", "/admin/feedback",
+    "/dashboard", "/products", "/products/new", "/products/*/modules", "/settings", "/users",
+    "/audit", "/content/*/publish", "/forms/new", "/admin/feedback",
   ],
   viewer: [
-    "/settings", "/users", "/audit", "/products/new",
+    "/dashboard", "/products", "/products/new", "/products/*/modules", "/settings", "/users", "/audit",
     "/content/*/editor", "/pages/*/editor", "/forms/new", "/assets/upload", "/assets/*/metadata", "/assets/*/tags",
     "/content/*/workflow", "/knowledge/graph", "/knowledge/relationships", "/knowledge/entities",
     "/knowledge/search", "/knowledge/orphans", "/knowledge/insights", "/admin/feedback",
@@ -77,6 +72,9 @@ export const roleBlockedRoutePrefixes: Record<UserRole, string[]> = {
  * Supports a single `*` wildcard segment in prefixes (e.g. "/assets/*\/tags").
  */
 export function isRouteBlocked(role: UserRole, pathname: string): boolean {
+  if (pathname === "/products/globals") {
+    return role === "viewer";
+  }
   const prefixes = roleBlockedRoutePrefixes[role];
   return prefixes.some((prefix) => {
     if (!prefix.includes("*")) return pathname.startsWith(prefix);
@@ -99,8 +97,12 @@ const PRODUCT_ASSIGNABLE_ROLES: readonly UserRole[] = ["product_manager", "edito
  */
 export function toProductUserRole(assignedRole: string | null | undefined): UserRole | null {
   if (!assignedRole) return null;
-  const normalized = assignedRole.toLowerCase();
+  const normalized = assignedRole.toLowerCase().replace(/-/g, "_");
   return PRODUCT_ASSIGNABLE_ROLES.find((role) => role === normalized) ?? null;
+}
+
+export function effectiveProductRole(platformRole: UserRole, assignedRole: string | null | undefined): UserRole {
+  return toProductUserRole(assignedRole) ?? platformRole;
 }
 
 /**
@@ -115,6 +117,18 @@ export function effectiveVisibleNav(role: UserRole, productAssignedRole?: string
   const productRole = toProductUserRole(productAssignedRole);
   if (!productRole) return roleVisibleNav[role];
   return new Set([...roleVisibleNav[role], ...roleVisibleNav[productRole]]);
+}
+
+export function canCreateProduct(role: UserRole): boolean {
+  return role === "super_admin" || role === "tenant_admin";
+}
+
+export function isProductWorkspaceRoute(pathname: string): boolean {
+  return ["/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings/product", "/settings/team"].some((prefix) => pathname.startsWith(prefix));
+}
+
+export function requiresProductContext(pathname: string): boolean {
+  return isProductWorkspaceRoute(pathname) || pathname.startsWith("/products/") && pathname !== "/products/new";
 }
 
 /**

@@ -5,6 +5,7 @@ import br.com.byop.aegis.product.domain.ProductStatus;
 import br.com.byop.aegis.product.domain.ProductTypeKey;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record ProductSummary(
@@ -20,6 +21,8 @@ public record ProductSummary(
         OffsetDateTime updatedAt,
         /** Número de módulos habilitados. Usado pelo frontend para determinar se o produto pode ser aberto. */
         int enabledModuleCount,
+        /** Lista canônica dos módulos habilitados, usada pelo frontend para não inferir módulos pelo tipo do produto. */
+        List<String> enabledModules,
         /**
          * Papel do próprio caller neste produto especificamente (via {@code ProductAssignment}
          * com status ASSIGNED), independente do papel de plataforma dele (Keycloak realm role).

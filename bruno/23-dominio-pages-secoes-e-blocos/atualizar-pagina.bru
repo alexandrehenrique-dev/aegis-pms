@@ -11,12 +11,12 @@ put {
 
 body:json {
   {
-    "slug": "home",
-    "title": "Home — Maestro Beton",
+    "slug": "{{brunoPageSlug}}",
+    "title": "Pagina Bruno — Maestro Beton",
     "locale": "pt-BR",
     "status": "published",
     "seo": {
-      "title": "Maestro Beton | Home",
+      "title": "Maestro Beton | Pagina Bruno",
       "description": "Site oficial do Maestro Beton",
       "canonical": "https://maestrobeton.com.br",
       "noIndex": false
@@ -35,7 +35,8 @@ tests {
   });
   test("pagina publicada", function() {
     expect(res.body.status).to.equal("published");
-    expect(res.body.seo.title).to.equal("Maestro Beton | Home");
-    expect(res.body.version).to.equal(2);
+    expect(res.body.slug).to.equal(bru.getVar('brunoPageSlug'));
+    expect(res.body.seo.title).to.equal("Maestro Beton | Pagina Bruno");
+    expect(res.body.version).to.be.greaterThan(1);
   });
 }

@@ -4,9 +4,10 @@ import { Badge, Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } fr
 import { toast } from "../../../core/notifications/toast";
 import { productsService } from "../services/productsService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { useAuth } from "../../../core/auth/useAuth";
 import type { ModuleState } from "../../../shared/types";
 import type { ModuleCatalogItem } from "../contracts/responses";
-import { KNOWLEDGE_GRAPH_DEPENDENCY } from "../../../core/products/moduleDefaults";
+import { KNOWLEDGE_GRAPH_DEPENDENCIES } from "../../../core/products/moduleDefaults";
 
 /** Rota de destino ao abrir um módulo já habilitado */
 const MODULE_ROUTES: Record<string, string> = {
@@ -45,6 +46,7 @@ function ModuleCard({ Icon, name, desc, state, maturity, dep, impact, selected, 
 
 export function ModuleCatalog({ compact = false, productId }: { compact?: boolean; productId?: string }) {
   const navigate = useNavigate();
+  const { effectiveProduct, updateProduct } = useAuth();
   const { data: loaded, loading, error } = useAsyncData(() => productsService.listModuleCatalog(), []);
   const [modules, setModules] = useState<ModuleCatalogItem[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -61,12 +63,28 @@ export function ModuleCatalog({ compact = false, productId }: { compact?: boolea
     });
   };
 
-  const contentEnabled = list.find((x) => x.name === KNOWLEDGE_GRAPH_DEPENDENCY)?.state === "habilitado";
+  const missingKnowledgeGraphDependencies = KNOWLEDGE_GRAPH_DEPENDENCIES.filter(
+    (dependency) => list.find((item) => item.name === dependency)?.state !== "habilitado",
+  );
+  const knowledgeGraphDependencyMessage = `Knowledge Graph exige os módulos ${KNOWLEDGE_GRAPH_DEPENDENCIES.join(" e ")} habilitados primeiro.`;
 
   const blockedByDependency = (m: ModuleCatalogItem) =>
-    m.name === "Knowledge Graph" && !contentEnabled
-      ? `Knowledge Graph exige o módulo ${KNOWLEDGE_GRAPH_DEPENDENCY} habilitado primeiro.`
+    m.name === "Knowledge Graph" && missingKnowledgeGraphDependencies.length > 0
+      ? knowledgeGraphDependencyMessage
       : null;
+
+  const syncProductSnapshot = async () => {
+    if (!productId) return;
+    const product = (await productsService.listProducts()).find((item) => item.id === productId || item.name === productId);
+    const target = product ?? effectiveProduct;
+    if (!target) return;
+    updateProduct(productId, {
+      name: target.name,
+      type: target.type,
+      status: target.status,
+      modules: target.modulesList ?? [],
+    });
+  };
 
   const handleAction = async (m: ModuleCatalogItem) => {
     if (m.state === "habilitado") {
@@ -88,6 +106,7 @@ export function ModuleCatalog({ compact = false, productId }: { compact?: boolea
       return;
     }
     await productsService.enableModule(m.name, productId);
+    await syncProductSnapshot();
     const refreshed = await productsService.listModuleCatalog();
     setModules(refreshed);
     toast.success("Módulo habilitado!", { description: m.name });
@@ -100,10 +119,11 @@ export function ModuleCatalog({ compact = false, productId }: { compact?: boolea
     }
     const blocked = list.filter((m) => selected.has(m.name) && blockedByDependency(m));
     if (blocked.length > 0) {
-      toast.error(`Knowledge Graph exige o módulo ${KNOWLEDGE_GRAPH_DEPENDENCY} habilitado primeiro.`);
+      toast.error(knowledgeGraphDependencyMessage);
       return;
     }
     await Promise.all(Array.from(selected).map((name) => productsService.enableModule(name, productId)));
+    await syncProductSnapshot();
     const refreshed = await productsService.listModuleCatalog();
     setModules(refreshed);
     toast.success(`${selected.size} módulo(s) habilitado(s)!`);

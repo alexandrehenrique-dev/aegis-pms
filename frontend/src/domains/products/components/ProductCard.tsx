@@ -11,6 +11,7 @@ import { toast } from "../../../core/notifications/toast";
 import { productsService } from "../services/productsService";
 import { useViewAsRole } from "../../../core/permissions/useViewAsRole";
 import { useAuth } from "../../../core/auth/useAuth";
+import { countOperationalModules } from "../../../core/products/moduleDefaults";
 import type { ProductSummary } from "../contracts/responses";
 
 export function ProductCard({ p }: { p: ProductSummary }) {
@@ -22,6 +23,7 @@ export function ProductCard({ p }: { p: ProductSummary }) {
   // claro que ele está administrando a plataforma, não operando o produto.
   const isSuperAdmin = viewAsRole === "super_admin";
   const slug = getProductSlug(p.name);
+  const moduleCount = countOperationalModules(p);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [archiving, setArchiving] = useState(false);
 
@@ -29,7 +31,7 @@ export function ProductCard({ p }: { p: ProductSummary }) {
     // Muda o produto selecionado no contexto de auth antes de navegar,
     // garantindo que ProductDashboard/Detail/ModulesPage recebam o produto certo.
     if (p.id) switchProduct(p.id);
-    if (!p.modules) { navigate(`/products/${slug}?empty=1`); return; }
+    if (!moduleCount) { navigate(`/products/${slug}?empty=1`); return; }
     navigate(`/products/${slug}`);
   };
 
@@ -68,7 +70,7 @@ export function ProductCard({ p }: { p: ProductSummary }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="mt-4 flex flex-wrap gap-2"><ProductStatusBadge status={p.status} /><Badge tone="blue">{p.modules} módulos</Badge></div>
+      <div className="mt-4 flex flex-wrap gap-2"><ProductStatusBadge status={p.status} /><Badge tone="blue">{moduleCount} módulos</Badge></div>
       <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
         <div className="rounded-lg bg-muted p-3"><p className="text-xs text-muted-foreground">Saúde</p><p className="font-semibold">{p.score}</p></div>
         <div className="rounded-lg bg-muted p-3"><p className="text-xs text-muted-foreground">Atividade</p><p className="truncate font-semibold">Hoje</p></div>

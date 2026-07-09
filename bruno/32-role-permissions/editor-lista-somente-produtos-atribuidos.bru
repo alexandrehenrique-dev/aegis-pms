@@ -1,0 +1,31 @@
+meta {
+  name: Editor lista somente produtos atribuidos
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products
+  body: none
+}
+
+headers {
+  Authorization: Bearer {{rbacEditorToken}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("editor ve o produto atribuido", function() {
+    const products = Array.isArray(res.body) ? res.body : [];
+    const ids = products.map((product) => product.id);
+    expect(ids).to.include(bru.getVar('rbacProductId'));
+  });
+  test("todos os produtos retornados possuem papel atribuido para o caller", function() {
+    const products = Array.isArray(res.body) ? res.body : [];
+    const roles = products.map((product) => product.callerAssignedRole);
+    expect(roles).to.not.include(null);
+    expect(roles).to.not.include(undefined);
+  });
+}

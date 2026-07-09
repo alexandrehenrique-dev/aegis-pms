@@ -19,10 +19,25 @@ body:form-urlencoded {
 
 script:post-response {
   bru.setVar('rbacEditorToken', res.body.access_token);
+  const result = await new Promise((resolve) => {
+    bru.sendRequest({
+      method: 'GET',
+      url: bru.getEnvVar('baseUrl') + '/api/v1/me',
+      headers: { 'Authorization': 'Bearer ' + res.body.access_token },
+    }, function(error, response) {
+      resolve({ error, response });
+    });
+  });
+  const rawBody = result.response && (result.response.body !== undefined ? result.response.body : result.response.data);
+  const body = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
+  bru.setVar('rbacEditorRole', body && body.role ? body.role : '');
 }
 
 tests {
   test("status 200", function() {
     expect(res.status).to.equal(200);
+  });
+  test("/me reconhece Editor canonico", function() {
+    expect(bru.getVar('rbacEditorRole')).to.equal('editor');
   });
 }

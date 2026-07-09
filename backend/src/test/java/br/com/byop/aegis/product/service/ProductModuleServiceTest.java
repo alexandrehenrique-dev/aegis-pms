@@ -15,6 +15,7 @@ import br.com.byop.aegis.product.mapper.ProductModuleMapper;
 import br.com.byop.aegis.product.repository.ProductModuleRepository;
 import br.com.byop.aegis.product.repository.ProductRepository;
 import br.com.byop.aegis.security.AuthenticatedUser;
+import br.com.byop.aegis.tenant.api.TenantAccessService;
 import java.time.OffsetDateTime;
 import java.util.Set;
 import java.util.Optional;
@@ -39,6 +40,9 @@ class ProductModuleServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private TenantAccessService tenantAccessService;
 
     @Mock
     private ProductModuleRepository moduleRepository;
@@ -124,22 +128,52 @@ class ProductModuleServiceTest {
     }
 
     @Test
-    void shouldEnableContentAndThenKnowledgeGraph() {
+    void shouldFailWhenEnablingKnowledgeGraphWithoutAssets() {
+        Product product = product();
+        UUID productId = product.getId();
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(moduleRepository.existsByProductIdAndModuleKeyAndEnabledTrue(productId, ModuleKey.CONTENT))
+                .thenReturn(true);
+        when(moduleRepository.existsByProductIdAndModuleKeyAndEnabledTrue(productId, ModuleKey.ASSETS))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> moduleService.enableModule(productId, "KNOWLEDGE_GRAPH"))
+                .isInstanceOf(ModuleDependencyMissingException.class)
+                .satisfies(exception -> {
+                    ModuleDependencyMissingException dependencyException = (ModuleDependencyMissingException) exception;
+                    assertThat(dependencyException.getModuleKey()).isEqualTo(ModuleKey.KNOWLEDGE_GRAPH);
+                    assertThat(dependencyException.getRequires()).isEqualTo(ModuleKey.ASSETS);
+                });
+    }
+
+    @Test
+    void shouldEnableContentAssetsAndThenKnowledgeGraph() {
         Product product = product();
         ProductModule content = new ProductModule(product, ModuleKey.CONTENT);
         content.enable();
+        ProductModule assets = new ProductModule(product, ModuleKey.ASSETS);
+        assets.enable();
         ProductModule graph = new ProductModule(product, ModuleKey.KNOWLEDGE_GRAPH);
         graph.enable();
         ProductModuleSummary contentSummary = moduleSummary(product.getId(), ModuleKey.CONTENT, true);
+        ProductModuleSummary assetsSummary = moduleSummary(product.getId(), ModuleKey.ASSETS, true);
         ProductModuleSummary graphSummary = moduleSummary(product.getId(), ModuleKey.KNOWLEDGE_GRAPH, true);
         when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
         when(moduleRepository.findByProductIdAndModuleKey(product.getId(), ModuleKey.CONTENT)).thenReturn(Optional.empty());
-        when(moduleRepository.save(any(ProductModule.class))).thenReturn(content, graph);
+        when(moduleRepository.save(any(ProductModule.class))).thenReturn(content, assets, graph);
         when(moduleMapper.toSummary(content)).thenReturn(contentSummary);
 
         ProductModuleSummary enabledContent = moduleService.enableModule(product.getId(), "CONTENT");
 
+        when(moduleRepository.findByProductIdAndModuleKey(product.getId(), ModuleKey.ASSETS))
+                .thenReturn(Optional.empty());
+        when(moduleMapper.toSummary(assets)).thenReturn(assetsSummary);
+
+        ProductModuleSummary enabledAssets = moduleService.enableModule(product.getId(), "ASSETS");
+
         when(moduleRepository.existsByProductIdAndModuleKeyAndEnabledTrue(product.getId(), ModuleKey.CONTENT))
+                .thenReturn(true);
+        when(moduleRepository.existsByProductIdAndModuleKeyAndEnabledTrue(product.getId(), ModuleKey.ASSETS))
                 .thenReturn(true);
         when(moduleRepository.findByProductIdAndModuleKey(product.getId(), ModuleKey.KNOWLEDGE_GRAPH))
                 .thenReturn(Optional.empty());
@@ -148,6 +182,7 @@ class ProductModuleServiceTest {
         ProductModuleSummary enabledGraph = moduleService.enableModule(product.getId(), "KNOWLEDGE_GRAPH");
 
         assertThat(enabledContent.moduleKey()).isEqualTo(ModuleKey.CONTENT);
+        assertThat(enabledAssets.moduleKey()).isEqualTo(ModuleKey.ASSETS);
         assertThat(enabledGraph.moduleKey()).isEqualTo(ModuleKey.KNOWLEDGE_GRAPH);
     }
 
@@ -165,6 +200,23 @@ class ProductModuleServiceTest {
                     ModuleDependencyMissingException dependencyException = (ModuleDependencyMissingException) exception;
                     assertThat(dependencyException.getModuleKey()).isEqualTo(ModuleKey.KNOWLEDGE_GRAPH);
                     assertThat(dependencyException.getRequires()).isEqualTo(ModuleKey.CONTENT);
+                });
+    }
+
+    @Test
+    void shouldFailWhenDisablingAssetsWithKnowledgeGraphEnabled() {
+        Product product = product();
+        UUID productId = product.getId();
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(moduleRepository.existsByProductIdAndModuleKeyAndEnabledTrue(productId, ModuleKey.KNOWLEDGE_GRAPH))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> moduleService.disableModule(productId, "ASSETS"))
+                .isInstanceOf(ModuleDependencyMissingException.class)
+                .satisfies(exception -> {
+                    ModuleDependencyMissingException dependencyException = (ModuleDependencyMissingException) exception;
+                    assertThat(dependencyException.getModuleKey()).isEqualTo(ModuleKey.KNOWLEDGE_GRAPH);
+                    assertThat(dependencyException.getRequires()).isEqualTo(ModuleKey.ASSETS);
                 });
     }
 
@@ -213,7 +265,8 @@ class ProductModuleServiceTest {
         when(moduleRepository.findByProductIdAndModuleKey(product.getId(), ModuleKey.CONTENT)).thenReturn(Optional.empty());
         when(moduleRepository.save(any(ProductModule.class))).thenReturn(savedModule);
         when(moduleMapper.toSummary(savedModule)).thenReturn(summary);
-        AuthenticatedUser caller = caller();
+        AuthenticatedUser caller = tenantAdmin();
+        when(tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), caller.subject())).thenReturn(true);
 
         moduleService.enableModule(product.getId(), "CONTENT", caller);
 
@@ -222,7 +275,7 @@ class ProductModuleServiceTest {
         AuditRecordCommand command = auditCaptor.getValue();
         assertThat(command.tenantId()).isEqualTo(product.getTenantId());
         assertThat(command.productId()).isEqualTo(product.getId());
-        assertThat(command.actorSubject()).isEqualTo("pm-subject");
+        assertThat(command.actorSubject()).isEqualTo("tenant-admin-subject");
         assertThat(command.action()).isEqualTo("MODULE_ENABLED");
         assertThat(command.after()).containsEntry("moduleKey", "CONTENT").containsEntry("enabled", true);
     }
@@ -239,7 +292,8 @@ class ProductModuleServiceTest {
         when(moduleRepository.findByProductIdAndModuleKey(product.getId(), ModuleKey.CONTENT)).thenReturn(Optional.of(content));
         when(moduleRepository.save(content)).thenReturn(content);
         when(moduleMapper.toSummary(content)).thenReturn(summary);
-        AuthenticatedUser caller = caller();
+        AuthenticatedUser caller = tenantAdmin();
+        when(tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), caller.subject())).thenReturn(true);
 
         moduleService.disableModule(product.getId(), "CONTENT", caller);
 
@@ -247,6 +301,97 @@ class ProductModuleServiceTest {
         verify(auditService).recordEvent(auditCaptor.capture());
         assertThat(auditCaptor.getValue().action()).isEqualTo("MODULE_DISABLED");
         assertThat(auditCaptor.getValue().after()).containsEntry("enabled", false);
+    }
+
+    @Test
+    void shouldAllowSuperAdminChangingModules() {
+        Product product = product();
+        ProductModule savedModule = new ProductModule(product, ModuleKey.CONTENT);
+        savedModule.enable();
+        ProductModuleSummary summary = moduleSummary(product.getId(), ModuleKey.CONTENT, true);
+        AuthenticatedUser caller = new AuthenticatedUser(
+                "super-admin-subject",
+                "super-admin@byop.io",
+                "super-admin",
+                "Super Admin",
+                Set.of("ROLE_SUPER_ADMIN")
+        );
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(moduleRepository.findByProductIdAndModuleKey(product.getId(), ModuleKey.CONTENT)).thenReturn(Optional.empty());
+        when(moduleRepository.save(any(ProductModule.class))).thenReturn(savedModule);
+        when(moduleMapper.toSummary(savedModule)).thenReturn(summary);
+
+        ProductModuleSummary result = moduleService.enableModule(product.getId(), "CONTENT", caller);
+
+        assertThat(result).isEqualTo(summary);
+        verify(tenantAccessService, never()).hasActiveMembership(product.getTenantId(), caller.subject());
+    }
+
+    @Test
+    void shouldAllowTenantAdminMembershipChangingModules() {
+        Product product = product();
+        ProductModule savedModule = new ProductModule(product, ModuleKey.CONTENT);
+        savedModule.enable();
+        ProductModuleSummary summary = moduleSummary(product.getId(), ModuleKey.CONTENT, true);
+        AuthenticatedUser caller = caller("tenant-admin-subject", "ROLE_EDITOR");
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), caller.subject())).thenReturn(true);
+        when(moduleRepository.findByProductIdAndModuleKey(product.getId(), ModuleKey.CONTENT)).thenReturn(Optional.empty());
+        when(moduleRepository.save(any(ProductModule.class))).thenReturn(savedModule);
+        when(moduleMapper.toSummary(savedModule)).thenReturn(summary);
+
+        ProductModuleSummary result = moduleService.enableModule(product.getId(), "CONTENT", caller);
+
+        assertThat(result).isEqualTo(summary);
+    }
+
+    @Test
+    void shouldAllowTenantAdminAuthorityThroughAdministrativeMembership() {
+        Product product = product();
+        ProductModule savedModule = new ProductModule(product, ModuleKey.CONTENT);
+        savedModule.enable();
+        ProductModuleSummary summary = moduleSummary(product.getId(), ModuleKey.CONTENT, true);
+        AuthenticatedUser caller = tenantAdmin();
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
+        when(tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), caller.subject())).thenReturn(true);
+        when(moduleRepository.findByProductIdAndModuleKey(product.getId(), ModuleKey.CONTENT)).thenReturn(Optional.empty());
+        when(moduleRepository.save(any(ProductModule.class))).thenReturn(savedModule);
+        when(moduleMapper.toSummary(savedModule)).thenReturn(summary);
+
+        ProductModuleSummary result = moduleService.enableModule(product.getId(), "CONTENT", caller);
+
+        assertThat(result).isEqualTo(summary);
+    }
+
+    @Test
+    void shouldRejectTenantAdminAuthorityWithoutAdministrativeMembershipChangingModules() {
+        Product product = product();
+        UUID productId = product.getId();
+        AuthenticatedUser caller = tenantAdmin();
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), caller.subject())).thenReturn(false);
+
+        assertThatThrownBy(() -> moduleService.enableModule(productId, "CONTENT", caller))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessage("Product not found: " + productId);
+
+        verify(moduleRepository, never()).save(any(ProductModule.class));
+        verify(tenantAccessService, never()).hasActiveMembership(product.getTenantId(), caller.subject());
+    }
+
+    @Test
+    void shouldRejectProductRoleChangingModules() {
+        Product product = product();
+        UUID productId = product.getId();
+        AuthenticatedUser caller = productManager();
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), caller.subject())).thenReturn(false);
+
+        assertThatThrownBy(() -> moduleService.enableModule(productId, "CONTENT", caller))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessage("Product not found: " + productId);
+
+        verify(moduleRepository, never()).save(any(ProductModule.class));
     }
 
     private Product product() {
@@ -274,8 +419,17 @@ class ProductModuleServiceTest {
         );
     }
 
-    private AuthenticatedUser caller() {
+    private AuthenticatedUser productManager() {
         return new AuthenticatedUser("pm-subject", "pm@byop.io", "pm", "Product Manager",
                 Set.of("ROLE_PRODUCT_MANAGER"));
+    }
+
+    private AuthenticatedUser tenantAdmin() {
+        return new AuthenticatedUser("tenant-admin-subject", "admin@byop.io", "admin", "Tenant Admin",
+                Set.of("ROLE_TENANT_ADMIN"));
+    }
+
+    private AuthenticatedUser caller(String subject, String authority) {
+        return new AuthenticatedUser(subject, subject + "@byop.io", subject, subject, Set.of(authority));
     }
 }

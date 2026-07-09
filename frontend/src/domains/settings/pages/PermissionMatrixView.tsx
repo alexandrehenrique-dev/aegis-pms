@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { Loader2 } from "lucide-react";
 import { Button, Card, PageHeader } from "../../../shared/components/Primitives";
@@ -11,9 +11,38 @@ import { useAuth } from "../../../core/auth/useAuth";
 
 const MODULES = ["Conteúdo", "Assets", "Forms", "Analytics", "Knowledge Graph", "Users", "Settings", "Audit"];
 const COLS = ["Visualizar", "Criar", "Editar", "Publicar", "Arquivar", "Excluir", "Exportar", "Administrar"];
+const EDITED_ROLE = "EDITOR";
+const MATRIX_PERMISSION_KEYS: string[][] = [
+  ["/content", "/content/*/editor", "/content/*/editor", "/content/*/publish", "/content/*/workflow", "/content/*/publish", "/content", "/content"],
+  ["/assets", "/assets/upload", "/assets/*/metadata", "/assets/*/metadata", "/assets/*/tags", "/assets/*/metadata", "/assets", "/assets/*/tags"],
+  ["/forms", "/forms/new", "/forms/new", "/forms", "/forms", "/forms", "/forms", "/forms"],
+  ["/analytics", "/analytics", "/analytics", "/analytics", "/analytics", "/analytics", "/analytics", "/analytics"],
+  ["/knowledge", "/knowledge/entities", "/knowledge/entities", "/knowledge/relationships", "/knowledge/orphans", "/knowledge/orphans", "/knowledge/insights", "/knowledge/graph"],
+  ["/users", "/users", "/users", "/users", "/users", "/users", "/users", "/settings/roles"],
+  ["/settings", "/settings", "/settings", "/settings", "/settings", "/settings", "/settings", "/settings/permissions"],
+  ["/audit", "/audit", "/audit", "/audit", "/audit", "/audit", "/audit", "/audit"],
+];
 
 function buildDefaultMatrix(): string[][] {
   return MODULES.map((_, ri) => COLS.map((_, ci) => (ri > 4 && ci > 1 ? "locked" : ci < 3 ? "on" : "off")));
+}
+
+function matrixFromPermissions(permissions: Record<string, boolean>): string[][] {
+  return buildDefaultMatrix().map((row, rowIndex) => row.map((state, colIndex) => {
+    if (state === "locked") return state;
+    return permissions[MATRIX_PERMISSION_KEYS[rowIndex][colIndex]] ? "on" : "off";
+  }));
+}
+
+function permissionsFromMatrix(matrix: string[][]): Record<string, boolean> {
+  const permissions: Record<string, boolean> = {};
+  matrix.forEach((row, rowIndex) => {
+    row.forEach((state, colIndex) => {
+      if (state === "locked") return;
+      permissions[MATRIX_PERMISSION_KEYS[rowIndex][colIndex]] = state === "on";
+    });
+  });
+  return permissions;
 }
 
 export function PermissionMatrixView() {
@@ -22,6 +51,20 @@ export function PermissionMatrixView() {
   const [confirmRestore, setConfirmRestore] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    settingsService.getPermissionMatrix(effectiveTenant?.id)
+      .then((entries) => {
+        if (!alive) return;
+        const editor = entries.find((entry) => entry.role === EDITED_ROLE);
+        if (editor) setMatrix(matrixFromPermissions(editor.permissions));
+      })
+      .catch(() => {
+        if (alive) toast.error("Não foi possível carregar a matriz de permissões.");
+      });
+    return () => { alive = false; };
+  }, [effectiveTenant?.id]);
 
   const toggleCell = (ri: number, ci: number) => {
     setMatrix((prev) => prev.map((row, r) => (r !== ri ? row : row.map((c, ci2) => (ci2 !== ci ? c : c === "on" ? "off" : "on")))));
@@ -42,7 +85,7 @@ export function PermissionMatrixView() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await settingsService.savePermissions();
+      await settingsService.savePermissions(effectiveTenant?.id, [{ role: EDITED_ROLE, permissions: permissionsFromMatrix(matrix) }]);
       toast.success("Permissões salvas!");
     } finally {
       setSaving(false);

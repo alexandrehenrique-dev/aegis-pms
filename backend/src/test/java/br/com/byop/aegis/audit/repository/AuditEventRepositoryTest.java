@@ -9,7 +9,10 @@ import br.com.byop.aegis.tenant.domain.Tenant;
 import br.com.byop.aegis.tenant.repository.TenantRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -81,6 +84,28 @@ class AuditEventRepositoryTest extends RepositoryTestSupport {
 
         assertThat(auditEventRepository.findAllByFilters(tenant.getId(), null, null, null, null))
                 .containsExactly(event);
+    }
+
+    @Test
+    void shouldPageAuditEventsByTenantIsolation() {
+        Tenant tenant = tenantRepository.saveAndFlush(tenant("audit-page"));
+        Tenant otherTenant = tenantRepository.saveAndFlush(tenant("audit-page-other"));
+        auditEventRepository.saveAndFlush(newEvent(otherTenant.getId(), null, "subject-1",
+                "TENANT_UPDATED", null, AuditRisk.MEDIO));
+        AuditEvent first = auditEventRepository.saveAndFlush(newEvent(tenant.getId(), null, "subject-1",
+                "TENANT_UPDATED", null, AuditRisk.MEDIO));
+        AuditEvent second = auditEventRepository.saveAndFlush(newEvent(tenant.getId(), null, "subject-1",
+                "USER_BLOCKED", null, AuditRisk.ALTO));
+
+        Page<AuditEvent> firstPage = auditEventRepository.findPageByFilters(
+                tenant.getId(), null, null, null, null, PageRequest.of(0, 1));
+        Page<AuditEvent> secondPage = auditEventRepository.findPageByFilters(
+                tenant.getId(), null, null, null, null, PageRequest.of(1, 1));
+
+        assertThat(firstPage.getContent()).containsExactly(second);
+        assertThat(firstPage.getTotalElements()).isEqualTo(2);
+        assertThat(firstPage.getTotalPages()).isEqualTo(2);
+        assertThat(secondPage.getContent()).isEqualTo(List.of(first));
     }
 
     @Test

@@ -13,6 +13,12 @@ import type { ApiError } from "../../../shared/services/apiClient";
 import type { FormField } from "../contracts/responses";
 
 const UPLOAD_FORMAT_OPTIONS = ["PDF", "Imagem", "DOCX", "ZIP"];
+const UPLOAD_FORMAT_MIME_TYPES: Record<string, string[]> = {
+  PDF: ["application/pdf"],
+  Imagem: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+  DOCX: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+  ZIP: ["application/zip", "application/x-zip-compressed"],
+};
 const FORM_TYPE_OPTIONS = ["Contato", "Orçamento", "RSVP", "Pesquisa", "Newsletter", "Cadastro"];
 const DEFAULT_FORM_NAME = "Novo formulário";
 
@@ -107,10 +113,10 @@ function FormPropertiesPanel({ field, onChange }: { field: FormField | undefined
       </Card>
     );
   }
-  const acceptedFormats = field.acceptedFormats ?? [];
+  const acceptedFormats = field.acceptedFormats ?? formatsFromMimeTypes(field.acceptedFileTypes ?? []);
   const toggleFormat = (fmt: string) => {
     const next = acceptedFormats.includes(fmt) ? acceptedFormats.filter((f) => f !== fmt) : [...acceptedFormats, fmt];
-    onChange({ acceptedFormats: next });
+    onChange({ acceptedFormats: next, acceptedFileTypes: mimeTypesFromFormats(next) });
   };
   return (
     <Card className="h-full">
@@ -138,6 +144,14 @@ function FormPropertiesPanel({ field, onChange }: { field: FormField | undefined
       </div>
     </Card>
   );
+}
+
+function mimeTypesFromFormats(formats: string[]): string[] {
+  return Array.from(new Set(formats.flatMap((format) => UPLOAD_FORMAT_MIME_TYPES[format] ?? [])));
+}
+
+function formatsFromMimeTypes(mimeTypes: string[]): string[] {
+  return UPLOAD_FORMAT_OPTIONS.filter((format) => (UPLOAD_FORMAT_MIME_TYPES[format] ?? []).some((mimeType) => mimeTypes.includes(mimeType)));
 }
 
 export function FormBuilder() {

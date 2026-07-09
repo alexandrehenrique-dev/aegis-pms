@@ -26,9 +26,13 @@ function UploadProgressItem({ file }: { file: UploadFileState }) {
   return (
     <div className="rounded-xl border border-border p-3">
       <div className="flex justify-between gap-3 text-sm"><b className="min-w-0 truncate">{file.name}</b><span className="shrink-0">{label}</span></div>
-      <div className="mt-2 h-2 rounded-full bg-muted">
-        <div className={`h-2 rounded-full ${file.status === "error" ? "bg-destructive" : "bg-primary"}`} style={{ width: `${file.p}%` }} />
-      </div>
+      {file.status === "ready" ? (
+        <p className="mt-2 text-xs text-muted-foreground">Clique em "Enviar upload" para iniciar.</p>
+      ) : (
+        <div className="mt-2 h-2 rounded-full bg-muted">
+          <div className={`h-2 rounded-full ${file.status === "error" ? "bg-destructive" : "bg-primary"}`} style={{ width: `${file.p}%` }} />
+        </div>
+      )}
     </div>
   );
 }

@@ -91,6 +91,75 @@ membership do tenant devem permanecer enquanto o usuário tiver qualquer outro
 vínculo ativo em outro produto ou tenant. A regra vale para todos os papéis de
 produto (`PRODUCT_MANAGER`, `EDITOR`, `VIEWER`).
 
+### 7. Jornada de produto para PRODUCT_MANAGER / EDITOR / VIEWER
+
+Papéis de produto podem pertencer a vários produtos em vários tenants diferentes,
+mas a jornada principal deles é **produto-first**, não tenant-first. Para esses
+papéis, o tenant é contexto técnico de autorização e auditoria; a UI não deve
+exigir que o usuário "entenda" ou selecione tenant antes de escolher o produto.
+
+Regras de UX/autorização:
+
+| Papel | Entrada pós-login | Navegação primária |
+|---|---|---|
+| `PRODUCT_MANAGER` | Seleção direta de produto atribuído, agregando produtos de todos os tenants onde tem assignment ativo | Workspace do produto (`/content`, `/pages`, `/assets`, `/forms`, `/analytics`, `/knowledge`, settings de produto/equipe) |
+| `EDITOR` | Seleção direta de produto atribuído | Workspace editorial (`/content`, `/pages`, `/assets`, `/forms`) |
+| `VIEWER` | Seleção direta de produto atribuído | Leitura/consulta (`/content`, `/pages`, `/analytics`) |
+| `TENANT_ADMIN` | Seleção de tenant, depois visão administrativa de produtos/usuários/settings do tenant | Hub administrativo do tenant |
+| `SUPER_ADMIN` | Visão de plataforma/tenants/produtos, com acesso a conteúdo somente quando também houver `ProductAssignment` explícito (ADR-0018) | Hub de plataforma; workspace de produto apenas no contexto de assignment explícito |
+
+Consequências práticas:
+- Um `PRODUCT_MANAGER`, `EDITOR` ou `VIEWER` atribuído a produtos em tenants
+  diferentes vê uma lista única de produtos autorizados; selecionar um produto
+  seta o tenant internamente para chamadas API, mas não expõe uma jornada de
+  troca de tenant como pré-requisito.
+- Os testes de fumaça do frontend devem validar esta jornada nova, não o fluxo
+  antigo. Para papéis de produto, pós-login válido deve cair em
+  `/select-product` ou diretamente no workspace do produto; um teste que espera
+  `/select-tenant` para `PRODUCT_MANAGER`/`EDITOR`/`VIEWER` está testando o
+  comportamento errado.
+- Rotas, botões, cards e menus de configuração devem seguir a mesma autorização
+  do backend. Não basta bloquear a chamada HTTP: ações que o papel não pode
+  executar não devem aparecer como affordance principal na UI.
+- Busca global, timeline lateral, dashboards de produto e qualquer sidebar de
+  "atividade recente" seguem o mesmo contexto efetivo. Para papéis de produto,
+  o escopo padrão é o produto selecionado; não podem aparecer itens, assets,
+  conteúdos, produtos ou eventos de outros produtos do mesmo tenant. Para
+  `SUPER_ADMIN`/`TENANT_ADMIN`, a busca pode listar produtos do escopo
+  administrativo, mas itens operacionais internos (conteúdo/assets/forms/KG)
+  continuam filtrados pelo produto quando houver produto selecionado.
+- Telas de settings são contextuais. `EDITOR` e `VIEWER` não veem settings;
+  `PRODUCT_MANAGER` vê apenas settings operacionais de produto/equipe que seu
+  papel permite; tenant/security/roles/access-preview/audit continuam reservados
+  a `TENANT_ADMIN`/`SUPER_ADMIN` conforme ADR-0014/0018.
+- `Dashboard Global` é uma tela administrativa de tenant/plataforma.
+  `ProductDashboard` também é cockpit administrativo do produto. Para
+  `PRODUCT_MANAGER`, `EDITOR` e `VIEWER`, a landing após escolher produto é o
+  workspace operacional permitido (ex.: `/content`), não `/dashboard` nem
+  `/products/{id}`. Esses papéis não devem ver item de sidebar para dashboard
+  global nem KPIs agregados do tenant.
+- Módulos de produto são configuração administrativa. A ativação/desativação de
+  módulos é permitida para `SUPER_ADMIN` e `TENANT_ADMIN` ativo do tenant; papéis
+  de produto operam módulos já habilitados, mas não alteram o catálogo habilitado.
+- Métricas e listas de usuários devem falar a mesma língua: "usuários ativos"
+  considera somente sujeitos com membership de tenant ativa e vínculo de produto
+  ativo. Usuários removidos, convites expirados e vínculos removidos podem ser
+  auditados/filtrados explicitamente, mas não entram em KPIs ativos nem aparecem
+  por padrão nas listas operacionais do produto.
+- Relatórios de analytics devem respeitar o formato anunciado pela UI
+  (`PDF`, `CSV`, `XLSX`) e o contexto do produto selecionado. Arquivos de
+  download genéricos, sem extensão correta ou contendo apenas data de geração
+  não satisfazem a jornada de relatório.
+
+Essa decisão segue padrões similares observados em produtos consolidados:
+- GitLab documenta que usuários recebem um papel ao serem adicionados a um grupo
+  ou projeto, e esse papel determina permissões naquele escopo.
+- GitLab também trata membros de projeto como usuários/grupos que têm acesso a
+  um projeto específico, com ações de membros dependentes do papel do projeto.
+- Microsoft Entra documenta o princípio de usar o menor papel privilegiado por
+  tarefa administrativa, reforçando a separação entre operação cotidiana e
+  administração sensível.
+
 ## Consequências
 
 Positivas:
@@ -103,6 +172,9 @@ Negativas / trade-offs:
 - `GET /products` precisa de lógica de filtro condicional por papel — mais complexo que um único `findAllByTenantId`; mitigado pelo fato de ser localizado no `ProductService`, nunca espalhado
 - `GET /tenants/{tenantId}/users` para PRODUCT_MANAGER precisa de um JOIN entre `ProductAssignment` do caller e `ProductAssignment` de todos os outros usuários — query mais complexa, mas correta
 - Convites e alterações de equipe precisam validar `allowedProductIds`/`productId` no backend, mesmo quando a UI já restringe as opções
+- A UI precisa manter um mapa explícito de rotas/ações por papel efetivo
+  (plataforma + assignment de produto no contexto selecionado), para evitar
+  dashboards, botões e settings administrativos em jornadas de editor/viewer
 
 ## Alternativas Consideradas
 
@@ -110,12 +182,14 @@ Negativas / trade-offs:
 - **PRODUCT_MANAGER vê todos os produtos mas não pode editar os que não são seus**: rejeitado — ver dado que não é do seu escopo já é o problema, mesmo sem poder editar
 - **Filtro via parâmetro de query (`?scope=mine`)**: rejeitado — o cliente poderia omitir o parâmetro e ver tudo; o critério deve ser determinado pelo backend com base no papel do token
 - **PRODUCT_MANAGER sem permissão para gerenciar equipe nenhuma**: rejeitado — contradiz a responsabilidade operacional do papel sobre o produto e forçaria Tenant Admin a executar tarefas de equipe que pertencem ao dono do produto
+- **PRODUCT_MANAGER/EDITOR/VIEWER escolherem tenant antes de produto**: rejeitado — o tenant é necessário para a API e auditoria, mas não é o objeto mental desses papéis; forçar a escolha aumenta confusão e expõe estrutura organizacional desnecessária
 
 ## Impactos
 
-- **Backend**: `ProductService.listProducts` passa a receber o `AuthenticatedUser` como parâmetro de filtro (etapa 07); `UserService.listUsers` adiciona a mesma lógica (etapa 15); testes adicionais em Rodada 3 (service) cobrindo o filtro por papel para cada um dos 5 papéis.
-- **Frontend**: nenhuma mudança de UI necessária — o backend já devolverá a lista filtrada; o frontend renderiza o que recebe (Sprint 07 de integração mock→real).
+- **Backend**: `ProductService.listProducts` recebe o `AuthenticatedUser` como parâmetro de filtro (etapa 07); `UserService.listUsers` adiciona a mesma lógica (etapa 15); `ProductModuleService` bloqueia alteração de módulos para papéis de produto; testes cobrem filtro por papel, assignment multi-produto e bloqueio de módulos.
+- **Frontend**: a seleção de produto para `PRODUCT_MANAGER`/`EDITOR`/`VIEWER` agrega produtos de todos os tenants autorizados e seta tenant internamente; sidebar, rotas, botões e settings são filtrados pelo papel efetivo no produto selecionado.
 - **Seed** (etapa 21): incluir seeds de `ProductAssignment` que permitam validar o filtro — ex.: `editor_joao` atribuído só ao produto A, e confirmar que `GET /products` para ele não retorna o produto B (mesmo que ambos sejam do mesmo tenant).
+- **Bruno/smoke**: collections de RBAC devem validar `/me` canônico, listagem de produtos com `callerAssignedRole`, bloqueios de convite/remoção/módulos e limpeza de usuários temporários no teardown.
 
 ## Links Relacionados
 
@@ -124,3 +198,6 @@ Negativas / trade-offs:
 - `docs/sprints/backend/07_modelo_core_tenant_product_modulos.md` (ProductService.listProducts).
 - `docs/sprints/backend/15_dominio_users.md` (UserService.listUsers).
 - `docs/sprints/backend/10_tenants_crud_completo_e_product_assignment.md` (ProductAssignment).
+- GitLab Docs — Roles and permissions: https://docs.gitlab.com/user/permissions/
+- GitLab Docs — Members of a project: https://docs.gitlab.com/user/project/members/
+- Microsoft Learn — Least privileged roles by task: https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/delegate-by-task

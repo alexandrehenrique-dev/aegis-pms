@@ -24,7 +24,8 @@ class ProductModuleTemplateCatalogTest {
     @Test
     void shouldRecommendContentBeforeKnowledgeGraphForKnowledgeBase() {
         assertThat(ProductModuleTemplateCatalog.recommendedModulesFor(ProductTypeKey.KNOWLEDGE_BASE))
-                .containsExactly(ModuleKey.CONTENT, ModuleKey.KNOWLEDGE_GRAPH, ModuleKey.SEO, ModuleKey.ANALYTICS);
+                .containsExactly(ModuleKey.CONTENT, ModuleKey.ASSETS, ModuleKey.KNOWLEDGE_GRAPH, ModuleKey.SEO,
+                        ModuleKey.ANALYTICS);
     }
 
     @Test
@@ -38,7 +39,7 @@ class ProductModuleTemplateCatalogTest {
     void shouldRecommendContentBeforeKnowledgeGraphForLibraryBooksMusic() {
         assertThat(ProductModuleTemplateCatalog.recommendedModulesFor(ProductTypeKey.LIBRARY_BOOKS_MUSIC))
                 .containsExactly(ModuleKey.LIBRARY, ModuleKey.BOOKS, ModuleKey.MUSIC, ModuleKey.CONTENT,
-                        ModuleKey.KNOWLEDGE_GRAPH, ModuleKey.SEO, ModuleKey.ANALYTICS);
+                        ModuleKey.ASSETS, ModuleKey.KNOWLEDGE_GRAPH, ModuleKey.SEO, ModuleKey.ANALYTICS);
     }
 
     @Test

@@ -1,6 +1,7 @@
 package br.com.byop.aegis.audit.controller;
 
 import br.com.byop.aegis.audit.dto.AuditEventDetail;
+import br.com.byop.aegis.audit.dto.AuditEventPageQuery;
 import br.com.byop.aegis.audit.dto.AuditEventSummary;
 import br.com.byop.aegis.audit.exception.AuditEventExceptionHandler;
 import br.com.byop.aegis.audit.exception.AuditEventNotFoundException;
@@ -79,6 +80,31 @@ class AuditEventControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void shouldListPagedAuditEventsWithFilters() throws Exception {
+        UUID productId = UUID.fromString("33333333-3333-3333-3333-333333333333");
+        AuditEventSummary summary = summary();
+        AuditEventPageQuery pageQuery = new AuditEventPageQuery("subject-1", productId, "CONTENT", "baixo", "tenant", 2, 10);
+        when(auditEventQueryService.listEventsPage(any(), eq(TENANT_ID), eq(pageQuery)))
+                .thenReturn(new br.com.byop.aegis.audit.dto.AuditEventPage(List.of(summary), 2, 10, 21, 3));
+
+        mockMvc.perform(get("/api/v1/tenants/{tenantId}/audit-events/page", TENANT_ID)
+                        .param("actorSubject", "subject-1")
+                        .param("productId", productId.toString())
+                        .param("module", "CONTENT")
+                        .param("risk", "baixo")
+                        .param("q", "tenant")
+                        .param("page", "2")
+                        .param("size", "10")
+                        .with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].id").value(EVENT_ID.toString()))
+                .andExpect(jsonPath("$.page").value(2))
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.totalElements").value(21))
+                .andExpect(jsonPath("$.totalPages").value(3));
     }
 
     @Test

@@ -2,6 +2,7 @@ package br.com.byop.aegis.form.service;
 
 import br.com.byop.aegis.form.domain.FormFieldType;
 import br.com.byop.aegis.form.exception.InvalidFormPublicationException;
+import br.com.byop.aegis.form.api.FormAcceptedFileTypes;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
@@ -50,20 +51,10 @@ public class FormPublicationPolicy {
 
     private void assertUploadFieldsHaveAcceptedFileTypes(List<Map<String, Object>> fields) {
         for (Map<String, Object> field : fields) {
-            if (FormFieldType.isUpload(stringValue(field.get("type"))) && acceptedFileTypes(field).isEmpty()) {
+            if (FormFieldType.isUpload(stringValue(field.get("type"))) && FormAcceptedFileTypes.fromField(field).isEmpty()) {
                 throw new InvalidFormPublicationException(UPLOAD_ACCEPTED_TYPES_ERROR);
             }
         }
-    }
-
-    private List<String> acceptedFileTypes(Map<String, Object> field) {
-        Object value = field.get("acceptedFileTypes");
-        if (value instanceof List<?> list && list.stream().allMatch(item -> item instanceof String _)) {
-            return list.stream()
-                    .map(String.class::cast)
-                    .toList();
-        }
-        return List.of();
     }
 
     private String stringValue(Object value) {

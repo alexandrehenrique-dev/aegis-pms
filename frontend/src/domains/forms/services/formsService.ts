@@ -19,6 +19,27 @@ function makeField(type: string): FormField {
   return { id: `${type}-${Date.now()}`, type, label: type, placeholder: "", required: true, help: "", validation: "Nenhuma", mask: "—", defaultValue: "", condition: "Sempre visível" };
 }
 
+const UPLOAD_FORMAT_MIME_TYPES: Record<string, string[]> = {
+  PDF: ["application/pdf"],
+  Imagem: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+  DOCX: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+  ZIP: ["application/zip", "application/x-zip-compressed"],
+};
+
+function mimeTypesFromFormats(formats: string[] = []): string[] {
+  return Array.from(new Set(formats.flatMap((format) => UPLOAD_FORMAT_MIME_TYPES[format] ?? [])));
+}
+
+function normalizeFieldForPersistence(field: FormField): FormField {
+  if (field.type !== "Upload") return field;
+  const acceptedFileTypes = field.acceptedFileTypes?.length ? field.acceptedFileTypes : mimeTypesFromFormats(field.acceptedFormats);
+  return { ...field, acceptedFileTypes };
+}
+
+function normalizeFieldsForPersistence(fields: FormField[]): FormField[] {
+  return fields.map(normalizeFieldForPersistence);
+}
+
 const DEFAULT_CONTATO_FIELDS: FormField[] = [
   { id: "nome", type: "Texto", label: "Nome", placeholder: "Seu nome", required: true, help: "", validation: "Nenhuma", mask: "—", defaultValue: "", condition: "Sempre visível" },
   { id: "email", type: "Email", label: "Email", placeholder: "seu@email.com", required: true, help: "Usaremos este email para responder sua solicitação.", validation: "Email válido", mask: "—", defaultValue: "", condition: "Sempre visível" },
@@ -87,11 +108,11 @@ export const formsService = {
   async saveFormFields(productId: string, formId: string, fields: FormField[], name?: string): Promise<void> {
     if (IS_API_MODE) {
       const form = await apiClient.get<FormDetail>(`/products/${productId}/forms/${formId}`);
-      await apiClient.put(`/products/${productId}/forms/${formId}`, { name: name ?? form.name, type: form.type, fields });
+      await apiClient.put(`/products/${productId}/forms/${formId}`, { name: name ?? form.name, type: form.type, fields: normalizeFieldsForPersistence(fields) });
       return;
     }
     logApiCall("PUT", `/api/v1/products/${productId}/forms/${formId}`, { fields, name });
-    fieldsByFormId[formId] = fields;
+    fieldsByFormId[formId] = normalizeFieldsForPersistence(fields);
     if (name) {
       const stored = formsStore.find((f) => f.id === formId);
       if (stored) stored.name = name;

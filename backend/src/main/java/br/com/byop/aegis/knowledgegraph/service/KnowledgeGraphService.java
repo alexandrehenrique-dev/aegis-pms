@@ -14,6 +14,7 @@ import br.com.byop.aegis.knowledgegraph.domain.GraphEdge;
 import br.com.byop.aegis.knowledgegraph.domain.GraphInsightReview;
 import br.com.byop.aegis.knowledgegraph.domain.GraphNode;
 import br.com.byop.aegis.knowledgegraph.dto.GraphEdgeDetail;
+import br.com.byop.aegis.knowledgegraph.dto.GraphEdgeSummary;
 import br.com.byop.aegis.knowledgegraph.dto.GraphInsightReviewSummary;
 import br.com.byop.aegis.knowledgegraph.dto.GraphNeighborSummary;
 import br.com.byop.aegis.knowledgegraph.dto.GraphNodeDetail;
@@ -242,6 +243,16 @@ public class KnowledgeGraphService {
         GraphEdge saved = edgeRepository.save(edge);
         log.info("createEdge: edge criada id='{}'", saved.getId());
         return edgeMapper.toDetail(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GraphEdgeSummary> listEdges(UUID productId) {
+        log.debug("listEdges: productId='{}'", productId);
+        productReferenceService.getRequiredReference(productId);
+        return edgeRepository.findAllByProductId(productId)
+                .stream()
+                .map(edgeMapper::toSummary)
+                .toList();
     }
 
     @Transactional(readOnly = true)

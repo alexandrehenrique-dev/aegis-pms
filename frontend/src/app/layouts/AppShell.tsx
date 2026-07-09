@@ -5,7 +5,7 @@ import { AlertTriangle, Building2, CheckCircle2, Clock3, HelpCircle, LogOut, Men
 
 import { useAuth } from "../../core/auth/useAuth";
 import { useViewAsRole } from "../../core/permissions/useViewAsRole";
-import { roleDescriptions, roleLabels, effectiveVisibleNav, isRouteBlockedForEffectiveAccess } from "../../core/permissions/roles";
+import { roleDescriptions, roleLabels, effectiveVisibleNav, isRouteBlockedForEffectiveAccess, requiresProductContext } from "../../core/permissions/roles";
 import { resolveEnabledModules } from "../../core/products/moduleDefaults";
 import { SimulationBanner } from "../../core/permissions/components/SimulationBanner";
 import { ReadOnlyBanner } from "../../core/permissions/components/ReadOnlyBanner";
@@ -97,7 +97,9 @@ export function AppShell() {
   const { data: myNotifications } = useAsyncData(() => notificationsService.listMine(), []);
   const latestUnread = (myNotifications ?? []).find((n) => !n.read) ?? null;
 
-  if (!authUser || !effectiveTenant || !effectiveProduct) return null;
+  if (!authUser || !effectiveTenant) return null;
+  const productContextRequired = requiresProductContext(location.pathname);
+  if (!effectiveProduct && productContextRequired) return null;
 
   const handleLogout = () => { logout(); navigate("/login"); };
 
@@ -106,21 +108,26 @@ export function AppShell() {
 
   const userTenantSwitcherItems: SwitcherItem[] = userTenants.filter((t) => t.status === "ativo").map((t) => ({ id: t.id, name: t.name, meta: t.plan }));
   const productSwitcherItems: SwitcherItem[] = tenantProducts.filter((p) => p.status !== "Arquivado" && p.modules > 0).map((p) => ({ id: p.id, name: p.name, meta: p.type }));
+  const currentProduct = effectiveProduct ?? (productSwitcherItems.length === 1 ? tenantProducts.find((p) => p.id === productSwitcherItems[0]?.id) ?? null : null);
 
   // Sprint 15, Tarefa B (ADR-0015) — item de nav ligado a um módulo opcional
   // só aparece quando o módulo está habilitado NESTE produto, além do papel
   // permitir; antes só o papel era checado, então até Super Admin via
   // "Knowledge Graph" num produto sem o módulo habilitado.
-  const enabledModules = resolveEnabledModules(effectiveProduct);
+  const enabledModules = resolveEnabledModules(currentProduct);
   // Mescla a nav do papel de plataforma com a do papel do caller NO PRODUTO
   // efetivo (se houver ProductAssignment própria ali) — ex.: Super Admin que
   // também é Editor de um produto específico vê Conteúdo/Assets/etc só
   // quando esse produto está selecionado, sem perder os itens de super_admin.
-  const visibleNavPaths = effectiveVisibleNav(viewAsRole, effectiveProduct.callerAssignedRole);
+  const visibleNavPaths = effectiveVisibleNav(viewAsRole, productContextRequired ? currentProduct?.callerAssignedRole : null);
   const visibleNav = nav.filter((item) => visibleNavPaths.has(item.path) && (!item.moduleKey || enabledModules.includes(item.moduleKey)));
 
-  const tabs = tabsForPath(location.pathname);
-  const blocked = isRouteBlockedForEffectiveAccess(viewAsRole, effectiveProduct.callerAssignedRole, location.pathname);
+  const blocked = isRouteBlockedForEffectiveAccess(viewAsRole, productContextRequired ? currentProduct?.callerAssignedRole : null, location.pathname);
+  const tabs = tabsForPath(location.pathname)?.filter(([path]) => !isRouteBlockedForEffectiveAccess(
+    viewAsRole,
+    productContextRequired ? currentProduct?.callerAssignedRole : null,
+    path,
+  ));
 
   const showViewerBanner = viewAsRole === "viewer" && !viewerQuietRoutes.some((r) => location.pathname.startsWith(r));
   const showEditorBanner = viewAsRole === "editor" && (location.pathname.includes("/publish") || location.pathname.startsWith("/settings/permissions") || location.pathname.startsWith("/settings/roles"));
@@ -162,7 +169,11 @@ export function AppShell() {
           <Switcher label="Tenant" active={effectiveTenant.name} items={userTenantSwitcherItems} onSelect={(item) => { switchTenant(item.id); navigate("/dashboard"); }} />
         </div>
         <div className="hidden md:block">
-          <Switcher label="Produto" active={effectiveProduct.name} items={productSwitcherItems} onSelect={(item) => { switchProduct(item.id); navigate("/dashboard"); }} />
+          {currentProduct ? (
+            <Switcher label="Produto" active={currentProduct.name} items={productSwitcherItems} onSelect={(item) => { switchProduct(item.id); navigate("/content"); }} />
+          ) : (
+            <button onClick={() => navigate("/select-product")} className="rounded-xl border border-border bg-card px-3 py-1.5 text-sm transition hover:bg-muted">Selecionar produto</button>
+          )}
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           {viewAsRole === "super_admin" && (
@@ -213,7 +224,7 @@ export function AppShell() {
       <SimulationBanner viewAs={viewAsRole} actual={actualRole} onRestore={restore} />
 
       <PendingNotificationGate />
-      <AnimatePresence>{productSwitching && <ProductSwitchingOverlay key="product-switching" product={effectiveProduct} />}</AnimatePresence>
+      <AnimatePresence>{productSwitching && currentProduct && <ProductSwitchingOverlay key="product-switching" product={currentProduct} />}</AnimatePresence>
       <AnimatePresence>{showFeedback && <FeedbackModal key="fb" screenName={location.pathname} onClose={() => setShowFeedback(false)} />}</AnimatePresence>
       <AnimatePresence>
         {mobile && (

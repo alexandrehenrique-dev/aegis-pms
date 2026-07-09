@@ -2,18 +2,15 @@ package br.com.byop.aegis.product.service;
 
 import br.com.byop.aegis.product.api.ModuleKey;
 import br.com.byop.aegis.product.command.CreateProductCommand;
+import br.com.byop.aegis.product.command.UpdateProductCommand;
 import br.com.byop.aegis.product.api.AssetStorageStrategy;
 import br.com.byop.aegis.product.api.ProductCreatedEvent;
-import br.com.byop.aegis.product.domain.Product;
-import br.com.byop.aegis.product.domain.ProductAssignment;
-import br.com.byop.aegis.product.domain.ProductAssignmentRole;
-import br.com.byop.aegis.product.domain.ProductAssignmentStatus;
-import br.com.byop.aegis.product.domain.ProductModuleTemplateCatalog;
-import br.com.byop.aegis.product.domain.ProductTypeKey;
+import br.com.byop.aegis.product.domain.*;
 import br.com.byop.aegis.product.dto.ProductDetail;
 import br.com.byop.aegis.product.dto.ProductModuleSummary;
 import br.com.byop.aegis.product.dto.ProductSummary;
 import br.com.byop.aegis.product.exception.InvalidProductTypeException;
+import br.com.byop.aegis.product.exception.InvalidProductStatusException;
 import br.com.byop.aegis.product.exception.ProductAlreadyExistsException;
 import br.com.byop.aegis.product.exception.ProductNotFoundException;
 import br.com.byop.aegis.product.mapper.ProductMapper;
@@ -42,6 +39,7 @@ public class ProductService {
     private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
     private static final String ROLE_TENANT_ADMIN = "ROLE_TENANT_ADMIN";
     private static final Map<String, ProductTypeKey> PRODUCT_TYPES = buildProductTypes();
+    private static final Map<String, ProductStatus> PRODUCT_STATUSES = buildProductStatuses();
 
     private final ProductRepository productRepository;
     private final TenantAccessService tenantAccessService;
@@ -147,6 +145,17 @@ public class ProductService {
         return toSummaryWithModuleCount(product, callerRoleForProduct(caller.subject(), productId));
     }
 
+    @Transactional
+    public ProductSummary updateProduct(AuthenticatedUser caller, UUID productId, UpdateProductCommand command) {
+        log.debug("updateProduct: productId='{}', status='{}'", productId, command.status());
+        Product product = resolveManageableProduct(caller, productId);
+        product.rename(command.name());
+        product.changeType(parseProductType(command.type()));
+        product.changeStatus(parseProductStatus(command.status()));
+        log.info("updateProduct: produto atualizado id='{}', status='{}'", productId, product.getStatus());
+        return toSummaryWithModuleCount(product, callerRoleForProduct(caller.subject(), productId));
+    }
+
     /**
      * O papel de plataforma do caller (Keycloak realm role, ex. ROLE_SUPER_ADMIN)
      * e o papel dele NUM PRODUTO especifico ({@link ProductAssignmentRole}) sao
@@ -168,9 +177,14 @@ public class ProductService {
     }
 
     private ProductSummary toSummaryWithModuleCount(Product product, ProductAssignmentRole callerRole) {
-        int enabledModuleCount = (int) moduleRepository.countByProductIdAndEnabledTrue(product.getId());
+        List<String> enabledModules = moduleRepository.findAllByProductId(product.getId())
+                .stream()
+                .filter(ProductModule::isEnabled)
+                .map(module -> module.getModuleKey().name())
+                .toList();
+        int enabledModuleCount = enabledModules.size();
         String callerRoleName = callerRole == null ? null : callerRole.name();
-        return productMapper.toSummary(product, enabledModuleCount, callerRoleName);
+        return productMapper.toSummary(product, enabledModuleCount, enabledModules, callerRoleName);
     }
 
     @Transactional(readOnly = true)
@@ -207,12 +221,32 @@ public class ProductService {
         throw new ProductNotFoundException(productId);
     }
 
+    private Product resolveManageableProduct(AuthenticatedUser caller, UUID productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException(productId));
+
+        if (caller.authorities().contains(ROLE_SUPER_ADMIN)
+                || tenantAccessService.hasActiveTenantAdminMembership(product.getTenantId(), caller.subject())) {
+            return product;
+        }
+
+        throw new ProductNotFoundException(productId);
+    }
+
     private ProductTypeKey parseProductType(String type) {
         ProductTypeKey productType = PRODUCT_TYPES.get(normalizeProductType(type));
         if (productType == null) {
             throw new InvalidProductTypeException(type);
         }
         return productType;
+    }
+
+    private ProductStatus parseProductStatus(String status) {
+        ProductStatus productStatus = PRODUCT_STATUSES.get(normalizeProductType(status));
+        if (productStatus == null) {
+            throw new InvalidProductStatusException(status);
+        }
+        return productStatus;
     }
 
     private static Map<String, ProductTypeKey> buildProductTypes() {
@@ -222,6 +256,19 @@ public class ProductService {
             productTypes.put(normalizeProductType(productType.label()), productType);
         });
         return Map.copyOf(productTypes);
+    }
+
+    private static Map<String, ProductStatus> buildProductStatuses() {
+        Map<String, ProductStatus> productStatuses = new HashMap<>();
+        productStatuses.put("ACTIVE", ProductStatus.ACTIVE);
+        productStatuses.put("ATIVO", ProductStatus.ACTIVE);
+        productStatuses.put("ARCHIVED", ProductStatus.ARCHIVED);
+        productStatuses.put("ARQUIVADO", ProductStatus.ARCHIVED);
+        productStatuses.put("SUSPENDED", ProductStatus.SUSPENDED);
+        productStatuses.put("SUSPENSO", ProductStatus.SUSPENDED);
+        productStatuses.put("PENDING", ProductStatus.SUSPENDED);
+        productStatuses.put("INACTIVE", ProductStatus.SUSPENDED);
+        return Map.copyOf(productStatuses);
     }
 
     private static String normalizeProductType(String value) {

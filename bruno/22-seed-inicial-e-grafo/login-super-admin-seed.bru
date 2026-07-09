@@ -13,12 +13,12 @@ post {
 body:form-urlencoded {
   grant_type: password
   client_id: {{clientId}}
-  username: super-admin@byop.io
-  password: senha123
+  username: {{username}}
+  password: {{password}}
 }
 
 docs {
-Objetivo: autenticar com o usuario demo criado pela Sprint 22 e capturar token para validar o seed real.
+Objetivo: autenticar com as credenciais do ambiente Bruno local para validar o seed real.
 Resultado esperado: 200, access_token e refresh_token presentes.
 Variaveis produzidas: token, refreshToken.
 }

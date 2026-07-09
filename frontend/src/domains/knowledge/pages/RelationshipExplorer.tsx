@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Filter } from "lucide-react";
 import { Badge, Button, Card, PageHeader, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../shared/components/ui/popover";
@@ -29,12 +29,13 @@ export function RelationshipExplorer() {
   const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(productId), [productId]);
   const [verbFilter, setVerbFilter] = useState<string | null>(null);
 
-  const verbs = useMemo(() => Array.from(new Set((kgEdges ?? []).map((e) => e.verb))), [kgEdges]);
-
   if (loadingNodes || loadingEdges) return <SkeletonLines />;
   if (errorNodes || errorEdges || !kgNodes || !kgEdges) return <PartialErrorWidget />;
 
-  const filteredEdges = kgEdges.filter((e) => !verbFilter || e.verb === verbFilter);
+  const visibleNodeIds = new Set(kgNodes.map((node) => node.id));
+  const visibleEdges = kgEdges.filter((edge) => visibleNodeIds.has(edge.from) && visibleNodeIds.has(edge.to));
+  const verbs = Array.from(new Set(visibleEdges.map((e) => e.verb)));
+  const filteredEdges = visibleEdges.filter((e) => !verbFilter || e.verb === verbFilter);
 
   return (
     <>
