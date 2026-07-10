@@ -38,6 +38,9 @@ Desktop.ini
 !*.env.example
 infra/.env.prod
 !infra/.env.prod.example
+# .env.ci é commitado de propósito: só contém credenciais descartáveis da
+# stack efêmera de CI (infra/docker-compose.ci.yml) — jamais segredos reais.
+!infra/.env.ci
 *.pem
 *.key
 *.p12

@@ -426,7 +426,6 @@
     "containerId" : "19e40f51-7040-4aac-9106-068e1ed44d07"
   },
   "requiredCredentials" : [ "password" ],
-  "passwordPolicy" : "length(10) and upperCase(1) and lowerCase(1) and digits(1) and notUsername(undefined) and passwordHistory(5)",
   "otpPolicyType" : "totp",
   "otpPolicyAlgorithm" : "HmacSHA1",
   "otpPolicyInitialCounter" : 0,

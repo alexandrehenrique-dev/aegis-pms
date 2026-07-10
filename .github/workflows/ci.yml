@@ -68,15 +68,37 @@ jobs:
       - name: Build image
         run: docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} -f backend/Dockerfile .
 
+  # Stack EFÊMERA de CI (infra/docker-compose.ci.yml): PostgreSQL x2, Keycloak
+  # (realm importado automaticamente + usuários de teste via keycloak-init-ci),
+  # MailHog e Backend. Nada persiste: tmpfs + `down -v` garantido no final.
+  # Jamais aponta para banco/Keycloak de produção (Oracle Cloud) — ver
+  # docs/adr/ADR-0021-stack-ci-efemera.md.
   bruno-tests:
-    name: Bruno - local stack smoke
+    name: Bruno - ephemeral CI stack
     runs-on: [self-hosted, genesis-lab]
     needs: docker-build
+    env:
+      COMPOSE_CI: docker compose -f infra/docker-compose.ci.yml --env-file infra/.env.ci
     steps:
       - uses: actions/checkout@v4
 
-      - name: Start local stack
-        run: docker compose up -d --build
+      # Pré-limpeza de infra: remove qualquer resíduo da stack de CI deixado
+      # por um run anterior abortado (runner self-hosted).
+      - name: Pre-clean CI stack (resíduos de runs anteriores)
+        run: ${{ env.COMPOSE_CI }} down -v --remove-orphans || true
+
+      - name: Start ephemeral CI stack
+        run: ${{ env.COMPOSE_CI }} up -d --build
+
+      - name: Wait for Keycloak bootstrap (realm + usuários de teste)
+        run: |
+          EXIT_CODE=$(docker wait aegis-keycloak-init-ci)
+          docker logs aegis-keycloak-init-ci
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Bootstrap do Keycloak de CI falhou (exit ${EXIT_CODE})."
+            ${{ env.COMPOSE_CI }} logs keycloak-ci
+            exit 1
+          fi
 
       - name: Wait for backend health
         run: |
@@ -86,13 +108,23 @@ jobs:
             fi
             sleep 5
           done
-          docker compose logs aegis-backend
+          ${{ env.COMPOSE_CI }} logs aegis-backend-ci
           exit 1
 
+      # Credenciais do usuário de teste efêmero (criado pelo keycloak-init-ci).
+      # Lidas de infra/.env.ci com grep/cut (não usar `source`: valores podem
+      # conter caracteres especiais) e injetadas no Bruno via --env-var — as
+      # coleções e environments permanecem intocados.
+      - name: Load CI test credentials
+        run: |
+          echo "BRUNO_CI_USERNAME=$(grep '^CI_TEST_USERNAME=' infra/.env.ci | cut -d= -f2-)" >> "$GITHUB_ENV"
+          echo "BRUNO_CI_PASSWORD=$(grep '^CI_TEST_PASSWORD=' infra/.env.ci | cut -d= -f2-)" >> "$GITHUB_ENV"
+
       # PRÉ-LIMPEZA: apagar resíduos de runs anteriores que falharam antes do teardown
+      # (na stack efêmera isso vira no-op, mas mantém o comportamento atual)
       - name: Pre-test teardown (limpar resíduos anteriores)
         working-directory: bruno
-        run: npx @usebruno/cli run 99-teardown --env local -r --sandbox developer
+        run: npx @usebruno/cli run 99-teardown --env local -r --sandbox developer --env-var username="$BRUNO_CI_USERNAME" --env-var password="$BRUNO_CI_PASSWORD"
         continue-on-error: true # não bloquear se já está limpo
 
       # SUITE PRINCIPAL: --sandbox developer é obrigatório para que o teardown
@@ -101,17 +133,32 @@ jobs:
       # teardown roda sem erro aparente mas não apaga nada (G.1).
       - name: Run Bruno collection
         working-directory: bruno
-        run: npx @usebruno/cli run --env local --sandbox developer
+        run: npx @usebruno/cli run --env local --sandbox developer --env-var username="$BRUNO_CI_USERNAME" --env-var password="$BRUNO_CI_PASSWORD"
 
       # PÓS-LIMPEZA: garantir limpeza mesmo que a suite falhe no meio
       - name: Post-test teardown (garantir limpeza após suite)
         if: always()
         working-directory: bruno
-        run: npx @usebruno/cli run 99-teardown --env local -r --sandbox developer
+        run: npx @usebruno/cli run 99-teardown --env local -r --sandbox developer --env-var username="$BRUNO_CI_USERNAME" --env-var password="$BRUNO_CI_PASSWORD"
 
-      - name: Stop local stack
+      # Destrói a stack efêmera SEMPRE (sucesso ou falha), incluindo volumes
+      # anônimos (-v). Depois confirma que não ficou container nem volume.
+      - name: Destroy ephemeral CI stack (down -v)
         if: always()
-        run: docker compose down
+        run: ${{ env.COMPOSE_CI }} down -v --remove-orphans
+
+      - name: Assert no CI residue (containers/volumes)
+        if: always()
+        run: |
+          LEFT_CONTAINERS=$(docker ps -aq --filter "label=com.docker.compose.project=aegis-pms-ci")
+          LEFT_VOLUMES=$(docker volume ls -q --filter "label=com.docker.compose.project=aegis-pms-ci")
+          if [ -n "$LEFT_CONTAINERS" ] || [ -n "$LEFT_VOLUMES" ]; then
+            echo "Resíduo da stack de CI detectado:"
+            echo "containers: $LEFT_CONTAINERS"
+            echo "volumes: $LEFT_VOLUMES"
+            exit 1
+          fi
+          echo "OK: nenhum container ou volume da stack de CI permaneceu."
 
   deploy:
     name: Deploy - genesis-lab

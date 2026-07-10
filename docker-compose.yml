@@ -1,3 +1,17 @@
+# =============================================================================
+# docker-compose.yml — ambiente de DESENVOLVIMENTO local (finalidade única)
+# =============================================================================
+# Mantém o nome default para preservar o `docker compose up` do dia a dia.
+# Volumes nomeados persistentes são intencionais aqui (dados de dev).
+#
+# Composes por ambiente (nunca misturar):
+#   dev  -> docker-compose.yml (este arquivo)
+#   ci   -> infra/docker-compose.ci.yml (stack efêmera, tmpfs, down -v)
+#   prod -> infra/docker-compose.prod.yml (backend apenas; PostgreSQL e
+#           Keycloak externos — Oracle Cloud)
+# Ver docs/adr/ADR-0021-stack-ci-efemera.md.
+# =============================================================================
+
 services:
   aegis-postgres:
     image: postgres:16
