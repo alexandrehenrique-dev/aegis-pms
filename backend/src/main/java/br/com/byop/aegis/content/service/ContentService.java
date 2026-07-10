@@ -58,7 +58,6 @@ public class ContentService {
     private static final String MODULE_CONTENT = "CONTENT";
     private static final String DIFF_KEY_STATUS = "status";
     private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
-    private static final String ROLE_TENANT_ADMIN = "ROLE_TENANT_ADMIN";
 
     private final ContentRepository contentRepository;
     private final ContentVersionRepository versionRepository;
@@ -175,13 +174,13 @@ public class ContentService {
     /**
      * Exclui definitivamente um {@code Content} — restrito a rascunho nunca
      * publicado ({@code DRAFT} com {@code currentVersion == 1}) e a
-     * {@code SUPER_ADMIN}/{@code TENANT_ADMIN} (F.1.2, BUG-SPRINT consolidado
+     * {@code SUPER_ADMIN} (F.1.2, BUG-SPRINT consolidado
      * de paginas/conteudo). Qualquer outro estado ja tem caminho de saida
      * proprio via {@link #transition} para {@code ARCHIVED}, que preserva
      * historico — a exclusao fisica nunca se aplica a conteudo com historico
      * editorial real.
      *
-     * @throws InsufficientContentDeleteRoleException se o chamador nao for SUPER_ADMIN/TENANT_ADMIN
+     * @throws InsufficientContentDeleteRoleException se o chamador nao for SUPER_ADMIN
      * @throws ContentDeletionNotAllowedException se o conteudo ja foi publicado ou tem mais de uma versao
      */
     @Transactional
@@ -206,7 +205,7 @@ public class ContentService {
     }
 
     private boolean canDelete(Set<String> authorities) {
-        return authorities.contains(ROLE_SUPER_ADMIN) || authorities.contains(ROLE_TENANT_ADMIN);
+        return authorities.contains(ROLE_SUPER_ADMIN);
     }
 
     private boolean isNeverPublishedDraft(Content content) {

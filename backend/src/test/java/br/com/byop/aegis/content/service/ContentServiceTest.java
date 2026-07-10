@@ -474,7 +474,7 @@ class ContentServiceTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"ROLE_SUPER_ADMIN", "ROLE_TENANT_ADMIN", "ROLE_PRODUCT_MANAGER"})
+    @CsvSource({"ROLE_SUPER_ADMIN", "ROLE_PRODUCT_MANAGER"})
     void shouldAllowAuthorizedRolesToPublishViaTransition(String role) {
         UUID productId = UUID.randomUUID();
         Content content = content(productId, ContentStatus.IN_REVIEW);
@@ -508,7 +508,7 @@ class ContentServiceTest {
                 .thenReturn(new ProductReference(productId, UUID.randomUUID()));
 
         ContentSummary result = service.publish(productId, content.getId(), new PublishContentRequest("foi pra ar"),
-                caller(Set.of("ROLE_TENANT_ADMIN")));
+                caller(Set.of("ROLE_PRODUCT_MANAGER")));
 
         assertThat(result).isEqualTo(summary);
         assertThat(content.getStatus()).isEqualTo(ContentStatus.PUBLISHED);
@@ -563,16 +563,15 @@ class ContentServiceTest {
                 .isInstanceOf(InsufficientContentRoleException.class);
     }
 
-    @ParameterizedTest
-    @CsvSource({"ROLE_SUPER_ADMIN", "ROLE_TENANT_ADMIN"})
-    void shouldDeleteNeverPublishedDraftContent(String role) {
+    @Test
+    void shouldDeleteNeverPublishedDraftContent() {
         UUID productId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
         Content content = content(productId, ContentStatus.DRAFT);
         when(contentRepository.findByProductIdAndId(productId, content.getId())).thenReturn(Optional.of(content));
         when(productReferenceService.getRequiredReference(productId)).thenReturn(new ProductReference(productId, tenantId));
 
-        service.deleteContent(productId, content.getId(), caller(Set.of(role)));
+        service.deleteContent(productId, content.getId(), caller(Set.of("ROLE_SUPER_ADMIN")));
 
         verify(versionRepository).deleteAllByContentId(content.getId());
         verify(contentRepository).delete(content);
@@ -617,7 +616,7 @@ class ContentServiceTest {
         ReflectionTestUtils.setField(content, "currentVersion", 2);
         when(contentRepository.findByProductIdAndId(productId, content.getId())).thenReturn(Optional.of(content));
         UUID contentId = content.getId();
-        AuthenticatedUser admin = caller(Set.of("ROLE_TENANT_ADMIN"));
+        AuthenticatedUser admin = caller(Set.of("ROLE_SUPER_ADMIN"));
 
         assertThatThrownBy(() -> service.deleteContent(productId, contentId, admin))
                 .isInstanceOf(ContentDeletionNotAllowedException.class);

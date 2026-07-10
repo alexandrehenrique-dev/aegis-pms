@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { Loader2 } from "lucide-react";
 import { Button, Card, Field, PageHeader, SelectLike } from "../../../shared/components/Primitives";
@@ -39,6 +39,8 @@ export function InviteUserDrawer() {
   const [allowedModules, setAllowedModules] = useState("");
   const [message, setMessage] = useState(DEFAULT_INVITE_MESSAGE);
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean }>({});
+  const isTenantAdminInvite = role === "Tenant Admin";
+  const tenantScopeLabel = effectiveTenant?.name ? `Tenant ${effectiveTenant.name}` : "Tenant atual";
   const enabledModules = useMemo(() => {
     const products = allowedProducts === "Todos os produtos"
       ? tenantProducts
@@ -63,15 +65,45 @@ export function InviteUserDrawer() {
   const emailErr = emailError(email);
   const hasErrors = !!nameErr || !!emailErr;
 
+  useEffect(() => {
+    if (!productOptions.includes(allowedProducts)) {
+      setAllowedProducts(productOptions[0]);
+    }
+  }, [allowedProducts, productOptions]);
+
+  const handleRoleChange = (nextRole: string) => {
+    setRole(nextRole);
+    if (nextRole === "Tenant Admin") {
+      setAllowedProducts("Todos os produtos");
+      setAllowedModules("Governança do tenant");
+      setMessage(effectiveTenant?.name ? `Você foi convidado para administrar o tenant ${effectiveTenant.name}.` : "Você foi convidado para administrar o tenant.");
+      return;
+    }
+    if (role === "Tenant Admin") {
+      setAllowedModules("");
+      setMessage(DEFAULT_INVITE_MESSAGE);
+    }
+  };
+
+
   const handleSend = async () => {
     setTouched({ name: true, email: true });
     if (hasErrors) return;
     setSending(true);
     try {
-      const allowedProductIds = allowedProducts === "Todos os produtos"
+      const allowedProductIds = isTenantAdminInvite
+        ? []
+        : allowedProducts === "Todos os produtos"
         ? tenantProducts.map((product) => product.id)
         : tenantProducts.filter((product) => product.name === allowedProducts).map((product) => product.id);
-      await usersService.invite({ name, email, role: ROLE_VALUE_BY_LABEL[role] ?? role, allowedProducts, allowedProductIds, message }, effectiveTenant?.id);
+      await usersService.invite({
+        name,
+        email,
+        role: ROLE_VALUE_BY_LABEL[role] ?? role,
+        allowedProducts: isTenantAdminInvite ? tenantScopeLabel : allowedProducts,
+        allowedProductIds,
+        message,
+      }, effectiveTenant?.id);
       toast.success("Convite enviado!", { description: `${name} receberá um email com instruções de acesso.` });
       navigate("/users");
     } catch (error) {
@@ -102,9 +134,18 @@ export function InviteUserDrawer() {
           <div className="grid gap-3 md:grid-cols-2">
             <Field label="Nome" value={name} onChange={setName} onBlur={() => setTouched((t) => ({ ...t, name: true }))} error={touched.name ? nameErr : undefined} />
             <Field label="Email" value={email} onChange={setEmail} onBlur={() => setTouched((t) => ({ ...t, email: true }))} error={touched.email ? emailErr : undefined} />
-            <SelectLike label="Papel" value={role} options={ROLE_LABELS} onChange={setRole} />
-            <SelectLike label="Produtos permitidos" value={allowedProducts} options={productOptions} onChange={setAllowedProducts} />
-            <SelectLike label="Módulos permitidos" value={allowedModules || moduleOptions[0]} options={moduleOptions} onChange={setAllowedModules} />
+            <SelectLike label="Papel" value={role} options={ROLE_LABELS} onChange={handleRoleChange} />
+            {isTenantAdminInvite ? (
+              <>
+                <Field label="Tenant administrado" value={tenantScopeLabel} onChange={() => undefined} locked />
+                <Field label="Escopo" value="Governança, usuários, produtos, configurações e auditoria do tenant" onChange={() => undefined} locked />
+              </>
+            ) : (
+              <>
+                <SelectLike label="Produtos permitidos" value={allowedProducts} options={productOptions} onChange={setAllowedProducts} />
+                <SelectLike label="Módulos permitidos" value={allowedModules || moduleOptions[0]} options={moduleOptions} onChange={setAllowedModules} />
+              </>
+            )}
             <Field label="Mensagem opcional" value={message} onChange={setMessage} textarea />
           </div>
         </Card>

@@ -31,9 +31,11 @@ async function main() {
 
     await goToTab(page, "Insights");
     ok = report("Knowledge Insights carrega", page.url().endsWith("/knowledge/insights")) && ok;
-    await page.getByRole("button", { name: "Abrir entidade" }).first().click();
+    const beforeInsightPath = new URL(page.url()).pathname;
+    await page.getByRole("button", { name: "Abrir destino" }).first().click();
     await page.waitForTimeout(800);
-    ok = report("Abrir entidade pelo insight entra no detalhe", page.url().includes("/knowledge/entities/")) && ok;
+    const afterInsightPath = new URL(page.url()).pathname;
+    ok = report("Abrir destino pelo insight navega para uma jornada real do KG", afterInsightPath.startsWith("/knowledge/") && afterInsightPath !== beforeInsightPath) && ok;
 
     ok = report("Nenhum erro de console/runtime durante o fluxo", errors.length === 0, errors.join(" | ")) && ok;
   } finally {

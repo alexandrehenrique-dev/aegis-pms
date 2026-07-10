@@ -33,7 +33,6 @@ class ContentWorkflowPolicyTest {
     @ParameterizedTest
     @CsvSource({
             "ROLE_SUPER_ADMIN",
-            "ROLE_TENANT_ADMIN",
             "ROLE_PRODUCT_MANAGER"
     })
     void shouldAllowPublishingForAuthorizedRoles(String role) {
@@ -45,6 +44,7 @@ class ContentWorkflowPolicyTest {
 
     @ParameterizedTest
     @CsvSource({
+            "ROLE_TENANT_ADMIN",
             "ROLE_EDITOR",
             "ROLE_VIEWER"
     })

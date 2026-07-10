@@ -7,7 +7,7 @@ import { knowledgeService } from "../../knowledge/services/knowledgeService";
 import { IS_API_MODE } from "../../../infra/apiMode";
 import { apiClient } from "../../../shared/services/apiClient";
 import { requireCurrentProductId } from "../../../core/products/currentProductContext";
-import type { ContentRow, ListContentResponse, ListEditEventsResponse, ListWorkflowItemsResponse } from "../contracts/responses";
+import type { ContentRow, ContentVersionRow, ListContentResponse, ListEditEventsResponse, ListWorkflowItemsResponse } from "../contracts/responses";
 
 /** Produto efetivo da sessão, no formato mínimo exigido por `resolveEnabledModules` — `null` quando chamado fora de um contexto de produto (ex.: seed inicial). `id` (UUID real, nunca slug — Sprint de Integração 02, Seção A) é o que identifica o produto nas chamadas ao Knowledge Graph. */
 type ContentProductContext = { id: string; name: string; type: string; modulesList?: string[] } | null;
@@ -20,9 +20,14 @@ function mockProductSlug(productId: string): string {
 }
 
 type ContentDto = Omit<ContentRow, "updatedAt"> & { updatedAt: string };
+type ContentVersionDto = Omit<ContentVersionRow, "createdAt"> & { createdAt: string };
 
 function mapContentRow(dto: ContentDto): ContentRow {
   return { ...dto, updatedAt: dto.updatedAt ? new Date(dto.updatedAt).toLocaleString("pt-BR") : "—" };
+}
+
+function mapContentVersionRow(dto: ContentVersionDto): ContentVersionRow {
+  return { ...dto, createdAt: dto.createdAt ? new Date(dto.createdAt).toLocaleString("pt-BR") : "—" };
 }
 
 function toContentRequest(content: ContentRow, patch: Partial<ContentRow>) {
@@ -122,6 +127,22 @@ export const contentService = {
   async listWorkflowItems(productId = requireCurrentProductId()): Promise<ListWorkflowItemsResponse> {
     if (IS_API_MODE) return apiClient.get<ListWorkflowItemsResponse>(`/products/${productId}/content/workflow-items`);
     return wfInitialItems;
+  },
+
+  async listVersions(contentId: string, productId = requireCurrentProductId()): Promise<ContentVersionRow[]> {
+    if (IS_API_MODE) {
+      const dtos = await apiClient.get<ContentVersionDto[]>(`/products/${productId}/content/${contentId}/versions`);
+      return dtos.map(mapContentVersionRow).reverse();
+    }
+    const row = contentStore.find((content) => content.id === contentId);
+    if (!row) return [];
+    return [{
+      id: `${row.id}-v${row.version.replace(/^v/i, "")}`,
+      versionLabel: row.version,
+      createdByName: row.author,
+      createdAt: row.updatedAt,
+      snapshotJson: JSON.stringify({ title: row.title, status: row.status, type: row.type }),
+    }];
   },
 
   /** Cria um artigo do domínio `content` (Sprint 12, Tarefa B) — distinto de `pagesService.createPage`, que cria uma `Page` institucional. `product` segue o mesmo papel de `updateContent` (Sprint 16, Tarefa B). */

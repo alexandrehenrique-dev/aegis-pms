@@ -33,7 +33,7 @@ export function FormsList() {
   const { viewAsRole } = useViewAsRole();
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "";
-  const canEdit = viewAsRole !== "viewer";
+  const canEdit = ["product_manager", "editor"].includes(viewAsRole);
   const { data: loadedForms, loading, error } = useAsyncData(() => (productId ? formsService.listForms(productId) : Promise.resolve([])), [productId]);
   const [forms, setForms] = useState<FormSummary[]>([]);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);

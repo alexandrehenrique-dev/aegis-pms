@@ -14,6 +14,8 @@ const KPI_ROUTES: Record<string, string> = {
   "Taxa de conversão": "/analytics/forms",
   "Formulários recebidos": "/forms/submissions",
   "Conteúdos publicados": "/content/list",
+  "Conteúdos pendentes": "/content/workflow",
+  "Assets recentes": "/assets",
   "Páginas mais acessadas": "/analytics/content",
   "Leads qualificados": "/forms/submissions",
   "Tempo médio na página": "/analytics/content",

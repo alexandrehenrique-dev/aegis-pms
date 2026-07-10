@@ -19,10 +19,20 @@ class PermissionMatrixDefaultsTest {
     }
 
     @Test
-    void shouldAllowContentForTenantAdminEditorAndViewer() {
-        assertThat(PermissionMatrixDefaults.isAllowedByDefault(PermissionMatrixDefaults.ROLE_TENANT_ADMIN, "/content")).isTrue();
+    void shouldAllowContentForProductRolesOnly() {
+        assertThat(PermissionMatrixDefaults.isAllowedByDefault(PermissionMatrixDefaults.ROLE_TENANT_ADMIN, "/content")).isFalse();
+        assertThat(PermissionMatrixDefaults.isAllowedByDefault(PermissionMatrixDefaults.ROLE_PRODUCT_MANAGER, "/content")).isTrue();
         assertThat(PermissionMatrixDefaults.isAllowedByDefault(PermissionMatrixDefaults.ROLE_EDITOR, "/content")).isTrue();
         assertThat(PermissionMatrixDefaults.isAllowedByDefault(PermissionMatrixDefaults.ROLE_VIEWER, "/content")).isTrue();
+    }
+
+    @Test
+    void shouldAllowTenantAdminGovernanceButDenyProductOperations() {
+        assertThat(PermissionMatrixDefaults.isAllowedByDefault(PermissionMatrixDefaults.ROLE_TENANT_ADMIN, "/users")).isTrue();
+        assertThat(PermissionMatrixDefaults.isAllowedByDefault(PermissionMatrixDefaults.ROLE_TENANT_ADMIN, "/products/new")).isTrue();
+        assertThat(PermissionMatrixDefaults.isAllowedByDefault(PermissionMatrixDefaults.ROLE_TENANT_ADMIN, "/knowledge")).isFalse();
+        assertThat(PermissionMatrixDefaults.isAllowedByDefault(PermissionMatrixDefaults.ROLE_TENANT_ADMIN, "/assets/upload")).isFalse();
+        assertThat(PermissionMatrixDefaults.isAllowedByDefault(PermissionMatrixDefaults.ROLE_TENANT_ADMIN, "/content/*/publish")).isFalse();
     }
 
     @Test

@@ -49,7 +49,7 @@ export const roleBlockedRoutePrefixes: Record<UserRole, string[]> = {
   // ProductAccessResolver — esta restrição de UI é só o caminho feliz; a
   // restrição real é enforçada pelo backend (403 PRODUCT_CONTENT_ACCESS_DENIED).
   super_admin: ["/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge"],
-  tenant_admin: ["/settings/security", "/admin/feedback"],
+  tenant_admin: ["/content", "/pages", "/assets", "/forms", "/analytics", "/knowledge", "/settings/security", "/admin/feedback"],
   product_manager: [
     "/dashboard", "/products", "/products/new", "/products/*/modules", "/users", "/settings/tenant",
     "/settings/permissions", "/settings/roles", "/settings/access-preview", "/audit",

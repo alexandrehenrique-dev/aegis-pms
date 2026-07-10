@@ -15,6 +15,13 @@ type AuditEventDto = AuditEvent & {
   timestamp?: string;
 };
 
+type AuditEventDetailResponseDto = AuditEventDto & {
+  diffJson?: AuditEventDetailDto["diffJson"] | null;
+  traceId?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
+};
+
 function mapAuditEvent(dto: AuditEventDto): AuditEvent {
   const fallbackTarget = [dto.targetType, dto.targetId].filter(Boolean).join(":") || "—";
   return {
@@ -26,6 +33,16 @@ function mapAuditEvent(dto: AuditEventDto): AuditEvent {
     module: dto.module ?? "—",
     time: dto.time ?? (dto.timestamp ? new Date(dto.timestamp).toLocaleTimeString("pt-BR") : "—"),
     risk: dto.risk ?? "baixo",
+  };
+}
+
+function mapAuditEventDetail(dto: AuditEventDetailResponseDto): AuditEventDetailDto {
+  return {
+    ...mapAuditEvent(dto),
+    diffJson: dto.diffJson ?? {},
+    traceId: dto.traceId ?? null,
+    ip: dto.ip ?? null,
+    userAgent: dto.userAgent ?? null,
   };
 }
 
@@ -110,7 +127,8 @@ export const auditService = {
    */
   async getEvent(tenantId: string, eventId: string): Promise<AuditEventDetailDto> {
     if (IS_API_MODE) {
-      return apiClient.get<AuditEventDetailDto>(`/tenants/${tenantId}/audit-events/${eventId}`);
+      const event = await apiClient.get<AuditEventDetailResponseDto>(`/tenants/${tenantId}/audit-events/${eventId}`);
+      return mapAuditEventDetail(event);
     }
     const found = auditStore.find((e) => e.id === eventId);
     if (!found) throw { status: 404, message: `Evento ${eventId} não encontrado.` };

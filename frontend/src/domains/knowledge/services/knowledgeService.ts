@@ -43,6 +43,9 @@ type GraphRelatedApiResponse = {
   edge: { edgeType?: string; weight?: number | string | null };
 };
 
+export type GraphOrphan = { id: string; label: string; type: KGEntityType; status: string; action: string };
+export type KnowledgeInsight = { id: string; text: string; severity: "baixa" | "média" | "alta"; targetPath: string };
+
 function mapEdgeApiResponse(edge: GraphEdgeApiResponse): KGEdge {
   return {
     from: edge.sourceNodeId,
@@ -60,15 +63,29 @@ function mapRelatedApiResponse(row: GraphRelatedApiResponse): RelatedNode {
   };
 }
 
-function isContentBackedNode(node: KGNode): boolean {
-  return !node.refType || node.refType === "CONTENT";
+function orphanActionForType(type: KGEntityType): string {
+  if (type === "Asset") return "Arquivar";
+  if (type === "Formulário") return "Vincular";
+  if (type === "SEO") return "Associar";
+  if (type === "Categoria") return "Mesclar";
+  return "Revisar";
+}
+
+function mapOrphanNode(node: KGNode): GraphOrphan {
+  return {
+    id: node.id,
+    label: node.label,
+    type: node.type,
+    status: node.status || "sem relação",
+    action: orphanActionForType(node.type),
+  };
 }
 
 export const knowledgeService = {
   async listNodes(productId: string): Promise<ListNodesResponse> {
     if (IS_API_MODE) {
       const rows = await apiClient.get<ListNodesResponse>(`/products/${productId}/graph/nodes`);
-      return rows.filter(isContentBackedNode);
+      return rows;
     }
     return productNodes(productId);
   },
@@ -94,6 +111,48 @@ export const knowledgeService = {
     if (IS_API_MODE) return apiClient.post(`/products/${productId}/graph/orphans/resolve`, { ids });
     logApiCall("POST", `/api/v1/products/${productId}/graph/orphans/resolve`, { ids });
   },
+  async listOrphans(productId: string): Promise<GraphOrphan[]> {
+    if (IS_API_MODE) {
+      const rows = await apiClient.get<KGNode[]>(`/products/${productId}/graph/orphans`);
+      return rows.map(mapOrphanNode);
+    }
+    const connected = new Set(productEdges(productId).flatMap((edge) => [edge.from, edge.to]));
+    return productNodes(productId).filter((node) => !connected.has(node.id)).map(mapOrphanNode);
+  },
+  async listInsights(productId: string): Promise<KnowledgeInsight[]> {
+    const [nodes, edges, orphans] = await Promise.all([
+      this.listNodes(productId),
+      this.listEdges(productId),
+      this.listOrphans(productId),
+    ]);
+    const insights: KnowledgeInsight[] = [];
+    if (nodes.length === 0) return insights;
+    if (orphans.length > 0) {
+      insights.push({
+        id: "orphans",
+        text: `${orphans.length} entidade(s) sem relação ativa.`,
+        severity: orphans.length > 4 ? "alta" : "média",
+        targetPath: "/knowledge/orphans",
+      });
+    }
+    if (nodes.length > 1 && edges.length === 0) {
+      insights.push({
+        id: "no-relations",
+        text: "Grafo sem relações entre entidades publicadas.",
+        severity: "alta",
+        targetPath: "/knowledge/graph",
+      });
+    }
+    if (edges.length > 0) {
+      insights.push({
+        id: "relations",
+        text: `Grafo possui ${edges.length} relação(ões) ativa(s).`,
+        severity: "baixa",
+        targetPath: "/knowledge/relationships",
+      });
+    }
+    return insights;
+  },
 
   /** Preview leve para tooltip de referência inline (`kg-ref`) — Sprint 11, Tarefa C.1/C.4. */
   async getNodePreview(productId: string, nodeId: string): Promise<GraphNodePreview | undefined> {
@@ -107,7 +166,7 @@ export const knowledgeService = {
   async listRelated(productId: string, nodeId: string): Promise<RelatedNode[]> {
     if (IS_API_MODE) {
       const rows = await apiClient.get<GraphRelatedApiResponse[]>(`/products/${productId}/graph/nodes/${nodeId}/related`);
-      return rows.map(mapRelatedApiResponse).filter((row) => isContentBackedNode(row.node)).sort((a, b) => b.weight - a.weight);
+      return rows.map(mapRelatedApiResponse).sort((a, b) => b.weight - a.weight);
     }
     return allEdges
       .filter((e) => e.from === nodeId || e.to === nodeId)
@@ -124,7 +183,7 @@ export const knowledgeService = {
   async searchNodes(query: string, productId: string): Promise<KGNode[]> {
     if (IS_API_MODE) {
       const rows = await apiClient.get<KGNode[]>(`/products/${productId}/graph/nodes?q=${encodeURIComponent(query)}`);
-      return rows.filter(isContentBackedNode);
+      return rows;
     }
     const productSlug = productSlugFromId(productId);
     const q = query.toLowerCase();

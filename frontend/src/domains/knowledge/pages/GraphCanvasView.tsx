@@ -1,10 +1,20 @@
-import { useMemo, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { Info, Search, X, AlertTriangle } from "lucide-react";
+import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { AlertTriangle, Info, Search, X, ZoomIn, ZoomOut } from "lucide-react";
 import { Button, EmptyState, PageHeader, Card, SkeletonLines, PartialErrorWidget } from "../../../shared/components/Primitives";
 import { kgColor, KG_H, KG_W, type KGEdge, type KGNode } from "../mocks/knowledge.mocks";
 import { knowledgeService } from "../services/knowledgeService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
+
+const CANVAS_WIDTH = 864;
+const CANVAS_HEIGHT = 570;
+const ZOOM_MIN = 0.1;
+const ZOOM_MAX = 1.8;
+const ZOOM_STEP = 0.1;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
 
 export function GraphCanvasView() {
   const { product } = useCurrentProduct();
@@ -12,7 +22,9 @@ export function GraphCanvasView() {
   const [sel, setSel] = useState<KGNode | null>(null);
   const [tf, setTf] = useState("todos");
   const [q, setQ] = useState("");
+  const [zoom, setZoom] = useState(1);
   const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
+  const canvasViewportRef = useRef<HTMLDivElement>(null);
   const { data: kgNodes, loading: loadingNodes, error: errorNodes } = useAsyncData(() => knowledgeService.listNodes(productId), [productId]);
   const { data: kgEdges, loading: loadingEdges, error: errorEdges } = useAsyncData(() => knowledgeService.listEdges(productId), [productId]);
   const edges = kgEdges ?? [];
@@ -20,8 +32,8 @@ export function GraphCanvasView() {
     const pos = nodePositions[node.id];
     return {
       ...node,
-      x: pos?.x ?? (node.x || 40 + (index % 4) * 190),
-      y: pos?.y ?? (node.y || 40 + Math.floor(index / 4) * 150),
+      x: pos?.x ?? (node.x ?? 40 + (index % 4) * 190),
+      y: pos?.y ?? (node.y ?? 40 + Math.floor(index / 4) * 150),
     };
   }), [kgNodes, nodePositions]);
 
@@ -44,6 +56,7 @@ export function GraphCanvasView() {
   const outgoing = sel ? visibleScopeEdges.filter((e) => e.from === sel.id).map((e) => positionedNodes.find((n) => n.id === e.to)!).filter(Boolean) : [];
 
   const startDrag = (node: KGNode, event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
     const originX = event.clientX;
     const originY = event.clientY;
     const startX = node.x;
@@ -54,10 +67,32 @@ export function GraphCanvasView() {
       setNodePositions((current) => ({
         ...current,
         [node.id]: {
-          x: Math.max(8, Math.min(864 - KG_W - 8, startX + moveEvent.clientX - originX)),
-          y: Math.max(8, Math.min(570 - KG_H - 8, startY + moveEvent.clientY - originY)),
+          x: clamp(startX + (moveEvent.clientX - originX) / zoom, 8, CANVAS_WIDTH - KG_W - 8),
+          y: clamp(startY + (moveEvent.clientY - originY) / zoom, 8, CANVAS_HEIGHT - KG_H - 8),
         },
       }));
+    };
+    const handleUp = () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+  };
+
+  const startCanvasPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    if (event.target instanceof HTMLElement && event.target.closest("[data-kg-node]")) return;
+    const viewport = canvasViewportRef.current;
+    if (!viewport) return;
+    event.preventDefault();
+    const originX = event.clientX;
+    const originY = event.clientY;
+    const startScrollLeft = viewport.scrollLeft;
+    const startScrollTop = viewport.scrollTop;
+    const handleMove = (moveEvent: PointerEvent) => {
+      viewport.scrollLeft = startScrollLeft - (moveEvent.clientX - originX);
+      viewport.scrollTop = startScrollTop - (moveEvent.clientY - originY);
     };
     const handleUp = () => {
       window.removeEventListener("pointermove", handleMove);
@@ -70,6 +105,25 @@ export function GraphCanvasView() {
   return (
     <>
       <PageHeader title="Graph Canvas" desc="Mapa de entidades de negócio e dependências. Clique num nó para ver o impacto." badge="Knowledge Graph">
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-2 py-1 text-sm text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => setZoom((current) => clamp(Number((current - ZOOM_STEP).toFixed(2)), ZOOM_MIN, ZOOM_MAX))}
+            className="rounded-lg p-1 hover:bg-muted"
+            aria-label="Diminuir zoom"
+          >
+            <ZoomOut size={15} />
+          </button>
+          <span className="w-12 text-center text-xs font-medium">{Math.round(zoom * 100)}%</span>
+          <button
+            type="button"
+            onClick={() => setZoom((current) => clamp(Number((current + ZOOM_STEP).toFixed(2)), ZOOM_MIN, ZOOM_MAX))}
+            className="rounded-lg p-1 hover:bg-muted"
+            aria-label="Aumentar zoom"
+          >
+            <ZoomIn size={15} />
+          </button>
+        </div>
         <Button onClick={() => setSel(null)}>Limpar seleção</Button>
       </PageHeader>
       <div className="mb-3 flex flex-wrap gap-2">
@@ -83,9 +137,10 @@ export function GraphCanvasView() {
         ))}
       </div>
       <div className="grid gap-4 xl:grid-cols-[1fr_296px]">
-        <div className="overflow-x-auto rounded-2xl border border-border">
-          <div className="relative" style={{ width: 864, height: 570, backgroundImage: "radial-gradient(var(--border) 1px,transparent 1px)", backgroundSize: "24px 24px" }}>
-            <svg width={864} height={570} className="pointer-events-none absolute inset-0">
+        <div ref={canvasViewportRef} onPointerDown={startCanvasPan} className="cursor-grab overflow-auto rounded-2xl border border-border active:cursor-grabbing">
+          <div style={{ width: CANVAS_WIDTH * zoom, height: CANVAS_HEIGHT * zoom }}>
+          <div className="relative" style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT, transform: `scale(${zoom})`, transformOrigin: "top left", backgroundImage: "radial-gradient(var(--border) 1px,transparent 1px)", backgroundSize: "24px 24px" }}>
+            <svg width={CANVAS_WIDTH} height={CANVAS_HEIGHT} className="pointer-events-none absolute inset-0">
               <defs>
                 <marker id="kga" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><polygon points="0 0,7 3.5,0 7" fill="#a1a1aa" /></marker>
                 <marker id="kgah" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><polygon points="0 0,7 3.5,0 7" fill="var(--primary)" /></marker>
@@ -108,13 +163,14 @@ export function GraphCanvasView() {
               const isSel = sel?.id === n.id;
               const isRel = !!(sel && visibleScopeEdges.some((e) => (e.from === sel.id && e.to === n.id) || (e.to === sel.id && e.from === n.id)));
               return (
-                <button key={n.id} onPointerDown={(event) => startDrag(n, event)} onClick={() => setSel(isSel ? null : n)} style={{ left: n.x, top: n.y, width: KG_W, height: KG_H, borderColor: isSel ? c : isRel ? c + "88" : "transparent", background: `${c}14` }} className={`absolute flex cursor-grab flex-col justify-center rounded-xl border-2 px-2.5 transition hover:border-current hover:shadow-md active:cursor-grabbing ${isSel ? "shadow-[0_0_0_3px_rgba(124,58,237,0.18)]" : ""}`}>
+                <button key={n.id} data-kg-node onPointerDown={(event) => startDrag(n, event)} onClick={() => setSel(isSel ? null : n)} style={{ left: n.x, top: n.y, width: KG_W, height: KG_H, borderColor: isSel ? c : isRel ? c + "88" : "transparent", background: `${c}14` }} className={`absolute flex cursor-grab flex-col justify-center rounded-xl border-2 px-2.5 transition hover:border-current hover:shadow-md active:cursor-grabbing ${isSel ? "shadow-[0_0_0_3px_rgba(124,58,237,0.18)]" : ""}`}>
                   <span style={{ color: c }} className="text-[8px] font-bold uppercase tracking-widest">{n.type}</span>
                   <span className="mt-0.5 w-full truncate text-sm font-semibold leading-tight text-foreground">{n.label}</span>
                   <span className="text-[9px] capitalize text-muted-foreground">{n.status}</span>
                 </button>
               );
             })}
+          </div>
           </div>
         </div>
         {sel ? (

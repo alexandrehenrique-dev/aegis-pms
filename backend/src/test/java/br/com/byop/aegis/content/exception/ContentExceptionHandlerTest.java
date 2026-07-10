@@ -30,7 +30,7 @@ class ContentExceptionHandlerTest {
         assertThat(new InvalidContentReferenceException("node-1"))
                 .hasMessage("Knowledge graph node referenced by kg-ref does not exist: node-1");
         assertThat(new InsufficientContentRoleException())
-                .hasMessage("Only SUPER_ADMIN, TENANT_ADMIN or PRODUCT_MANAGER can publish content");
+                .hasMessage("Only SUPER_ADMIN or PRODUCT_MANAGER can publish content");
         assertThat(new DuplicateContentTitleException("Artigo novo"))
                 .hasMessage("Content title already exists in this product: Artigo novo");
     }

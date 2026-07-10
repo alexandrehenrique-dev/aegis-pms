@@ -10,10 +10,20 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SKIP = new Set(["helpers.mjs", "run-all.mjs"]);
+const PRIORITY = ["tutorial-onboarding.mjs"];
 
 const scripts = readdirSync(__dirname)
   .filter((f) => f.endsWith(".mjs") && !SKIP.has(f))
-  .sort();
+  .sort((a, b) => {
+    const priorityA = PRIORITY.indexOf(a);
+    const priorityB = PRIORITY.indexOf(b);
+    if (priorityA !== -1 || priorityB !== -1) {
+      if (priorityA === -1) return 1;
+      if (priorityB === -1) return -1;
+      return priorityA - priorityB;
+    }
+    return a.localeCompare(b);
+  });
 
 function runOne(script) {
   return new Promise((resolve) => {

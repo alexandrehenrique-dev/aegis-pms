@@ -45,7 +45,7 @@ export function WorkflowBoard() {
     setPending(null);
   };
 
-  const canPublish = ["super_admin", "tenant_admin", "product_manager"].includes(viewAsRole);
+  const canPublish = ["super_admin", "product_manager"].includes(viewAsRole);
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -81,7 +81,7 @@ export function WorkflowBoard() {
           <Card>
             <h3 className="mb-2 font-semibold">Regras do fluxo</h3>
             <div className="space-y-1.5 text-xs">
-              {[["Draft → In Review", "Todos os editores"], ["In Review → Published", "PM ou superior"], ["Published → Archived", "Comentário obrigatório"], ["Archived → Draft", "Restaura como nova versão"]].map(([r, d]) => (
+              {[["Draft → In Review", "Todos os editores"], ["In Review → Published", "Product Manager ou Super Admin"], ["Published → Archived", "Comentário obrigatório"], ["Archived → Draft", "Restaura como nova versão"]].map(([r, d]) => (
                 <div key={r} className="flex justify-between"><span className="font-medium">{r}</span><span className="text-muted-foreground">{d}</span></div>
               ))}
             </div>

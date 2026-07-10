@@ -48,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -374,6 +375,94 @@ class ProductServiceTest {
     }
 
     @Test
+    void shouldSyncProductModulesWhenUpdatingProduct() {
+        Tenant tenant = tenant(UUID.fromString("b9b9b9b9-b9b9-b9b9-b9b9-b9b9b9b9b9b9"), "update-modules");
+        Product product = product(tenant, "loki");
+        UUID productId = product.getId();
+        ProductModule contentModule = enabledProductModule(product, ModuleKey.CONTENT);
+        ProductModule assetsModule = enabledProductModule(product, ModuleKey.ASSETS);
+        ProductModule pagesModule = new ProductModule(product, ModuleKey.PAGES);
+        List<ProductModule> configuredModules = List.of(contentModule, assetsModule, pagesModule);
+        ProductAssignment assignment = new ProductAssignment(product, "super-subject", ProductAssignmentRole.EDITOR);
+        ProductSummary summary = productSummary(tenant.getId(), productId, "loki");
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(moduleRepository.findAllByProductId(productId)).thenReturn(configuredModules);
+        when(assignmentRepository.findByProductIdAndUserSubject(productId, "super-subject"))
+                .thenReturn(Optional.of(assignment));
+        when(productMapper.toSummary(product, 2, List.of("CONTENT", "PAGES"), "EDITOR")).thenReturn(summary);
+        AuthenticatedUser caller = user("super-subject", "ROLE_SUPER_ADMIN");
+        UpdateProductCommand command = new UpdateProductCommand(
+                "Loki",
+                "Library/Books/Music",
+                "Ativo",
+                List.of("Conteúdo", "Páginas")
+        );
+
+        ProductSummary result = productService.updateProduct(caller, productId, command);
+
+        assertThat(result).isEqualTo(summary);
+        assertThat(contentModule.isEnabled()).isTrue();
+        assertThat(pagesModule.isEnabled()).isTrue();
+        assertThat(assetsModule.isEnabled()).isFalse();
+        verify(moduleRepository).save(contentModule);
+        verify(moduleRepository).save(assetsModule);
+        verify(moduleRepository).save(pagesModule);
+        verify(moduleRepository).flush();
+    }
+
+    @Test
+    void shouldCreateMissingRequiredModulesWhenUpdatingProductWithKnowledgeGraph() {
+        Tenant tenant = tenant(UUID.fromString("b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b112"), "update-kg-modules");
+        Product product = product(tenant, "kg-product");
+        UUID productId = product.getId();
+        ProductModule knowledgeGraphModule = enabledProductModule(product, ModuleKey.KNOWLEDGE_GRAPH);
+        ProductSummary summary = productSummary(tenant.getId(), productId, "kg-product");
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(moduleRepository.findAllByProductId(productId)).thenReturn(List.of(knowledgeGraphModule));
+        when(productMapper.toSummary(
+                product,
+                3,
+                List.of(ModuleKey.KNOWLEDGE_GRAPH.name(), ModuleKey.CONTENT.name(), ModuleKey.ASSETS.name()),
+                null))
+                .thenReturn(summary);
+        AuthenticatedUser caller = user("super-subject", "ROLE_SUPER_ADMIN");
+        UpdateProductCommand command =
+                new UpdateProductCommand("KG Product", "Knowledge Base", "Ativo", List.of("Knowledge Graph"));
+
+        ProductSummary result = productService.updateProduct(caller, productId, command);
+
+        assertThat(result).isEqualTo(summary);
+        ArgumentCaptor<ProductModule> moduleCaptor = ArgumentCaptor.forClass(ProductModule.class);
+        verify(moduleRepository, times(3)).save(moduleCaptor.capture());
+        assertThat(moduleCaptor.getAllValues())
+                .extracting(ProductModule::getModuleKey)
+                .containsExactly(ModuleKey.KNOWLEDGE_GRAPH, ModuleKey.CONTENT, ModuleKey.ASSETS);
+        assertThat(moduleCaptor.getAllValues())
+                .extracting(ProductModule::isEnabled)
+                .containsOnly(true);
+        verify(moduleRepository).flush();
+    }
+
+    @Test
+    void shouldRejectInvalidProductModuleWhenUpdatingProduct() {
+        Tenant tenant = tenant(UUID.fromString("b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b113"), "invalid-module-tenant");
+        Product product = product(tenant, "invalid-module-product");
+        UUID productId = product.getId();
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        AuthenticatedUser caller = user("super-subject", "ROLE_SUPER_ADMIN");
+        UpdateProductCommand command =
+                new UpdateProductCommand("Invalid Module Product", "CUSTOM", "ACTIVE", List.of("Modulo inexistente"));
+
+        assertThatThrownBy(() -> productService.updateProduct(caller, productId, command))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Invalid product module: Modulo inexistente");
+
+        verify(moduleRepository, never()).findAllByProductId(productId);
+    }
+
+    @Test
     void shouldUpdateProductForTenantAdminMembershipWithPortugueseArchivedStatus() {
         Tenant tenant = tenant(UUID.fromString("b4b4b4b4-b4b4-b4b4-b4b4-b4b4b4b4b4b4"), "update-tenant");
         Product product = product(tenant, "tenant-product");
@@ -622,6 +711,12 @@ class ProductServiceTest {
         );
         ReflectionTestUtils.setField(product, "id", savedProductId());
         return product;
+    }
+
+    private ProductModule enabledProductModule(Product product, ModuleKey moduleKey) {
+        ProductModule module = new ProductModule(product, moduleKey);
+        module.enable();
+        return module;
     }
 
     private ProductSummary productSummary(UUID tenantId, UUID productId, String key) {

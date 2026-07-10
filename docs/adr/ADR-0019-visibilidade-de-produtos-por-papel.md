@@ -10,7 +10,7 @@ A etapa 07 do backend define que `GET /api/v1/products` retorna "só produtos de
 
 Na prática, o modelo correto é diferente por papel:
 
-- **TENANT_ADMIN**: deve ver todos os produtos do tenant — ele administra o tenant inteiro.
+- **TENANT_ADMIN**: deve ver todos os produtos do tenant para governança, configuração, equipe e módulos. Ele não ganha acesso automático aos domínios de conteúdo do produto; para editar conteúdo, páginas, assets, forms, analytics operacionais ou Knowledge Graph como operador de produto, precisa de `ProductAssignment` explícito naquele produto.
 - **PRODUCT_MANAGER, EDITOR, VIEWER**: devem ver **apenas os produtos para os quais têm um `ProductAssignment`** — são papéis de produto, não de tenant.
 - **SUPER_ADMIN**: vê metadados de todos os produtos (para gerenciar infraestrutura), mas não acessa conteúdo — ver ADR-0018.
 
@@ -43,7 +43,7 @@ A seleção do critério de filtro é determinada no `Service`, nunca passada co
 
 Aplica as mesmas regras de `ProductAccessResolver` (ADR-0018):
 - SUPER_ADMIN: metadados sim, conteúdo não
-- TENANT_ADMIN: acesso total
+- TENANT_ADMIN: acesso administrativo ao tenant/produto; acesso operacional aos domínios de conteúdo só com `ProductAssignment` explícito
 - PRODUCT_MANAGER/EDITOR/VIEWER: exige `ProductAssignment` para este `productId`
 
 ### 3. `GET /api/v1/tenants/{tenantId}/users` — listagem de usuários do tenant
@@ -105,7 +105,7 @@ Regras de UX/autorização:
 | `PRODUCT_MANAGER` | Seleção direta de produto atribuído, agregando produtos de todos os tenants onde tem assignment ativo | Workspace do produto (`/content`, `/pages`, `/assets`, `/forms`, `/analytics`, `/knowledge`, settings de produto/equipe) |
 | `EDITOR` | Seleção direta de produto atribuído | Workspace editorial (`/content`, `/pages`, `/assets`, `/forms`) |
 | `VIEWER` | Seleção direta de produto atribuído | Leitura/consulta (`/content`, `/pages`, `/analytics`) |
-| `TENANT_ADMIN` | Seleção de tenant, depois visão administrativa de produtos/usuários/settings do tenant | Hub administrativo do tenant |
+| `TENANT_ADMIN` | Seleção de tenant, depois visão administrativa de produtos/usuários/settings do tenant | Hub administrativo do tenant; conteúdo do produto só aparece quando houver assignment explícito |
 | `SUPER_ADMIN` | Visão de plataforma/tenants/produtos, com acesso a conteúdo somente quando também houver `ProductAssignment` explícito (ADR-0018) | Hub de plataforma; workspace de produto apenas no contexto de assignment explícito |
 
 Consequências práticas:
