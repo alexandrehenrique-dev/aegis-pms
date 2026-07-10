@@ -46,6 +46,9 @@ function EventForm({ initial, onSave, onCancel, saving }: { initial: CreateEvent
       <Field label="Data e horário" type="datetime-local" value={draft.date} onChange={(v) => patch({ date: v })} />
       <Field label="Local" value={draft.location} onChange={(v) => patch({ location: v })} />
       <MediaField label="Foto do evento" value={draft.image ?? ""} typeFilter="imagem" onChange={(v) => patch({ image: v })} />
+      <p className="text-xs text-muted-foreground">
+        {draft.image ? "Imagem vinculada ao evento. Use Trocar ou Remover para alterar." : "Nenhuma imagem vinculada ao evento."}
+      </p>
       <SelectLike label="Tipo" value={draft.type} options={TYPE_OPTIONS} onChange={(v) => patch({ type: v as PageEvent["type"] })} />
       <SelectLike label="Visibilidade" value={draft.visibility} options={VISIBILITY_OPTIONS} onChange={(v) => patch({ visibility: v as EventVisibility })} />
       <Field label="Descrição" value={draft.description} onChange={(v) => patch({ description: v })} textarea />

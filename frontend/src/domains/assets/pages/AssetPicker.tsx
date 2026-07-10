@@ -47,7 +47,7 @@ export function AssetPicker() {
   const { product } = useCurrentProduct();
   const { viewAsRole } = useViewAsRole();
   const productId = product?.id ?? "";
-  const canEdit = viewAsRole !== "viewer";
+  const canEdit = ["product_manager", "editor"].includes(viewAsRole);
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<AssetPickerFilter>("all");

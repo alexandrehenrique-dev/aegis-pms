@@ -23,7 +23,7 @@ export function PendingNotificationGate() {
     notificationsService.getPendingModal().then((next) => {
       if (
         next
-        && next.type !== "ONBOARDING"
+        && next.type === "ONBOARDING"
         && !tutorialService.isCompleted()
         && !tutorialStartedByGate.current
       ) {
@@ -44,6 +44,7 @@ export function PendingNotificationGate() {
   const handleClose = async () => {
     if (!pending) return;
     await notificationsService.markShown(pending.id);
+    await notificationsService.markRead(pending.id);
     loadNext();
   };
 

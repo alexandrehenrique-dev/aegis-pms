@@ -140,6 +140,7 @@ export const PRODUCT_TYPE_MODULE_DEFAULTS: Partial<Record<ProductTypeKey, Module
     { key: "Library", default: true },
     { key: "Books", default: true },
     { key: "Music", default: true },
+    { key: "Páginas", default: false },
     { key: "Conteúdo", default: true },
     { key: "Assets", default: true },
     { key: "Knowledge Graph", default: true },

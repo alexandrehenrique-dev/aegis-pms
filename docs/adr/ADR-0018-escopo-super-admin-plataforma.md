@@ -28,7 +28,7 @@ Quando um `SUPER_ADMIN` cria um produto (`POST /api/v1/products`), um `ProductAs
 - Rastreabilidade: há um registro explícito de "quem tem acesso a este produto"
 - Simetria com outros papéis: o criador é sempre o primeiro membro do produto
 
-> Esta regra se aplica igualmente quando um TENANT_ADMIN cria um produto no seu tenant — ele também recebe um `ProductAssignment` automático como `product_manager` do produto criado.
+> Esta regra se aplica igualmente quando um TENANT_ADMIN cria um produto no seu tenant: o Tenant Admin governa o tenant e a configuração dos produtos, mas só opera conteúdo do produto quando existir um `ProductAssignment` explícito para aquele produto.
 
 ### O que SUPER_ADMIN pode fazer
 
@@ -59,7 +59,7 @@ Quando um `SUPER_ADMIN` cria um produto (`POST /api/v1/products`), um `ProductAs
 
 ### Atribuição explícita para acesso a produto de cliente
 
-Se o SUPER_ADMIN precisar acessar o conteúdo de um produto de cliente (ex.: suporte técnico), um `TENANT_ADMIN` ou o próprio SUPER_ADMIN (via operação de plataforma) pode criar explicitamente um `ProductAssignment` para o produto em questão. Nesse contexto, o SUPER_ADMIN opera com o papel do `ProductAssignment`, não com o papel `super_admin` — para os domínios de produto, o `ProductAssignment.role` prevalece.
+Se o SUPER_ADMIN ou TENANT_ADMIN precisar acessar o conteúdo de um produto (ex.: suporte técnico ou operação temporária), um administrador autorizado cria explicitamente um `ProductAssignment` para o produto em questão. Nesse contexto, o usuário opera com o papel do `ProductAssignment`, não com o papel administrativo global — para os domínios de conteúdo do produto, o `ProductAssignment.role` prevalece.
 
 ### Resposta HTTP ao SUPER_ADMIN sem atribuição
 
@@ -79,7 +79,8 @@ Em cada domínio de produto gateado (content, pages, assets, forms, analytics, k
 ```
 1. SUPER_ADMIN com ProductAssignment para este productId → usa o papel do ProductAssignment
 2. SUPER_ADMIN sem ProductAssignment → 403 PRODUCT_CONTENT_ACCESS_DENIED
-3. TENANT_ADMIN com TenantMembership no tenant do produto → acesso total (passa)
+3. SUPER_ADMIN ou TENANT_ADMIN com TenantMembership no tenant do produto, mas sem ProductAssignment → acesso a governança/configuração do tenant e produto; acesso a conteúdo do produto é negado
+4. SUPER_ADMIN ou TENANT_ADMIN com ProductAssignment explícito → passa usando o papel do ProductAssignment
 4. PRODUCT_MANAGER/EDITOR/VIEWER com ProductAssignment para este productId → acesso pelo papel
 5. Qualquer outro caso → 404 (nem tenantId conhecido → não revelar existência)
 ```

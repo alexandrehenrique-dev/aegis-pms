@@ -25,12 +25,17 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -40,6 +45,7 @@ public class ProductService {
     private static final String ROLE_TENANT_ADMIN = "ROLE_TENANT_ADMIN";
     private static final Map<String, ProductTypeKey> PRODUCT_TYPES = buildProductTypes();
     private static final Map<String, ProductStatus> PRODUCT_STATUSES = buildProductStatuses();
+    private static final Map<String, ModuleKey> PRODUCT_MODULE_KEYS = buildProductModuleKeys();
 
     private final ProductRepository productRepository;
     private final TenantAccessService tenantAccessService;
@@ -152,8 +158,56 @@ public class ProductService {
         product.rename(command.name());
         product.changeType(parseProductType(command.type()));
         product.changeStatus(parseProductStatus(command.status()));
+        Set<ModuleKey> syncedModuleKeys = syncModules(product, command.modules());
         log.info("updateProduct: produto atualizado id='{}', status='{}'", productId, product.getStatus());
+        if (!syncedModuleKeys.isEmpty()) {
+            return toSummaryWithModules(product, syncedModuleKeys, callerRoleForProduct(caller.subject(), productId));
+        }
         return toSummaryWithModuleCount(product, callerRoleForProduct(caller.subject(), productId));
+    }
+
+    private Set<ModuleKey> syncModules(Product product, List<String> moduleValues) {
+        if (moduleValues == null) {
+            return Set.of();
+        }
+
+        Set<ModuleKey> enabledModuleKeys = expandRequiredModules(moduleValues.stream()
+                .map(ProductService::parseProductModuleKey)
+                .collect(Collectors.toCollection(LinkedHashSet::new)));
+        List<ProductModule> configuredModules = moduleRepository.findAllByProductId(product.getId());
+        Map<ModuleKey, ProductModule> modulesByKey = configuredModules.stream()
+                .collect(Collectors.toMap(ProductModule::getModuleKey, Function.identity()));
+
+        for (ProductModule module : configuredModules) {
+            if (enabledModuleKeys.contains(module.getModuleKey())) {
+                module.enable();
+            } else {
+                module.disable();
+            }
+            moduleRepository.save(module);
+        }
+
+        enabledModuleKeys.stream()
+                .filter(moduleKey -> !modulesByKey.containsKey(moduleKey))
+                .map(moduleKey -> enabledModule(product, moduleKey))
+                .forEach(moduleRepository::save);
+        moduleRepository.flush();
+        return enabledModuleKeys;
+    }
+
+    private static ProductModule enabledModule(Product product, ModuleKey moduleKey) {
+        ProductModule module = new ProductModule(product, moduleKey);
+        module.enable();
+        return module;
+    }
+
+    private static Set<ModuleKey> expandRequiredModules(Set<ModuleKey> moduleKeys) {
+        LinkedHashSet<ModuleKey> expandedModuleKeys = new LinkedHashSet<>(moduleKeys);
+        if (moduleKeys.contains(ModuleKey.KNOWLEDGE_GRAPH)) {
+            expandedModuleKeys.add(ModuleKey.CONTENT);
+            expandedModuleKeys.add(ModuleKey.ASSETS);
+        }
+        return expandedModuleKeys;
     }
 
     /**
@@ -185,6 +239,15 @@ public class ProductService {
         int enabledModuleCount = enabledModules.size();
         String callerRoleName = callerRole == null ? null : callerRole.name();
         return productMapper.toSummary(product, enabledModuleCount, enabledModules, callerRoleName);
+    }
+
+    private ProductSummary toSummaryWithModules(Product product, Set<ModuleKey> enabledModuleKeys,
+                                                ProductAssignmentRole callerRole) {
+        List<String> enabledModules = enabledModuleKeys.stream()
+                .map(ModuleKey::name)
+                .toList();
+        String callerRoleName = callerRole == null ? null : callerRole.name();
+        return productMapper.toSummary(product, enabledModules.size(), enabledModules, callerRoleName);
     }
 
     @Transactional(readOnly = true)
@@ -249,6 +312,14 @@ public class ProductService {
         return productStatus;
     }
 
+    private static ModuleKey parseProductModuleKey(String moduleKeyValue) {
+        ModuleKey moduleKey = PRODUCT_MODULE_KEYS.get(normalizeModuleKey(moduleKeyValue));
+        if (moduleKey == null) {
+            throw new IllegalArgumentException("Invalid product module: " + moduleKeyValue);
+        }
+        return moduleKey;
+    }
+
     private static Map<String, ProductTypeKey> buildProductTypes() {
         Map<String, ProductTypeKey> productTypes = new HashMap<>();
         Arrays.stream(ProductTypeKey.values()).forEach(productType -> {
@@ -271,7 +342,24 @@ public class ProductService {
         return Map.copyOf(productStatuses);
     }
 
+    private static Map<String, ModuleKey> buildProductModuleKeys() {
+        Map<String, ModuleKey> moduleKeys = new HashMap<>();
+        Arrays.stream(ModuleKey.values()).forEach(moduleKey -> moduleKeys.put(normalizeModuleKey(moduleKey.name()), moduleKey));
+        moduleKeys.put(normalizeModuleKey("Páginas"), ModuleKey.PAGES);
+        moduleKeys.put(normalizeModuleKey("Conteúdo"), ModuleKey.CONTENT);
+        moduleKeys.put(normalizeModuleKey("Formulários"), ModuleKey.FORMS);
+        moduleKeys.put(normalizeModuleKey("Grafo de conhecimento"), ModuleKey.KNOWLEDGE_GRAPH);
+        moduleKeys.put(normalizeModuleKey("Knowledge Graph"), ModuleKey.KNOWLEDGE_GRAPH);
+        return Map.copyOf(moduleKeys);
+    }
+
     private static String normalizeProductType(String value) {
         return String.valueOf(value).trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
+    }
+
+    private static String normalizeModuleKey(String value) {
+        String normalizedValue = Normalizer.normalize(String.valueOf(value).trim(), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return normalizedValue.toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
     }
 }

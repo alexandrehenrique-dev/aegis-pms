@@ -22,3 +22,11 @@ export type ContentRow = {
 export type ListContentResponse = ContentRow[];
 export type ListEditEventsResponse = string[];
 export type ListWorkflowItemsResponse = WFItem[];
+
+export type ContentVersionRow = {
+  id: string;
+  versionLabel: string;
+  createdByName: string;
+  createdAt: string;
+  snapshotJson?: string | null;
+};

@@ -60,7 +60,7 @@ export function EditorialDashboard() {
     () => (productId ? contentService.listContent(productId) : Promise.resolve([])),
     [productId],
   );
-  const canEdit = viewAsRole !== "viewer";
+  const canEdit = ["product_manager", "editor"].includes(viewAsRole);
   const [showNewContent, setShowNewContent] = useState(false);
   const rows = contentItems ?? [];
   const drafts = rows.filter((item) => item.status === "Draft").length;

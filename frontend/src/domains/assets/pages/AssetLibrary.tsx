@@ -14,7 +14,7 @@ export function AssetLibrary() {
   const { viewAsRole } = useViewAsRole();
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "";
-  const canEdit = viewAsRole !== "viewer";
+  const canEdit = ["product_manager", "editor"].includes(viewAsRole);
   const [view, setView] = useState<"grid" | "list">("grid");
   const [q, setQ] = useState("");
   const { data: assets, loading, error } = useAsyncData(() => (productId ? assetsService.listAssets(productId) : Promise.resolve([])), [productId]);

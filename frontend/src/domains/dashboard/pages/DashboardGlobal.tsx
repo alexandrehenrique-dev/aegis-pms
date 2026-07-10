@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence } from "motion/react";
 import { Plus } from "lucide-react";
@@ -12,25 +12,51 @@ import { OperationalTimeline } from "../../../shared/components/OperationalTimel
 import { CreateProductModal } from "../../products/components/CreateProductModal";
 import { dashboardService } from "../services/dashboardService";
 import { useAsyncData } from "../../../shared/hooks/useAsyncData";
+import { usersService } from "../../users/services/usersService";
 import type { ProductOption } from "../../../shared/types";
 import type { ProductSummary } from "../../products/contracts/responses";
+import type { UserSummary } from "../../users/contracts/responses";
 
 const PERIODS = ["Últimos 7 dias", "Últimos 30 dias", "Últimos 90 dias"];
+const PRODUCT_WIDE_LABELS = ["Todos", "Todos os produtos"];
+
+function productNamesFrom(user: UserSummary): string[] {
+  return user.products.split(",").map((product) => product.trim()).filter(Boolean);
+}
+
+function matchesProduct(user: UserSummary, productName?: string): boolean {
+  if (!productName) return true;
+  return productNamesFrom(user).some((product) => PRODUCT_WIDE_LABELS.includes(product) || product === productName);
+}
+
+function isProductManager(user: UserSummary): boolean {
+  return user.role === "Product Manager" || user.role === "product_manager" || user.role === "PRODUCT_MANAGER";
+}
 
 export function DashboardGlobal() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
-  const { authUser, effectiveTenant, tenantProducts, selectProduct } = useAuth();
+  const { authUser, effectiveTenant, effectiveProduct, tenantProducts, selectProduct } = useAuth();
   const canCreate = canCreateProduct(viewAsRole);
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const canSeeUsers = ["super_admin", "tenant_admin"].includes(viewAsRole);
   const canSeeFinancial = viewAsRole === "super_admin";
   const { data: summary, loading, error } = useAsyncData(() => dashboardService.getSummary(), []);
+  const { data: tenantUsers } = useAsyncData(
+    () => (canSeeUsers && effectiveTenant?.id ? usersService.listUsers(effectiveTenant.id) : Promise.resolve([])),
+    [canSeeUsers, effectiveTenant?.id],
+  );
   const [period, setPeriod] = useState(PERIODS[1]);
   // Contagem real (não mock) — reflete na hora criação/edição/exclusão de produto
   // feitas em ProductSelectScreen/ProductsList, ao contrário do resto do summary.
   const activeProducts = tenantProducts.filter((p) => p.status === "Ativo").length;
   const archivedProducts = tenantProducts.filter((p) => p.status === "Arquivado").length;
+  const usersInProductScope = useMemo(
+    () => (tenantUsers ?? []).filter((user) => user.status !== "removido" && matchesProduct(user, effectiveProduct?.name)),
+    [effectiveProduct?.name, tenantUsers],
+  );
+  const activeUsers = usersInProductScope.filter((user) => user.status === "ativo").length;
+  const productManagers = usersInProductScope.filter((user) => user.status === "ativo" && isProductManager(user)).length;
 
   // Tarefa C.2 — `/products/new` não corresponde a nenhuma tela de criação
   // real (só existe o modal); antes o usuário ficava preso na tela anterior.
@@ -75,7 +101,13 @@ export function DashboardGlobal() {
               <KPIWidget label="Aprovações em aberto" value={String(summary.openApprovals)} detail={`${summary.criticalApprovals} críticas`} onClick={() => navigate("/content/workflow")} />
               <KPIWidget label="Formulários recebidos" value={String(summary.formsReceived)} detail={`+${summary.formsReceivedToday} hoje`} onClick={() => navigate("/forms/submissions")} />
               <KPIWidget label="Assets recentes" value={String(summary.recentAssets)} detail="Atualizados na semana" onClick={() => navigate("/assets")} />
-              <KPIWidget label="Usuários ativos" value={String(summary.activeUsers)} detail={`${summary.productManagers} Product Managers`} locked={!canSeeUsers} onClick={canSeeUsers ? () => navigate("/users") : undefined} />
+              <KPIWidget
+                label="Usuários ativos"
+                value={String(canSeeUsers ? activeUsers : summary.activeUsers)}
+                detail={canSeeUsers ? `${productManagers} Product Managers no escopo` : `${summary.productManagers} Product Managers`}
+                locked={!canSeeUsers}
+                onClick={canSeeUsers ? () => navigate("/users") : undefined}
+              />
               <KPIWidget label="Conversão" value={summary.conversionRate} detail="Estimativa agregada" error onClick={() => navigate("/analytics")} />
               <KPIWidget label="Financeiro" value="—" detail="" locked={!canSeeFinancial} />
             </div>

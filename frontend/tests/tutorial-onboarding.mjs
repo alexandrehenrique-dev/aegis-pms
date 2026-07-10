@@ -1,7 +1,7 @@
 // Tutorial interativo de onboarding (Sprint 22 —
 // docs/sprints/frontend/22_tutorial_de_onboarding_interativo.md).
-// Cobre: checkbox pré-marcado no modal de boas-vindas, o tour iniciando
-// automaticamente, gate por papel (um Product Manager nunca vê os steps de
+// Cobre: abertura automática do tour a partir da notificação de onboarding,
+// gate por papel (um Product Manager nunca vê os steps de
 // "criar produto"/"gerenciar usuários"/"zona de perigo"), "Pular tutorial"
 // marcando como concluído, e a garantia de "nunca mostrar novamente" após
 // reload. Usa `pm@byop.io` (product_manager) de propósito: nenhum outro
@@ -35,15 +35,9 @@ async function main() {
     await page.getByText("Maestro Beton", { exact: true }).first().click();
     await page.waitForTimeout(1200);
 
-    const checkbox = page.getByRole("checkbox");
-    ok = report("Checkbox 'Fazer um tour pela plataforma' aparece no modal de boas-vindas", await checkbox.isVisible()) && ok;
-    ok = report("Checkbox vem pré-marcado", await checkbox.isChecked()) && ok;
-
-    await page.getByText("Entendi").click();
-    await page.waitForTimeout(600);
-
     let tooltip = page.getByRole("alertdialog");
-    ok = report("Tour inicia automaticamente ~300ms após fechar o modal", (await tooltip.textContent())?.includes("Seja bem-vindo ao Aegis")) && ok;
+    await tooltip.waitFor({ state: "visible", timeout: 3000 });
+    ok = report("Tour inicia automaticamente sem modal intermediario repetitivo", (await tooltip.textContent())?.includes("Seja bem-vindo ao Aegis")) && ok;
 
     // Percorre o tour clicando "Próximo" até o botão virar "Concluir",
     // registrando o título de cada step efetivamente mostrado (alguns são

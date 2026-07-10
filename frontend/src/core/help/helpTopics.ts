@@ -20,12 +20,12 @@ export const PLATFORM_OVERVIEW_TOPICS: HelpOverviewTopic[] = [
   {
     title: "Tenants e Produtos",
     description:
-      "Um tenant é uma organização (ex.: BYOP, um cliente). Dentro de um tenant, cada produto digital tem tipo (Site Institucional, Portal, Knowledge Base, Portfolio, Library/Books/Music, Produto SaaS), módulos habilitados, idioma e uma estratégia de armazenamento de assets (local — padrão — ou bucket S3 externo, escolhida na criação). Super Admin gerencia tenants; Tenant Admin e Product Manager operam produtos dentro do seu tenant.",
+      "Um tenant é uma organização (ex.: BYOP, um cliente). Dentro de um tenant, cada produto digital tem tipo (Site Institucional, Portal, Knowledge Base, Portfolio, Library/Books/Music, Produto SaaS), módulos habilitados, idioma e uma estratégia de armazenamento de assets (local — padrão — ou bucket S3 externo, escolhida na criação). Super Admin gerencia a plataforma; Tenant Admin governa tenant, produtos e equipe; Product Manager opera produtos em que foi atribuído.",
   },
   {
     title: "Papéis e permissões",
     description:
-      "Cinco papéis: Super Admin (acesso total), Tenant Admin (administra tenant e equipe), Product Manager (opera produtos e módulos), Editor (cria e revisa conteúdo) e Viewer (somente leitura). Cada papel vê apenas a navegação e os widgets relevantes ao seu escopo — rotas fora do escopo são bloqueadas, e dashboards escondem ou restringem ações que o papel atual não pode executar. No menu do seu avatar (canto superior direito), \"Simular perfil\" deixa visualizar a plataforma como outro papel sem trocar de conta.",
+      "Cinco papéis: Super Admin (administra plataforma e tenants), Tenant Admin (administra tenant, produtos e equipe), Product Manager (opera produtos e módulos atribuídos), Editor (cria e revisa conteúdo) e Viewer (somente leitura). Papéis administrativos não recebem acesso operacional automático ao conteúdo de todos os produtos; para editar conteúdo, assets, forms, analytics ou Knowledge Graph, o usuário precisa de atribuição naquele produto. No menu do avatar, \"Simular perfil\" deixa visualizar a plataforma como outro papel sem trocar de conta.",
   },
   {
     title: "Dashboards",

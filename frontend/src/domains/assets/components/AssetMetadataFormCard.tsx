@@ -31,7 +31,15 @@ export function AssetMetadataFormCard({ suggestedFileName }: { suggestedFileName
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setFriendlyName((current) => current || friendlyNameFromFile(suggestedFileName));
+    setFriendlyName(friendlyNameFromFile(suggestedFileName));
+    setAltText("");
+    setCaption("");
+    setCredit("");
+    setTags("");
+    setFolder(FOLDERS[0]);
+    setVisibility(VISIBILITY[0]);
+    setSeoUsage(SEO_USAGE[0]);
+    setNotes("");
   }, [suggestedFileName]);
 
   const handleSave = async () => {
@@ -49,7 +57,10 @@ export function AssetMetadataFormCard({ suggestedFileName }: { suggestedFileName
 
   return (
     <Card>
-      <h2 className="mb-3 text-lg font-semibold">Metadados do asset</h2>
+      <h2 className="text-lg font-semibold">Metadados do asset</h2>
+      <p className="mb-3 mt-1 text-xs text-muted-foreground">
+        {suggestedFileName ? `Editando ${suggestedFileName}` : "Selecione um arquivo para editar metadados."}
+      </p>
       <div className="space-y-3">
         <Field label="Nome amigável" value={friendlyName} onChange={setFriendlyName} />
         <Field label="Alt text" value={altText} onChange={setAltText} />

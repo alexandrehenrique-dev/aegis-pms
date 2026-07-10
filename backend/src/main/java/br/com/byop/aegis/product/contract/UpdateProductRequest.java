@@ -13,6 +13,6 @@ public record UpdateProductRequest(
 ) {
 
     public UpdateProductCommand toCommand() {
-        return new UpdateProductCommand(name, type, status);
+        return new UpdateProductCommand(name, type, status, modules);
     }
 }

@@ -55,7 +55,7 @@ export function FormsDashboard() {
   const averageConversion = conversionValues.length === 0
     ? "0%"
     : `${(conversionValues.reduce((total, value) => total + value, 0) / conversionValues.length).toFixed(1)}%`;
-  const canCreate = viewAsRole !== "viewer";
+  const canCreate = ["product_manager", "editor"].includes(viewAsRole);
   return (
     <>
       <PageHeader title="Forms" module="Forms" desc="Central operacional de captura de dados, submissões e qualificação de leads." badge={effectiveProduct?.name}>

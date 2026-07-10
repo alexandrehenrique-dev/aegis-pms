@@ -14,7 +14,7 @@ export function ContentCardMobile({ row, onArchive, onRequestDelete, canDelete }
 }) {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
-  const canEdit = viewAsRole !== "viewer";
+  const canEdit = ["product_manager", "editor"].includes(viewAsRole);
   return (
     <Card>
       <div className="flex justify-between gap-2">

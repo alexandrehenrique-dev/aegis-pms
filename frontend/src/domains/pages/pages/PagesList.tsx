@@ -71,7 +71,7 @@ function NewPageModal({ onClose, onCreate }: { onClose: () => void; onCreate: (r
 export function PagesList() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
-  const canEdit = viewAsRole !== "viewer";
+  const canEdit = ["product_manager", "editor"].includes(viewAsRole);
   const { product } = useCurrentProduct();
   const productSlug = product ? product.id : "p1";
 

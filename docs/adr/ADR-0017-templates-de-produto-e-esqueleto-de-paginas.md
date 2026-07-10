@@ -14,7 +14,7 @@ Ao mesmo tempo, o projeto já tem 6 contratos de produto reais e detalhadamente 
 
 "Template" deixa de ser um campo decorativo e passa a ser uma consequência direta do `type` escolhido na criação do produto: cada tipo (exceto o novo tipo **Custom**) gera automaticamente um **esqueleto de páginas e seções** (estrutura e tipo de bloco, nunca conteúdo de demonstração) e pré-habilita os módulos recomendados daquele tipo.
 
-**Catálogo de esqueleto por tipo** (só os tipos cujo módulo `Páginas` é `default: true` — `core/products/moduleDefaults.ts` — recebem páginas; os demais recebem só os módulos pré-habilitados, sem nenhuma página):
+**Catálogo de esqueleto por tipo** (só os tipos cujo módulo `Páginas` é `default: true` — `core/products/moduleDefaults.ts` — recebem páginas automaticamente; tipos que oferecem `Páginas` como opcional nascem sem scaffold e podem receber páginas depois que o módulo for habilitado):
 
 | Tipo | Referência real | Páginas geradas | Módulos pré-habilitados |
 |---|---|---|---|
@@ -22,7 +22,7 @@ Ao mesmo tempo, o projeto já tem 6 contratos de produto reais e detalhadamente 
 | Portal | Conecta Talentos | Home (`hero`, `text`, `card-list` "Vagas", `card-list` "Blog") | Páginas, Conteúdo, Forms, SEO, Analytics |
 | Portfolio | Alexandre Dev | Home (`hero`, `card-list` "Projetos", `feature-grid` "Skills", `timeline` "Experiência", `download` "Downloads") | Portfolio, Páginas, Conteúdo, Assets, SEO, Analytics |
 | Knowledge Base | WikiDev | nenhuma (módulo `Páginas` não é default neste tipo — produto é predominantemente `content`/`knowledge`) | Conteúdo, Assets, Knowledge Graph, SEO, Analytics |
-| Library/Books/Music | Loki | nenhuma (mesmo motivo) | Library, Books, Music, Conteúdo, Assets, Knowledge Graph, SEO, Analytics |
+| Library/Books/Music | Loki | nenhuma por padrão (`Páginas` é opcional, `default: false`) | Library, Books, Music, Conteúdo, Assets, Knowledge Graph, SEO, Analytics; Páginas opcional |
 | Produto SaaS | — (nenhum contrato real ainda usa páginas institucionais) | nenhuma | Conteúdo, Assets, Forms, Analytics, SEO, Workflow |
 | **Custom** (tipo novo) | — | nenhuma | nenhum — produto nasce 100% em branco, todo módulo desabilitado, Tenant Admin habilita manualmente depois |
 

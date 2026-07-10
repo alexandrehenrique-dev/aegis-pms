@@ -16,7 +16,6 @@ import java.util.Set;
 public class ContentWorkflowPolicy {
 
     private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
-    private static final String ROLE_TENANT_ADMIN = "ROLE_TENANT_ADMIN";
     private static final String ROLE_PRODUCT_MANAGER = "ROLE_PRODUCT_MANAGER";
 
     private static final Map<ContentStatus, Set<ContentStatus>> ALLOWED_TRANSITIONS = Map.of(
@@ -48,7 +47,6 @@ public class ContentWorkflowPolicy {
 
     private boolean canPublish(Set<String> authorities) {
         return authorities.contains(ROLE_SUPER_ADMIN)
-                || authorities.contains(ROLE_TENANT_ADMIN)
                 || authorities.contains(ROLE_PRODUCT_MANAGER);
     }
 }

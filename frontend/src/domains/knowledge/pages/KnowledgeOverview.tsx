@@ -35,11 +35,12 @@ export function KnowledgeOverview() {
   const { data: nodes, loading: loadingNodes } = useAsyncData<ListNodesResponse>(() => (productId ? knowledgeService.listNodes(productId) : Promise.resolve([])), [productId, seedRevision]);
   const { data: edges, loading: loadingEdges } = useAsyncData<ListEdgesResponse>(() => (productId ? knowledgeService.listEdges(productId) : Promise.resolve([])), [productId, seedRevision]);
   const nodeById = useMemo(() => new Map((nodes ?? []).map((node) => [node.id, node])), [nodes]);
-  const relations = (edges ?? []).map((edge) => ({
-    from: nodeById.get(edge.from)?.label ?? edge.from,
-    to: nodeById.get(edge.to)?.label ?? edge.to,
-    verb: edge.verb,
-  }));
+  const relations = (edges ?? []).flatMap((edge) => {
+    const from = nodeById.get(edge.from);
+    const to = nodeById.get(edge.to);
+    if (!from || !to) return [];
+    return [{ from: from.label, to: to.label, verb: edge.verb }];
+  });
   const orphanNodes = (nodes ?? []).filter((node) => !(edges ?? []).some((edge) => edge.from === node.id || edge.to === node.id)).length;
 
   /** Conteúdo publicado gera candidato real no grafo, sem depender de seed demo. */

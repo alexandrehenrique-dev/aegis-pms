@@ -77,7 +77,7 @@ export function AssetDetail() {
   const { viewAsRole } = useViewAsRole();
   const { product } = useCurrentProduct();
   const productId = product?.id ?? "";
-  const canEdit = viewAsRole !== "viewer";
+  const canEdit = ["product_manager", "editor"].includes(viewAsRole);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);

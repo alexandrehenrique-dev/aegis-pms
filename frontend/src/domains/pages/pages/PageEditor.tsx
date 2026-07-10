@@ -27,10 +27,9 @@ const CONTENT_SAVE_DEBOUNCE_MS = 500;
  *
  * Quem chega a esta tela já passou pelo gate de rota (`RequireRole` +
  * `roleBlockedRoutePrefixes["/pages/*\/editor"]`, ver core/permissions/roles.ts)
- * — hoje só `viewer` é bloqueado. Editor, Product Manager, Tenant Admin e
- * Super Admin podem adicionar, editar e remover blocos; não há gating
- * adicional por ação dentro do editor porque nenhum documento (004, V1)
- * distingue essas ações dentro do mesmo papel "Editor de Conteúdo" (07.04).
+ * — hoje `viewer` é bloqueado na edição. Editor e Product Manager operam
+ * blocos; papéis administrativos precisam de uma ProductAssignment operacional
+ * para atuar no conteúdo do produto.
  */
 export function PageEditor() {
   const navigate = useNavigate();

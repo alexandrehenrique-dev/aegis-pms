@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { ConfirmDialog } from "../../../shared/components/ConfirmDialog";
 import { Field, SelectLike } from "../../../shared/components/Primitives";
@@ -6,6 +6,7 @@ import { toast } from "../../../core/notifications/toast";
 import { contentService } from "../services/contentService";
 import { pagesService } from "../../pages/services/pagesService";
 import { useCurrentProduct } from "../../../core/products/useCurrentProduct";
+import { resolveEnabledModules } from "../../../core/products/moduleDefaults";
 import { slugify } from "../../../shared/utils/slugify";
 import type { ApiError } from "../../../shared/services/apiClient";
 
@@ -34,6 +35,12 @@ export function NewContentModal({ onClose }: { onClose: () => void }) {
   const [lang, setLang] = useState(LANGS[0]);
   const [author, setAuthor] = useState("");
   const [creating, setCreating] = useState(false);
+  const canCreatePages = useMemo(() => resolveEnabledModules(product).includes("Páginas"), [product]);
+  const availableTypes = useMemo(() => canCreatePages ? TYPES : TYPES.filter((item) => item !== PAGE_TYPE), [canCreatePages]);
+
+  useEffect(() => {
+    if (!availableTypes.includes(type)) setType(availableTypes[0]);
+  }, [availableTypes, type]);
 
   const handleCreate = async () => {
     setCreating(true);
@@ -77,7 +84,7 @@ export function NewContentModal({ onClose }: { onClose: () => void }) {
     >
       <div className="space-y-3">
         <Field label="Título" value={title} onChange={setTitle} />
-        <SelectLike label="Tipo" value={type} options={TYPES} onChange={setType} />
+        <SelectLike label="Tipo" value={type} options={availableTypes} onChange={setType} />
         <SelectLike label="Idioma" value={lang} options={LANGS} onChange={setLang} />
         {type !== PAGE_TYPE && <Field label="Autor" value={author} onChange={setAuthor} />}
       </div>

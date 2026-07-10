@@ -36,9 +36,9 @@ const CAN_SEE_SETTINGS: UserRole[] = ["super_admin", "tenant_admin", "product_ma
 /** `/settings/tenant` (zona de perigo) também bloqueado para product_manager. */
 const CAN_SEE_DANGER_ZONE: UserRole[] = ["super_admin", "tenant_admin"];
 /** `/content` bloqueado para super_admin (ADR-0018, LGPD — não acessa conteúdo de produtos de clientes). */
-const CAN_SEE_CONTENT: UserRole[] = ["tenant_admin", "product_manager", "editor", "viewer"];
+const CAN_SEE_CONTENT: UserRole[] = ["product_manager", "editor", "viewer"];
 /** Editor de blocos: `/pages/*\/editor` bloqueado para viewer, e a rota `/pages` inteira bloqueada para super_admin. */
-const CAN_EDIT_CONTENT_BLOCKS: UserRole[] = ["tenant_admin", "product_manager", "editor"];
+const CAN_EDIT_CONTENT_BLOCKS: UserRole[] = ["product_manager", "editor"];
 
 /**
  * Textos gerados por IA e calibrados na Sprint 22

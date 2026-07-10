@@ -31,8 +31,8 @@ function FilterGroup({ label, options, value, onChange }: { label: string; optio
 export function ContentDataGrid() {
   const navigate = useNavigate();
   const { viewAsRole } = useViewAsRole();
-  const canEdit = viewAsRole !== "viewer";
-  const canDelete = viewAsRole === "super_admin" || viewAsRole === "tenant_admin";
+  const canEdit = ["product_manager", "editor"].includes(viewAsRole);
+  const canDelete = viewAsRole === "super_admin";
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string[]>([]);
   const [status, setStatus] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export function ContentDataGrid() {
     }
   };
 
-  /** F.1.2 (BUG-SPRINT consolidado) — exclusão definitiva, restrita pelo backend a Draft nunca publicado + SUPER_ADMIN/TENANT_ADMIN; o gate de role aqui é só UX, a regra de verdade é sempre no backend. */
+  /** F.1.2 (BUG-SPRINT consolidado) — exclusão definitiva, restrita pelo backend a Draft nunca publicado + SUPER_ADMIN; o gate de role aqui é só UX, a regra de verdade é sempre no backend. */
   const handleDelete = async () => {
     if (!pendingDelete) return;
     setDeleting(true);
