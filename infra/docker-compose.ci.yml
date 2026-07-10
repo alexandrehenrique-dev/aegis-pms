@@ -1,0 +1,194 @@
+# =============================================================================
+# docker-compose.ci.yml — stack EFÊMERA e DESCARTÁVEL para testes de integração
+# =============================================================================
+# Finalidade única: dar ao CI (GitHub Actions) uma infraestrutura completa,
+# isolada e reproduzível para rodar as coleções Bruno. NADA aqui é produção.
+#
+# Por que este arquivo existe (ver docs/adr/ADR-0021-stack-ci-efemera.md):
+#   - Em produção, PostgreSQL e Keycloak passarão a viver em uma máquina
+#     Oracle Cloud, fora do Genesis Lab. Os testes Bruno JAMAIS podem tocar
+#     banco/Keycloak/realm de produção.
+#   - Toda persistência usa tmpfs (memória). Não há volumes nomeados.
+#     Após `docker compose down -v` nenhum dado sobrevive.
+#   - O realm é importado automaticamente (--import-realm) e os usuários de
+#     teste são criados pelo serviço one-shot keycloak-init-ci.
+#
+# Uso:
+#   docker compose -f infra/docker-compose.ci.yml --env-file infra/.env.ci up -d --build
+#   docker compose -f infra/docker-compose.ci.yml --env-file infra/.env.ci down -v --remove-orphans
+#
+# Composes por ambiente:
+#   dev  -> docker-compose.yml (raiz — nome default para manter `docker compose up`)
+#   ci   -> infra/docker-compose.ci.yml (este arquivo)
+#   prod -> infra/docker-compose.prod.yml (backend apenas; DB/Keycloak externos)
+# =============================================================================
+
+services:
+  aegis-postgres-ci:
+    image: postgres:16
+    container_name: aegis-postgres-ci
+    environment:
+      POSTGRES_DB: ${AEGIS_DB_NAME}
+      POSTGRES_USER: ${AEGIS_DB_USER}
+      POSTGRES_PASSWORD: ${AEGIS_DB_PASSWORD}
+      TZ: ${TZ}
+    # Dados em memória: nascem e morrem com o container. Sem porta no host.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AEGIS_DB_USER} -d ${AEGIS_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - aegis-ci-network
+
+  keycloak-postgres-ci:
+    image: postgres:16
+    container_name: keycloak-postgres-ci
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      TZ: ${TZ}
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KEYCLOAK_DB_USER} -d ${KEYCLOAK_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - aegis-ci-network
+
+  keycloak-ci:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: aegis-keycloak-ci
+    # --import-realm importa infra/keycloak/realm/aegis-realm.json na subida.
+    # O realm JSON canônico NÃO contém usuários — quem cria os usuários de
+    # teste é o serviço keycloak-init-ci, via kcadm.
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL_HOST: keycloak-postgres-ci
+      KC_DB_URL_PORT: 5432
+      KC_DB_URL_DATABASE: ${KEYCLOAK_DB_NAME}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HTTP_ENABLED: "true"
+      # Mesmo issuer de dev (http://localhost:8282/realms/aegis) para que o
+      # environment "local" do Bruno continue funcionando sem alterações.
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_HTTP_PORT}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_SMTP_HOST: mailhog-ci
+      KC_SMTP_PORT: 1025
+      KC_SMTP_FROM: ${SMTP_FROM}
+      KC_SMTP_FROM_DISPLAY_NAME: ${SMTP_FROM_DISPLAY_NAME}
+      KC_SMTP_AUTH: "false"
+      KC_SMTP_STARTTLS: "false"
+      KC_SMTP_SSL: "false"
+    ports:
+      - "${KEYCLOAK_HTTP_PORT}:8080"
+    depends_on:
+      keycloak-postgres-ci:
+        condition: service_healthy
+    volumes:
+      - ./keycloak/themes:/opt/keycloak/themes:ro
+      - ./keycloak/realm:/opt/keycloak/data/import:ro
+    networks:
+      - aegis-ci-network
+
+  # One-shot: aguarda o Keycloak ficar pronto e cria os usuários de teste
+  # (realm role AEGIS_SUPER_ADMIN). Sai com código 0 em caso de sucesso —
+  # o workflow espera esse exit code antes de rodar o Bruno.
+  keycloak-init-ci:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: aegis-keycloak-init-ci
+    restart: "no"
+    entrypoint: ["/bin/bash", "/opt/bootstrap/bootstrap-ci-users.sh"]
+    environment:
+      KC_URL: http://keycloak-ci:8080
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      CI_TEST_USERNAME: ${CI_TEST_USERNAME}
+      CI_TEST_PASSWORD: ${CI_TEST_PASSWORD}
+      CI_TEST_EMAIL: ${CI_TEST_EMAIL}
+      CI_TEST_REALM_ROLE: ${CI_TEST_REALM_ROLE}
+    depends_on:
+      keycloak-ci:
+        condition: service_started
+    volumes:
+      - ./keycloak/scripts/bootstrap-ci-users.sh:/opt/bootstrap/bootstrap-ci-users.sh:ro
+    networks:
+      - aegis-ci-network
+
+  aegis-backend-ci:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: aegis-backend-ci
+    environment:
+      AEGIS_DB_HOST: aegis-postgres-ci
+      AEGIS_DB_PORT: 5432
+      AEGIS_DB_NAME: ${AEGIS_DB_NAME}
+      AEGIS_DB_USER: ${AEGIS_DB_USER}
+      AEGIS_DB_PASSWORD: ${AEGIS_DB_PASSWORD}
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_ISSUER_URI}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak-ci:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      KEYCLOAK_INTERNAL_BASE_URL: http://keycloak-ci:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_WEB_CLIENT_ID: ${KEYCLOAK_WEB_CLIENT_ID}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_ADMIN_REALMS_PATH: /admin/realms/
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      AEGIS_STORAGE_LOCAL_PATH: /app/assets
+      SMTP_HOST: mailhog-ci
+      SMTP_PORT: 1025
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_FROM_DISPLAY_NAME: ${SMTP_FROM_DISPLAY_NAME}
+      SMTP_AUTH: "false"
+      SMTP_USER: ""
+      SMTP_PASSWORD: ""
+      SMTP_STARTTLS: "false"
+      SMTP_SSL: "false"
+      AEGIS_APP_BASE_URL: http://localhost:5173
+      AEGIS_PRODUCT_EMAIL_TEMPLATE_PATH: /app/email-templates/product
+      AEGIS_ASSETS_MULTIPART_MAX_FILE_SIZE: ${AEGIS_ASSETS_MULTIPART_MAX_FILE_SIZE}
+      AEGIS_ASSETS_MULTIPART_MAX_REQUEST_SIZE: ${AEGIS_ASSETS_MULTIPART_MAX_REQUEST_SIZE}
+      TZ: ${TZ}
+    ports:
+      - "${BACKEND_PORT}:8080"
+    # Assets em memória — descartados junto com o container.
+    tmpfs:
+      - /app/assets
+    volumes:
+      - ./keycloak/themes/aegis/email/html:/app/email-templates/product:ro
+    depends_on:
+      aegis-postgres-ci:
+        condition: service_healthy
+      keycloak-ci:
+        condition: service_started
+      mailhog-ci:
+        condition: service_started
+    networks:
+      - aegis-ci-network
+
+  mailhog-ci:
+    image: mailhog/mailhog:latest
+    container_name: aegis-mailhog-ci
+    ports:
+      # Somente a API/UI (8025) é exposta — o Bruno limpa as mensagens por ela.
+      # O SMTP (1025) fica interno à rede da stack.
+      - "${MAILHOG_UI_PORT}:8025"
+    networks:
+      - aegis-ci-network
+
+# Sem volumes nomeados de propósito: `down -v` não pode deixar rastro.
+
+networks:
+  aegis-ci-network:
