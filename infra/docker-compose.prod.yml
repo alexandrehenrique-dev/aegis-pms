@@ -47,7 +47,7 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
-      - aegis_assets_data:/data/assets
+      - /opt/genesis-lab/services/aegis-pms/runtime/assets:/data/assets
       - ./infra/keycloak/themes/aegis/email/html:/app/email-templates/product:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health >/dev/null || wget -qO- http://localhost:8080/actuator/health >/dev/null"]
