@@ -45,7 +45,7 @@ services:
       AEGIS_TELEGRAM_ALERT_BOT_TOKEN: ${AEGIS_TELEGRAM_ALERT_BOT_TOKEN:-}
       AEGIS_TELEGRAM_ALERT_CHAT_ID: ${AEGIS_TELEGRAM_ALERT_CHAT_ID:-}
     ports:
-      - "127.0.0.1:8080:8080"
+      - "${AEGIS_HTTP_BIND_ADDRESS:-192.168.0.77}:${AEGIS_HTTP_PORT:-8080}:8080"
     volumes:
       - /opt/genesis-lab/services/aegis-pms/runtime/assets:/data/assets
       - ./infra/keycloak/themes/aegis/email/html:/app/email-templates/product:ro
