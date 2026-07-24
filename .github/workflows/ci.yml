@@ -255,20 +255,7 @@ jobs:
           ref: ${{ github.ref_name }}
 
       - name: Keycloak realm hardening
-        run: |
-          ENV_FILE="${AEGIS_ENV_FILE:-/opt/genesis-lab/services/aegis-pms/secrets/.env.${AEGIS_DEPLOY_BRANCH}}"
-          test -f "$ENV_FILE" || {
-            echo "Arquivo de ambiente não encontrado: $ENV_FILE"
-            exit 1
-          }
-          docker run --rm \
-            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
-            --volume "$ENV_FILE:/run/secrets/aegis.env:ro" \
-            --workdir /workspace \
-            --entrypoint /bin/bash \
-            "$KEYCLOAK_CLI_IMAGE" \
-            infra/keycloak/scripts/harden-realm-prod.sh \
-            --env-file /run/secrets/aegis.env
+        run: ./scripts/run-keycloak-hardening.sh
 
       - name: Build, deploy and validate
         run: ./scripts/deploy-aegis.sh

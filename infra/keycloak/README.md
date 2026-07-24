@@ -25,7 +25,9 @@ O arquivo não é executado como shell script. Somente as chaves de Keycloak,
 SMTP e a opção de Direct Access Grants declaradas pelo script são carregadas.
 No workflow do Genesis Lab, o script roda dentro de um container efêmero da
 imagem oficial do Keycloak, que fornece o `kcadm`; o host não precisa instalar
-o CLI.
+o CLI. O wrapper `scripts/run-keycloak-hardening.sh` adiciona um override DNS
+ao container quando `KEYCLOAK_RESOLVE_IP` existe no arquivo operacional,
+preservando o hostname público usado por SNI e TLS.
 
 Para mudar por ambiente, ajuste o realm importado antes de recriar o container local, ou aplique os mesmos campos via `kcadm.sh update realms/aegis -s nomeDoCampo=valorEmSegundos`.
 

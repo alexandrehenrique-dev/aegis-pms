@@ -577,3 +577,9 @@ como shell. O realm foi alinhado para `aegis-pms`, e URL, credenciais
 administrativas e SMTP deixaram de ser duplicados no GitHub. O `kcadm` é
 fornecido por um container efêmero da imagem oficial do Keycloak, eliminando a
 dependência de instalação do CLI no runner.
+
+O teste operacional confirmou que o proxy público aceitava autenticação, mas
+bloqueava a operação administrativa com `403`; o mesmo hardening passou ao
+resolver `auth.buildyourownpath.io` para `10.200.0.1` pela WireGuard. A rota foi
+centralizada em `KEYCLOAK_RESOLVE_IP`, aplicada somente ao container via
+`--add-host`, sem trocar a URL HTTPS nem comprometer SNI/TLS.

@@ -169,6 +169,7 @@ As variáveis não sensíveis obrigatórias são:
 ```dotenv
 SPRING_PROFILES_ACTIVE=prod
 KEYCLOAK_URL=https://auth.buildyourownpath.io
+KEYCLOAK_RESOLVE_IP=10.200.0.1
 AEGIS_APP_BASE_URL=https://aegis.byop.dev
 AEGIS_APP_CORS_ALLOWED_ORIGINS=https://aegis.byop.dev
 ```
@@ -182,6 +183,12 @@ arquivo como shell script. O `kcadm` é executado em um container efêmero da
 imagem oficial `quay.io/keycloak/keycloak:26.0`; não é necessário instalar o
 CLI do Keycloak no Genesis Lab. O repositório e o arquivo operacional são
 montados somente para leitura, e o container é removido ao terminar.
+
+`KEYCLOAK_RESOLVE_IP` é opcional. No Genesis Lab ele direciona somente o
+container de hardening para o IP WireGuard `10.200.0.1` por meio de
+`docker --add-host`. A URL continua usando `auth.buildyourownpath.io`, portanto
+hostname, SNI e validação do certificado TLS são preservados. Não substitua
+`KEYCLOAK_URL` por uma URL contendo o IP.
 
 Múltiplas origens usam lista separada por vírgula:
 

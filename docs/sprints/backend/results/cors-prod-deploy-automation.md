@@ -160,6 +160,12 @@ real. O workflow executa o hardening em um container efêmero da imagem oficial
 do Keycloak, com repositório e arquivo operacional montados somente para
 leitura, evitando depender de `kcadm` instalado no runner.
 
+O diagnóstico seguinte distinguiu autorização de conectividade: o mesmo
+usuário concluiu o hardening ao resolver o hostname público para o IP WireGuard
+`10.200.0.1`. O wrapper oficial agora lê `KEYCLOAK_RESOLVE_IP` do arquivo
+operacional, valida o IPv4 e adiciona `--add-host` apenas ao container. A
+`KEYCLOAK_URL` continua pública para preservar hostname, SNI e certificado TLS.
+
 ### Docker, Compose e scripts
 
 ```text
