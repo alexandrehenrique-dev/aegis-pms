@@ -18,6 +18,7 @@ permissions:
 
 env:
   IMAGE_NAME: aegis-pms
+  BRUNO_CLI_VERSION: "4.0.0"
 
 jobs:
   frontend-check:
@@ -111,6 +112,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node for Bruno
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify Bruno runtime
+        run: |
+          node -e "if (!globalThis.crypto?.subtle) throw new Error('Web Crypto API unavailable')"
+          npx --yes @usebruno/cli@${BRUNO_CLI_VERSION} --version
+
       # Pré-limpeza de infra: remove qualquer resíduo da stack de CI deixado
       # por um run anterior abortado (runner self-hosted).
       - name: Pre-clean CI stack (resíduos de runs anteriores)
@@ -129,10 +140,25 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve CI endpoints
+        run: |
+          BACKEND_ADDRESS=$(${{ env.COMPOSE_CI }} port aegis-backend-ci 8080)
+          BACKEND_PORT=${BACKEND_ADDRESS##*:}
+          MAILHOG_ADDRESS=$(${{ env.COMPOSE_CI }} port mailhog-ci 8025)
+          MAILHOG_PORT=${MAILHOG_ADDRESS##*:}
+          KEYCLOAK_ISSUER=$(grep '^KEYCLOAK_ISSUER_URI=' infra/.env.ci | cut -d= -f2-)
+          if [ -z "$BACKEND_PORT" ] || [ -z "$MAILHOG_PORT" ] || [ -z "$KEYCLOAK_ISSUER" ]; then
+            echo "Não foi possível resolver os endpoints efêmeros da stack de CI."
+            exit 1
+          fi
+          echo "BRUNO_CI_BASE_URL=http://127.0.0.1:${BACKEND_PORT}" >> "$GITHUB_ENV"
+          echo "BRUNO_CI_MAILHOG_BASE_URL=http://127.0.0.1:${MAILHOG_PORT}" >> "$GITHUB_ENV"
+          echo "BRUNO_CI_KEYCLOAK_ISSUER=${KEYCLOAK_ISSUER}" >> "$GITHUB_ENV"
+
       - name: Wait for backend health
         run: |
           for i in $(seq 1 60); do
-            if curl -fsS http://localhost:8080/actuator/health; then
+            if curl -fsS "${BRUNO_CI_BASE_URL}/actuator/health"; then
               exit 0
             fi
             sleep 5
@@ -153,7 +179,14 @@ jobs:
       # (na stack efêmera isso vira no-op, mas mantém o comportamento atual)
       - name: Pre-test teardown (limpar resíduos anteriores)
         working-directory: bruno
-        run: npx @usebruno/cli run 99-teardown --env local -r --sandbox developer --env-var username="$BRUNO_CI_USERNAME" --env-var password="$BRUNO_CI_PASSWORD"
+        run: >-
+          npx --yes @usebruno/cli@${BRUNO_CLI_VERSION} run 99-teardown
+          --env local -r --sandbox developer
+          --env-var baseUrl="$BRUNO_CI_BASE_URL"
+          --env-var keycloakIssuer="$BRUNO_CI_KEYCLOAK_ISSUER"
+          --env-var mailhogBaseUrl="$BRUNO_CI_MAILHOG_BASE_URL"
+          --env-var username="$BRUNO_CI_USERNAME"
+          --env-var password="$BRUNO_CI_PASSWORD"
         continue-on-error: true # não bloquear se já está limpo
 
       # SUITE PRINCIPAL: --sandbox developer é obrigatório para que o teardown
@@ -162,13 +195,27 @@ jobs:
       # teardown roda sem erro aparente mas não apaga nada (G.1).
       - name: Run Bruno collection
         working-directory: bruno
-        run: npx @usebruno/cli run --env local --sandbox developer --env-var username="$BRUNO_CI_USERNAME" --env-var password="$BRUNO_CI_PASSWORD"
+        run: >-
+          npx --yes @usebruno/cli@${BRUNO_CLI_VERSION} run
+          --env local --sandbox developer
+          --env-var baseUrl="$BRUNO_CI_BASE_URL"
+          --env-var keycloakIssuer="$BRUNO_CI_KEYCLOAK_ISSUER"
+          --env-var mailhogBaseUrl="$BRUNO_CI_MAILHOG_BASE_URL"
+          --env-var username="$BRUNO_CI_USERNAME"
+          --env-var password="$BRUNO_CI_PASSWORD"
 
       # PÓS-LIMPEZA: garantir limpeza mesmo que a suite falhe no meio
       - name: Post-test teardown (garantir limpeza após suite)
         if: always()
         working-directory: bruno
-        run: npx @usebruno/cli run 99-teardown --env local -r --sandbox developer --env-var username="$BRUNO_CI_USERNAME" --env-var password="$BRUNO_CI_PASSWORD"
+        run: >-
+          npx --yes @usebruno/cli@${BRUNO_CLI_VERSION} run 99-teardown
+          --env local -r --sandbox developer
+          --env-var baseUrl="$BRUNO_CI_BASE_URL"
+          --env-var keycloakIssuer="$BRUNO_CI_KEYCLOAK_ISSUER"
+          --env-var mailhogBaseUrl="$BRUNO_CI_MAILHOG_BASE_URL"
+          --env-var username="$BRUNO_CI_USERNAME"
+          --env-var password="$BRUNO_CI_PASSWORD"
 
       # Destrói a stack efêmera SEMPRE (sucesso ou falha), incluindo volumes
       # anônimos (-v). Depois confirma que não ficou container nem volume.

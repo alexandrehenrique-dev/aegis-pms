@@ -78,8 +78,8 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_HTTP_ENABLED: "true"
-      # Mesmo issuer de dev (http://localhost:8282/realms/aegis) para que o
-      # environment "local" do Bruno continue funcionando sem alterações.
+      # Issuer dedicado da CI para não disputar a porta 8282 do ambiente local.
+      # O workflow injeta este issuer no Bruno sem alterar os environments.
       KC_HOSTNAME: http://localhost:${KEYCLOAK_HTTP_PORT}
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_STRICT_HTTPS: "false"
@@ -91,7 +91,7 @@ services:
       KC_SMTP_STARTTLS: "false"
       KC_SMTP_SSL: "false"
     ports:
-      - "${KEYCLOAK_HTTP_PORT}:8080"
+      - "127.0.0.1:${KEYCLOAK_HTTP_PORT}:8080"
     depends_on:
       keycloak-postgres-ci:
         condition: service_healthy
@@ -162,7 +162,9 @@ services:
       AEGIS_ASSETS_MULTIPART_MAX_REQUEST_SIZE: ${AEGIS_ASSETS_MULTIPART_MAX_REQUEST_SIZE}
       TZ: ${TZ}
     ports:
-      - "${BACKEND_PORT}:8080"
+      # Porta efêmera em loopback: evita colisão com o Aegis implantado na
+      # porta 8080 do Genesis Lab. O workflow descobre e injeta a URL no Bruno.
+      - "127.0.0.1::8080"
     # Assets em memória — descartados junto com o container.
     tmpfs:
       - /app/assets
@@ -182,9 +184,11 @@ services:
     image: mailhog/mailhog:latest
     container_name: aegis-mailhog-ci
     ports:
-      # Somente a API/UI (8025) é exposta — o Bruno limpa as mensagens por ela.
-      # O SMTP (1025) fica interno à rede da stack.
-      - "${MAILHOG_UI_PORT}:8025"
+      # Somente a API/UI é publicada em 127.0.0.1, com porta efêmera escolhida
+      # pelo Docker. O workflow descobre a porta com `docker compose port` e a
+      # injeta no Bruno; assim a CI não disputa a 8025 com o MailHog local.
+      # O SMTP (1025) permanece interno à rede da stack.
+      - "127.0.0.1::8025"
     networks:
       - aegis-ci-network
 

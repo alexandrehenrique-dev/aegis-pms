@@ -115,6 +115,8 @@ Pré-requisitos do usuário do serviço:
 - Java é preparado pelo workflow e o Maven é baixado pelo wrapper binário
   versionado em `backend/mvnw`; não é necessário instalar Maven nem `unzip`
   globalmente no runner;
+- Node 22 é preparado separadamente nos jobs de frontend e Bruno; o Node global
+  do servidor não é usado por essas etapas;
 - leitura do arquivo
   `/opt/genesis-lab/services/aegis-pms/secrets/.env.develop`;
 - acesso aos diretórios bind-mounted de runtime;

@@ -21,8 +21,29 @@ Pre-requisito: executar antes "Convidar usuario existente no segundo tenant" (se
 
 script:post-response {
   const targetEmail = bru.getVar('authActionInviteEmail');
-  const items = res.body.items || res.body.Items || [];
+  const mailhogBaseUrl = bru.getEnvVar('mailhogBaseUrl');
+  let payload = parseResponseBody(res.body);
+  let items = payload.items || payload.Items || [];
   const tokenPattern = /\/invite\?token=([0-9a-fA-F-]{36})/;
+
+  function parseResponseBody(value) {
+    const raw = res.getDataBuffer();
+    if (raw) {
+      try {
+        return JSON.parse(raw.toString('utf8'));
+      } catch (error) {
+        // Mantem compatibilidade com runtimes que ja entregam o JSON desserializado.
+      }
+    }
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch (error) {
+        return {};
+      }
+    }
+    return value && typeof value === 'object' ? value : {};
+  }
 
   function decodeQuotedPrintable(value) {
     return value
@@ -32,18 +53,33 @@ script:post-response {
 
   function recipientMatches(message) {
     const to = message.To || message.to || [];
-    if (Array.isArray(to)) {
-      return to.some((recipient) => {
+    const envelopeMatches = Array.isArray(to)
+      && to.some((recipient) => {
         const mailbox = recipient.Mailbox || recipient.mailbox || '';
         const domain = recipient.Domain || recipient.domain || '';
         const address = domain ? mailbox + '@' + domain : mailbox;
         return address === targetEmail;
       });
-    }
-    return false;
+    const headers = message.Content && message.Content.Headers
+      ? message.Content.Headers.To || message.Content.Headers.to || []
+      : [];
+    const headerMatches = Array.isArray(headers)
+      && headers.some((recipient) => String(recipient).includes(targetEmail));
+    return envelopeMatches || headerMatches;
   }
 
-  const message = items.find((item) => recipientMatches(item));
+  async function refreshMessages() {
+    const response = await fetch(mailhogBaseUrl + '/api/v2/messages?limit=50');
+    return response.ok ? response.json() : {};
+  }
+
+  let message = items.find((item) => recipientMatches(item));
+  for (let attempt = 0; !message && attempt < 30; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    payload = await refreshMessages();
+    items = payload.items || payload.Items || [];
+    message = items.find((item) => recipientMatches(item));
+  }
   const rawBody = message && message.Content ? String(message.Content.Body || '') : '';
   const body = decodeQuotedPrintable(rawBody);
   const match = body.match(tokenPattern);

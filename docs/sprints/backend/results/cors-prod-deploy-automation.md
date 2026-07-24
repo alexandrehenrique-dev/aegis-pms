@@ -135,6 +135,20 @@ inválido tentava descobrir a configuração OpenID em
 `JwtDecoder` e simular `BadJwtException`, comprovando a resposta 401 sem exigir
 Keycloak ativo.
 
+Após o backend passar, o job Bruno expôs dois problemas específicos do runner:
+o CLI era iniciado pelo Node 18.19.1 global, sem a Web Crypto API esperada pelo
+Bruno 4.0.0, e o MailHog efêmero tentava publicar a porta 8025 já usada no
+Genesis Lab. O job passou a configurar Node 22, validar `crypto.subtle` e fixar
+o Bruno CLI 4.0.0. Backend e API do MailHog de CI agora usam portas efêmeras
+limitadas a `127.0.0.1`, e o Keycloak de CI usa a porta dedicada 18282. O
+workflow descobre os endpoints e injeta `baseUrl`, `mailhogBaseUrl` e
+`keycloakIssuer` na collection, sem alterar o SMTP interno entre containers.
+As capturas de tokens de convite e reset agora fazem polling limitado pela
+mensagem do destinatário esperado, pois o envio assíncrono podia fazer a
+primeira consulta ao MailHog retornar `items: []`. A execução completa
+equivalente ao runner terminou com 337/337 requisições e 650/650 testes
+aprovados.
+
 ### Docker, Compose e scripts
 
 ```text

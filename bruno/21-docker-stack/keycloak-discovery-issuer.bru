@@ -21,6 +21,6 @@ tests {
   });
 
   test("issuer externo preservado", function() {
-    expect(res.body.issuer).to.equal("http://localhost:8282/realms/aegis");
+    expect(res.body.issuer).to.equal(bru.getEnvVar("keycloakIssuer"));
   });
 }

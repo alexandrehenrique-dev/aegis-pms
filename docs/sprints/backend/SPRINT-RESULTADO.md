@@ -553,3 +553,18 @@ usava o modo `only-script`, que no host sem `unzip` substituiu o ZIP por
 `tar.gz` sem substituir o checksum e falhou antes do Maven iniciar. O wrapper
 foi migrado para o modo `bin`, com o JAR oficial versionado e validado por
 checksum, eliminando dependências globais de Maven e `unzip`.
+
+**Correção do job Bruno no runner:** o job passou a configurar Node 22
+explicitamente, validar a disponibilidade de `crypto.subtle` e fixar o Bruno
+CLI 4.0.0, porque jobs distintos não herdam o Node preparado no job frontend.
+Backend e MailHog da stack efêmera deixaram de disputar as portas 8080 e 8025
+do host: são publicados em portas aleatórias limitadas a `127.0.0.1`. O
+Keycloak de CI usa a porta dedicada 18282. Os endpoints são descobertos e
+injetados na collection como `baseUrl`, `mailhogBaseUrl` e `keycloakIssuer`; o
+SMTP permanece exclusivamente interno à rede da stack.
+
+As capturas de convite e redefinição de senha também passaram a aguardar, por
+polling limitado, a entrega assíncrona da mensagem ao destinatário esperado no
+MailHog. Isso elimina a condição de corrida em que a API retornava `items: []`
+imediatamente após a criação do convite. Validação local equivalente ao runner:
+337/337 requisições e 650/650 testes Bruno aprovados com Node 22 e CLI 4.0.0.
