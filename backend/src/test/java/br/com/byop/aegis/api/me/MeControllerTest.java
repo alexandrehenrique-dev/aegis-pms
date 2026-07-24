@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.BadJwtException;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -43,6 +45,9 @@ class MeControllerTest {
     @MockitoBean
     private ProductUserAccessService productUserAccessService;
 
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
+
     @Test
     void shouldReturnUnauthorizedWhenTokenIsMissing() throws Exception {
         mockMvc.perform(get("/api/v1/me"))
@@ -51,6 +56,9 @@ class MeControllerTest {
 
     @Test
     void shouldReturnUnauthorizedWhenTokenIsInvalid() throws Exception {
+        when(jwtDecoder.decode("invalid-token"))
+                .thenThrow(new BadJwtException("Invalid token"));
+
         mockMvc.perform(get("/api/v1/me")
                         .header("Authorization", "Bearer invalid-token"))
                 .andExpect(status().isUnauthorized());

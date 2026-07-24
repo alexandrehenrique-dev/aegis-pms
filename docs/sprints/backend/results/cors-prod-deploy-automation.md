@@ -128,6 +128,13 @@ A correção foi reproduzida em um container Linux `eclipse-temurin:25-jdk` sem
 seguida, `./mvnw -B clean verify` concluiu com 1681 testes, zero falhas/erros,
 JaCoCo aprovado e `BUILD SUCCESS`.
 
+Na primeira execução completa no runner, o Maven iniciou corretamente e revelou
+uma dependência externa oculta em `MeControllerTest`: o cenário de token
+inválido tentava descobrir a configuração OpenID em
+`http://localhost:8282/realms/aegis`. O teste web passou a substituir o
+`JwtDecoder` e simular `BadJwtException`, comprovando a resposta 401 sem exigir
+Keycloak ativo.
+
 ### Docker, Compose e scripts
 
 ```text
