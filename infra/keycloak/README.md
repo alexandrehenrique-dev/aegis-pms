@@ -14,6 +14,19 @@ Produção deve usar valores mais restritos. O script `scripts/harden-realm-prod
 - SSO Session Max: 8 horas (`28800`)
 - Access Token Lifespan: 5 minutos (`300`)
 
+No Genesis Lab, execute com o arquivo operacional externo:
+
+```bash
+bash infra/keycloak/scripts/harden-realm-prod.sh \
+  --env-file /opt/genesis-lab/services/aegis-pms/secrets/.env.develop
+```
+
+O arquivo não é executado como shell script. Somente as chaves de Keycloak,
+SMTP e a opção de Direct Access Grants declaradas pelo script são carregadas.
+No workflow do Genesis Lab, o script roda dentro de um container efêmero da
+imagem oficial do Keycloak, que fornece o `kcadm`; o host não precisa instalar
+o CLI.
+
 Para mudar por ambiente, ajuste o realm importado antes de recriar o container local, ou aplique os mesmos campos via `kcadm.sh update realms/aegis -s nomeDoCampo=valorEmSegundos`.
 
 ## Keycloak efêmero de CI

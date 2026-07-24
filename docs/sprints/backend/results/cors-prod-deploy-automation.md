@@ -150,12 +150,15 @@ equivalente ao runner terminou com 337/337 requisições e 650/650 testes
 aprovados.
 
 No primeiro deploy automatizado, o hardening foi interrompido antes do `kcadm`
-porque `KEYCLOAK_URL` estava referenciada como Secret ausente. A URL não é
-credencial: o workflow agora a obtém da Repository Variable `KEYCLOAK_URL`,
-esperando `https://auth.buildyourownpath.io` sem `/realms/aegis-pms`. O realm
-padrão foi corrigido para `aegis-pms`, e os exemplos de ambiente foram
-alinhados com o endpoint público real. Secrets administrativos e SMTP não
-foram movidos nem expostos.
+porque `KEYCLOAK_URL` estava referenciada no GitHub, mas o valor existia apenas
+no `.env.develop`. A correção definitiva fez o workflow resolver o mesmo
+`AEGIS_ENV_FILE` do deploy e fornecê-lo ao hardening com `--env-file`. O script
+carrega apenas uma lista permitida de chaves, sem `source`, sem executar o
+arquivo e sem imprimir segredos. O realm padrão foi corrigido para
+`aegis-pms`, e os exemplos de ambiente foram alinhados com o endpoint público
+real. O workflow executa o hardening em um container efêmero da imagem oficial
+do Keycloak, com repositório e arquivo operacional montados somente para
+leitura, evitando depender de `kcadm` instalado no runner.
 
 ### Docker, Compose e scripts
 

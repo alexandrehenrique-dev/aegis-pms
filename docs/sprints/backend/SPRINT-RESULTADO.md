@@ -570,8 +570,10 @@ imediatamente após a criação do convite. Validação local equivalente ao run
 337/337 requisições e 650/650 testes Bruno aprovados com Node 22 e CLI 4.0.0.
 
 **Correção do hardening no deploy:** a URL-base pública do Keycloak passou a
-ser lida da Repository Variable `KEYCLOAK_URL`, com valor operacional
-`https://auth.buildyourownpath.io` e sem o caminho do realm. O realm padrão do
-workflow foi alinhado para `aegis-pms`. A URL também foi incluída nos exemplos
-de ambiente para suportar a execução manual, enquanto credenciais
-administrativas e SMTP permanecem exclusivamente em Secrets.
+ser lida do arquivo operacional externo, com valor
+`https://auth.buildyourownpath.io` e sem o caminho do realm. O script recebeu
+suporte a `--env-file` com lista permitida de chaves e sem executar o arquivo
+como shell. O realm foi alinhado para `aegis-pms`, e URL, credenciais
+administrativas e SMTP deixaram de ser duplicados no GitHub. O `kcadm` é
+fornecido por um container efêmero da imagem oficial do Keycloak, eliminando a
+dependência de instalação do CLI no runner.

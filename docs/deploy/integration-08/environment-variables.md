@@ -54,17 +54,9 @@ Este canal e somente para feedback interno do Aegis (`POST /feedback`), nao para
 - `AEGIS_TELEGRAM_ALERT_BOT_TOKEN`
 - `AEGIS_TELEGRAM_ALERT_CHAT_ID`
 
-## GitHub Actions Variables
+## GitHub Actions
 
-- `KEYCLOAK_URL` — URL-base pública, sem o caminho `/realms/...`.
-
-## GitHub Actions Secrets
-
-- `KEYCLOAK_ADMIN`
-- `KEYCLOAK_ADMIN_PASSWORD`
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_FROM`
-- `SMTP_FROM_DISPLAY_NAME`
-- `SMTP_USER`
-- `SMTP_PASSWORD`
+O deploy self-hosted lê as configurações de Keycloak e SMTP do arquivo externo
+indicado por `AEGIS_ENV_FILE`. O workflow não duplica esses valores em
+Repository Variables ou Secrets. O script de hardening recebe o caminho por
+`--env-file`, carrega apenas as chaves permitidas e não executa o arquivo.

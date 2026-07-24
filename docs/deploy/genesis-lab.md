@@ -162,6 +162,7 @@ O arquivo atual é:
 Ele não é versionado, não é copiado para artifacts e nunca deve ser exibido
 integralmente em logs. A variável opcional de repositório `AEGIS_ENV_FILE` pode
 sobrescrever o caminho; quando ausente, o script deriva o caminho da branch.
+Tanto o hardening do Keycloak quanto o deploy usam esse caminho canônico.
 
 As variáveis não sensíveis obrigatórias são:
 
@@ -173,12 +174,14 @@ AEGIS_APP_CORS_ALLOWED_ORIGINS=https://aegis.byop.dev
 ```
 
 `KEYCLOAK_URL` é a URL-base pública usada pelo `kcadm` no hardening do realm.
-Ela não inclui `/realms/aegis-pms`. No GitHub, cadastre o mesmo valor como
-Repository Variable `KEYCLOAK_URL`; o workflow não lê o `.env.develop` antes
-desse passo. `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD` e as credenciais SMTP
-continuam exclusivamente em GitHub Actions Secrets. O workflow usa
-`KEYCLOAK_REALM=aegis-pms` por padrão; essa configuração também pode ser
-sobrescrita por uma Repository Variable de mesmo nome.
+Ela não inclui `/realms/aegis-pms`. O workflow fornece o `AEGIS_ENV_FILE` ao
+script de hardening por `--env-file`; não é necessário duplicar URL,
+credenciais administrativas ou SMTP em GitHub Actions Variables/Secrets. O
+carregamento aceita apenas uma lista explícita de chaves e não executa o
+arquivo como shell script. O `kcadm` é executado em um container efêmero da
+imagem oficial `quay.io/keycloak/keycloak:26.0`; não é necessário instalar o
+CLI do Keycloak no Genesis Lab. O repositório e o arquivo operacional são
+montados somente para leitura, e o container é removido ao terminar.
 
 Múltiplas origens usam lista separada por vírgula:
 

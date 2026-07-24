@@ -19,6 +19,7 @@ permissions:
 env:
   IMAGE_NAME: aegis-pms
   BRUNO_CLI_VERSION: "4.0.0"
+  KEYCLOAK_CLI_IMAGE: quay.io/keycloak/keycloak:26.0
 
 jobs:
   frontend-check:
@@ -254,21 +255,20 @@ jobs:
           ref: ${{ github.ref_name }}
 
       - name: Keycloak realm hardening
-        env:
-          KEYCLOAK_URL: ${{ vars.KEYCLOAK_URL }}
-          KEYCLOAK_REALM: ${{ vars.KEYCLOAK_REALM || 'aegis-pms' }}
-          KEYCLOAK_WEB_CLIENT_ID: aegis-web
-          KEYCLOAK_ADMIN: ${{ secrets.KEYCLOAK_ADMIN }}
-          KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_FROM: ${{ secrets.SMTP_FROM }}
-          SMTP_FROM_DISPLAY_NAME: ${{ secrets.SMTP_FROM_DISPLAY_NAME }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          SMTP_STARTTLS: "true"
-          SMTP_SSL: "false"
-        run: bash infra/keycloak/scripts/harden-realm-prod.sh
+        run: |
+          ENV_FILE="${AEGIS_ENV_FILE:-/opt/genesis-lab/services/aegis-pms/secrets/.env.${AEGIS_DEPLOY_BRANCH}}"
+          test -f "$ENV_FILE" || {
+            echo "Arquivo de ambiente não encontrado: $ENV_FILE"
+            exit 1
+          }
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --volume "$ENV_FILE:/run/secrets/aegis.env:ro" \
+            --workdir /workspace \
+            --entrypoint /bin/bash \
+            "$KEYCLOAK_CLI_IMAGE" \
+            infra/keycloak/scripts/harden-realm-prod.sh \
+            --env-file /run/secrets/aegis.env
 
       - name: Build, deploy and validate
         run: ./scripts/deploy-aegis.sh

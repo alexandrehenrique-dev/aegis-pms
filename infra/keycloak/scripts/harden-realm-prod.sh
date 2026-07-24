@@ -2,7 +2,11 @@
 #
 # Aplica hardening de producao no realm Keycloak do Aegis.
 # Uso:
-#   KEYCLOAK_URL=https://auth.byop.dev \
+#   bash infra/keycloak/scripts/harden-realm-prod.sh \
+#     --env-file /opt/genesis-lab/services/aegis-pms/secrets/.env.develop
+#
+# Ou com variaveis ja exportadas:
+#   KEYCLOAK_URL=https://auth.buildyourownpath.io \
 #   KEYCLOAK_ADMIN=admin \
 #   KEYCLOAK_ADMIN_PASSWORD=... \
 #   SMTP_HOST=smtp.example.com \
@@ -13,9 +17,48 @@
 
 set -euo pipefail
 
-REALM="${KEYCLOAK_REALM:-aegis}"
-WEB_CLIENT_ID="${KEYCLOAK_WEB_CLIENT_ID:-aegis-web}"
-KCADM="${KCADM:-/opt/keycloak/bin/kcadm.sh}"
+ENV_FILE=""
+
+usage() {
+  echo "Uso: $0 [--env-file CAMINHO]" >&2
+}
+
+read_env_value() {
+  local name="$1"
+  local line
+  local value
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      "$name="*)
+        value="${line#*=}"
+        value="${value#"${value%%[![:space:]]*}"}"
+        value="${value%"${value##*[![:space:]]}"}"
+        if [[ "$value" == \"*\" && "$value" == *\" ]] ||
+           [[ "$value" == \'*\' && "$value" == *\' ]]; then
+          value="${value:1:${#value}-2}"
+        fi
+        printf '%s\n' "$value"
+        return
+        ;;
+    esac
+  done < "$ENV_FILE"
+}
+
+load_env_value() {
+  local name="$1"
+  local value
+
+  if [ -n "${!name:-}" ]; then
+    return
+  fi
+
+  value="$(read_env_value "$name")"
+  if [ -n "$value" ]; then
+    printf -v "$name" '%s' "$value"
+    export "$name"
+  fi
+}
 
 require_env() {
   local name="$1"
@@ -25,9 +68,56 @@ require_env() {
   fi
 }
 
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --env-file)
+      [ $# -ge 2 ] || {
+        usage
+        exit 1
+      }
+      ENV_FILE="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Erro: argumento desconhecido: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [ -n "$ENV_FILE" ]; then
+  [ -f "$ENV_FILE" ] || {
+    echo "Erro: arquivo de ambiente nao encontrado: $ENV_FILE" >&2
+    exit 1
+  }
+
+  for name in \
+    KEYCLOAK_URL KEYCLOAK_REALM KEYCLOAK_WEB_CLIENT_ID \
+    KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD \
+    SMTP_HOST SMTP_PORT SMTP_FROM SMTP_FROM_DISPLAY_NAME SMTP_REPLY_TO \
+    SMTP_AUTH SMTP_USER SMTP_PASSWORD SMTP_STARTTLS SMTP_SSL \
+    DISABLE_AEGIS_WEB_DIRECT_GRANTS; do
+    load_env_value "$name"
+  done
+fi
+
+REALM="${KEYCLOAK_REALM:-aegis-pms}"
+WEB_CLIENT_ID="${KEYCLOAK_WEB_CLIENT_ID:-aegis-web}"
+KCADM="${KCADM:-/opt/keycloak/bin/kcadm.sh}"
+
 for name in KEYCLOAK_URL KEYCLOAK_ADMIN KEYCLOAK_ADMIN_PASSWORD SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASSWORD; do
   require_env "$name"
 done
+
+[ -x "$KCADM" ] || {
+  echo "Erro: kcadm nao encontrado ou sem permissao de execucao: $KCADM" >&2
+  exit 1
+}
 
 echo "==> Autenticando no Keycloak em $KEYCLOAK_URL..."
 "$KCADM" config credentials \
