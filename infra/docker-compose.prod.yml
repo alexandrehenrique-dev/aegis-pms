@@ -6,6 +6,10 @@ services:
     image: aegis-pms:${IMAGE_TAG:-develop}
     container_name: aegis-pms-prod
     restart: unless-stopped
+
+    extra_hosts:
+      - "auth.buildyourownpath.io:10.200.0.1"
+
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
 
