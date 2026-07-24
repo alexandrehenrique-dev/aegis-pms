@@ -10,6 +10,7 @@
 #
 # Uso:
 #   ./scripts/gitflow-finish-sprint.sh sprint/09-servicos-fluxo-super-admin
+#   ./scripts/gitflow-finish-sprint.sh develop  # exceção explícita: trabalho direto em develop
 #
 # Requisitos: já deve existir um remote chamado "origin" e a branch
 # informada já deve ter sido enviada ao remoto (git push -u origin <branch>).
@@ -19,6 +20,7 @@ set -euo pipefail
 if [ $# -ne 1 ]; then
   echo "Uso: $0 <nome-da-branch>" >&2
   echo "Exemplo: $0 sprint/09-servicos-fluxo-super-admin" >&2
+  echo "Exceção autorizada: $0 develop" >&2
   exit 1
 fi
 
@@ -26,14 +28,31 @@ BRANCH="$1"
 REMOTE="origin"
 BASE_BRANCH="develop"
 
+if [ -n "$(git status --porcelain)" ]; then
+  echo "Erro: há alterações locais não commitadas. Finalização abortada." >&2
+  exit 1
+fi
+
 if ! git rev-parse --verify "$BRANCH" >/dev/null 2>&1; then
   echo "Erro: branch local '$BRANCH' não encontrada." >&2
   exit 1
 fi
 
+if [ "$BRANCH" = "$BASE_BRANCH" ]; then
+  echo "==> Finalização direta excepcional em ${BASE_BRANCH}..."
+  git checkout "$BASE_BRANCH"
+  git pull --ff-only "$REMOTE" "$BASE_BRANCH"
+
+  echo "==> Enviando ${BASE_BRANCH} para ${REMOTE}..."
+  git push "$REMOTE" "$BASE_BRANCH"
+
+  echo "==> Concluído. ${BASE_BRANCH} foi enviada sem merge ou exclusão de branch."
+  exit 0
+fi
+
 echo "==> Atualizando ${BASE_BRANCH}..."
 git checkout "$BASE_BRANCH"
-git pull "$REMOTE" "$BASE_BRANCH"
+git pull --ff-only "$REMOTE" "$BASE_BRANCH"
 
 echo "==> Fazendo merge --no-ff de ${BRANCH} em ${BASE_BRANCH}..."
 git merge --no-ff "$BRANCH" -m "merge: finaliza ${BRANCH} em ${BASE_BRANCH}"

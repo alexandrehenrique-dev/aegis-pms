@@ -1,6 +1,7 @@
 package br.com.byop.aegis.security;
 
-import org.springframework.beans.factory.annotation.Value;
+import br.com.byop.aegis.shared.config.AegisAppProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,12 +20,13 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@EnableConfigurationProperties(AegisAppProperties.class)
 public class SecurityConfig {
 
-    private final List<String> corsAllowedOrigins;
+    private final AegisAppProperties appProperties;
 
-    public SecurityConfig(@Value("${aegis.app.cors-allowed-origins:http://localhost:5173}") List<String> corsAllowedOrigins) {
-        this.corsAllowedOrigins = List.copyOf(corsAllowedOrigins);
+    public SecurityConfig(AegisAppProperties appProperties) {
+        this.appProperties = appProperties;
     }
 
     /**
@@ -45,7 +47,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration configuration = new CorsConfiguration();
-                    configuration.setAllowedOrigins(corsAllowedOrigins);
+                    configuration.setAllowedOrigins(appProperties.corsAllowedOrigins());
                     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                     configuration.setAllowedHeaders(List.of("*"));
                     configuration.setAllowCredentials(true);

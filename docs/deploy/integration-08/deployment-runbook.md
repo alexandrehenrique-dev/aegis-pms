@@ -36,31 +36,21 @@ sudo systemctl reload caddy
 
 ## 3. Build e Deploy Manual Inicial
 
-Enquanto a implantacao real ainda nao for acionada pelo GitHub Actions:
-
-```bash
-docker build -t aegis-pms:latest -f backend/Dockerfile .
-docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod up -d
-```
+O ambiente já está implantado. O procedimento vigente é
+[`../genesis-lab.md`](../genesis-lab.md), executado por
+`scripts/deploy-aegis.sh`.
 
 ## 4. Deploy via GitHub Actions
 
-1. Garantir que os checks em `develop` passaram.
-2. Promover para `main` somente por decisao humana.
-3. O job `deploy` roda apenas em push para `main`.
-4. O deploy recria o container `aegis-backend` em `/opt/aegis`.
-5. O health check publico deve passar antes da conclusao do job.
+1. Garantir que os checks da branch configurada passaram.
+2. Manter `AEGIS_DEPLOY_BRANCH=develop` enquanto este for o ambiente implantado.
+3. O workflow observa `develop` e `release`, mas só implanta a branch igual à variável.
+4. O script constrói a tag derivada da branch e recria `aegis-backend`.
+5. Healthcheck, IDs de imagem, preflight e login inválido devem passar.
 
 ## 5. Rollback
 
-1. Identificar a imagem anterior disponivel no host.
-2. Ajustar `IMAGE_TAG` em `/opt/aegis/infra/.env.prod`.
-3. Recriar o container:
-
-```bash
-docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod up -d --force-recreate aegis-backend
-```
-
-4. Validar `https://aegis.byop.dev/actuator/health`.
+O script preserva a imagem anterior e tenta rollback automático. O procedimento
+manual atualizado está em [`../genesis-lab.md`](../genesis-lab.md#rollback-e-contingência).
 
 Migrations Flyway aplicadas nao devem ser revertidas por troca simples de imagem. Mudancas destrutivas exigem plano de rollback de dados antes do deploy.

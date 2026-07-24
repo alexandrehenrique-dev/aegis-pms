@@ -4,6 +4,10 @@
 .DS_Store
 *.iml
 *.log
+**/.env
+**/.env.*
+**/secrets/
+**/*.secret
 data/
 backend/target/
 frontend/node_modules/

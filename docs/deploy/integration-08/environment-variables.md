@@ -4,7 +4,8 @@ O arquivo real de producao deve ficar em `/opt/aegis/infra/.env.prod` no servido
 
 ## Imagem
 
-- `IMAGE_TAG`: tag Docker a subir. Padrao: `latest`.
+- `AEGIS_DEPLOY_BRANCH`: branch canônica implantada. Atual: `develop`; futuro: `release`.
+- `IMAGE_TAG`: tag Docker opcional; o script oficial deriva da branch por padrão.
 
 ## Banco Aegis
 
@@ -27,7 +28,9 @@ O arquivo real de producao deve ficar em `/opt/aegis/infra/.env.prod` no servido
 
 ## Aplicacao
 
+- `SPRING_PROFILES_ACTIVE`: profile Spring, padrão de produção `prod`.
 - `AEGIS_APP_BASE_URL`: URL publica do painel, padrao `https://aegis.byop.dev`.
+- `AEGIS_APP_CORS_ALLOWED_ORIGINS`: origens explícitas separadas por vírgula.
 - `AEGIS_ASSETS_MULTIPART_MAX_FILE_SIZE`: limite multipart por arquivo, padrao `260MB`.
 - `AEGIS_ASSETS_MULTIPART_MAX_REQUEST_SIZE`: limite multipart por request, padrao `260MB`.
 

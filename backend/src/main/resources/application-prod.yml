@@ -16,8 +16,7 @@ springdoc:
 aegis:
   app:
     base-url: ${AEGIS_APP_BASE_URL:https://aegis.byop.dev}
-    cors-allowed-origins:
-      - "https://aegis.byop.dev"
+    cors-allowed-origins: ${AEGIS_APP_CORS_ALLOWED_ORIGINS:https://aegis.byop.dev}
   seed:
     demo-user-initial-credential: ""
 

@@ -68,3 +68,7 @@ Não use `docker compose down -v` em ambientes com dados que precisam ser preser
 ## Preparacao de Producao
 
 A Sprint de Integracao 08 preparou os artefatos iniciais de producao e CI/CD em [integration-08](integration-08/README.md). Essa pasta separa o que ja foi implementado no repositorio do que ainda precisa ser executado no servidor `genesis-lab` e na maquina Oracle antes do primeiro deploy real.
+
+O runbook operacional vigente do ambiente já implantado está em
+[genesis-lab.md](genesis-lab.md). Ele substitui os comandos manuais iniciais da
+Sprint de Integração 08 quando houver divergência.

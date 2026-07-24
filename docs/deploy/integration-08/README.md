@@ -15,10 +15,13 @@ Arquivos desta pasta:
 - [deployment-runbook.md](deployment-runbook.md): ordem recomendada de implantacao.
 - [validation-plan.md](validation-plan.md): plano de validacao de build, API, SPA, auth, banco, migrations e health checks.
 
+O estado operacional atual e a automação posterior a esta sprint estão
+documentados no runbook canônico [`../genesis-lab.md`](../genesis-lab.md).
+
 Decisoes preservadas:
 
 - SPA React/Vite servida pelo Spring Boot na mesma origem.
-- Sem CORS em producao para deploy normal; CORS fica parametrizado apenas como protecao operacional.
+- Same-origin continua sendo o fluxo normal; CORS fica explícito, tipado e validado para o host público.
 - PostgreSQL do Aegis e PostgreSQL do Keycloak permanecem dedicados e persistentes.
 - Keycloak continua externo ao container de aplicacao em producao.
 - `docker-compose.yml` local permanece intocado.

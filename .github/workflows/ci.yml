@@ -1,14 +1,20 @@
 name: CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - develop
+      - release
       - main
   pull_request:
     branches:
       - develop
+      - release
       - main
+
+permissions:
+  contents: read
 
 env:
   IMAGE_NAME: aegis-pms
@@ -164,29 +170,18 @@ jobs:
     name: Deploy - genesis-lab
     runs-on: [self-hosted, genesis-lab]
     needs: bruno-tests
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == (vars.AEGIS_DEPLOY_BRANCH || 'develop')
+    concurrency:
+      group: aegis-genesis-lab-deploy
+      cancel-in-progress: false
+    env:
+      AEGIS_DEPLOY_BRANCH: ${{ vars.AEGIS_DEPLOY_BRANCH || 'develop' }}
+      AEGIS_ENV_FILE: ${{ vars.AEGIS_ENV_FILE }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Build production image
-        run: |
-          docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} -f backend/Dockerfile .
-          docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.IMAGE_NAME }}:latest
-
-      - name: Deploy container
-        run: |
-          cd /opt/aegis
-          docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod up -d --force-recreate aegis-backend
-
-      - name: Health check
-        run: |
-          for i in $(seq 1 15); do
-            if curl -fsS https://aegis.byop.dev/actuator/health; then
-              exit 0
-            fi
-            sleep 5
-          done
-          exit 1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
 
       - name: Keycloak realm hardening
         env:
@@ -204,3 +199,6 @@ jobs:
           SMTP_STARTTLS: "true"
           SMTP_SSL: "false"
         run: bash infra/keycloak/scripts/harden-realm-prod.sh
+
+      - name: Build, deploy and validate
+        run: ./scripts/deploy-aegis.sh

@@ -41,7 +41,7 @@ export function setRefreshHandler(handler: RefreshHandler) {
 
 /** Exportado (Sprint 23) para montar links diretos fora do `apiClient` — ex.: `href` de download de anexo, que abre em nova aba em vez de passar por `request()`. */
 export function resolveBaseUrl(): string {
-  return import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+  return import.meta.env.VITE_API_BASE_URL || "/api/v1";
 }
 
 async function request<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {

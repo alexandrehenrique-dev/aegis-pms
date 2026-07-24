@@ -6,7 +6,21 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
 COPY frontend ./
+
+ARG VITE_API_MODE=api
+ARG VITE_API_BASE_URL=/api/v1
+ARG VITE_KEYCLOAK_URL=https://auth.buildyourownpath.io
+ARG VITE_KEYCLOAK_REALM=aegis-pms
+ARG VITE_KEYCLOAK_CLIENT_ID=aegis-web
+
+ENV VITE_API_MODE=${VITE_API_MODE}
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_KEYCLOAK_URL=${VITE_KEYCLOAK_URL}
+ENV VITE_KEYCLOAK_REALM=${VITE_KEYCLOAK_REALM}
+ENV VITE_KEYCLOAK_CLIENT_ID=${VITE_KEYCLOAK_CLIENT_ID}
+
 RUN npm run build
+RUN ! grep -R --fixed-strings "http://localhost:8080/api/v1" dist
 
 FROM maven:3.9-eclipse-temurin-25 AS backend-build
 

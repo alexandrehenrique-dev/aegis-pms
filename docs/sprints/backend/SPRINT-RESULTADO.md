@@ -506,3 +506,36 @@
 **Cobertura e testes:** `mvn clean verify` fechou com `BUILD SUCCESS`, **1504 testes**, 0 falhas, 0 erros, 0 ignorados, JaCoCo aprovado (`All coverage checks have been met`) e Spring Modulith aprovado pela suíte completa. Testes focados de feedback, submissão, Telegram, settings, OpenAPI, auditoria, módulos e grafo também passaram antes do verify completo.
 
 **Pendências conscientes:** validar manualmente recebimento real no Telegram global do Aegis com `AEGIS_TELEGRAM_ALERT_ENABLED=true`, token e chat reais; validar manualmente submission externa com canal Telegram real; validar OAuth2 PKCE na UI do Swagger com Keycloak local no navegador. Evidências completas: `results/sprint-30.md`.
+
+## Correção operacional — CORS de produção e deploy automatizado (concluída em 2026-07-24)
+
+**Classes criadas/alteradas:** criados `shared.config.AegisAppProperties`,
+`shared.config.AegisApplicationConfig` e a `NamedInterface` `shared.config`;
+`SecurityConfig` passou a consumir propriedades tipadas e imutáveis em vez de
+`@Value` sobre lista YAML. `SecurityConfigTest` cobre origem permitida, origem
+negada e preflight; `AegisAppPropertiesTest` cobre YAML de `prod`, default local,
+variável de ambiente separada por vírgula, imutabilidade e rejeição de wildcard.
+
+**Endpoints confirmados:** nenhum endpoint novo. Foram validados
+`GET /actuator/health`, `OPTIONS /api/v1/auth/login` e
+`POST /api/v1/auth/login` com credenciais propositalmente inválidas.
+
+**Decisões de implementação registradas pelo GPT:** lista de origens usa
+`@ConfigurationProperties`; apenas origens HTTP(S) explícitas sem wildcard são
+válidas; `allowCredentials(true)` e múltiplas origens foram preservados;
+`AEGIS_DEPLOY_BRANCH` é a variável canônica (`develop` hoje, `release` no
+futuro), e `IMAGE_TAG` deriva dela. O Dockerfile fixa o modo API e as URLs
+públicas do build Vite. O deploy oficial usa `scripts/deploy-aegis.sh`, compara
+IDs de imagem, valida health/CORS/login inválido e executa rollback automático.
+O workflow observa `develop`/`release`, mas só implanta a branch configurada.
+
+**Retrofits pendentes:** revogar no Keycloak as sessões atuais de
+`aegis@buildyourownpath.io` após o teste manual de login real; tratar em
+manutenção dedicada as três vulnerabilidades transitivas reportadas por
+`npm audit`; preparar `.env.release` somente antes da promoção real.
+
+**Cobertura de testes:** `mvn clean verify` com `BUILD SUCCESS`, 1681 testes,
+zero falhas/erros e JaCoCo 100%; Modulith aprovado. Frontend typecheck, lint e
+build API aprovados. Docker build sem cache aprovado para
+`aegis-pms:develop`; Compose, scripts, workflow YAML e diff validados. Evidências
+detalhadas: `results/cors-prod-deploy-automation.md`.
