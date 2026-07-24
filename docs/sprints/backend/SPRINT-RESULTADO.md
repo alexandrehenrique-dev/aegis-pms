@@ -581,5 +581,17 @@ dependência de instalação do CLI no runner.
 O teste operacional confirmou que o proxy público aceitava autenticação, mas
 bloqueava a operação administrativa com `403`; o mesmo hardening passou ao
 resolver `auth.buildyourownpath.io` para `10.200.0.1` pela WireGuard. A rota foi
-centralizada em `KEYCLOAK_RESOLVE_IP`, aplicada somente ao container via
-`--add-host`, sem trocar a URL HTTPS nem comprometer SNI/TLS.
+centralizada em `KEYCLOAK_RESOLVE_IP`, aplicada ao container efêmero de
+hardening e ao `aegis-backend` via `--add-host`, sem trocar a URL HTTPS nem
+comprometer SNI/TLS. Isso cobre também as chamadas administrativas de convite
+feitas pelo backend.
+
+O deploy chegou a construir e ativar a nova imagem, confirmou container
+saudável e healthcheck público, mas fez rollback por um falso negativo no
+preflight: o parser separava o valor do header em todos os caracteres `:` e
+comparava `https` com a origem completa. A leitura agora preserva o `https://`
+e compara integralmente `access-control-allow-origin`.
+
+Durante a mesma validação, o caminho relativo do volume de templates de e-mail
+foi corrigido de `infra/infra/keycloak/...` para `infra/keycloak/...`, mantendo
+o mount somente leitura usado pelo envio de convites.

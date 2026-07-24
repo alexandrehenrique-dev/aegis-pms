@@ -184,11 +184,15 @@ imagem oficial `quay.io/keycloak/keycloak:26.0`; não é necessário instalar o
 CLI do Keycloak no Genesis Lab. O repositório e o arquivo operacional são
 montados somente para leitura, e o container é removido ao terminar.
 
-`KEYCLOAK_RESOLVE_IP` é opcional. No Genesis Lab ele direciona somente o
-container de hardening para o IP WireGuard `10.200.0.1` por meio de
-`docker --add-host`. A URL continua usando `auth.buildyourownpath.io`, portanto
-hostname, SNI e validação do certificado TLS são preservados. Não substitua
-`KEYCLOAK_URL` por uma URL contendo o IP.
+`KEYCLOAK_RESOLVE_IP` direciona tanto o container efêmero de hardening quanto
+o container `aegis-backend` para o Keycloak pelo IP WireGuard `10.200.0.1`.
+No backend, isso é necessário para as chamadas administrativas de convite,
+que usam `KEYCLOAK_INTERNAL_BASE_URL`. A URL continua usando
+`auth.buildyourownpath.io`, portanto hostname, SNI e validação do certificado
+TLS são preservados. Não substitua `KEYCLOAK_URL`,
+`KEYCLOAK_INTERNAL_BASE_URL` ou o issuer por uma URL contendo o IP. O Compose
+de produção interrompe a validação com uma mensagem clara quando a variável
+não está definida.
 
 Múltiplas origens usam lista separada por vírgula:
 
@@ -279,6 +283,10 @@ O script:
 
 O script nunca usa `git reset --hard`, nunca carrega o arquivo de secrets como
 shell script e nunca imprime seu conteúdo.
+
+O preflight compara o valor completo de `access-control-allow-origin`. O parser
+separa o nome do header apenas no primeiro `:`, preservando o `https://` da
+origem esperada.
 
 ## Diagnóstico
 

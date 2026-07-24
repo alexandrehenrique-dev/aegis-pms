@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
 
     extra_hosts:
-      - "auth.buildyourownpath.io:10.200.0.1"
+      - "auth.buildyourownpath.io:${KEYCLOAK_RESOLVE_IP:?KEYCLOAK_RESOLVE_IP deve apontar para o Keycloak pela WireGuard}"
 
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
@@ -53,7 +53,7 @@ services:
       - "${AEGIS_HTTP_BIND_ADDRESS:-192.168.0.77}:${AEGIS_HTTP_PORT:-8080}:8080"
     volumes:
       - /opt/genesis-lab/services/aegis-pms/runtime/assets:/data/assets
-      - ./infra/keycloak/themes/aegis/email/html:/app/email-templates/product:ro
+      - ./keycloak/themes/aegis/email/html:/app/email-templates/product:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health >/dev/null || wget -qO- http://localhost:8080/actuator/health >/dev/null"]
       interval: 30s

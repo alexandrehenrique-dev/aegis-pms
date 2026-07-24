@@ -266,8 +266,14 @@ case "$PREFLIGHT_STATUS" in
 esac
 
 tr -d '\r' < "$PREFLIGHT_HEADERS" \
-  | awk -F ': *' -v expected="$CORS_TEST_ORIGIN" '
-      tolower($1) == "access-control-allow-origin" && $2 == expected { found = 1 }
+  | awk -v expected="$CORS_TEST_ORIGIN" '
+      {
+        name = $0
+        sub(/:.*/, "", name)
+        value = $0
+        sub(/^[^:]*:[[:space:]]*/, "", value)
+      }
+      tolower(name) == "access-control-allow-origin" && value == expected { found = 1 }
       END { exit(found ? 0 : 1) }
     ' \
   || fail "preflight não devolveu access-control-allow-origin igual à origem configurada."

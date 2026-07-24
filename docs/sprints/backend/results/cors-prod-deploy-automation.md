@@ -166,6 +166,24 @@ usuário concluiu o hardening ao resolver o hostname público para o IP WireGuar
 operacional, valida o IPv4 e adiciona `--add-host` apenas ao container. A
 `KEYCLOAK_URL` continua pública para preservar hostname, SNI e certificado TLS.
 
+Uma falha posterior de convite confirmou que o backend também precisa dessa
+rota: o `KeycloakAdminClient` usa `KEYCLOAK_INTERNAL_BASE_URL` para obter o
+token administrativo e acessar `/admin/realms/...`. O Compose de produção
+passou a aplicar o mesmo `KEYCLOAK_RESOLVE_IP` ao `aegis-backend`, sem
+hardcode do IP e sem trocar o hostname HTTPS.
+
+A primeira validação pública do preflight produziu um falso negativo mesmo
+com resposta HTTP 200 e `access-control-allow-origin` correto. A causa era o
+parser `awk` separar a linha em todos os caracteres `:`, reduzindo
+`https://aegis.byop.dev` a `https`. O parser agora separa somente o primeiro
+delimitador e compara a URL completa.
+
+A inspeção do Compose renderizado também mostrou que o volume dos templates de
+e-mail era resolvido como `infra/infra/keycloak/...`, pois caminhos relativos
+partem do diretório do próprio arquivo Compose. O mount foi corrigido para
+`infra/keycloak/...`, garantindo que os templates reais de convite sejam
+montados como somente leitura no backend.
+
 ### Docker, Compose e scripts
 
 ```text
