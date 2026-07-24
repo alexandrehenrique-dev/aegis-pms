@@ -545,4 +545,7 @@ detalhadas: `results/cors-prod-deploy-automation.md`.
 **Correção pós-instalação do runner:** o job `backend-verify` passou a provisionar
 PostgreSQL 16 efêmero em `localhost:5434`, com credenciais descartáveis iguais
 aos defaults de teste. Isso torna o `mvn verify` independente de serviços
-preexistentes no host e mantém os testes isolados do banco de produção.
+preexistentes no host e mantém os testes isolados do banco de produção. O log
+real do runner revelou depois que `actions/setup-java` não instala o comando
+`mvn`; o backend passou a versionar o Maven Wrapper 3.9.16, com checksum da
+distribuição, e o workflow executa `./mvnw -B clean verify`.

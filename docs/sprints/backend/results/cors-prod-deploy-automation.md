@@ -110,6 +110,12 @@ que o job dependia implicitamente de PostgreSQL já ativo em `localhost:5434`.
 O workflow agora cria um PostgreSQL 16 efêmero e saudável para o `mvn verify`,
 sem acesso ao banco de produção.
 
+Na execução seguinte, o PostgreSQL ficou saudável, mas o passo `Verify` encerrou
+com código 127 e `mvn: command not found`: `actions/setup-java` prepara o JDK e
+o cache, não instala o Maven. O backend agora inclui o Maven Wrapper 3.9.16 em
+`backend/mvnw`, fixa o SHA-256 da distribuição e o workflow usa
+`./mvnw -B clean verify`, sem depender de Maven global no host.
+
 ### Docker, Compose e scripts
 
 ```text

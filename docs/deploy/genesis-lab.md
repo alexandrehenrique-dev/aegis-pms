@@ -112,6 +112,8 @@ Pré-requisitos do usuário do serviço:
 
 - acesso ao daemon Docker e ao plugin Docker Compose;
 - `git`, `curl`, `awk`, `grep`, `sed` e `seq`;
+- Java é preparado pelo workflow e o Maven é baixado pelo wrapper versionado
+  em `backend/mvnw`; não é necessário instalar Maven globalmente no runner;
 - leitura do arquivo
   `/opt/genesis-lab/services/aegis-pms/secrets/.env.develop`;
 - acesso aos diretórios bind-mounted de runtime;

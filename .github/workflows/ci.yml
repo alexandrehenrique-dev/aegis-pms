@@ -83,7 +83,7 @@ jobs:
 
       - name: Verify
         working-directory: backend
-        run: mvn -B clean verify
+        run: ./mvnw -B clean verify
 
   docker-build:
     name: Docker - build image
