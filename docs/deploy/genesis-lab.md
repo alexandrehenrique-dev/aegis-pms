@@ -167,9 +167,18 @@ As variáveis não sensíveis obrigatórias são:
 
 ```dotenv
 SPRING_PROFILES_ACTIVE=prod
+KEYCLOAK_URL=https://auth.buildyourownpath.io
 AEGIS_APP_BASE_URL=https://aegis.byop.dev
 AEGIS_APP_CORS_ALLOWED_ORIGINS=https://aegis.byop.dev
 ```
+
+`KEYCLOAK_URL` é a URL-base pública usada pelo `kcadm` no hardening do realm.
+Ela não inclui `/realms/aegis-pms`. No GitHub, cadastre o mesmo valor como
+Repository Variable `KEYCLOAK_URL`; o workflow não lê o `.env.develop` antes
+desse passo. `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD` e as credenciais SMTP
+continuam exclusivamente em GitHub Actions Secrets. O workflow usa
+`KEYCLOAK_REALM=aegis-pms` por padrão; essa configuração também pode ser
+sobrescrita por uma Repository Variable de mesmo nome.
 
 Múltiplas origens usam lista separada por vírgula:
 

@@ -255,8 +255,8 @@ jobs:
 
       - name: Keycloak realm hardening
         env:
-          KEYCLOAK_URL: ${{ secrets.KEYCLOAK_URL }}
-          KEYCLOAK_REALM: aegis
+          KEYCLOAK_URL: ${{ vars.KEYCLOAK_URL }}
+          KEYCLOAK_REALM: ${{ vars.KEYCLOAK_REALM || 'aegis-pms' }}
           KEYCLOAK_WEB_CLIENT_ID: aegis-web
           KEYCLOAK_ADMIN: ${{ secrets.KEYCLOAK_ADMIN }}
           KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.KEYCLOAK_ADMIN_PASSWORD }}

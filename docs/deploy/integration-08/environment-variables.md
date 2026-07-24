@@ -54,9 +54,12 @@ Este canal e somente para feedback interno do Aegis (`POST /feedback`), nao para
 - `AEGIS_TELEGRAM_ALERT_BOT_TOKEN`
 - `AEGIS_TELEGRAM_ALERT_CHAT_ID`
 
+## GitHub Actions Variables
+
+- `KEYCLOAK_URL` — URL-base pública, sem o caminho `/realms/...`.
+
 ## GitHub Actions Secrets
 
-- `KEYCLOAK_URL`
 - `KEYCLOAK_ADMIN`
 - `KEYCLOAK_ADMIN_PASSWORD`
 - `SMTP_HOST`

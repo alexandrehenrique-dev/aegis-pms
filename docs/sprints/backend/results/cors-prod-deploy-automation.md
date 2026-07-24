@@ -149,6 +149,14 @@ primeira consulta ao MailHog retornar `items: []`. A execução completa
 equivalente ao runner terminou com 337/337 requisições e 650/650 testes
 aprovados.
 
+No primeiro deploy automatizado, o hardening foi interrompido antes do `kcadm`
+porque `KEYCLOAK_URL` estava referenciada como Secret ausente. A URL não é
+credencial: o workflow agora a obtém da Repository Variable `KEYCLOAK_URL`,
+esperando `https://auth.buildyourownpath.io` sem `/realms/aegis-pms`. O realm
+padrão foi corrigido para `aegis-pms`, e os exemplos de ambiente foram
+alinhados com o endpoint público real. Secrets administrativos e SMTP não
+foram movidos nem expostos.
+
 ### Docker, Compose e scripts
 
 ```text

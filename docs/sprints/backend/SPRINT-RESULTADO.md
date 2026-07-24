@@ -568,3 +568,10 @@ polling limitado, a entrega assíncrona da mensagem ao destinatário esperado no
 MailHog. Isso elimina a condição de corrida em que a API retornava `items: []`
 imediatamente após a criação do convite. Validação local equivalente ao runner:
 337/337 requisições e 650/650 testes Bruno aprovados com Node 22 e CLI 4.0.0.
+
+**Correção do hardening no deploy:** a URL-base pública do Keycloak passou a
+ser lida da Repository Variable `KEYCLOAK_URL`, com valor operacional
+`https://auth.buildyourownpath.io` e sem o caminho do realm. O realm padrão do
+workflow foi alinhado para `aegis-pms`. A URL também foi incluída nos exemplos
+de ambiente para suportar a execução manual, enquanto credenciais
+administrativas e SMTP permanecem exclusivamente em Secrets.
