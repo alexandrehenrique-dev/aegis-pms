@@ -39,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -48,6 +51,26 @@ jobs:
   backend-verify:
     name: Backend - Maven verify
     runs-on: [self-hosted, genesis-lab]
+    env:
+      AEGIS_DB_HOST: localhost
+      AEGIS_DB_PORT: "5434"
+      AEGIS_DB_NAME: aegis_pms
+      AEGIS_DB_USER: aegis_user
+      AEGIS_DB_PASSWORD: aegis_password
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: aegis_pms
+          POSTGRES_USER: aegis_user
+          POSTGRES_PASSWORD: aegis_password
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U aegis_user -d aegis_pms"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
 

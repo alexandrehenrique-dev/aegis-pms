@@ -530,12 +530,19 @@ IDs de imagem, valida health/CORS/login inválido e executa rollback automático
 O workflow observa `develop`/`release`, mas só implanta a branch configurada.
 
 **Retrofits pendentes:** revogar no Keycloak as sessões atuais de
-`aegis@buildyourownpath.io` após o teste manual de login real; tratar em
-manutenção dedicada as três vulnerabilidades transitivas reportadas por
-`npm audit`; preparar `.env.release` somente antes da promoção real.
+`aegis@buildyourownpath.io` após o teste manual de login real; preparar
+`.env.release` somente antes da promoção real. As três vulnerabilidades
+transitivas inicialmente reportadas por `npm audit` foram corrigidas no
+lockfile em 2026-07-24 e o workflow passou a bloquear novas vulnerabilidades
+altas ou críticas.
 
 **Cobertura de testes:** `mvn clean verify` com `BUILD SUCCESS`, 1681 testes,
 zero falhas/erros e JaCoCo 100%; Modulith aprovado. Frontend typecheck, lint e
-build API aprovados. Docker build sem cache aprovado para
+build API aprovados; `npm audit` retorna zero vulnerabilidades. Docker build sem cache aprovado para
 `aegis-pms:develop`; Compose, scripts, workflow YAML e diff validados. Evidências
 detalhadas: `results/cors-prod-deploy-automation.md`.
+
+**Correção pós-instalação do runner:** o job `backend-verify` passou a provisionar
+PostgreSQL 16 efêmero em `localhost:5434`, com credenciais descartáveis iguais
+aos defaults de teste. Isso torna o `mvn verify` independente de serviços
+preexistentes no host e mantém os testes isolados do banco de produção.

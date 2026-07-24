@@ -100,9 +100,15 @@ npm run build          aprovado em modo API
 scan do bundle         endpoint localhost ausente
 ```
 
-`npm audit` registrou uma pendência preexistente em dependências transitivas: 2
-vulnerabilidades altas (`brace-expansion`, `js-yaml`) e 1 crítica (`tar`).
-Atualização ampla de dependências ficou fora desta correção operacional.
+Em 2026-07-24, o lockfile foi atualizado sem mudança de dependências diretas:
+`brace-expansion` passou para `1.1.16`/`2.1.2`, `js-yaml` para `4.3.0` e `tar`
+para `7.5.21`. `npm audit` retorna zero vulnerabilidades, e o workflow executa
+`npm audit --audit-level=high` após o `npm ci`.
+
+Após a instalação do runner no Genesis Lab, o primeiro `backend-verify` revelou
+que o job dependia implicitamente de PostgreSQL já ativo em `localhost:5434`.
+O workflow agora cria um PostgreSQL 16 efêmero e saudável para o `mvn verify`,
+sem acesso ao banco de produção.
 
 ### Docker, Compose e scripts
 
@@ -154,8 +160,6 @@ automatizada.
 - Revogar no Keycloak todas as sessões do usuário
   `aegis@buildyourownpath.io` depois da validação manual, pois tokens reais
   apareceram durante o diagnóstico.
-- Tratar as três vulnerabilidades transitivas indicadas por `npm audit` em uma
-  manutenção de dependências dedicada.
 - Criar `.env.release` apenas quando o ambiente `release` for realmente
   promovido; o script aborta com clareza enquanto o arquivo não existir.
 
