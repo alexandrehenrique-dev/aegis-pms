@@ -116,6 +116,18 @@ o cache, não instala o Maven. O backend agora inclui o Maven Wrapper 3.9.16 em
 `backend/mvnw`, fixa o SHA-256 da distribuição e o workflow usa
 `./mvnw -B clean verify`, sem depender de Maven global no host.
 
+O modo inicial `only-script` revelou uma segunda dependência implícita: sem
+`unzip`, o script troca o artefato Maven de `.zip` para `.tar.gz`, mas conserva
+o SHA-256 configurado para o ZIP. O runner então falhava na validação antes de
+iniciar o Maven. A correção definitiva usa o wrapper `bin`, versiona o JAR
+oficial 3.3.4 com SHA-256 fixado e mantém o checksum do ZIP do Maven 3.9.16. A
+execução não depende mais de Maven ou `unzip` instalados no host.
+
+A correção foi reproduzida em um container Linux `eclipse-temurin:25-jdk` sem
+`unzip`: `./mvnw --version` baixou e iniciou o Maven 3.9.16 com sucesso. Em
+seguida, `./mvnw -B clean verify` concluiu com 1681 testes, zero falhas/erros,
+JaCoCo aprovado e `BUILD SUCCESS`.
+
 ### Docker, Compose e scripts
 
 ```text

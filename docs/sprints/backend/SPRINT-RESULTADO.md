@@ -548,4 +548,8 @@ aos defaults de teste. Isso torna o `mvn verify` independente de serviços
 preexistentes no host e mantém os testes isolados do banco de produção. O log
 real do runner revelou depois que `actions/setup-java` não instala o comando
 `mvn`; o backend passou a versionar o Maven Wrapper 3.9.16, com checksum da
-distribuição, e o workflow executa `./mvnw -B clean verify`.
+distribuição, e o workflow executa `./mvnw -B clean verify`. A primeira versão
+usava o modo `only-script`, que no host sem `unzip` substituiu o ZIP por
+`tar.gz` sem substituir o checksum e falhou antes do Maven iniciar. O wrapper
+foi migrado para o modo `bin`, com o JAR oficial versionado e validado por
+checksum, eliminando dependências globais de Maven e `unzip`.
